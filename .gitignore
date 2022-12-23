@@ -3,7 +3,7 @@
 *.log
 
 /documents/
-/source/driver/
+/selenium/driver/
 
 # Dotnet Build results
 [Dd]ebug/
