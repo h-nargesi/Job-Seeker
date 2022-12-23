@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8"><!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+	<style>
+		body {
+			width: 250pt;
+			padding: 0pt;
+		}
+
+		.section {
+			padding: 15pt 20pt;
+		}
+
+		.btn .switch-on,
+		.btn .switch-off {
+			display: none;
+		}
+
+		.btn[data-state='on'] .switch-on,
+		.btn[data-state='off'] .switch-off {
+			display: inline;
+		}
+
+		.btn[data-state='on'] .switch-off,
+		.btn[data-state='off'] .switch-on {
+			display: none;
+		}
+
+		#Message {
+			max-height: 300pt;
+			overflow-y: scroll;
+			font-size: 0.9em;
+		}
+
+		.description {
+			font-size: 0.9em;
+		}
+
+		.auto-width {
+			width: auto;
+		}
+	</style>
+</head>
+
+<body class="bg-light">
+	<div class="section">
+		<h4 id="ManifestTitle"></h4>
+	</div>
+	<div class="section">
+		<div class="form-group">
+			<label for="Pilot">Server URL:</label>
+			<input id="ServerUrl" type="text" class="form-control" />
+		</div>
+	</div>
+	<div class="section description">
+		<p id="ManifestDescr"></p>
+	</div>
+	<script src="../controllers/storage-handler.js"></script>
+	<script src="menu.js"></script>
+</body>
+</html>

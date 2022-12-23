@@ -1,0 +1,41 @@
+{
+	"name": "Job Seeker Agent",
+	"version": "1.0.0",
+	"description": "This extension is built for seeking jobs in different job agents.",
+	"manifest_version": 3,
+	"action": {
+		"default_popup": "application/menu.html",
+		"default_title": "Job Seeker",
+		"default_icon": {
+			"16": "assets/images/job-16.png",
+			"32": "assets/images/job-32.png",
+			"48": "assets/images/job-48.png",
+			"128": "assets/images/job-128.png"
+		}
+	},
+	"content_scripts": [
+		{
+			"matches": ["*://*/*"],
+			"js": [
+				"assets/scripts/jquery-3.6.1.min.js",
+				"controllers/storage-handler.js",
+				"controllers/background-messaging.js",
+				"controllers/action-handler.js",
+				"controllers/check-page.js"
+			]
+		}
+	],
+	"background": {
+		"service_worker": "controllers/background.js"
+	},
+	"permissions": [
+		"storage",
+		"activeTab"
+	],
+	"icons": {
+		"16": "assets/images/job-16.png",
+		"32": "assets/images/job-32.png",
+		"48": "assets/images/job-48.png",
+		"128": "assets/images/job-128.png"
+	}
+}
