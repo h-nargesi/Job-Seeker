@@ -6,7 +6,7 @@ create table JobOption (
 	Regexp			text	not null,
 	Options			text	not null,
 
-	unique			(Title),
+	unique			(Title)
 );
 
 create unique index UQ_JobOption_Name on JobOption (Title);
