@@ -9,7 +9,7 @@ struct JobOption
     public Regex Pattern { get; set; }
 
     public string Options { get; set; }
-
+    
     public override string ToString()
     {
         return $"({Score}) {Title}";

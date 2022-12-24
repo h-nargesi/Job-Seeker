@@ -2,7 +2,7 @@
 {
     public override int Order => 100;
 
-    public IamExpatPageOther(Agency parent) : base(parent) { }
+    public IamExpatPageOther(IamExpat parent) : base(parent) { }
 
     public override Command[]? IssueCommand(string url, string content)
     {

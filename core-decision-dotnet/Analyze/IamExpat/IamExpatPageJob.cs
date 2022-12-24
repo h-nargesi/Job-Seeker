@@ -5,74 +5,77 @@ class IamExpatPageJob : IamExpatPage
     public override int Order => 10;
 
     private static readonly Regex reg_job_url = new(@"/career/jobs-[^""\']+/it-technology/[^""\']+/(\d+)/?");
+    private static readonly Regex reg_job_title = new(@"<h1[^>]+class=""article__title""[^>]*>([^<]*)</h1>");
+    private static readonly Regex reg_job_internal_apply = new(@"<h1[^>]+class=""article__title""[^>]*>([^<]*)</h1>");
+    private static readonly Regex reg_job_external_apply = new(@"<a[^>]+href=""([^""']+)""[^>]*>Apply Now</a>");
 
-    public IamExpatPageJob(Agency parent) : base(parent) { }
+    public IamExpatPageJob(IamExpat parent) : base(parent) { }
 
     public override Command[]? IssueCommand(string url, string content)
     {
         if (reg_job_url.IsMatch(url)) return null;
 
-        var job = LoadJob(url, content);
+        using var database = Database.Open();
 
-        // load options
-        var options = LoadOptions();
+        var job = LoadJob(database, url, content);
 
-        // eligibility
+        var options = database.JobOption.FetchAll();
+
         var eligibility = EvaluateEligibility(job, options);
 
-        // rejection : return
         if (!eligibility)
         {
             job.State = JobState.rejected;
-            // TODO: save job
+            database.Job.Save(job, JobFilter.Log | JobFilter.Title);
             return new[] { Command.Close() };
         }
 
-        // easy apply : else return
+        var external_apply_match = reg_job_external_apply.Match(content);
+        if (external_apply_match != null)
+        {
+            job.Link = external_apply_match.Groups[1].Value;
+            job.State = JobState.attention;
+            database.Job.Save(job, JobFilter.Log | JobFilter.Title | JobFilter.Link);
+            return new[] { Command.Close() };
+        }
 
-        // apply
+        if (reg_job_internal_apply.IsMatch(content))
+        {
+            job.State = JobState.attention;
+            database.Job.Save(job, JobFilter.Log | JobFilter.Title);
+            return new[] { Command.Close() };
+        }
 
         return Array.Empty<Command>();
     }
 
-    private Job LoadJob(string url, string content)
+    private Job LoadJob(Database database, string url, string content)
     {
         var code = reg_job_url.Match(url).Groups[1].Value;
+        var job = database.Job.Fetch(parent.ID, code);
+        var filter = JobFilter.Title | JobFilter.Html;
 
-        using var database = Database.Open();
-        using var reader = database.Read(q_select_job, Parent.ID, code);
-
-        Job job;
-
-        if (reader.Read())
+        if (job == null)
         {
             job = new Job
             {
-                JobID = (long)reader["JobID"],
+                AgencyID = parent.ID,
                 Code = code,
-                AgencyID = Parent.ID,
-                State = Enum.Parse<JobState>((string)reader["State"]),
-                Title = (string)reader["Title"],
-            };
-        }
-        else
-        {
-            job = new Job
-            {
-                Code = code,
-                AgencyID = Parent.ID,
                 State = JobState.saved,
+                Url = reg_job_url.Match(url).Value,
             };
 
-            // TODO find title
-
-            // TODO insert job
+            filter = JobFilter.All;
         }
 
-        job.Url = url;
+        var title_match = reg_job_title.Match(content);
+        if (title_match == null)
+            parent.logger.LogWarning("Title not found ({0}, {1})", parent.Name, code);
+        else job.Title = title_match.Groups[1].Value.Trim();
+
         job.Html = content;
 
-        // TODO update job
+        database.Job.Save(job, filter);
 
         return job;
     }
@@ -98,7 +101,7 @@ class IamExpatPageJob : IamExpatPage
         }
 
         job.Log = string.Join("|", logs);
-        Parent.logger.LogDebug(string.Join(", ", Parent.Name, job.Title, job.Code, job.Log));
+        parent.logger.LogDebug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log));
 
         if (!hasField) return false;
         else return score >= MinEligibilityScore;
@@ -117,29 +120,4 @@ class IamExpatPageJob : IamExpatPage
         else return option.Score;
     }
 
-    private static JobOption[] LoadOptions()
-    {
-        using var database = Database.Open();
-        using var reader = database.Read(q_select_job_options);
-
-        var option_list = new List<JobOption>();
-        while (reader.Read())
-        {
-            option_list.Add(new JobOption()
-            {
-                Title = (string)reader["Title"],
-                Score = (long)reader["Score"],
-                Pattern = new Regex((string)reader["Pattern"]),
-                Options = (string)reader["Options"],
-            });
-        }
-
-        return option_list.ToArray();
-    }
-
-    private const string q_select_job = @"
-SELECT * FROM Job WHERE AgencyID = @agency and Code = @code";
-
-    private const string q_select_job_options = @"
-SELECT Score, Title, Pattern, Options FROM JobOption WHERE Efective != 0";
 }

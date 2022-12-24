@@ -6,7 +6,7 @@ class IamExpatPageLogin : IamExpatPage
 
     private static readonly Regex reg_login_url = new(@"iamexpat\.com/login");
 
-    public IamExpatPageLogin(Agency parent) : base(parent) { }
+    public IamExpatPageLogin(IamExpat parent) : base(parent) { }
 
     public override Command[]? IssueCommand(string url, string content)
     {

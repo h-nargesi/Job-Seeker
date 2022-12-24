@@ -6,7 +6,7 @@ class IamExpatPageAuth : IamExpatPage
 
     private static readonly Regex reg_login_but = new(@"<a[^>]+href=[""\']/login[""\']");
 
-    public IamExpatPageAuth(Agency parent) : base(parent) { }
+    public IamExpatPageAuth(IamExpat parent) : base(parent) { }
 
     public override Command[]? IssueCommand(string url, string content)
     {

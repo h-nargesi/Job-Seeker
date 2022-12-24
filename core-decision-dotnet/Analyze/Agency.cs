@@ -40,25 +40,25 @@ public abstract class Agency
     {
         if (database == null) throw new ArgumentNullException(nameof(database));
 
-        using var reader = database.Read(Q_LOAD_AGENCIES, Name);
-        if (!reader.Read()) return;
+        var agency_info = database.Agency.LoadByName(Name);
+        if (agency_info == default) return;
 
-        ID = (long)reader["ID"];
-        Domain = (string)reader["Domain"];
+        ID = agency_info.id;
+        Domain = agency_info.domain;
 
         LoadPages();
     }
+
+    protected abstract IEnumerable<Type> GetSubPages();
 
     private void LoadPages()
     {
         pages.Clear();
         logger.LogDebug("loading pages of", Name);
 
-        var types = AppDomain.CurrentDomain.GetAssemblies()
-                                           .SelectMany(s => s.GetTypes())
-                                           .Where(p => typeof(Page).IsAssignableFrom(p));
+        var types = GetSubPages();
 
-        foreach (var type in types)
+        foreach (var type in GetSubPages())
         {
             if (Activator.CreateInstance(type, this) is not Page page) continue;
 
@@ -69,6 +69,4 @@ public abstract class Agency
         pages.Sort();
         logger.LogInformation("pages: {0}", pages.StringJoin());
     }
-
-    private const string Q_LOAD_AGENCIES = "SELECT ID, Domain FROM Agency WHERE Title = @title";
 }

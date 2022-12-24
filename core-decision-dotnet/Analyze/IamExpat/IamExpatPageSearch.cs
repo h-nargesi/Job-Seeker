@@ -8,7 +8,7 @@ class IamExpatPageSearch : IamExpatPage
     private static readonly Regex reg_search_title = new(@"<h1>[^<]*IT[^<]*Technology[^<]*</h1>");
     private static readonly Regex reg_job_link = new(@"href=[""\'](/career/jobs-[^""\']+/it-technology/[^""\']+/(\d+)/?)[""\']");
 
-    public IamExpatPageSearch(Agency parent) : base(parent) { }
+    public IamExpatPageSearch(IamExpat parent) : base(parent) { }
 
     public override Command[]? IssueCommand(string url, string content)
     {
@@ -29,22 +29,25 @@ class IamExpatPageSearch : IamExpatPage
 
         var codes = new HashSet<long>();
         using var database = Database.Open();
-        
-        foreach(Match job in reg_job_link.Matches(content).Cast<Match>())
+
+        foreach (Match job in reg_job_link.Matches(content).Cast<Match>())
         {
             var code = long.Parse(job.Groups[1].Value);
-            
+
             if (codes.Contains(code)) continue;
             codes.Add(code);
 
-            database.Execute(q_ins_job, Parent.ID, url, code, JobState.saved.ToString());
+            database.Job.Save(new
+            {
+                AgencyID = parent.ID,
+                Url = url,
+                Code = code.ToString(),
+                State = JobState.saved
+            });
         }
 
         return new Command[] { Command.Click(@"a[title=""Go to next page""]") };
     }
 
-    private const string q_ins_job = @"
-INSERT INTO Job (AgencyID, Url, Code, State) VALUES (@agency, @url, @code, @state)
-ON CONFLICT(AgencyID, Code) DO NOTHING;";
 
 }

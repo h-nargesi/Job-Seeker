@@ -45,9 +45,7 @@ public class Analyzer
         agencies.Clear();
         logger.LogDebug("loading agencies");
 
-        var types = AppDomain.CurrentDomain.GetAssemblies()
-                                           .SelectMany(s => s.GetTypes())
-                                           .Where(p => typeof(Agency).IsAssignableFrom(p));
+        var types = TypeHelper.GetSubTypes(typeof(Agency));
 
         using var database = Database.Open();
         foreach (var type in types)

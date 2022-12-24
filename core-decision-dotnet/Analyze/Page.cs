@@ -16,14 +16,7 @@ public abstract class Page : IComparable<Page>
     public (string user, string pass) GetUserPass()
     {
         using var database = Database.Open();
-        using var reader = database.Parameter("title", Parent.Name)
-                                   .Read("SELECT UserName, Password FROM Agency WHERE Title = @title");
-
-        if (!reader.Read()) return default;
-        else
-        {
-            return ((string)reader["UserName"], (string)reader["Password"]);
-        }
+        return database.Agency.GetUserPass(Parent.Name);
     }
 
     public int CompareTo(Page? other)

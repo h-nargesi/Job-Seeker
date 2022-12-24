@@ -1,4 +1,6 @@
 ﻿abstract class IamExpatPage : Page
 {
-    protected IamExpatPage(Agency parent) : base(parent) { }
+    protected readonly IamExpat parent;
+
+    protected IamExpatPage(IamExpat parent) : base(parent) => this.parent = parent;
 }
