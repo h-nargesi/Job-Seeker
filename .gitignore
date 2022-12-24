@@ -6,6 +6,7 @@
 /selenium/driver/
 
 # Dotnet Build results
+.vs/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
