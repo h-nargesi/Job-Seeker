@@ -10,6 +10,8 @@ public abstract class Page : IComparable<Page>
     public Agency Parent { get; }
 
     public abstract int Order { get; }
+    
+    public abstract TrendType TrendType { get; }
 
     public abstract Command[]? IssueCommand(string url, string content);
 

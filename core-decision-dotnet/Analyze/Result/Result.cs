@@ -1,4 +1,4 @@
-struct Result
+public struct Result
 {
     public TrendType Type { get; set; }
 

@@ -1,6 +1,8 @@
 ﻿class IamExpatPageOther : IamExpatPage
 {
     public override int Order => 100;
+    
+    public override TrendType TrendType => TrendType.Searching;
 
     public IamExpatPageOther(IamExpat parent) : base(parent) { }
 

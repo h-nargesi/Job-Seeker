@@ -25,7 +25,7 @@ public class Analyzer
         }
     }
 
-    public Command[] Analyze(string agency, string url, string content)
+    public Result Analyze(string agency, string url, string content)
     {
         logger.LogDebug("Analyzer.Analyze: {0}", agency);
 
@@ -36,7 +36,7 @@ public class Analyzer
         }
         else logger.LogError("{0} not found!", agency);
 
-        return Array.Empty<Command>();
+        return new Result();
     }
 
 

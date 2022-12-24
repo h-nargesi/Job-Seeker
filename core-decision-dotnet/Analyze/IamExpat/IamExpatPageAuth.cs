@@ -3,6 +3,8 @@
 class IamExpatPageAuth : IamExpatPage
 {
     public override int Order => 2;
+    
+    public override TrendType TrendType => TrendType.None;
 
     private static readonly Regex reg_login_but = new(@"<a[^>]+href=[""\']/login[""\']");
 

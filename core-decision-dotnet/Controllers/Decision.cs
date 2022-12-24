@@ -16,9 +16,9 @@ public class DecisionController : Controller
     {
         logger.LogInformation($"agency: {agency}, url: {url}, content: {content}");
 
-        var context = analyzer.Analyze(agency, url, content);
+        var result = analyzer.Analyze(agency, url, content);
 
-        return Ok(context);
+        return Ok(result.Commands);
     }
 
     public IActionResult Reload()

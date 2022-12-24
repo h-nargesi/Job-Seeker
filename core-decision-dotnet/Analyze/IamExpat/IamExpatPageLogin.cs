@@ -3,6 +3,8 @@
 class IamExpatPageLogin : IamExpatPage
 {
     public override int Order => 1;
+    
+    public override TrendType TrendType => TrendType.None;
 
     private static readonly Regex reg_login_url = new(@"iamexpat\.com/login");
 

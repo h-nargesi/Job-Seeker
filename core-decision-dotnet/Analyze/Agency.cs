@@ -16,7 +16,7 @@ public abstract class Agency
 
     public IReadOnlyList<Page> Pages => pages;
 
-    public Command[] AnalyzeContent(string url, string content)
+    public Result AnalyzeContent(string url, string content)
     {
         logger.LogDebug("AnalyzeContent: {0}", Name);
 
@@ -28,12 +28,12 @@ public abstract class Agency
             {
                 logger.LogInformation("page checked: {0}", page.GetType().Name);
                 logger.LogDebug("page commands: {0}", commands.StringJoin());
-                return commands;
+                return new Result { Type = page.TrendType, Commands = commands };
             }
         }
 
         logger.LogDebug("Page not found: {0}", Name);
-        return new Command[] { Command.Close() };
+        return new Result { Type = TrendType.None, Commands = new Command[] { Command.Close() } };
     }
 
     public void LoadFromDatabase(Database database)

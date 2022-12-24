@@ -3,6 +3,8 @@
 class IamExpatPageJob : IamExpatPage
 {
     public override int Order => 10;
+    
+    public override TrendType TrendType => TrendType.Analyzing;
 
     private static readonly Regex reg_job_url = new(@"/career/jobs-[^""\']+/it-technology/[^""\']+/(\d+)/?");
     private static readonly Regex reg_job_title = new(@"<h1[^>]+class=""article__title""[^>]*>([^<]*)</h1>");

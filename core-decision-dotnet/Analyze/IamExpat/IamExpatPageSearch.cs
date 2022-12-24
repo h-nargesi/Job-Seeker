@@ -3,6 +3,8 @@
 class IamExpatPageSearch : IamExpatPage
 {
     public override int Order => 10;
+    
+    public override TrendType TrendType => TrendType.Searching;
 
     private static readonly Regex reg_search_url = new(@"://[^/]*iamexpat\.nl/career/jobs-netherlands");
     private static readonly Regex reg_search_title = new(@"<h1>[^<]*IT[^<]*Technology[^<]*</h1>");
