@@ -1,4 +1,4 @@
-abstract class Page : IComparable<Page>
+public abstract class Page : IComparable<Page>
 {
     public Page(Agency parent)
     {

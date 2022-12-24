@@ -1,6 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
 
-class Database : IDisposable
+public class Database : IDisposable
 {
     private readonly SqliteConnection connection;
     private readonly SqliteCommand executer;

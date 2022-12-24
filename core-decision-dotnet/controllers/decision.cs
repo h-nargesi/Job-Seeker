@@ -21,6 +21,13 @@ public class DecisionController : Controller
         return Ok(context);
     }
 
+    public IActionResult Reload()
+    {
+        analyzer.LoadAgencies();
+
+        return Ok();
+    }
+
     public IActionResult Scopes()
     {
         var agencies = analyzer.Agencies.Values.Select(a => new

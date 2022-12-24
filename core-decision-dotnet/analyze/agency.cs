@@ -1,4 +1,4 @@
-abstract class Agency
+public abstract class Agency
 {
     private readonly ILogger logger;
     private readonly List<Page> pages = new();

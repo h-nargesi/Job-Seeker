@@ -1,4 +1,4 @@
-﻿struct Command
+﻿public struct Command
 {
     public Command(Action action, string? @object, Dictionary<string, object>? @params)
     {

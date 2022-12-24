@@ -1,4 +1,4 @@
-﻿enum Action
+﻿public enum Action
 {
     go = 1,
     open = 2,

@@ -40,7 +40,7 @@ public class Analyzer
     }
 
 
-    private void LoadAgencies()
+    public void LoadAgencies()
     {
         agencies.Clear();
         logger.LogDebug("loading agencies");
