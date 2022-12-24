@@ -5,6 +5,8 @@ public abstract class Page : IComparable<Page>
         Parent = parent ?? throw new ArgumentNullException(nameof(parent));
     }
 
+    protected static long MinEligibilityScore = 100;
+
     public Agency Parent { get; }
 
     public abstract int Order { get; }

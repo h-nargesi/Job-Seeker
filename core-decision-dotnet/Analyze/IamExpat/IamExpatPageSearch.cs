@@ -8,9 +8,7 @@ class IamExpatPageSearch : IamExpatPage
     private static readonly Regex reg_search_title = new(@"<h1>[^<]*IT[^<]*Technology[^<]*</h1>");
     private static readonly Regex reg_job_link = new(@"href=[""\'](/career/jobs-[^""\']+/it-technology/[^""\']+/(\d+)/?)[""\']");
 
-    public IamExpatPageSearch(Agency parent) : base(parent)
-    {
-    }
+    public IamExpatPageSearch(Agency parent) : base(parent) { }
 
     public override Command[]? IssueCommand(string url, string content)
     {
@@ -44,7 +42,6 @@ class IamExpatPageSearch : IamExpatPage
 
         return new Command[] { Command.Click(@"a[title=""Go to next page""]") };
     }
-
 
     private const string q_ins_job = @"
 INSERT INTO Job (AgencyID, Url, Code, State) VALUES (@agency, @url, @code, @state)

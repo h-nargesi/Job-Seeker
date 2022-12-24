@@ -52,7 +52,7 @@ public class Analyzer
         using var database = Database.Open();
         foreach (var type in types)
         {
-            if (Activator.CreateInstance(type) is not Agency agency) continue;
+            if (Activator.CreateInstance(type, logger) is not Agency agency) continue;
 
             if (agency.Name is null) continue;
 
