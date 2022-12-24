@@ -1,7 +1,7 @@
 public abstract class Agency
 {
-    private readonly ILogger logger;
     private readonly List<Page> pages = new();
+    public readonly ILogger logger;
 
     public Agency(ILogger<Agency> logger)
     {

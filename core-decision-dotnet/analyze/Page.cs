@@ -9,12 +9,12 @@ public abstract class Page : IComparable<Page>
 
     public abstract int Order { get; }
 
-    public abstract Command[] IssueCommand(string url, string content);
+    public abstract Command[]? IssueCommand(string url, string content);
 
     public (string user, string pass) GetUserPass()
     {
         using var database = Database.Open();
-        using var reader = database.Parameter("", null)
+        using var reader = database.Parameter("title", Parent.Name)
                                    .Read("SELECT UserName, Password FROM Agency WHERE Title = @title");
 
         if (!reader.Read()) return default;
