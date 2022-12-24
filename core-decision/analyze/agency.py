@@ -19,6 +19,9 @@ class Agency:
     @property
     def ID(self) -> int : pass
 
+    @property
+    def Domain(self) -> str : pass
+
     def GetByName():
         if Agency.__agencies_name is None:
             Agency.__load_agencies()
@@ -65,12 +68,32 @@ class Agency:
 
     def __load_agencies():
         Agency.__logger.debug('loading agencies')
+
+        ## loading from code
         ImportModules(__file__, Agency.__logger)
         Agency.__agencies_name = {}
-        Agency.__agencies_id = {}
         for agency_type in Agency.__subclasses__():
             agency = agency_type()
             if agency.Name is None: continue
             Agency.__agencies_name[agency.Name] = agency
-            Agency.__agencies_id[agency.ID] = agency
             Agency.__logger.debug("agency added: " + agency.Name)
+            
+        ## loading from database
+        Agency.__agencies_id = {}
+        with connection.cursor() as cursor:
+            cursor.execute(Agency.q_agancies)
+            rows = cursor.fetchall()
+            for row in rows:
+                agency = {}; i = 0
+                for cell in row:
+                    agency[cursor.description[i][0].lower()] = cell
+                    i += 1
+
+                if row["Title"] not in Agency.__agencies_name: continue
+                agency = Agency.__agencies_name[row["Title"]]
+                agency.ID = row["ID"]
+
+                Agency.__agencies_id[agency.ID] = agency
+
+
+    q_agancies = "SELECT ID, Title, Domain FROM Agency WHERE Active = 1"
