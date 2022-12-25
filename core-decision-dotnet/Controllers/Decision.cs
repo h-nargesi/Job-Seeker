@@ -5,25 +5,31 @@ public class DecisionController : Controller
 {
     private readonly Analyzer analyzer;
     private readonly ILogger logger;
+    private readonly Database database;
 
-    public DecisionController(ILogger<DecisionController> logger, Analyzer analyzer)
+    public DecisionController(ILogger<DecisionController> logger, Analyzer analyzer, Database database)
     {
         this.analyzer = analyzer;
         this.logger = logger;
+        this.database = database;
     }
 
-    public IActionResult Take([FromBody] string agency, [FromBody] string url, [FromBody] string content)
+    public IActionResult Take([FromBody] long? trend, [FromBody] string agency, [FromBody] string url, [FromBody] string content)
     {
-        logger.LogInformation($"agency: {agency}, url: {url}, content: {content}");
+        logger.LogInformation($"trend: {trend}, agency: {agency}, url: {url}, content: {content}");
 
-        var result = analyzer.Analyze(agency, url, content);
+        var result = analyzer.Analyze(trend, agency, url, content);
 
-        return Ok(result.Commands);
+        return Ok(new
+        {
+            result.Trend,
+            result.Commands,
+        });
     }
 
     public IActionResult Reload()
     {
-        analyzer.LoadAgencies();
+        analyzer.ClearAgencies();
 
         return Ok();
     }
@@ -37,5 +43,12 @@ public class DecisionController : Controller
         });
 
         return Ok(agencies);
+    }
+
+    public IActionResult Index()
+    {
+        var list = database.Job.Fetch(JobState.attention);
+
+        return View("index.cshtml", list);
     }
 }

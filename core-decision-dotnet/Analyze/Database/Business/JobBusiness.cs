@@ -1,9 +1,20 @@
-﻿using System.Reflection;
+﻿using Microsoft.Data.Sqlite;
 
 class JobBusiness
 {
     private Database database;
     public JobBusiness(Database database) => this.database = database;
+
+    public List<Job> Fetch(JobState state)
+    {
+        using var reader = database.Read(Q_INDEX, state);
+        var list = new List<Job>();
+
+        while (reader.Read())
+            list.Add(ReadJob(reader));
+
+        return list;
+    }
 
     public Job? Fetch(long agency, string code)
     {
@@ -11,17 +22,7 @@ class JobBusiness
 
         if (!reader.Read()) return default;
 
-        return new Job
-        {
-            JobID = (long)reader["JobID"],
-            AgencyID = agency,
-            Code = code,
-            Title = (string)reader["Title"],
-            State = Enum.Parse<JobState>((string)reader["State"]),
-            Url = (string)reader["Url"],
-            Html = (string)reader["Html"],
-            Log = (string)reader["Log"],
-        };
+        return ReadJob(reader);
     }
 
     public void Save(object model, JobFilter filter = JobFilter.All)
@@ -48,6 +49,24 @@ class JobBusiness
         else Update(model, id, filter);
     }
 
+    private static Job ReadJob(SqliteDataReader reader)
+    {
+        return new Job
+        {
+            JobID = (long)reader["JobID"],
+            RegTime = DateTime.Parse((string)reader["RegTime"]),
+            AgencyID = (long)reader["AgencyID"],
+            Code = (string)reader["Code"],
+            Title = (string)reader["Title"],
+            State = Enum.Parse<JobState>((string)reader["State"]),
+            Score = reader["Score"] as long?,
+            Url = (string)reader["Url"],
+            Html = (string)reader["Html"],
+            Link = (string)reader["Link"],
+            Log = (string)reader["Log"],
+        };
+    }
+
     private void Insert(object job, JobFilter filter)
     {
         var columns = new List<string>();
@@ -72,7 +91,7 @@ class JobBusiness
             throw new Exception("No column found for insert");
 
         var query = string.Format(Q_INSERT, string.Join(", ", columns), string.Join(", ", parameters));
-        database.Execute(Q_INSERT, values.ToArray());
+        database.Execute(query, values.ToArray());
     }
 
     private void Update(object job, long id, JobFilter filter)
@@ -98,9 +117,13 @@ class JobBusiness
 
         values.Add(id);
 
-        var query = string.Format(Q_INSERT, string.Join(", ", parameters), "JobID = $JobID");
-        database.Execute(Q_INSERT, values.ToArray());
+        var query = string.Format(Q_UPDATE, string.Join(", ", parameters), "JobID = $JobID");
+        database.Execute(query, values.ToArray());
     }
+
+    private const string Q_INDEX = @"
+SELECT * FROM Job WHERE State = @state
+ORDER BY Score DESC, RegTime DESC";
 
     private const string Q_FETCH = @"
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";

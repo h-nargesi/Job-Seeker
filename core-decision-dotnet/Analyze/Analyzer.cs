@@ -2,11 +2,13 @@ public class Analyzer
 {
     private readonly object lock_loader = new();
     private readonly ILogger logger;
+    private readonly Trend trend_handler;
     private readonly Dictionary<string, Agency> agencies = new();
 
-    public Analyzer(ILogger<Analyzer> logger)
+    public Analyzer(ILogger<Analyzer> logger, Trend trend)
     {
         this.logger = logger;
+        trend_handler = trend;
     }
 
     public IReadOnlyDictionary<string, Agency> Agencies
@@ -25,22 +27,36 @@ public class Analyzer
         }
     }
 
-    public Result Analyze(string agency, string url, string content)
+    public Result Analyze(long? trend, string agency, string url, string content)
+    {
+        var result = AnalyzeContent(agency, url, content);
+        result.Trend = trend;
+        return trend_handler.CheckTrend(result);
+    }
+
+    public void ClearAgencies()
+    {
+        agencies.Clear();
+    }
+
+    private Result AnalyzeContent(string agency, string url, string content)
     {
         logger.LogDebug("Analyzer.Analyze: {0}", agency);
 
         if (Agencies.ContainsKey(agency))
         {
             // TODO: SaveHtmlContent(__file__, content);
-            return Agencies[agency].AnalyzeContent(url, content);
+            var agency_handler = Agencies[agency];
+            var result = agency_handler.AnalyzeContent(url, content);
+            result.Agency = agency_handler.ID;
+            return result;
         }
         else logger.LogError("{0} not found!", agency);
 
-        return new Result();
+        return new Result { Agency = null, Commands = Command.JustClose() };
     }
 
-
-    public void LoadAgencies()
+    private void LoadAgencies()
     {
         agencies.Clear();
         logger.LogDebug("loading agencies");

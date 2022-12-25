@@ -1,10 +1,10 @@
 enum JobFilter
 {
-    JobID = 1,
-    AgencyID = 2,
-    Code = 4,
-    Title = 8,
-    State = 16,
+    AgencyID = 1,
+    Code = 2,
+    Title = 4,
+    State = 8,
+    Score = 16,
     Url = 32,
     Html = 64,
     Link = 128,
