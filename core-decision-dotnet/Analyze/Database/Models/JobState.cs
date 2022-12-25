@@ -2,6 +2,6 @@
 {
     saved = 1,
     rejected = 2,
-    applied = 3,
-    attention = 4,
+    attention = 3,
+    applied = 4,
 }

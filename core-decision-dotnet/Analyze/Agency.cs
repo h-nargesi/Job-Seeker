@@ -33,7 +33,7 @@ public abstract class Agency
         }
 
         logger.LogDebug("Page not found: {0}", Name);
-        return new Result { Type = TrendType.None, Commands = new Command[] { Command.Close() } };
+        return new Result { Type = TrendType.None, Commands = Command.JustClose() };
     }
 
     public void LoadFromDatabase(Database database)

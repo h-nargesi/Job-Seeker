@@ -8,8 +8,7 @@ class IamExpatPageJob : IamExpatPage
 
     private static readonly Regex reg_job_url = new(@"/career/jobs-[^""\']+/it-technology/[^""\']+/(\d+)/?");
     private static readonly Regex reg_job_title = new(@"<h1[^>]+class=""article__title""[^>]*>([^<]*)</h1>");
-    private static readonly Regex reg_job_internal_apply = new(@"<h1[^>]+class=""article__title""[^>]*>([^<]*)</h1>");
-    private static readonly Regex reg_job_external_apply = new(@"<a[^>]+href=""([^""']+)""[^>]*>Apply Now</a>");
+    private static readonly Regex reg_job_apply = new(@"<a[^>]+href=""([^""']+)""[^>]*>Apply\s+Now</a>");
 
     public IamExpatPageJob(IamExpat parent) : base(parent) { }
 
@@ -25,30 +24,27 @@ class IamExpatPageJob : IamExpatPage
 
         var eligibility = EvaluateEligibility(job, options);
 
-        if (!eligibility)
-        {
-            job.State = JobState.rejected;
-            database.Job.Save(job, JobFilter.Log | JobFilter.Title);
-            return new[] { Command.Close() };
-        }
-
-        var external_apply_match = reg_job_external_apply.Match(content);
-        if (external_apply_match != null)
-        {
-            job.Link = external_apply_match.Groups[1].Value;
-            job.State = JobState.attention;
-            database.Job.Save(job, JobFilter.Log | JobFilter.Title | JobFilter.Link);
-            return new[] { Command.Close() };
-        }
-
-        if (reg_job_internal_apply.IsMatch(content))
+        if (!eligibility) job.State = JobState.rejected;
+        else
         {
             job.State = JobState.attention;
-            database.Job.Save(job, JobFilter.Log | JobFilter.Title);
-            return new[] { Command.Close() };
+
+            var apply_match = reg_job_apply.Match(content);
+            if (apply_match == null) job.Log += "|Apply button not found!";
+            else
+            {
+                job.Link = apply_match.Groups[1].Value;
+                if (job.Link.StartsWith('#'))
+                {
+                    // TODO: easy apply
+                }
+            }
         }
 
-        return Array.Empty<Command>();
+        parent.logger.LogDebug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log));
+        database.Job.Save(job, JobFilter.Log | JobFilter.Title | JobFilter.Link);
+
+        return Command.JustClose();
     }
 
     private Job LoadJob(Database database, string url, string content)
@@ -82,7 +78,7 @@ class IamExpatPageJob : IamExpatPage
         return job;
     }
 
-    private bool EvaluateEligibility(Job job, JobOption[] options)
+    private static bool EvaluateEligibility(Job job, JobOption[] options)
     {
         var logs = new List<string>(options.Length);
         var hasField = false;
@@ -103,13 +99,12 @@ class IamExpatPageJob : IamExpatPage
         }
 
         job.Log = string.Join("|", logs);
-        parent.logger.LogDebug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log));
 
         if (!hasField) return false;
         else return score >= MinEligibilityScore;
     }
 
-    private long CheckOptionIn(Job job, JobOption option)
+    private static long CheckOptionIn(Job job, JobOption option)
     {
         if (!option.Pattern.IsMatch(job.Html ?? "")) return 0;
 
