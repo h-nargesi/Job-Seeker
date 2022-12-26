@@ -26,10 +26,10 @@ namespace Photon.JobSeeker
             }
         }
 
-        public Result Analyze(long? trend, string agency, string url, string content)
+        public Result Analyze(PageContext context)
         {
-            var result = AnalyzeContent(agency, url, content);
-            result.Trend = trend;
+            var result = AnalyzeContent(context);
+            result.Trend = context.Trend;
             return trend_handler.CheckTrend(result);
         }
 
@@ -38,21 +38,23 @@ namespace Photon.JobSeeker
             agencies.Clear();
         }
 
-        private Result AnalyzeContent(string agency, string url, string content)
+        private Result AnalyzeContent(PageContext context)
         {
-            Log.Debug("Analyzer.Analyze: {0}", agency);
+            if (context.Agency == null)
+                throw new BadJobRequest("Bad request (empty agency)");
 
-            if (Agencies.ContainsKey(agency))
-            {
-                // TODO: SaveHtmlContent(__file__, content);
-                var agency_handler = Agencies[agency];
-                var result = agency_handler.AnalyzeContent(url, content);
-                result.Agency = agency_handler.ID;
-                return result;
-            }
-            else Log.Error("{0} not found!", agency);
+            Log.Debug("Analyzer.Analyze: {0}", context.Agency);
 
-            return new Result { Agency = null, Commands = Command.JustClose() };
+            if (!Agencies.ContainsKey(context.Agency))
+                throw new BadJobRequest($"{context.Agency} not found!");
+
+            if (context.Url == null || context.Content == null)
+                throw new BadJobRequest($"{context.Agency} had empty url/content");
+
+            var agency_handler = Agencies[context.Agency];
+            var result = agency_handler.AnalyzeContent(context.Url, context.Content);
+            result.Agency = agency_handler.ID;
+            return result;
         }
 
         private void LoadAgencies()

@@ -20,7 +20,7 @@ async function SendingPageInfo(scope) {
     console.log("SendingPageInfo", window.location.hostname, scope);
 
     const commands = await BackgroundMessaging.Send({
-        agency: scope.title,
+        agency: scope.name,
         url: window.location.href,
         content: document.body.innerHTML,
     });

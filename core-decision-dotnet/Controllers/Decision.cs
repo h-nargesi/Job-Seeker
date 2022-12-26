@@ -11,22 +11,26 @@ namespace Photon.JobSeeker
         public DecisionController(Analyzer analyzer) => this.analyzer = analyzer;
 
         [HttpPost]
-        public IActionResult Take([FromBody] long? trend, [FromBody] string agency, [FromBody] string url, [FromBody] string content)
+        public IActionResult Take([FromBody] PageContext? context)
         {
-            if (string.IsNullOrEmpty(agency))
-                return BadRequest();
+            if (context == null) return BadRequest();
 
             try
             {
-                Log.Information($"trend: {trend}, agency: {agency}, url: {url}, content: {content}");
+                Log.Information(context.ToString());
 
-                var result = analyzer.Analyze(trend, agency, url, content);
+                var result = analyzer.Analyze(context);
 
                 return Ok(new
                 {
                     result.Trend,
                     result.Commands,
                 });
+            }
+            catch (BadJobRequest bd)
+            {
+                Log.Error(bd.Message);
+                return BadRequest();
             }
             catch (Exception ex)
             {

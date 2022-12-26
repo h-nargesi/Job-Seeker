@@ -20,6 +20,8 @@ class CoreMessaging {
 
     async Send(params) {
 
+        console.log(params);
+
         const server_url = await this.CheckServerUrl() + "decision/take";
 
         const data = {
