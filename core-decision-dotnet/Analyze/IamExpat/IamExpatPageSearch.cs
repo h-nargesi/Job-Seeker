@@ -4,7 +4,7 @@ namespace Photon.JobSeeker.IamExpat
 {
     class IamExpatPageSearch : IamExpatPage
     {
-        public override int Order => 10;
+        public override int Order => 20;
 
         public override TrendType TrendType => TrendType.Searching;
 
