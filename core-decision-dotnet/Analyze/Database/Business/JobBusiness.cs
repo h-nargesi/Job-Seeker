@@ -81,7 +81,7 @@ namespace Photon.JobSeeker
 
             foreach (var property in job.GetType().GetProperties())
             {
-                var flag = Enum.Parse<JobFilter>(property.Name);
+                if (!Enum.TryParse<JobFilter>(property.Name, out var flag)) continue;
                 if (!filter.HasFlag(flag)) continue;
 
                 columns.Add(flag.ToString());
