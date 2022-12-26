@@ -37,13 +37,13 @@ class CoreMessaging {
 
     async Scopes(reset) {
 
-        const server_url = await this.CheckServerUrl() + "decision/scopes";
-
         if (reset === true) {
             CoreMessaging.SCOPES = undefined;
         }
 
         if (CoreMessaging.SCOPES === undefined) {
+
+            const server_url = await this.CheckServerUrl() + "decision/scopes";
 
             const data = {
                 method: 'GET',

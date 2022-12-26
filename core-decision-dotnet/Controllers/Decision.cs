@@ -13,43 +13,78 @@ namespace Photon.JobSeeker
         [HttpPost]
         public IActionResult Take([FromBody] long? trend, [FromBody] string agency, [FromBody] string url, [FromBody] string content)
         {
-            Log.Information($"trend: {trend}, agency: {agency}, url: {url}, content: {content}");
+            if (string.IsNullOrEmpty(agency))
+                return BadRequest();
 
-            var result = analyzer.Analyze(trend, agency, url, content);
-
-            return Ok(new
+            try
             {
-                result.Trend,
-                result.Commands,
-            });
+                Log.Information($"trend: {trend}, agency: {agency}, url: {url}, content: {content}");
+
+                var result = analyzer.Analyze(trend, agency, url, content);
+
+                return Ok(new
+                {
+                    result.Trend,
+                    result.Commands,
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex.Message + ex.StackTrace);
+                throw;
+            }
         }
 
         [HttpPost]
         public IActionResult Reload()
         {
-            analyzer.ClearAgencies();
+            try
+            {
+                analyzer.ClearAgencies();
 
-            return Ok();
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex.Message + ex.StackTrace);
+                throw;
+            }
         }
 
-        [HttpPost]
+        [HttpGet]
         public IActionResult Scopes()
         {
-            var agencies = analyzer.Agencies.Values.Select(a => new
+            try
             {
-                a.Name,
-                a.Domain,
-            });
+                var agencies = analyzer.Agencies.Values.Select(a => new
+                {
+                    a.Name,
+                    a.Domain,
+                });
 
-            return Ok(agencies);
+                return Ok(agencies);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex.Message + ex.StackTrace);
+                throw;
+            }
         }
 
         [HttpGet]
         public IActionResult Index()
         {
-            var list = Database.Open().Job.Fetch(JobState.attention);
+            try
+            {
+                var list = Database.Open().Job.Fetch(JobState.attention);
 
-            return View("~/views/index.cshtml", list);
+                return View("~/views/index.cshtml", list);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex.Message + ex.StackTrace);
+                throw;
+            }
         }
     }
 }

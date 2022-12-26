@@ -10,7 +10,7 @@ namespace Photon.JobSeeker
             using var reader = database.Read(Q_LOAD_BY_NAME, name);
             if (!reader.Read()) return default;
 
-            return ((long)reader["ID"], (string)reader["Domain"]);
+            return ((long)reader["AgencyID"], (string)reader["Domain"]);
         }
 
         public (string user, string pass) GetUserPass(string agency)
@@ -25,8 +25,8 @@ namespace Photon.JobSeeker
             }
         }
 
-        private const string Q_LOAD_BY_NAME = "SELECT ID, Domain FROM Agency WHERE Title = $title";
+        private const string Q_LOAD_BY_NAME = "SELECT AgencyID, Domain FROM Agency WHERE Title = $title";
 
-        private const string Q_GET_USER_PASS = "SELECT ID, Domain FROM Agency WHERE Title = $title";
+        private const string Q_GET_USER_PASS = "SELECT AgencyID, Domain FROM Agency WHERE Title = $title";
     }
 }

@@ -23,9 +23,9 @@ class BackgroundMessaging {
 
     static CheckRequests(id, response) {
         if (id in BackgroundMessaging.CURRENT_REQUESTS) {
-            const resond = BackgroundMessaging.CURRENT_REQUESTS[id];
+            const respond = BackgroundMessaging.CURRENT_REQUESTS[id];
             delete BackgroundMessaging.CURRENT_REQUESTS[id];
-            resond(response);
+            respond(response);
         }
     }
 

@@ -1,6 +1,7 @@
 console.log("check-page");
 
 function OnPageLoad() {
+    console.log('Page is loaded');
     setTimeout(async function () {
         var scopes = await BackgroundMessaging.Scopes();
         var host = window.location.hostname;
