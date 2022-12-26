@@ -25,7 +25,7 @@ async function Respond(tab, id, promise) {
     let response = await promise;
 
     if (response.trend) {
-        trends.set(sender.tab.windowId, sender.tab.index, response.trend);
+        trends.set(tab.windowId, tab.index, response.trend);
         response = response.commands;
     }
 

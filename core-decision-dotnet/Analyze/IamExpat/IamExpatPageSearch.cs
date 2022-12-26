@@ -36,7 +36,7 @@ namespace Photon.JobSeeker.IamExpat
 
             foreach (Match job in reg_job_link.Matches(content).Cast<Match>())
             {
-                var code = long.Parse(job.Groups[1].Value);
+                var code = long.Parse(job.Groups[2].Value);
 
                 if (codes.Contains(code)) continue;
                 codes.Add(code);
@@ -52,7 +52,5 @@ namespace Photon.JobSeeker.IamExpat
 
             return new Command[] { Command.Click(@"a[title=""Go to next page""]") };
         }
-
-
     }
 }
