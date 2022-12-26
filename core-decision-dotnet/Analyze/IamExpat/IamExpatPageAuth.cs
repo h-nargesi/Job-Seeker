@@ -1,19 +1,22 @@
 ﻿using System.Text.RegularExpressions;
 
-class IamExpatPageAuth : IamExpatPage
+namespace Photon.JobSeeker.IamExpat
 {
-    public override int Order => 2;
-    
-    public override TrendType TrendType => TrendType.None;
-
-    private static readonly Regex reg_login_but = new(@"<a[^>]+href=[""\']/login[""\']");
-
-    public IamExpatPageAuth(IamExpat parent) : base(parent) { }
-
-    public override Command[]? IssueCommand(string url, string content)
+    class IamExpatPageAuth : IamExpatPage
     {
-        if (reg_login_but.IsMatch(content)) return null;
+        public override int Order => 2;
 
-        return new Command[] { Command.Click(@"a[href=""/login""]") };
+        public override TrendType TrendType => TrendType.None;
+
+        private static readonly Regex reg_login_but = new(@"<a[^>]+href=[""\']/login[""\']");
+
+        public IamExpatPageAuth(IamExpat parent) : base(parent) { }
+
+        public override Command[]? IssueCommand(string url, string content)
+        {
+            if (reg_login_but.IsMatch(content)) return null;
+
+            return new Command[] { Command.Click(@"a[href=""/login""]") };
+        }
     }
 }

@@ -1,4 +1,5 @@
 using Serilog;
+using Photon.JobSeeker;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +17,7 @@ Log.Information("Starting up");
 
 builder.Services.AddRazorPages();
 builder.Services.AddSingleton<Database>();
-builder.Services.AddSingleton<Agency>();
+// builder.Services.AddSingleton<Agency>();
 builder.Services.AddSingleton<Trend>();
 builder.Services.AddSingleton<Analyzer>();
 

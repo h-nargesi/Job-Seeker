@@ -1,17 +1,20 @@
 ﻿using System.Text.RegularExpressions;
 
-struct JobOption
+namespace Photon.JobSeeker
 {
-    public long Score { get; set; }
-
-    public string Title { get; set; }
-
-    public Regex Pattern { get; set; }
-
-    public string Options { get; set; }
-    
-    public override string ToString()
+    struct JobOption
     {
-        return $"({Score}) {Title}";
+        public long Score { get; set; }
+
+        public string Title { get; set; }
+
+        public Regex Pattern { get; set; }
+
+        public string Options { get; set; }
+
+        public override string ToString()
+        {
+            return $"({Score}) {Title}";
+        }
     }
 }

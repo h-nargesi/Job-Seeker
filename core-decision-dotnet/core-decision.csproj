@@ -4,8 +4,8 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-	  <AssemblyName>core-decision</AssemblyName>
-    <RootNamespace>Photon.CoreDecision</RootNamespace>
+	  <AssemblyName>job-seeker</AssemblyName>
+    <RootNamespace>Photon.JobSeeker</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

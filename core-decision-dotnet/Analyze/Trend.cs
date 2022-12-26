@@ -1,17 +1,20 @@
-public class Trend
+namespace Photon.JobSeeker
 {
-    private readonly ILogger logger;
-
-    public Trend(ILogger<Analyzer> logger) => this.logger = logger;
-
-    public Result CheckTrend(Result result)
+    public class Trend
     {
-        // load current trend from db
+        private readonly ILogger logger;
 
-        // load other trends
+        public Trend(ILogger<Analyzer> logger) => this.logger = logger;
 
-        // generate trend if not exists
+        public Result CheckTrend(Result result)
+        {
+            // load current trend from db
 
-        return result;
+            // load other trends
+
+            // generate trend if not exists
+
+            return result;
+        }
     }
 }

@@ -1,29 +1,32 @@
 using System.Text.RegularExpressions;
 
-class JobOptionBusiness
+namespace Photon.JobSeeker
 {
-    private readonly Database database;
-    public JobOptionBusiness(Database database) => this.database = database;
-
-    public JobOption[] FetchAll()
+    class JobOptionBusiness
     {
-        using var reader = database.Read(Q_FETCH_ALL);
+        private readonly Database database;
+        public JobOptionBusiness(Database database) => this.database = database;
 
-        var option_list = new List<JobOption>();
-        while (reader.Read())
+        public JobOption[] FetchAll()
         {
-            option_list.Add(new JobOption()
+            using var reader = database.Read(Q_FETCH_ALL);
+
+            var option_list = new List<JobOption>();
+            while (reader.Read())
             {
-                Title = (string)reader["Title"],
-                Score = (long)reader["Score"],
-                Pattern = new Regex((string)reader["Pattern"]),
-                Options = (string)reader["Options"],
-            });
+                option_list.Add(new JobOption()
+                {
+                    Title = (string)reader["Title"],
+                    Score = (long)reader["Score"],
+                    Pattern = new Regex((string)reader["Pattern"]),
+                    Options = (string)reader["Options"],
+                });
+            }
+
+            return option_list.ToArray();
         }
 
-        return option_list.ToArray();
-    }
-
-    private const string Q_FETCH_ALL = @"
+        private const string Q_FETCH_ALL = @"
 SELECT Score, Title, Pattern, Options FROM JobOption WHERE Efective != 0";
+    }
 }

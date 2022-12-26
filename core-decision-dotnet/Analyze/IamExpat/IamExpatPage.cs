@@ -1,6 +1,9 @@
-﻿abstract class IamExpatPage : Page
+﻿namespace Photon.JobSeeker.IamExpat
 {
-    protected readonly IamExpat parent;
+    abstract class IamExpatPage : Page
+    {
+        protected readonly IamExpat parent;
 
-    protected IamExpatPage(IamExpat parent) : base(parent) => this.parent = parent;
+        protected IamExpatPage(IamExpat parent) : base(parent) => this.parent = parent;
+    }
 }

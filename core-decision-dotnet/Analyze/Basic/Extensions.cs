@@ -1,7 +1,10 @@
-﻿static class Extensions
+﻿namespace Photon.JobSeeker
 {
-    public static string StringJoin<T>(this IEnumerable<T> values, string spliter = ", ")
+    static class Extensions
     {
-        return string.Join(spliter, values.Where(v => v != null).Select(v => v?.ToString()));
+        public static string StringJoin<T>(this IEnumerable<T> values, string spliter = ", ")
+        {
+            return string.Join(spliter, values.Where(v => v != null).Select(v => v?.ToString()));
+        }
     }
 }

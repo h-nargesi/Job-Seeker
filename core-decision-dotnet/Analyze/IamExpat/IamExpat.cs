@@ -1,9 +1,12 @@
-﻿class IamExpat : Agency
+﻿namespace Photon.JobSeeker.IamExpat
 {
-    public override string Name => "IamExpat";
-
-    protected override IEnumerable<Type> GetSubPages()
+    class IamExpat : Agency
     {
-        return TypeHelper.GetSubTypes(typeof(IamExpatPage));
+        public override string Name => "IamExpat";
+
+        protected override IEnumerable<Type> GetSubPages()
+        {
+            return TypeHelper.GetSubTypes(typeof(IamExpatPage));
+        }
     }
 }
