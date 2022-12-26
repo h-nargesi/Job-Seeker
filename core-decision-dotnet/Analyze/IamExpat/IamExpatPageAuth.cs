@@ -14,7 +14,7 @@ namespace Photon.JobSeeker.IamExpat
 
         public override Command[]? IssueCommand(string url, string content)
         {
-            if (reg_login_but.IsMatch(content)) return null;
+            if (!reg_login_but.IsMatch(content)) return null;
 
             return new Command[] { Command.Click(@"a[href=""/login""]") };
         }

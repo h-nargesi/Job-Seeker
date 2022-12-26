@@ -16,7 +16,7 @@ namespace Photon.JobSeeker.IamExpat
 
         public override Command[]? IssueCommand(string url, string content)
         {
-            if (!reg_search_url.IsMatch(content)) return null;
+            if (!reg_search_url.IsMatch(url)) return null;
 
             if (!reg_search_title.IsMatch(content))
             {
