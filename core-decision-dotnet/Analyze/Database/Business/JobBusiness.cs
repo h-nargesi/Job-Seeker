@@ -9,7 +9,7 @@ namespace Photon.JobSeeker
 
         public List<Job> Fetch(JobState state)
         {
-            using var reader = database.Read(Q_INDEX, state);
+            using var reader = database.Read(Q_INDEX, state.ToString());
             var list = new List<Job>();
 
             while (reader.Read())
@@ -129,8 +129,8 @@ namespace Photon.JobSeeker
 
         private const string Q_INDEX = @"
 SELECT Job.*, Agency.Title as AgencyName
-ROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
-WHERE State = @state
+FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+WHERE State = $state
 ORDER BY Score DESC, RegTime DESC";
 
         private const string Q_FETCH = @"

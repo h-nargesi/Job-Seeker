@@ -7,13 +7,8 @@ namespace Photon.JobSeeker
     public class DecisionController : Controller
     {
         private readonly Analyzer analyzer;
-        private readonly Database database;
 
-        public DecisionController(Analyzer analyzer, Database database)
-        {
-            this.analyzer = analyzer;
-            this.database = database;
-        }
+        public DecisionController(Analyzer analyzer) => this.analyzer = analyzer;
 
         [HttpPost]
         public IActionResult Take([FromBody] long? trend, [FromBody] string agency, [FromBody] string url, [FromBody] string content)
@@ -49,12 +44,12 @@ namespace Photon.JobSeeker
             return Ok(agencies);
         }
 
-        [HttpGet("/")]
+        [HttpGet]
         public IActionResult Index()
         {
-            var list = database.Job.Fetch(JobState.attention);
+            var list = Database.Open().Job.Fetch(JobState.attention);
 
-            return View("index.cshtml", list);
+            return View("~/views/index.cshtml", list);
         }
     }
 }

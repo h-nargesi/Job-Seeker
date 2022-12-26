@@ -7,7 +7,8 @@ namespace Photon.JobSeeker
     {
         private readonly SqliteConnection connection;
         private readonly SqliteCommand executer;
-        private static readonly Regex reg_parameter = new(@"$[\w_]+");
+        private static string? connection_string;
+        private static readonly Regex reg_parameter = new(@"\$[\w_]+");
 
         private JobBusiness? job_business;
         private AgencyBusiness? agency_business;
@@ -19,22 +20,31 @@ namespace Photon.JobSeeker
             this.executer = executer;
         }
 
-        public long LastInsertRowId()
+        public static void SetConfiguration(string path, string? version = null, string? password = null, bool? foreign_keys = true)
         {
-            executer.CommandText = "SELECT last_insert_rowid()";
-            return (long)(executer.ExecuteScalar() ?? throw new Exception("No ID found!"));
+            connection_string = $"Data Source={path}";
+            if (version != null) connection_string += $";Version={version}";
+            if (password != null) connection_string += $";Password={password}";
+            if (foreign_keys != null) connection_string += $";Foreign Keys={foreign_keys}";
         }
 
         public static Database Open()
         {
-            var connection = new SqliteConnection(new SqliteConnectionStringBuilder
-            {
-                DataSource = "hello.db"
+            if (connection_string == null)
+                throw new Exception("The configuration is not set.");
 
-            }.ToString());
+            var connection = new SqliteConnection(connection_string);
             var executer = connection.CreateCommand();
 
+            connection.Open();
+
             return new Database(connection, executer);
+        }
+
+        public long LastInsertRowId()
+        {
+            executer.CommandText = "SELECT last_insert_rowid()";
+            return (long)(executer.ExecuteScalar() ?? throw new Exception("No ID found!"));
         }
 
         public Database ClearParameter()
@@ -54,15 +64,16 @@ namespace Photon.JobSeeker
             {
                 parameter = executer.Parameters[name];
                 parameter.SqliteType = DbType.GetSqliteType(type);
+                parameter.Value = value;
             }
             else
             {
-                parameter = new SqliteParameter()
+                executer.Parameters.Add(new SqliteParameter()
                 {
                     ParameterName = name,
-                    SqliteType = DbType.GetSqliteType(type)
-                };
-                executer.Parameters.Add(parameter);
+                    SqliteType = DbType.GetSqliteType(type),
+                    Value = value,
+                });
             }
 
             return this;

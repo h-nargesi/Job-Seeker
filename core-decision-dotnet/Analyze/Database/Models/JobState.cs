@@ -1,6 +1,6 @@
 ﻿namespace Photon.JobSeeker
 {
-    enum JobState
+    public enum JobState
     {
         saved = 1,
         rejected = 2,
