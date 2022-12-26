@@ -47,12 +47,13 @@ namespace Photon.JobSeeker
 
             if (id == default)
             {
-                Insert(model, filter);
+                database.Insert("Job", model, filter,
+                    "ON CONFLICT(AgencyID, Code) DO NOTHING;");
 
                 if (job != null)
                     job.JobID = database.LastInsertRowId();
             }
-            else Update(model, id, filter);
+            else database.Update("", model, id, filter);
         }
 
         private static Job ReadJob(SqliteDataReader reader)
@@ -73,60 +74,6 @@ namespace Photon.JobSeeker
             };
         }
 
-        private void Insert(object job, JobFilter filter)
-        {
-            var columns = new List<string>();
-            var parameters = new List<string>();
-            var values = new List<object?>();
-
-            foreach (var property in job.GetType().GetProperties())
-            {
-                if (!Enum.TryParse<JobFilter>(property.Name, out var flag)) continue;
-                if (!filter.HasFlag(flag)) continue;
-
-                columns.Add(flag.ToString());
-                parameters.Add("$" + flag.ToString());
-
-                if (property.PropertyType == typeof(JobState))
-                    values.Add(property.GetValue(job)?.ToString());
-
-                else values.Add(property.GetValue(job));
-            }
-
-            if (values.Count == 0)
-                throw new Exception("No column found for insert");
-
-            var query = string.Format(Q_INSERT, string.Join(", ", columns), string.Join(", ", parameters));
-            database.Execute(query, values.ToArray());
-        }
-
-        private void Update(object job, long id, JobFilter filter)
-        {
-            var parameters = new List<string>();
-            var values = new List<object?>();
-
-            foreach (var property in job.GetType().GetProperties())
-            {
-                var flag = Enum.Parse<JobFilter>(property.Name);
-                if (!filter.HasFlag(flag)) continue;
-
-                parameters.Add(flag + " = $" + flag);
-
-                if (property.PropertyType == typeof(JobState))
-                    values.Add(property.GetValue(job)?.ToString());
-
-                else values.Add(property.GetValue(job));
-            }
-
-            if (values.Count == 0)
-                throw new Exception("No column found for update");
-
-            values.Add(id);
-
-            var query = string.Format(Q_UPDATE, string.Join(", ", parameters), "JobID = $JobID");
-            database.Execute(query, values.ToArray());
-        }
-
         private const string Q_INDEX = @"
 SELECT Job.*, Agency.Title as AgencyName
 FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
@@ -135,13 +82,6 @@ ORDER BY Score DESC, RegTime DESC";
 
         private const string Q_FETCH = @"
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
-
-        private const string Q_INSERT = @"
-INSERT INTO Job ({0}) VALUES ({1})
-ON CONFLICT(AgencyID, Code) DO NOTHING;";
-
-        private const string Q_UPDATE = @"
-UPDATE Job SET {0} WHERE {1}";
 
     }
 }

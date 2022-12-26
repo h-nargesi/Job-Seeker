@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Reflection;
+using System.Text.RegularExpressions;
 using Microsoft.Data.Sqlite;
 
 namespace Photon.JobSeeker
@@ -55,7 +56,9 @@ namespace Photon.JobSeeker
 
         public Database Parameter(string name, object value)
         {
-            var type = value.GetType();
+            SqliteType type;
+
+            (type, value) = DbType.GetSqliteType(value);
 
             if (!name.StartsWith("$")) name = "$" + name;
 
@@ -63,7 +66,7 @@ namespace Photon.JobSeeker
             if (executer.Parameters.Contains(name))
             {
                 parameter = executer.Parameters[name];
-                parameter.SqliteType = DbType.GetSqliteType(type);
+                parameter.SqliteType = type;
                 parameter.Value = value;
             }
             else
@@ -71,7 +74,7 @@ namespace Photon.JobSeeker
                 executer.Parameters.Add(new SqliteParameter()
                 {
                     ParameterName = name,
-                    SqliteType = DbType.GetSqliteType(type),
+                    SqliteType = type,
                     Value = value,
                 });
             }
@@ -79,14 +82,14 @@ namespace Photon.JobSeeker
             return this;
         }
 
-        public int Execute(string command, params object?[] parameters)
+        public int Execute(string command, params object[] parameters)
         {
             executer.CommandText = command;
             AddParameters(command, parameters);
             return executer.ExecuteNonQuery();
         }
 
-        public SqliteDataReader Read(string query, params object?[] parameters)
+        public SqliteDataReader Read(string query, params object[] parameters)
         {
             executer.CommandText = query;
             AddParameters(query, parameters);
@@ -97,13 +100,6 @@ namespace Photon.JobSeeker
         {
             connection.Dispose();
             executer.Dispose();
-        }
-
-        private void AddParameters(string query, object?[] parameters)
-        {
-            var index = 0;
-            foreach (Match param in reg_parameter.Matches(query))
-                Parameter(param.Value, parameters[index++] ?? DBNull.Value);
         }
 
         internal JobBusiness Job
@@ -138,5 +134,85 @@ namespace Photon.JobSeeker
                 return job_option_business;
             }
         }
+
+        internal void Insert(string name, object job, Enum filter, string? conflict = null)
+        {
+            var columns = new List<string>();
+            var parameters = new List<string>();
+            var values = new List<object>();
+
+            foreach (var property in job.GetType().GetProperties())
+            {
+                if (!CheckPropertyInFilter(filter, name)) continue;
+
+                columns.Add(property.Name);
+                parameters.Add("$" + property.Name);
+
+                values.Add(ValueFromProperty(property, job));
+            }
+
+            if (values.Count == 0)
+                throw new Exception("No column found for insert");
+
+            var query = string.Format(Q_INSERT, name, string.Join(", ", columns), string.Join(", ", parameters), conflict);
+            Execute(query, values.ToArray());
+        }
+
+        internal void Update(string name, object job, long id, Enum filter)
+        {
+            var parameters = new List<string>();
+            var values = new List<object>();
+
+            foreach (var property in job.GetType().GetProperties())
+            {
+                if (!CheckPropertyInFilter(filter, name)) continue;
+
+                parameters.Add(property.Name + " = $" + property.Name);
+
+                values.Add(ValueFromProperty(property, job));
+            }
+
+            if (values.Count == 0)
+                throw new Exception("No column found for update");
+
+            values.Add(id);
+
+            var query = string.Format(Q_UPDATE, name, string.Join(", ", parameters), $"{name}ID = ${name}ID");
+            Execute(query, values.ToArray());
+        }
+
+        private bool CheckPropertyInFilter(Enum filter, string name)
+        {
+            if (!Enum.TryParse(filter.GetType(), name, true, out var flag)) return false;
+            if (flag == null) return false;
+            if (!filter.HasFlag((Enum)flag)) return false;
+
+            return true;
+        }
+
+        private object ValueFromProperty(PropertyInfo property, object obj)
+        {
+            object? value;
+
+            if (property.PropertyType == typeof(JobState))
+                value = property.GetValue(obj)?.ToString();
+
+            else value = property.GetValue(obj);
+
+            return value ?? property.MemberType;
+        }
+
+        private void AddParameters(string query, object[] parameters)
+        {
+            var index = 0;
+            foreach (Match param in reg_parameter.Matches(query))
+                Parameter(param.Value, parameters[index++]);
+        }
+
+        private const string Q_INSERT = @"
+INSERT INTO {0} ({1}) VALUES ({2}) {3}";
+
+        private const string Q_UPDATE = @"
+UPDATE {0} SET {1} WHERE {2}";
     }
 }

@@ -4,11 +4,19 @@ namespace Photon.JobSeeker
 {
     static class DbType
     {
-        public static SqliteType GetSqliteType(this Type type)
+        public static (SqliteType type, object value) GetSqliteType(object value)
         {
+            if (value is DBNull)
+                throw new ArgumentNullException(nameof(value));
+
+            if (value is Type type)
+                value = DBNull.Value;
+            else type = value.GetType();
+
             if (!SYSTEM_TYPE_MAP.ContainsKey(type))
                 throw new ArgumentOutOfRangeException(nameof(type), type.FullName);
-            else return SYSTEM_TYPE_MAP[type];
+
+            return (SYSTEM_TYPE_MAP[type], value);
         }
 
         private readonly static Dictionary<Type, SqliteType> SYSTEM_TYPE_MAP = new Dictionary<Type, SqliteType>
