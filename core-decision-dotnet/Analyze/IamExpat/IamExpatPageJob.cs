@@ -12,6 +12,7 @@ namespace Photon.JobSeeker.IamExpat
         private static readonly Regex reg_job_url = new(@"/career/jobs-[^""\']+/it-technology/[^""\']+/(\d+)/?");
         private static readonly Regex reg_job_title = new(@"<h1[^>]+class=""article__title""[^>]*>([^<]*)</h1>");
         private static readonly Regex reg_job_apply = new(@"<a[^>]+href=""([^""']+)""[^>]*>Apply\s+Now</a>");
+        private static readonly Regex reg_job_adding = new(@"<a[^>]+href=""#""[^>]+rel=""nofollow""[^>]+title=""[^""]*Add to favourites""[^>]*>");
 
         public IamExpatPageJob(IamExpat parent) : base(parent) { }
 
@@ -27,10 +28,18 @@ namespace Photon.JobSeeker.IamExpat
 
             var eligibility = EvaluateEligibility(job, options);
 
+            var commands = new List<Command>();
+
             if (!eligibility) job.State = JobState.rejected;
             else
             {
                 job.State = JobState.attention;
+
+                if (reg_job_adding.IsMatch(content))
+                {
+                    commands.Add(Command.Click(@"a[rel=""nofollow""]"));
+                    commands.Add(Command.Wait(2000));
+                }
 
                 var apply_match = reg_job_apply.Match(content);
                 if (apply_match == null) job.Log += "|Apply button not found!";
@@ -45,9 +54,10 @@ namespace Photon.JobSeeker.IamExpat
             }
 
             Log.Debug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log));
-            database.Job.Save(job, JobFilter.Log | JobFilter.Title | JobFilter.Link);
+            database.Job.Save(job, JobFilter.Log | JobFilter.State | JobFilter.Link);
 
-            return Command.JustClose();
+            commands.Add(Command.Close());
+            return commands.ToArray();
         }
 
         private Job LoadJob(Database database, string url, string content)
@@ -85,7 +95,7 @@ namespace Photon.JobSeeker.IamExpat
         {
             var logs = new List<string>(options.Length);
             var hasField = false;
-            var score = 0L;
+            job.Score = 0L;
 
             foreach (var option in options)
             {
@@ -98,13 +108,13 @@ namespace Photon.JobSeeker.IamExpat
                     hasField = true;
                 }
 
-                score += option_score;
+                job.Score += option_score;
             }
 
             job.Log = string.Join("|", logs);
 
             if (!hasField) return false;
-            else return score >= MinEligibilityScore;
+            else return job.Score >= MinEligibilityScore;
         }
 
         private static long CheckOptionIn(Job job, JobOption option)
