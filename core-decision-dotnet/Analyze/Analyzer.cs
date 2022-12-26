@@ -1,15 +1,12 @@
+using Serilog;
+
 public class Analyzer
 {
     private readonly object lock_loader = new();
-    private readonly ILogger logger;
     private readonly Trend trend_handler;
     private readonly Dictionary<string, Agency> agencies = new();
 
-    public Analyzer(ILogger<Analyzer> logger, Trend trend)
-    {
-        this.logger = logger;
-        trend_handler = trend;
-    }
+    public Analyzer(Trend trend) => trend_handler = trend;
 
     public IReadOnlyDictionary<string, Agency> Agencies
     {
@@ -41,7 +38,7 @@ public class Analyzer
 
     private Result AnalyzeContent(string agency, string url, string content)
     {
-        logger.LogDebug("Analyzer.Analyze: {0}", agency);
+        Log.Debug("Analyzer.Analyze: {0}", agency);
 
         if (Agencies.ContainsKey(agency))
         {
@@ -51,7 +48,7 @@ public class Analyzer
             result.Agency = agency_handler.ID;
             return result;
         }
-        else logger.LogError("{0} not found!", agency);
+        else Log.Error("{0} not found!", agency);
 
         return new Result { Agency = null, Commands = Command.JustClose() };
     }
@@ -59,14 +56,14 @@ public class Analyzer
     private void LoadAgencies()
     {
         agencies.Clear();
-        logger.LogDebug("loading agencies");
+        Log.Debug("loading agencies");
 
         var types = TypeHelper.GetSubTypes(typeof(Agency));
 
         using var database = Database.Open();
         foreach (var type in types)
         {
-            if (Activator.CreateInstance(type, logger) is not Agency agency) continue;
+            if (Activator.CreateInstance(type) is not Agency agency) continue;
 
             if (agency.Name is null) continue;
 
@@ -75,7 +72,7 @@ public class Analyzer
             if (agency.ID == default) return;
 
             agencies.Add(agency.Name, agency);
-            logger.LogDebug("agency added: {0}", agency.Name);
+            Log.Debug("agency added: {0}", agency.Name);
         }
     }
 }

@@ -1,13 +1,9 @@
+using Serilog;
+
 public abstract class Agency
 {
     private readonly List<Page> pages = new();
-    public readonly ILogger logger;
-
-    public Agency(ILogger<Agency> logger)
-    {
-        this.logger = logger;
-    }
-
+    
     public abstract string Name { get; }
 
     public long ID { get; private set; }
@@ -18,7 +14,7 @@ public abstract class Agency
 
     public Result AnalyzeContent(string url, string content)
     {
-        logger.LogDebug("AnalyzeContent: {0}", Name);
+        Log.Debug("AnalyzeContent: {0}", Name);
 
         foreach (var page in Pages)
         {
@@ -26,13 +22,13 @@ public abstract class Agency
 
             if (commands != null)
             {
-                logger.LogInformation("page checked: {0}", page.GetType().Name);
-                logger.LogDebug("page commands: {0}", commands.StringJoin());
+                Log.Information("page checked: {0}", page.GetType().Name);
+                Log.Debug("page commands: {0}", commands.StringJoin());
                 return new Result { Type = page.TrendType, Commands = commands };
             }
         }
 
-        logger.LogDebug("Page not found: {0}", Name);
+        Log.Debug("Page not found: {0}", Name);
         return new Result { Type = TrendType.None, Commands = Command.JustClose() };
     }
 
@@ -54,7 +50,7 @@ public abstract class Agency
     private void LoadPages()
     {
         pages.Clear();
-        logger.LogDebug("loading pages of", Name);
+        Log.Debug("loading pages of", Name);
 
         var types = GetSubPages();
 
@@ -63,10 +59,10 @@ public abstract class Agency
             if (Activator.CreateInstance(type, this) is not Page page) continue;
 
             pages.Add(page);
-            logger.LogDebug("page added: {0}", type.Name);
+            Log.Debug("page added: {0}", type.Name);
         }
 
         pages.Sort();
-        logger.LogInformation("pages: {0}", pages.StringJoin());
+        Log.Information("pages: {0}", pages.StringJoin());
     }
 }

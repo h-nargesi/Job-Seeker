@@ -17,8 +17,10 @@
     public string? Url { get; set; }
 
     public string? Html { get; set; }
-    
+
     public string? Link { get; set; }
 
     public string? Log { get; set; }
+
+    public string? AgencyName { get; set; }
 }

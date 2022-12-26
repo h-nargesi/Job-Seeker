@@ -11,7 +11,11 @@ class JobBusiness
         var list = new List<Job>();
 
         while (reader.Read())
-            list.Add(ReadJob(reader));
+        {
+            var job = ReadJob(reader);
+            job.AgencyName = (string)reader[nameof(Job.AgencyName)];
+            list.Add(job);
+        }
 
         return list;
     }
@@ -53,17 +57,17 @@ class JobBusiness
     {
         return new Job
         {
-            JobID = (long)reader["JobID"],
-            RegTime = DateTime.Parse((string)reader["RegTime"]),
-            AgencyID = (long)reader["AgencyID"],
-            Code = (string)reader["Code"],
-            Title = (string)reader["Title"],
-            State = Enum.Parse<JobState>((string)reader["State"]),
-            Score = reader["Score"] as long?,
-            Url = (string)reader["Url"],
-            Html = (string)reader["Html"],
-            Link = (string)reader["Link"],
-            Log = (string)reader["Log"],
+            JobID = (long)reader[nameof(Job.JobID)],
+            RegTime = DateTime.Parse((string)reader[nameof(Job.RegTime)]),
+            AgencyID = (long)reader[nameof(Job.AgencyID)],
+            Code = (string)reader[nameof(Job.Code)],
+            Title = (string)reader[nameof(Job.Title)],
+            State = Enum.Parse<JobState>((string)reader[nameof(Job.State)]),
+            Score = reader[nameof(Job.Score)] as long?,
+            Url = (string)reader[nameof(Job.Url)],
+            Html = (string)reader[nameof(Job.Html)],
+            Link = (string)reader[nameof(Job.Link)],
+            Log = (string)reader[nameof(Job.Log)],
         };
     }
 
@@ -122,7 +126,9 @@ class JobBusiness
     }
 
     private const string Q_INDEX = @"
-SELECT * FROM Job WHERE State = @state
+SELECT Job.*, Agency.Title as AgencyName
+ROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+WHERE State = @state
 ORDER BY Score DESC, RegTime DESC";
 
     private const string Q_FETCH = @"

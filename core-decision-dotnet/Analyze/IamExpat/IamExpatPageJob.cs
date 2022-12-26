@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using Serilog;
 
 class IamExpatPageJob : IamExpatPage
 {
@@ -41,7 +42,7 @@ class IamExpatPageJob : IamExpatPage
             }
         }
 
-        parent.logger.LogDebug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log));
+        Log.Debug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log));
         database.Job.Save(job, JobFilter.Log | JobFilter.Title | JobFilter.Link);
 
         return Command.JustClose();
@@ -68,7 +69,7 @@ class IamExpatPageJob : IamExpatPage
 
         var title_match = reg_job_title.Match(content);
         if (title_match == null)
-            parent.logger.LogWarning("Title not found ({0}, {1})", parent.Name, code);
+            Log.Warning("Title not found ({0}, {1})", parent.Name, code);
         else job.Title = title_match.Groups[1].Value.Trim();
 
         job.Html = content;

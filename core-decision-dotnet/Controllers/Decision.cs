@@ -1,22 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
 [Route("[controller]/[action]")]
 public class DecisionController : Controller
 {
     private readonly Analyzer analyzer;
-    private readonly ILogger logger;
     private readonly Database database;
 
-    public DecisionController(ILogger<DecisionController> logger, Analyzer analyzer, Database database)
+    public DecisionController(Analyzer analyzer, Database database)
     {
         this.analyzer = analyzer;
-        this.logger = logger;
         this.database = database;
     }
 
     public IActionResult Take([FromBody] long? trend, [FromBody] string agency, [FromBody] string url, [FromBody] string content)
     {
-        logger.LogInformation($"trend: {trend}, agency: {agency}, url: {url}, content: {content}");
+        Log.Information($"trend: {trend}, agency: {agency}, url: {url}, content: {content}");
 
         var result = analyzer.Analyze(trend, agency, url, content);
 

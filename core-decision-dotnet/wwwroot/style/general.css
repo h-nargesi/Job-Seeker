@@ -1,0 +1,104 @@
+@import url(http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,700italic,300,400,700);
+
+html,
+body {
+    padding: 0;
+    margin: 0;
+    font-family: 'Open Sans', sans-serif;
+    color: var(--main-color);
+    font-size: 10pt;
+}
+
+a,
+a:visited {
+    color: var(--main-color);
+    text-decoration: none;
+}
+
+.highligh {
+    color: var(--high-color);
+    background-color: var(--high-ground);
+}
+
+main,
+header,
+footer {
+    padding: 15pt 30pt;
+}
+
+.header,
+.header a,
+.header a:visited {
+    color: var(--high-color);
+    text-decoration: none;
+}
+
+main {
+    padding-top: 5pt;
+    padding-bottom: 0;
+}
+
+section {
+    margin-bottom: 5pt;
+}
+
+section h2 {
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 1.25rem;
+    color: var(--title-color);
+    display: block;
+    border-bottom: solid 1px var(--title-color);
+}
+
+section ul {
+    margin-top: 0;
+}
+
+.skill {
+    border-radius: 3pt;
+    display: inline-block;
+    padding: 3pt 10pt 5pt;
+    margin-bottom: 3pt;
+}
+
+.experience h2 {
+    margin-bottom: 0;
+}
+
+article {
+    padding-top: 15pt;
+    padding-bottom: 5pt;
+}
+
+article h3 {
+    margin: 0;
+    margin-bottom: 5pt;
+}
+
+article h4 {
+    margin: 0;
+    margin-bottom: 5pt;
+}
+
+article .exp-date {
+    float: right;
+    text-align: right;
+}
+
+article ul {
+    margin: 0;
+}
+
+.version {
+    opacity: 0.125;
+}
+
+.none {
+    display: none !important;
+}
+
+footer {
+    padding-top: 0;
+    color: var(--back-color);
+}
