@@ -1,6 +1,9 @@
-public enum TrendType
+namespace Photon.JobSeeker
 {
-    None = 0,
-    Searching = 1,
-    Analyzing = 2,
+    public enum TrendType
+    {
+        None = 0,
+        Searching = 1,
+        Analyzing = 2,
+    }
 }
