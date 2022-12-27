@@ -47,13 +47,13 @@ namespace Photon.JobSeeker
 
             if (id == default)
             {
-                database.Insert("Job", model, filter,
+                database.Insert(nameof(Job), model, filter,
                     "ON CONFLICT(AgencyID, Code) DO NOTHING;");
 
                 if (job != null)
                     job.JobID = database.LastInsertRowId();
             }
-            else database.Update("", model, id, filter);
+            else database.Update(nameof(Job), model, id, filter);
         }
 
         private static Job ReadJob(SqliteDataReader reader)

@@ -15,7 +15,7 @@ class TrendCollection {
             }
         }
 
-        return -1;
+        return null;
     }
 
     set(window, tab, trend) {

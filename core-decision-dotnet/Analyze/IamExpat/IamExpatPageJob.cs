@@ -38,7 +38,7 @@ namespace Photon.JobSeeker.IamExpat
                 if (reg_job_adding.IsMatch(content))
                 {
                     commands.Add(Command.Click(@"a[rel=""nofollow""]"));
-                    commands.Add(Command.Wait(2000));
+                    commands.Add(Command.Wait(3000));
                 }
 
                 var apply_match = reg_job_apply.Match(content);

@@ -34,7 +34,7 @@ namespace Photon.JobSeeker
             }
             catch (Exception ex)
             {
-                Log.Error(ex.Message + ex.StackTrace);
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
                 throw;
             }
         }
@@ -50,7 +50,7 @@ namespace Photon.JobSeeker
             }
             catch (Exception ex)
             {
-                Log.Error(ex.Message + ex.StackTrace);
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
                 throw;
             }
         }
@@ -70,23 +70,23 @@ namespace Photon.JobSeeker
             }
             catch (Exception ex)
             {
-                Log.Error(ex.Message + ex.StackTrace);
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
                 throw;
             }
         }
 
         [HttpGet]
-        public IActionResult Index()
+        public IActionResult Orders()
         {
             try
             {
-                var list = Database.Open().Job.Fetch(JobState.attention);
-
-                return View("~/views/index.cshtml", list);
+                using var trends_checkpoint = new TrendsCheckpoint(analyzer);
+                var result = trends_checkpoint.CheckCurrentTrends();
+                return Ok(result);
             }
             catch (Exception ex)
             {
-                Log.Error(ex.Message + ex.StackTrace);
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
                 throw;
             }
         }

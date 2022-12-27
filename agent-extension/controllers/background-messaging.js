@@ -45,4 +45,12 @@ class BackgroundMessaging {
     static async Scopes(reset) {
         return BackgroundMessaging.Message({ title: "scopes", params: { reset } });
     }
+
+    static async Trends() {
+        return BackgroundMessaging.Message({ title: "trends" });
+    }
+
+    static async Orders() {
+        return BackgroundMessaging.Message({ title: "orders" });
+    }
 }

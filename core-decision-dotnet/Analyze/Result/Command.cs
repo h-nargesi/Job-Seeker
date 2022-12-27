@@ -4,12 +4,14 @@
     {
         public Command(PageAction action, string? @object, Dictionary<string, object>? @params)
         {
-            Action = action.ToString();
+            page_action = action;
             Object = @object;
             Params = @params;
         }
 
-        public string Action { get; }
+        internal readonly PageAction page_action;
+
+        public string Action => page_action.ToString();
 
         public string? Object { get; }
 

@@ -11,6 +11,7 @@ namespace Photon.JobSeeker
         private static string? connection_string;
         private static readonly Regex reg_parameter = new(@"\$[\w_]+");
 
+        private TrendBusiness? trend_business;
         private JobBusiness? job_business;
         private AgencyBusiness? agency_business;
         private JobOptionBusiness? job_option_business;
@@ -96,10 +97,38 @@ namespace Photon.JobSeeker
             return executer.ExecuteReader();
         }
 
+        public List<Dictionary<string, object>> ReadAll(string query)
+        {
+            using var reader = Read(query);
+            var list = new List<Dictionary<string, object>>();
+            var columns = GetColumns(reader);
+
+            while (reader.Read())
+            {
+                var record = new Dictionary<string, object>();
+                foreach (var column in columns)
+                    record[column] = reader[column];
+                list.Add(record);
+            }
+
+            return list;
+        }
+
         public void Dispose()
         {
             connection.Dispose();
             executer.Dispose();
+        }
+
+        internal TrendBusiness Trend
+        {
+            get
+            {
+                if (trend_business == null)
+                    trend_business = new TrendBusiness(this);
+
+                return trend_business;
+            }
         }
 
         internal JobBusiness Job
@@ -143,7 +172,7 @@ namespace Photon.JobSeeker
 
             foreach (var property in job.GetType().GetProperties())
             {
-                if (!CheckPropertyInFilter(filter, name)) continue;
+                if (!IsPropertyAllowed(filter, property.Name)) continue;
 
                 columns.Add(property.Name);
                 parameters.Add("$" + property.Name);
@@ -165,7 +194,7 @@ namespace Photon.JobSeeker
 
             foreach (var property in job.GetType().GetProperties())
             {
-                if (!CheckPropertyInFilter(filter, name)) continue;
+                if (!IsPropertyAllowed(filter, name)) continue;
 
                 parameters.Add(property.Name + " = $" + property.Name);
 
@@ -181,7 +210,7 @@ namespace Photon.JobSeeker
             Execute(query, values.ToArray());
         }
 
-        private bool CheckPropertyInFilter(Enum filter, string name)
+        private bool IsPropertyAllowed(Enum filter, string name)
         {
             if (!Enum.TryParse(filter.GetType(), name, true, out var flag)) return false;
             if (flag == null) return false;
@@ -192,14 +221,10 @@ namespace Photon.JobSeeker
 
         private object ValueFromProperty(PropertyInfo property, object obj)
         {
-            object? value;
+            if (property.PropertyType.IsEnum)
+                return property.GetValue(obj)?.ToString() ?? (object)typeof(string);
 
-            if (property.PropertyType == typeof(JobState))
-                value = property.GetValue(obj)?.ToString();
-
-            else value = property.GetValue(obj);
-
-            return value ?? property.MemberType;
+            else return property.GetValue(obj) ?? property.PropertyType;
         }
 
         private void AddParameters(string query, object[] parameters)
@@ -207,6 +232,14 @@ namespace Photon.JobSeeker
             var index = 0;
             foreach (Match param in reg_parameter.Matches(query))
                 Parameter(param.Value, parameters[index++]);
+        }
+
+        private string[] GetColumns(SqliteDataReader reader)
+        {
+            var result = new string[reader.FieldCount];
+            for (var i = 0; i < result.Length; i++)
+                result[i] = reader.GetName(i);
+            return result;
         }
 
         private const string Q_INSERT = @"

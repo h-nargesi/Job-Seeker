@@ -12,6 +12,8 @@ namespace Photon.JobSeeker
 
         public string? Domain { get; private set; }
 
+        public string? Link { get; private set; }
+
         public IReadOnlyList<Page> Pages => pages;
 
         public Result AnalyzeContent(string url, string content)
@@ -43,6 +45,7 @@ namespace Photon.JobSeeker
 
             ID = agency_info.id;
             Domain = agency_info.domain;
+            Link = agency_info.link;
 
             LoadPages();
         }

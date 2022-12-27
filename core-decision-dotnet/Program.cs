@@ -14,7 +14,7 @@ Log.Information("Starting up ...");
 Database.SetConfiguration(path: builder.Configuration["Database:Path"].ToString());
 
 builder.Services.AddRazorPages();
-builder.Services.AddSingleton<Trend>();
+builder.Services.AddScoped<TrendsCheckpoint>();
 builder.Services.AddSingleton<Analyzer>();
 
 var app = builder.Build();

@@ -5,10 +5,7 @@ namespace Photon.JobSeeker
     public class Analyzer
     {
         private readonly object lock_loader = new();
-        private readonly Trend trend_handler;
         private readonly Dictionary<string, Agency> agencies = new();
-
-        public Analyzer(Trend trend) => trend_handler = trend;
 
         public IReadOnlyDictionary<string, Agency> Agencies
         {
@@ -30,7 +27,8 @@ namespace Photon.JobSeeker
         {
             var result = AnalyzeContent(context);
             result.Trend = context.Trend;
-            return trend_handler.CheckTrend(result);
+            using var trends_checkpoint = new TrendsCheckpoint(this, result);
+            return trends_checkpoint.CheckCurrentTrends();
         }
 
         public void ClearAgencies()

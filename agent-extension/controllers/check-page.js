@@ -14,6 +14,11 @@ function OnPageLoad() {
             }
         }
     }, 5000);
+
+    if (job_seeker_trends != null) {
+        setInterval(LoadTrands, 5000);
+        setInterval(CheckNewTrends, 10000);
+    }
 }
 
 async function SendingPageInfo(scope) {
@@ -26,8 +31,43 @@ async function SendingPageInfo(scope) {
     });
 
     console.log("SendingPageInfo", "Command", commands);
-    ActionHandler.Handle(commands);
+    ActionHandler.Handle(commands, false);
 }
+
+async function LoadTrands() {
+    let html = "";
+
+    const trends = await BackgroundMessaging.Trends();
+    for (let t in trends) {
+        let trend = trends[t];
+
+        html += `
+<div>
+        <a href="${trend.link}" target="_blank">${trend.agency}</a>
+        <span>${trend.type}</span>
+        <span>${trend.lastActivity}</span>
+</div>`;
+    }
+
+    job_seeker_trends.innerHTML = html;
+}
+
+async function CheckNewTrends() {
+    const result = await BackgroundMessaging.Orders();
+    console.log("Orders", result.commands);
+    ActionHandler.Handle(result.commands, true);
+}
+
+function append(element, html) {
+    var temp = document.createElement('div');
+    temp.innerHTML = html;
+
+    while (temp.firstChild) {
+        element.appendChild(temp.firstChild);
+    }
+}
+
+var job_seeker_trends = document.getElementById('job-seeker-trend-list');
 
 if (window.addEventListener) window.addEventListener("load", OnPageLoad, false);
 // else if (window.attachEvent) window.attachEvent("onload", OnPageLoad);

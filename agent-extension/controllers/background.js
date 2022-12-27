@@ -17,6 +17,12 @@ chrome.runtime.onMessage.addListener(
             case "scopes":
                 Respond(sender.tab, request.id, messaging.Scopes(request.params.reset));
                 break;
+            case "trends":
+                Respond(sender.tab, request.id, messaging.Trends());
+                break;
+            case "orders":
+                Respond(sender.tab, request.id, messaging.Orders());
+                break;
         }
     }
 );

@@ -19,9 +19,6 @@ class CoreMessaging {
     }
 
     async Send(params) {
-
-        console.log(params);
-
         const server_url = await this.CheckServerUrl() + "decision/take";
 
         const data = {
@@ -34,7 +31,6 @@ class CoreMessaging {
         response = await response.json();
         console.log("CoreMessaging", "Send", response);
         return response;
-
     }
 
     async Scopes(reset) {
@@ -58,5 +54,33 @@ class CoreMessaging {
         }
 
         return CoreMessaging.SCOPES;
+    }
+
+    async Trends() {
+        const server_url = await this.CheckServerUrl() + "report/trends";
+
+        const data = {
+            method: 'GET',
+            headers: CoreMessaging.HEADERS
+        };
+
+        let response = await fetch(server_url, data);
+        response = await response.json();
+        console.log("CoreMessaging", "Trends", response);
+        return response;
+    }
+
+    async Orders() {
+        const server_url = await this.CheckServerUrl() + "decision/orders";
+
+        const data = {
+            method: 'GET',
+            headers: CoreMessaging.HEADERS
+        };
+
+        let response = await fetch(server_url, data);
+        response = await response.json();
+        console.log("CoreMessaging", "Orders", response);
+        return response;
     }
 }

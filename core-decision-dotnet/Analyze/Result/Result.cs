@@ -1,6 +1,6 @@
 namespace Photon.JobSeeker
 {
-    public struct Result
+    public class Result
     {
         public long? Trend { get; set; }
 
@@ -8,6 +8,6 @@ namespace Photon.JobSeeker
 
         public TrendType Type { get; set; }
 
-        public Command[] Commands { get; set; }
+        public Command[] Commands { get; set; } = Command.JustClose();
     }
 }
