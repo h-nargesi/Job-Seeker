@@ -49,9 +49,9 @@ namespace Photon.JobSeeker
             if (context.Url == null || context.Content == null)
                 throw new BadJobRequest($"{context.Agency} had empty url/content");
 
-            var agency_handler = Agencies[context.Agency];
-            var result = agency_handler.AnalyzeContent(context.Url, context.Content);
-            result.AgencyID = agency_handler.ID;
+            var agency = Agencies[context.Agency];
+            var result = agency.AnalyzeContent(context.Url, context.Content);
+            result.AgencyID = agency.ID;
             return result;
         }
 
