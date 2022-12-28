@@ -29,8 +29,8 @@ namespace Photon.JobSeeker
                     Agency = reader["Agency"],
                     Link = reader["Link"],
                     LastActivity = reader["LastActivity"] ,
-                    Type = state.GetTrendType(),
-                    State = state,
+                    Type = state.GetTrendType().ToString(),
+                    State = state.ToString(),
                 });
             }
 
