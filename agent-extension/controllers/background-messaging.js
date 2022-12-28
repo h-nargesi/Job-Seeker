@@ -33,8 +33,12 @@ class BackgroundMessaging {
         BackgroundMessaging.RunListener();
         return new Promise(function (resolve) {
             message.id = ++BackgroundMessaging.MESSAGE_ID;
-            BackgroundMessaging.CURRENT_REQUESTS[message.id] = resolve;
-            chrome.runtime.sendMessage(message);
+            try {
+                BackgroundMessaging.CURRENT_REQUESTS[message.id] = resolve;
+                chrome.runtime.sendMessage(message);
+            } catch {
+                delete BackgroundMessaging.CURRENT_REQUESTS[message.id];
+            }
         });
     }
 
