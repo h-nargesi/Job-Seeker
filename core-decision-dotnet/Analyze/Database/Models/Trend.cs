@@ -8,6 +8,8 @@ namespace Photon.JobSeeker
 
         public DateTime LastActivity { get; set; } = DateTime.Now;
 
-        public TrendType Type { get; set; }
+        public TrendState State { get; set; }
+
+        public TrendType Type => State.GetTrendType();
     }
 }

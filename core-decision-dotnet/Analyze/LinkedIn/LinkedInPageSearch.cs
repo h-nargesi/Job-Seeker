@@ -6,7 +6,7 @@ namespace Photon.JobSeeker.LinkedIn
     {
         public override int Order => 20;
 
-        public override TrendType TrendType => TrendType.Searching;
+        public override TrendState TrendState => TrendState.Seeking;
 
         public LinkedInPageSearch(LinkedIn parent) : base(parent) { }
 

@@ -11,7 +11,7 @@ namespace Photon.JobSeeker
 
         public abstract int Order { get; }
 
-        public abstract TrendType TrendType { get; }
+        public abstract TrendState TrendState { get; }
 
         public abstract Command[]? IssueCommand(string url, string content);
 

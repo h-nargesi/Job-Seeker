@@ -21,15 +21,18 @@ namespace Photon.JobSeeker
             using var reader = database.Read(Q_REPORT);
             var list = new List<object>();
 
-            while (reader.Read())
+            while (reader.Read()){
+                var state = Enum.Parse<TrendState>((string)reader["State"]);
                 list.Add(new
                 {
                     TrendID = reader["TrendID"],
                     Agency = reader["Agency"],
                     Link = reader["Link"],
                     LastActivity = reader["LastActivity"] ,
-                    Type = reader["Type"],
+                    Type = state.GetTrendType(),
+                    State = state,
                 });
+            }
 
             return list;
         }
@@ -81,7 +84,7 @@ namespace Photon.JobSeeker
                 TrendID = (long)reader[nameof(Trend.TrendID)],
                 AgencyID = (long)reader[nameof(Trend.AgencyID)],
                 LastActivity = DateTime.Parse((string)reader[nameof(Trend.LastActivity)]),
-                Type = Enum.Parse<TrendType>((string)reader[nameof(Trend.Type)]),
+                State = Enum.Parse<TrendState>((string)reader[nameof(Trend.State)]),
             };
         }
 
@@ -89,7 +92,8 @@ namespace Photon.JobSeeker
 SELECT * FROM Trend";
 
         private const string Q_REPORT = @"
-SELECT t.TrendID, a.Title AS Agency, a.Link, STRFTIME('%Y-%m-%d %H:%M:%S', t.LastActivity) AS LastActivity, t.Type
+SELECT t.TrendID, a.Title AS Agency, a.Link, t.State
+    , STRFTIME('%Y-%m-%d %H:%M:%S', t.LastActivity) AS LastActivity
 FROM Trend t JOIN Agency a ON t.AgencyID = a.AgencyID";
 
         private const string Q_GET = Q_INDEX + @"

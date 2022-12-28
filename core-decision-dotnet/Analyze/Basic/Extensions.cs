@@ -13,5 +13,21 @@
             list.Insert(1, @new);
             return list.ToArray();
         }
+
+        public static TrendType GetTrendType(this TrendState state)
+        {
+            if (state >= TrendState.Analyzing) return TrendType.Job;
+            else return TrendType.Search;
+        }
+
+        public static TrendState GetTrendState(this TrendType type)
+        {
+            switch (type)
+            {
+                case TrendType.Job: return TrendState.Analyzing;
+                case TrendType.Search:
+                default: return TrendState.Auth;
+            }
+        }
     }
 }

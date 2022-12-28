@@ -28,12 +28,12 @@ namespace Photon.JobSeeker
                 {
                     Log.Information("page checked: {0}", page.GetType().Name);
                     Log.Debug("page commands: {0}", commands.StringJoin());
-                    return new Result { Type = page.TrendType, Commands = commands };
+                    return new Result { State = page.TrendState, Commands = commands };
                 }
             }
 
             Log.Debug("Page not found: {0}", Name);
-            return new Result { Type = TrendType.None, Commands = Command.JustClose() };
+            return new Result { Commands = Command.JustClose() };
         }
 
         public void LoadFromDatabase(Database database)

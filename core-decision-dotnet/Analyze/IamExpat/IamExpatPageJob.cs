@@ -7,7 +7,7 @@ namespace Photon.JobSeeker.IamExpat
     {
         public override int Order => 10;
 
-        public override TrendType TrendType => TrendType.Analyzing;
+        public override TrendState TrendState => TrendState.Analyzing;
 
         public IamExpatPageJob(IamExpat parent) : base(parent) { }
 

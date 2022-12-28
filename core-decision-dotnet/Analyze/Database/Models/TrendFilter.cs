@@ -4,7 +4,7 @@ namespace Photon.JobSeeker
     {
         AgencyID = 1,
         LastActivity = 2,
-        Type = 4,
+        State = 4,
         All = 7,
     }
 }

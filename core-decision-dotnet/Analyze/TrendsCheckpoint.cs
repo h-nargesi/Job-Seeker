@@ -44,7 +44,7 @@ namespace Photon.JobSeeker
                 {
                     trend.LastActivity = DateTime.Now;
                     trend.AgencyID = result.Agency.Value;
-                    trend.Type = result.Type;
+                    trend.State = result.State;
                     database.Trend.Save(trend);
                     return;
                 }
@@ -58,7 +58,7 @@ namespace Photon.JobSeeker
             var new_trends = new List<(Agency agency, TrendType type)>();
 
             foreach (var agency_handler in analyzer.Agencies)
-                for (var type = TrendType.Searching; type <= TrendType.Analyzing; type++)
+                for (var type = TrendType.Search; type <= TrendType.Job; type++)
                 {
                     all_current_trends.TryGetValue((agency_handler.Value.ID, type), out var trend);
                     var matched_analyzed_result = agency_handler.Value.ID == result.Agency && type == result.Type;
@@ -66,29 +66,34 @@ namespace Photon.JobSeeker
                     if (trend == null)
                     {
                         if (matched_analyzed_result)
-                            result.Trend = GenerateANewTrend(result.Agency ?? 0, result.Type).TrendID;
+                            result.Trend = GenerateANewTrend(result.Agency ?? 0, result.State).TrendID;
 
                         else if (agency_handler.Value.Link != null)
                         {
-                            GenerateANewTrend(agency_handler.Value.ID, type);
+                            GenerateANewTrend(agency_handler.Value.ID, type.GetTrendState());
                             new_trends.Add((agency_handler.Value, type));
+                            continue;
                         }
                     }
-                    else if (type == TrendType.Analyzing && matched_analyzed_result)
+                    else if (type == TrendType.Job && matched_analyzed_result)
                     {
                         new_trends.Add((agency_handler.Value, type));
+                        continue;
                     }
+
+                    // When whe don't have type:'Searching', we don't continue in type:'Analyzing'
+                    break;
                 }
 
             return new_trends;
         }
 
-        private Trend GenerateANewTrend(long agency_id, TrendType type)
+        private Trend GenerateANewTrend(long agency_id, TrendState state)
         {
             var trend = new Trend
             {
                 AgencyID = agency_id,
-                Type = type
+                State = state
             };
             database.Trend.Save(trend);
             return trend;
@@ -101,11 +106,11 @@ namespace Photon.JobSeeker
             foreach (var (agency, type) in new_trends)
                 switch (type)
                 {
-                    case TrendType.Searching:
+                    case TrendType.Search:
                         commands.Insert(0, Command.Open(agency.Link));
                         break;
 
-                    case TrendType.Analyzing:
+                    case TrendType.Job:
                         var url = database.Job.GetFirstJob(agency.ID);
                         if (url == null) break;
                         else if (result.Agency == agency.ID && result.Type == type && result.Trend != null)

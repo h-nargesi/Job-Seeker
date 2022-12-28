@@ -4,7 +4,7 @@
     {
         public override int Order => 1;
 
-        public override TrendType TrendType => TrendType.Searching;
+        public override TrendState TrendState => TrendState.Login;
 
         public LinkedInPageLogin(LinkedIn parent) : base(parent) { }
 

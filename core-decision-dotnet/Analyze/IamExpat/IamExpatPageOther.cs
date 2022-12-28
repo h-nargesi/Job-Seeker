@@ -4,7 +4,7 @@
     {
         public override int Order => 100;
 
-        public override TrendType TrendType => TrendType.Searching;
+        public override TrendState TrendState => TrendState.Other;
 
         public IamExpatPageOther(IamExpat parent) : base(parent) { }
 

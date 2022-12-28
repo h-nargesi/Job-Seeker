@@ -6,8 +6,10 @@ namespace Photon.JobSeeker
 
         public long? Agency { get; set; }
 
-        public TrendType Type { get; set; }
+        public TrendState State { get; set; }
 
         public Command[] Commands { get; set; } = Command.JustClose();
+
+        public TrendType Type => State.GetTrendType();
     }
 }

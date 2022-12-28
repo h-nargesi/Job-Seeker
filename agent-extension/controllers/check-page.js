@@ -33,6 +33,7 @@ async function SendingPageInfo(scope) {
         url: window.location.href,
         content: document.body.innerHTML,
     });
+    console.log("SendingPageInfo", commands);
 
     console.log("SendingPageInfo", "Command", commands);
     ActionHandler.Handle(commands, false);
@@ -47,9 +48,10 @@ async function LoadTrands() {
 
         html += `
 <tr>
-        <td scope="row">${t}</td>
+        <td scope="row">${(t + 1)}</td>
         <td><a href="${trend.link}" target="_blank">${trend.agency}</a></td>
         <td><span>${trend.type}</span></td>
+        <td><span>${trend.state}</span></td>
         <td><span>${trend.lastActivity}</span></td>
 </tr>`;
     }
