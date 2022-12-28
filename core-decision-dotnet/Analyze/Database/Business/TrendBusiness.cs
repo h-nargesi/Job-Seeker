@@ -89,7 +89,7 @@ namespace Photon.JobSeeker
 SELECT * FROM Trend";
 
         private const string Q_REPORT = @"
-SELECT t.TrendID, a.Title AS Agency, a.Link, STRFTIME('%Y-%m-%d %H:%M:%s', t.LastActivity) AS LastActivity, t.Type
+SELECT t.TrendID, a.Title AS Agency, a.Link, STRFTIME('%Y-%m-%d %H:%M:%S', t.LastActivity) AS LastActivity, t.Type
 FROM Trend t JOIN Agency a ON t.AgencyID = a.AgencyID";
 
         private const string Q_GET = Q_INDEX + @"

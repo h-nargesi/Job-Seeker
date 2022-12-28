@@ -38,7 +38,7 @@ namespace Photon.JobSeeker
 
         private const string Q_FETCH_ALL = "SELECT AgencyID, Title FROM Agency WHERE Active = 1";
 
-        private const string Q_LOAD_BY_NAME = "SELECT AgencyID, Domain, Link FROM Agency WHERE Title = $title";
+        private const string Q_LOAD_BY_NAME = "SELECT AgencyID, Domain, Link FROM Agency WHERE Title = $title AND Active = 1";
 
         private const string Q_GET_USER_PASS = "SELECT UserName, Password FROM Agency WHERE Title = $title";
     }
