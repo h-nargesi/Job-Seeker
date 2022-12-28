@@ -12,6 +12,7 @@
         integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
     <link rel="stylesheet" href="/style/color.css" />
     <link rel="stylesheet" href="/style/general.css" />
+    <link rel="stylesheet" href="/style/jobs.css" />
 </head>
 
 <body>
@@ -21,23 +22,44 @@
     <main class="contaner">
         <div class="row">
             <section class="col-md-8 jobs-list">
-                @foreach (var job in Model)
-                {
-                    <div id="Job_@job.JobID">
-                        <a href="@job.Link">
-                            <span>@job.AgencyName</span>
-                            <span>@job.Title</span>
-                            <span><strong>@job.Score</strong></span>
-                            <span>@job.RegTime</span>
-                        </a>
-                        <a href="@job.Url">Source</a>
-                        <a href="javascript:ShowLog(@job.JobID)">Log</a>
-                        <p>@job.Log</p>
-                    </div>
-                }
+                Job List
+                <table class="table table-hover table-sm">
+                    <thead class="thead-dark">
+                        <tr>
+                            <td scope="col">#</td>
+                            <td scope="col">Agency</td>
+                            <td scope="col">Job</td>
+                            <td scope="col">Score</td>
+                            <td scope="col">Source</td>
+                            <td scope="col">Register Time</td>
+                            <td scope="col">Log</td>
+                        </tr>
+                    </thead>
+                    <tbody id="job-list">
+                    @foreach (var job in Model)
+                    {
+                        <tr id="Job_@job.JobID">
+                            <td>@job.JobID</td>
+                            <td><span>@job.AgencyName</span></td>
+                            <td>
+                                <a href="@job.Link">
+                                    @job.Title
+                                </a>
+                            </td>
+                            <td><strong>@job.Score</strong></td>
+                            <td><a href="@job.Url">Link</a></td>
+                            <td><span>@job.RegTime</span></td>
+                            <td>
+                                <a href="javascript:ShowLog(@job.JobID)">Log</a>
+                                <p>@job.Log</p>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
             </section>
             <article class="col-md-4">
-                Trends List
+                Trend List
                 <table class="table table-hover table-sm">
                     <thead class="thead-dark">
                         <tr>

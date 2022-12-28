@@ -1,5 +1,3 @@
-.jobs-list {}
-
-.jobs-list>div>p {
+.jobs-list td p {
     display: none;
 }
