@@ -3,9 +3,9 @@ console.log("action-handler");
 class ActionHandler {
 
     static async Handle(commands, dontclose) {
-        for (let c in commands) {
-            await ActionHandler.Execute(commands[c], dontclose);
-        }
+        for (let c in commands)
+            if (commands[c])
+                await ActionHandler.Execute(commands[c], dontclose);
     }
 
     static async Execute(command, dontclose) {
