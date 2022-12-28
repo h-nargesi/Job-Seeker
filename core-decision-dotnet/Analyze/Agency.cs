@@ -10,9 +10,9 @@ namespace Photon.JobSeeker
 
         public long ID { get; private set; }
 
-        public string? Domain { get; private set; }
+        public string Domain { get; private set; } = "";
 
-        public string? Link { get; private set; }
+        public string Link { get; private set; } = "";
 
         public IReadOnlyList<Page> Pages => pages;
 

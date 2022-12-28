@@ -15,14 +15,16 @@ namespace Photon.JobSeeker
 
         public Result CheckCurrentTrends()
         {
-            var analyzed_trend = LoadAndUpdateCurrentTrend();
+            LoadAndUpdateCurrentTrend();
 
             database.Trend.DeleteExpired(2);
 
             var all_current_trends = database.Trend.FetchAll()
                                                    .ToDictionary(k => (k.AgencyID, k.Type));
 
-            CheckingSleptTrends(all_current_trends, analyzed_trend);
+            var new_trends = CheckingSleptTrends(all_current_trends);
+
+            InjectOpenCommandForNewTrends(new_trends);
 
             return result;
         }
@@ -30,9 +32,10 @@ namespace Photon.JobSeeker
         public void Dispose()
         {
             database.Dispose();
+            GC.SuppressFinalize(this);
         }
 
-        private Trend? LoadAndUpdateCurrentTrend()
+        private void LoadAndUpdateCurrentTrend()
         {
             if (result.Agency.HasValue && result.Trend.HasValue)
             {
@@ -43,17 +46,16 @@ namespace Photon.JobSeeker
                     trend.AgencyID = result.Agency.Value;
                     trend.Type = result.Type;
                     database.Trend.Save(trend);
-                    return trend;
+                    return;
                 }
             }
 
             result.Trend = null;
-            return null;
         }
 
-        private void CheckingSleptTrends(Dictionary<(long, TrendType), Trend> all_current_trends, Trend? analyzed_trend)
+        private List<(Agency agency, TrendType type)> CheckingSleptTrends(Dictionary<(long, TrendType), Trend> all_current_trends)
         {
-            var commands = new List<Command>(result.Commands);
+            var new_trends = new List<(Agency agency, TrendType type)>();
 
             foreach (var agency_handler in analyzer.Agencies)
                 for (var type = TrendType.Searching; type <= TrendType.Analyzing; type++)
@@ -68,16 +70,17 @@ namespace Photon.JobSeeker
 
                         else if (agency_handler.Value.Link != null)
                         {
-                            var new_trend = GenerateANewTrend(agency_handler.Value.ID, type);
-                            commands.Insert(0, Command.Open(agency_handler.Value.Link));
+                            GenerateANewTrend(agency_handler.Value.ID, type);
+                            new_trends.Add((agency_handler.Value, type));
                         }
+                    }
+                    else if (type == TrendType.Analyzing && matched_analyzed_result)
+                    {
+                        new_trends.Add((agency_handler.Value, type));
                     }
                 }
 
-            if (result.Trend == null && !commands.Any(c => c.page_action == PageAction.close))
-                commands.Add(Command.Close());
-
-            result.Commands = commands.ToArray();
+            return new_trends;
         }
 
         private Trend GenerateANewTrend(long agency_id, TrendType type)
@@ -89,6 +92,39 @@ namespace Photon.JobSeeker
             };
             database.Trend.Save(trend);
             return trend;
+        }
+
+        private void InjectOpenCommandForNewTrends(IEnumerable<(Agency agency, TrendType type)> new_trends)
+        {
+            var commands = new List<Command>(result.Commands);
+
+            foreach (var (agency, type) in new_trends)
+                switch (type)
+                {
+                    case TrendType.Searching:
+                        commands.Insert(0, Command.Open(agency.Link));
+                        break;
+
+                    case TrendType.Analyzing:
+                        var url = database.Job.GetFirstJob(agency.ID);
+                        if (url == null) break;
+                        else if (result.Agency == agency.ID && result.Type == type && result.Trend != null)
+                        {
+                            if (url != null)
+                            {
+                                commands.Insert(0, Command.Go(url));
+                                commands = commands.Where(c => c.page_action == PageAction.close)
+                                                   .ToList();
+                            }
+                        }
+                        else commands.Insert(0, Command.Open(url));
+                        break;
+                }
+
+            if (result.Trend == null && !commands.Any(c => c.page_action == PageAction.close))
+                commands.Add(Command.Close());
+
+            result.Commands = commands.ToArray();
         }
     }
 }

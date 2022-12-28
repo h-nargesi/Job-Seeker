@@ -22,13 +22,22 @@ namespace Photon.JobSeeker
             return list;
         }
 
-        public Job? Fetch(long agency, string code)
+        public Job? Fetch(long agency_id, string code)
         {
-            using var reader = database.Read(Q_FETCH, agency, code);
+            using var reader = database.Read(Q_FETCH, agency_id, code);
 
             if (!reader.Read()) return default;
 
             return ReadJob(reader);
+        }
+
+        public string? GetFirstJob(long agency_id)
+        {
+            using var reader = database.Read(Q_FETCH_FIRST, agency_id);
+
+            if (!reader.Read()) return default;
+
+            return (string)reader["Url"];
         }
 
         public void Save(object model, JobFilter filter = JobFilter.All)
@@ -82,6 +91,9 @@ ORDER BY Score DESC, RegTime DESC";
 
         private const string Q_FETCH = @"
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
+
+        private const string Q_FETCH_FIRST = @"
+SELECT Url FROM Job WHERE AgencyID = $agency AND State = 'saved' ORDER BY JobID";
 
     }
 }
