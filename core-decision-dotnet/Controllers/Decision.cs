@@ -44,6 +44,8 @@ namespace Photon.JobSeeker
         {
             try
             {
+                using var database = Database.Open();
+                database.Trend.DeleteExpired(0);
                 analyzer.ClearAgencies();
 
                 return Ok();

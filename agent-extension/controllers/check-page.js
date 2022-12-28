@@ -16,12 +16,18 @@ function OnPageLoad() {
     }, 5000);
 
     if (job_seeker_trends != null) {
-        CheckNewOrders();
-        LoadTrands();
+        console.log('job_seeker_trends');
+        document.getElementById('reload-trends').addEventListener("click", function() {
+            BackgroundMessaging.Reload();
+            job_seeker_trends.innerHTML = "";
+        }, false);
 
-        var millisecnod = 10 * 1000;
-        setInterval(LoadTrands, millisecnod);
-        setInterval(CheckNewOrders, millisecnod * 2);
+        LoadTrands();
+        CheckNewOrders();
+
+        var millisecnod = 1000;
+        setInterval(LoadTrands, millisecnod * 10);
+        setInterval(CheckNewOrders, millisecnod * 30);
     }
 }
 
@@ -48,7 +54,7 @@ async function LoadTrands() {
 
         html += `
 <tr>
-        <td scope="row">${(t + 1)}</td>
+        <td scope="row">${Number(t) + 1}</td>
         <td><a href="${trend.link}" target="_blank">${trend.agency}</a></td>
         <td><span>${trend.type}</span></td>
         <td><span>${trend.state}</span></td>

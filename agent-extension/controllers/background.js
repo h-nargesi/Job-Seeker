@@ -23,6 +23,9 @@ chrome.runtime.onMessage.addListener(
             case "orders":
                 Respond(sender.tab, request.id, messaging.Orders());
                 break;
+            case "reload":
+                Respond(sender.tab, request.id, messaging.Reload());
+                break;
         }
     }
 );

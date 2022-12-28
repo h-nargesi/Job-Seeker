@@ -83,4 +83,16 @@ class CoreMessaging {
         console.log("CoreMessaging", "Orders", response);
         return response;
     }
+
+    async Reload() {
+        const server_url = await this.CheckServerUrl() + "decision/reload";
+
+        const data = {
+            method: 'POST',
+            headers: CoreMessaging.HEADERS
+        };
+
+        await fetch(server_url, data);
+        return {};
+    }
 }
