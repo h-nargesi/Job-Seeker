@@ -23,7 +23,7 @@ namespace Photon.JobSeeker
 
                 return Ok(new
                 {
-                    result.Trend,
+                    result.TrendID,
                     result.Commands,
                 });
             }

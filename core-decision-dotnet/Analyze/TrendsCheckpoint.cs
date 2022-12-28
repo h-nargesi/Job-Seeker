@@ -37,20 +37,20 @@ namespace Photon.JobSeeker
 
         private void LoadAndUpdateCurrentTrend()
         {
-            if (result.Agency.HasValue && result.Trend.HasValue)
+            if (result.AgencyID.HasValue && result.TrendID.HasValue)
             {
-                var trend = database.Trend.GetByID(result.Trend.Value);
+                var trend = database.Trend.GetByID(result.TrendID.Value);
                 if (trend != null)
                 {
                     trend.LastActivity = DateTime.Now;
-                    trend.AgencyID = result.Agency.Value;
+                    trend.AgencyID = result.AgencyID.Value;
                     trend.State = result.State;
                     database.Trend.Save(trend);
                     return;
                 }
             }
 
-            result.Trend = null;
+            result.TrendID = null;
         }
 
         private List<(Agency agency, TrendType type)> CheckingSleptTrends(Dictionary<(long, TrendType), Trend> all_current_trends)
@@ -61,13 +61,13 @@ namespace Photon.JobSeeker
                 for (var type = TrendType.Search; type <= TrendType.Job; type++)
                 {
                     all_current_trends.TryGetValue((agency_handler.Value.ID, type), out var trend);
-                    var matched_analyzed_result = agency_handler.Value.ID == result.Agency && type == result.Type;
+                    var matched_analyzed_result = agency_handler.Value.ID == result.AgencyID && type == result.Type;
 
                     if (trend == null)
                     {
                         if (matched_analyzed_result)
                         {
-                            result.Trend = GenerateANewTrend(result.Agency ?? 0, result.State).TrendID;
+                            result.TrendID = GenerateANewTrend(result.AgencyID ?? 0, result.State).TrendID;
                             if (result.State > TrendState.Login)
                                 continue;
                         }
@@ -116,7 +116,7 @@ namespace Photon.JobSeeker
                     case TrendType.Job:
                         var url = database.Job.GetFirstJob(agency.ID);
                         if (url == null) break;
-                        else if (result.Agency == agency.ID && result.Type == type && result.Trend != null)
+                        else if (result.AgencyID == agency.ID && result.Type == type && result.TrendID != null)
                         {
                             commands.Insert(0, Command.Go(url));
                             commands = commands.Where(c => c.page_action == PageAction.close)
@@ -126,7 +126,7 @@ namespace Photon.JobSeeker
                         break;
                 }
 
-            if (result.Trend == null && !commands.Any(c => c.page_action == PageAction.close))
+            if (result.TrendID == null && !commands.Any(c => c.page_action == PageAction.close))
                 commands.Add(Command.Close());
 
             result.Commands = commands.ToArray();

@@ -26,7 +26,7 @@ namespace Photon.JobSeeker
         public Result Analyze(PageContext context)
         {
             var result = AnalyzeContent(context);
-            result.Trend = context.Trend;
+            result.TrendID = context.Trend;
             using var trends_checkpoint = new TrendsCheckpoint(this, result);
             return trends_checkpoint.CheckCurrentTrends();
         }
@@ -51,7 +51,7 @@ namespace Photon.JobSeeker
 
             var agency_handler = Agencies[context.Agency];
             var result = agency_handler.AnalyzeContent(context.Url, context.Content);
-            result.Agency = agency_handler.ID;
+            result.AgencyID = agency_handler.ID;
             return result;
         }
 

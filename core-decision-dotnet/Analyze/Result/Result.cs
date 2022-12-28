@@ -2,9 +2,9 @@ namespace Photon.JobSeeker
 {
     public class Result
     {
-        public long? Trend { get; set; }
+        public long? TrendID { get; set; }
 
-        public long? Agency { get; set; }
+        public long? AgencyID { get; set; }
 
         public TrendState State { get; set; }
 
