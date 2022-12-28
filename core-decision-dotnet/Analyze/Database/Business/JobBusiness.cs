@@ -73,13 +73,13 @@ namespace Photon.JobSeeker
                 RegTime = DateTime.Parse((string)reader[nameof(Job.RegTime)]),
                 AgencyID = (long)reader[nameof(Job.AgencyID)],
                 Code = (string)reader[nameof(Job.Code)],
-                Title = (string)reader[nameof(Job.Title)],
+                Title = reader[nameof(Job.Title)] as string,
                 State = Enum.Parse<JobState>((string)reader[nameof(Job.State)]),
                 Score = reader[nameof(Job.Score)] as long?,
                 Url = (string)reader[nameof(Job.Url)],
-                Html = (string)reader[nameof(Job.Html)],
-                Link = (string)reader[nameof(Job.Link)],
-                Log = (string)reader[nameof(Job.Log)],
+                Html = reader[nameof(Job.Html)] as string,
+                Link = reader[nameof(Job.Link)] as string,
+                Log = reader[nameof(Job.Log)] as string,
             };
         }
 

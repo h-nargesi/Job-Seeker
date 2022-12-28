@@ -1,15 +1,15 @@
 ﻿using Photon.JobSeeker.Analyze;
 using Serilog;
 
-namespace Photon.JobSeeker.IamExpat
+namespace Photon.JobSeeker.LinkedIn
 {
-    class IamExpatPageJob : IamExpatPage
+    class LinkedInPageJob : LinkedInPage
     {
         public override int Order => 10;
 
         public override TrendState TrendState => TrendState.Analyzing;
 
-        public IamExpatPageJob(IamExpat parent) : base(parent) { }
+        public LinkedInPageJob(LinkedIn parent) : base(parent) { }
 
         public override Command[]? IssueCommand(string url, string content)
         {
@@ -30,20 +30,11 @@ namespace Photon.JobSeeker.IamExpat
 
                 if (reg_job_adding.IsMatch(content))
                 {
-                    commands.Add(Command.Click(@"a[rel=""nofollow""]"));
+                    commands.Add(Command.Click(@"button[class=""jobs-save-button""]"));
                     commands.Add(Command.Wait(3000));
                 }
 
-                var apply_match = reg_job_apply.Match(content);
-                if (apply_match == null) job.Log += "|Apply button not found!";
-                else
-                {
-                    job.Link = apply_match.Groups[1].Value;
-                    if (job.Link.StartsWith('#'))
-                    {
-                        // TODO: easy apply
-                    }
-                }
+                // TODO: apply link
             }
 
             Log.Debug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log));
@@ -93,7 +84,7 @@ namespace Photon.JobSeeker.IamExpat
             var end_match = reg_job_content_end.Match(html);
             if (end_match == null) return html;
 
-            return html.Substring(start_match.Index, end_match.Index + end_match.Length);
+            return html.Substring(start_match.Index + start_match.Length, end_match.Index);
         }
     }
 }

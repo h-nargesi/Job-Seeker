@@ -25,7 +25,7 @@ namespace Photon.JobSeeker.LinkedIn
             var codes = new HashSet<long>();
             using var database = Database.Open();
 
-            foreach (Match job in reg_job_link.Matches(content).Cast<Match>())
+            foreach (Match job in reg_job_url.Matches(content).Cast<Match>())
             {
                 var code = long.Parse(job.Groups[1].Value);
 

@@ -1,4 +1,6 @@
-﻿namespace Photon.JobSeeker.Analyze
+﻿using System.Text.RegularExpressions;
+
+namespace Photon.JobSeeker.Analyze
 {
     public static class JobEligibilityHelper
     {
