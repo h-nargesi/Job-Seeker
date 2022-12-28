@@ -16,5 +16,10 @@ namespace Photon.JobSeeker
         {
             return $"({Score}) {Title}";
         }
+
+        public string ToString(char state)
+        {
+            return $"({state}{Score}) {Title}";
+        }
     }
 }
