@@ -64,7 +64,8 @@ namespace Photon.JobSeeker
 
             if (id == default)
             {
-                database.Insert(nameof(Trend), model, filter);
+                database.Insert(nameof(Trend), model, filter,
+                    "ON CONFLICT(AgencyID, Type) DO NOTHING;");
 
                 if (trend != null)
                     trend.TrendID = database.LastInsertRowId();
