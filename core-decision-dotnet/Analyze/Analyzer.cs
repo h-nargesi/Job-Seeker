@@ -71,7 +71,7 @@ namespace Photon.JobSeeker
 
                 agency.LoadFromDatabase(database);
 
-                if (agency.ID == default) return;
+                if (agency.ID == default) continue;
 
                 agencies.Add(agency.Name, agency);
                 Log.Debug("agency added: {0}", agency.Name);
