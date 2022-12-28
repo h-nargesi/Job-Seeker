@@ -18,7 +18,7 @@ class ActionHandler {
                 ActionHandler.Open(command.params);
                 break;
             case "fill":
-                ActionHandler.Fill(command.params, command.object);
+                ActionHandler.Fill(command.object, command.params);
                 ActionHandler.Wait({ miliseconds: 300 });
                 break;
             case "click":
@@ -46,7 +46,7 @@ class ActionHandler {
         window.open(params.url);
     }
 
-    static Fill(params, object) {
+    static Fill(object, params) {
         let elements = document.querySelectorAll(object);
         if (!elements) console.warn("Not found", object);
         elements.forEach(element => {
@@ -58,13 +58,15 @@ class ActionHandler {
     static Click(object) {
         const info = ActionHandler.GetElement(object);
         if (!info.elements) console.warn("Not found", object);
-        info.elements.forEach(element => {
-            switch (info.extra) {
-                case "next":
-                    element = element.nextSibling;
-                    break;
-            }
-            if (!element) element.click();
+        else info.elements.forEach(element => {
+            if (!element) return;
+            if (info.extra)
+                switch (info.extra) {
+                    case "next":
+                        element = element.nextSibling;
+                        break;
+                }
+            if (element) element.click();
         });
     }
 

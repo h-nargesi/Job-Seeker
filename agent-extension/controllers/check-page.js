@@ -1,14 +1,14 @@
 console.log("check-page");
 
 function OnPageLoad() {
-    console.log('Page is loaded');
+    console.log('Page', 'loaded');
     setTimeout(async function () {
         var scopes = await BackgroundMessaging.Scopes();
         var host = window.location.hostname;
-        console.log("hostname:", host);
+        console.log('Page', "hostname:", host);
         for (let s in scopes) {
             if (host.match(new RegExp(scopes[s].domain, 'i'))) {
-                console.log("matched", scopes[s].domain);
+                console.log('Page', "matched", scopes[s].domain);
                 SendingPageInfo(scopes[s]);
                 break;
             }
@@ -16,7 +16,6 @@ function OnPageLoad() {
     }, 5000);
 
     if (job_seeker_trends != null) {
-        console.log('job_seeker_trends');
         document.getElementById('reload-trends').addEventListener("click", function() {
             BackgroundMessaging.Reload();
             job_seeker_trends.innerHTML = "";
@@ -26,22 +25,21 @@ function OnPageLoad() {
         CheckNewOrders();
 
         var millisecnod = 1000;
-        setInterval(LoadTrands, millisecnod * 10);
+        setInterval(LoadTrands, millisecnod * 5);
         setInterval(CheckNewOrders, millisecnod * 30);
     }
 }
 
 async function SendingPageInfo(scope) {
-    console.log("SendingPageInfo", window.location.hostname, scope);
+    console.log('Page', "sending", window.location.hostname, scope);
 
     const commands = await BackgroundMessaging.Send({
         agency: scope.name,
         url: window.location.href,
         content: document.body.innerHTML,
     });
-    console.log("SendingPageInfo", commands);
 
-    console.log("SendingPageInfo", "Command", commands);
+    console.log('Page', "commands", commands);
     ActionHandler.Handle(commands, false);
 }
 
