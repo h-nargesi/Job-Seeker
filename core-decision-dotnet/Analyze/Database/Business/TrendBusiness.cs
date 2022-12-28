@@ -11,7 +11,7 @@ namespace Photon.JobSeeker
         {
             using var reader = database.Read(Q_GET, id);
 
-            if (reader.Read()) return null;
+            if (!reader.Read()) return null;
 
             return ReadTrend(reader);
         }

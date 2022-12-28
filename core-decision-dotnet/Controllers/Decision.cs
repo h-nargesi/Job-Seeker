@@ -23,8 +23,8 @@ namespace Photon.JobSeeker
 
                 return Ok(new
                 {
-                    result.TrendID,
-                    result.Commands,
+                    trend = result.TrendID,
+                    commands = result.Commands,
                 });
             }
             catch (BadJobRequest bd)

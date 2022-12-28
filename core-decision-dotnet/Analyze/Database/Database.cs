@@ -194,7 +194,7 @@ namespace Photon.JobSeeker
 
             foreach (var property in job.GetType().GetProperties())
             {
-                if (!IsPropertyAllowed(filter, name)) continue;
+                if (!IsPropertyAllowed(filter, property.Name)) continue;
 
                 parameters.Add(property.Name + " = $" + property.Name);
 
