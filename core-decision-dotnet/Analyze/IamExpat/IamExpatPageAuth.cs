@@ -1,14 +1,10 @@
-﻿using System.Text.RegularExpressions;
-
-namespace Photon.JobSeeker.IamExpat
+﻿namespace Photon.JobSeeker.IamExpat
 {
     class IamExpatPageAuth : IamExpatPage
     {
         public override int Order => 2;
 
-        public override TrendType TrendType => TrendType.None;
-
-        private static readonly Regex reg_login_but = new(@"<a[^>]+href=[""\']/login[""\']");
+        public override TrendType TrendType => TrendType.Searching;
 
         public IamExpatPageAuth(IamExpat parent) : base(parent) { }
 

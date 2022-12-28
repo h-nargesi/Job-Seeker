@@ -56,9 +56,16 @@ class ActionHandler {
     }
 
     static Click(object) {
-        let elements = document.querySelectorAll(object);
-        if (!elements) console.warn("Not found", object);
-        elements.forEach(element => element.click());
+        const info = GetElement(object);
+        if (!info.elements) console.warn("Not found", object);
+        info.elements.forEach(element => {
+            switch (info.extra) {
+                case "next":
+                    element = element.nextSibling;
+                    break;
+            }
+            if (!element) element.click();
+        });
     }
 
     static Close() {
@@ -68,5 +75,19 @@ class ActionHandler {
 
     static async Wait(params) {
         await new Promise(r => setTimeout(r, params.miliseconds));
+    }
+
+    static GetElement(object) {
+        if (object.includes("@")) {
+            const parts = object.split("@");
+            return {
+                extra: parts[1],
+                elements: document.querySelectorAll(parts[0])
+            };
+
+        } else return {
+            extra: null,
+            elements: document.querySelectorAll(object)
+        };
     }
 }

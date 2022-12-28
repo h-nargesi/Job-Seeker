@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+﻿using Photon.JobSeeker.Analyze;
 using Serilog;
 
 namespace Photon.JobSeeker.IamExpat
@@ -8,11 +8,6 @@ namespace Photon.JobSeeker.IamExpat
         public override int Order => 10;
 
         public override TrendType TrendType => TrendType.Analyzing;
-
-        private static readonly Regex reg_job_url = new(@"/career/jobs-[^""\']+/it-technology/[^""\']+/(\d+)/?");
-        private static readonly Regex reg_job_title = new(@"<h1[^>]+class=""article__title""[^>]*>([^<]*)</h1>");
-        private static readonly Regex reg_job_apply = new(@"<a[^>]+href=""([^""']+)""[^>]*>Apply\s+Now</a>");
-        private static readonly Regex reg_job_adding = new(@"<a[^>]+href=""#""[^>]+rel=""nofollow""[^>]+title=""[^""]*Add to favourites""[^>]*>");
 
         public IamExpatPageJob(IamExpat parent) : base(parent) { }
 
@@ -24,9 +19,7 @@ namespace Photon.JobSeeker.IamExpat
 
             var job = LoadJob(database, url, content);
 
-            var options = database.JobOption.FetchAll();
-
-            var eligibility = EvaluateEligibility(job, options);
+            var eligibility = JobEligibilityHelper.EvaluateJobEligibility(database, job);
 
             var commands = new List<Command>();
 
@@ -62,7 +55,8 @@ namespace Photon.JobSeeker.IamExpat
 
         private Job LoadJob(Database database, string url, string content)
         {
-            var code = reg_job_url.Match(url).Groups[1].Value;
+            var url_matched = reg_job_url.Match(url);
+            var code = url_matched.Groups[1].Value;
             var job = database.Job.Fetch(parent.ID, code);
             var filter = JobFilter.Title | JobFilter.Html;
 
@@ -73,7 +67,7 @@ namespace Photon.JobSeeker.IamExpat
                     AgencyID = parent.ID,
                     Code = code,
                     State = JobState.saved,
-                    Url = reg_job_url.Match(url).Value,
+                    Url = url_matched.Value,
                 };
 
                 filter = JobFilter.All;
@@ -90,45 +84,5 @@ namespace Photon.JobSeeker.IamExpat
 
             return job;
         }
-
-        private static bool EvaluateEligibility(Job job, JobOption[] options)
-        {
-            var logs = new List<string>(options.Length);
-            var hasField = false;
-            job.Score = 0L;
-
-            foreach (var option in options)
-            {
-                var option_score = CheckOptionIn(job, option);
-
-                logs.Add((option_score > 0 ? "+" : "-") + option.ToString());
-
-                if (!hasField && option_score > 0 && option.Options == "field")
-                {
-                    hasField = true;
-                }
-
-                job.Score += option_score;
-            }
-
-            job.Log = string.Join("|", logs);
-
-            if (!hasField) return false;
-            else return job.Score >= MinEligibilityScore;
-        }
-
-        private static long CheckOptionIn(Job job, JobOption option)
-        {
-            if (!option.Pattern.IsMatch(job.Html ?? "")) return 0;
-
-            if (option.Options.StartsWith("salary"))
-            {
-                var group = int.Parse(option.Options.Split("-")[2]);
-                var salary = long.Parse(option.Pattern.Match(job.Html ?? "").Groups[group].Value);
-                return salary * option.Score;
-            }
-            else return option.Score;
-        }
-
     }
 }

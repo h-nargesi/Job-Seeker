@@ -110,12 +110,9 @@ namespace Photon.JobSeeker
                         if (url == null) break;
                         else if (result.Agency == agency.ID && result.Type == type && result.Trend != null)
                         {
-                            if (url != null)
-                            {
-                                commands.Insert(0, Command.Go(url));
-                                commands = commands.Where(c => c.page_action == PageAction.close)
-                                                   .ToList();
-                            }
+                            commands.Insert(0, Command.Go(url));
+                            commands = commands.Where(c => c.page_action == PageAction.close)
+                                               .ToList();
                         }
                         else commands.Insert(0, Command.Open(url));
                         break;

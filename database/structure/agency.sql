@@ -16,3 +16,5 @@ values
 	('IamExpat', '(.+\.)?iamexpat\.(nl|com)$', 'http://iamexpat.nl', 'hamed.nargesi.jar@gmail.com', 's@lm0nElla'),
 	('LinkedIn', '(.+\.)?linkedin\.com$', 'http://linkedin.com', 'hamed.nargesi.jar@gmail.com', 'CrguFW7SmtbHDDi'),
 	('Karboom', '(.+\.)?karboom\.io$', 'http://karboom.io', 'hamed.nargesi.jar@gmail.com', 'salmonella');
+
+update Agency set Active = 0 where Title in ('Indeed', 'LinkedIn', 'Karboom');

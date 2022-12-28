@@ -1,14 +1,10 @@
-﻿using System.Text.RegularExpressions;
-
-namespace Photon.JobSeeker.IamExpat
+﻿namespace Photon.JobSeeker.IamExpat
 {
     class IamExpatPageLogin : IamExpatPage
     {
         public override int Order => 1;
 
-        public override TrendType TrendType => TrendType.None;
-
-        private static readonly Regex reg_login_url = new(@"iamexpat\.com/login");
+        public override TrendType TrendType => TrendType.Searching;
 
         public IamExpatPageLogin(IamExpat parent) : base(parent) { }
 
@@ -19,10 +15,10 @@ namespace Photon.JobSeeker.IamExpat
             var (user, pass) = GetUserPass();
 
             return new Command[] {
-            Command.Fill(@"input[id=""edit-name""]", user),
-            Command.Fill(@"input[id=""edit-pass""]", pass),
-            Command.Click(@"input[id=""edit-submit""]")
-        };
+                Command.Fill(@"input[id=""edit-name""]", user),
+                Command.Fill(@"input[id=""edit-pass""]", pass),
+                Command.Click(@"input[id=""edit-submit""]")
+            };
         }
     }
 }

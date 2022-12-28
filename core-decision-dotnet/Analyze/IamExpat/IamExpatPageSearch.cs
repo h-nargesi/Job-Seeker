@@ -8,10 +8,6 @@ namespace Photon.JobSeeker.IamExpat
 
         public override TrendType TrendType => TrendType.Searching;
 
-        private static readonly Regex reg_search_url = new(@"://[^/]*iamexpat\.nl/career/jobs-netherlands");
-        private static readonly Regex reg_search_title = new(@"<h1>[^<]*IT[^<]*Technology[^<]*</h1>");
-        private static readonly Regex reg_job_link = new(@"href=[""\'](/career/jobs-[^""\']+/it-technology/[^""\']+/(\d+)/?)[""\']");
-
         public IamExpatPageSearch(IamExpat parent) : base(parent) { }
 
         public override Command[]? IssueCommand(string url, string content)
@@ -22,17 +18,18 @@ namespace Photon.JobSeeker.IamExpat
             {
                 return new Command[]
                 {
-                Command.Click(@"label[for=""industry-260""]"), // it-technology
-                Command.Click(@"label[for=""ccareer-level-19926""]"), // entry-level
-                Command.Click(@"label[for=""career-level-19928""]"), // experienced
-                Command.Click(@"label[for=""contract-19934""]"),
-                Command.Wait(3000),
-                Command.Click(@"input[type=""submit""][value=""Search""]"),
+                    Command.Click(@"label[for=""industry-260""]"), // it-technology
+                    Command.Click(@"label[for=""ccareer-level-19926""]"), // entry-level
+                    Command.Click(@"label[for=""career-level-19928""]"), // experienced
+                    Command.Click(@"label[for=""contract-19934""]"),
+                    Command.Wait(3000),
+                    Command.Click(@"input[type=""submit""][value=""Search""]"),
                 };
             }
 
             var codes = new HashSet<long>();
             using var database = Database.Open();
+            var base_link = parent.Link.Trim().EndsWith("/") ? parent.Link[..^1] : parent.Link;
 
             foreach (Match job in reg_job_link.Matches(content).Cast<Match>())
             {
@@ -44,7 +41,7 @@ namespace Photon.JobSeeker.IamExpat
                 database.Job.Save(new
                 {
                     AgencyID = parent.ID,
-                    Url = url,
+                    Url = string.Join("", base_link, job.Groups[1].Value),
                     Code = code.ToString(),
                     State = JobState.saved
                 });
