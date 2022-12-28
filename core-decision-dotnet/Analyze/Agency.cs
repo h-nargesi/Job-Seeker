@@ -38,8 +38,6 @@ namespace Photon.JobSeeker
 
         public void LoadFromDatabase(Database database)
         {
-            if (database == null) throw new ArgumentNullException(nameof(database));
-
             var agency_info = database.Agency.LoadByName(Name);
             if (agency_info == default) return;
 
