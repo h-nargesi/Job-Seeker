@@ -66,23 +66,26 @@ namespace Photon.JobSeeker
                     if (trend == null)
                     {
                         if (matched_analyzed_result)
-                            result.Trend = GenerateANewTrend(result.Agency ?? 0, result.State).TrendID;
-
-                        else if (agency_handler.Value.Link != null)
                         {
-                            GenerateANewTrend(agency_handler.Value.ID, type.GetTrendState());
+                            result.Trend = GenerateANewTrend(result.Agency ?? 0, result.State).TrendID;
+                            if (result.State > TrendState.Login)
+                                continue;
+                        }
+                        else if (agency_handler.Value.Link != null)
+                            new_trends.Add((agency_handler.Value, type));
+
+                        break;
+                    }
+                    else
+                    {
+                        if (trend.State <= TrendState.Login) break;
+
+                        if (type == TrendType.Job && matched_analyzed_result)
+                        {
                             new_trends.Add((agency_handler.Value, type));
                             continue;
                         }
                     }
-                    else if (type == TrendType.Job && matched_analyzed_result)
-                    {
-                        new_trends.Add((agency_handler.Value, type));
-                        continue;
-                    }
-
-                    // When whe don't have type:'Searching', we don't continue in type:'Analyzing'
-                    break;
                 }
 
             return new_trends;

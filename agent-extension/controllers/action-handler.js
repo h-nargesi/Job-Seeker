@@ -56,7 +56,7 @@ class ActionHandler {
     }
 
     static Click(object) {
-        const info = GetElement(object);
+        const info = ActionHandler.GetElement(object);
         if (!info.elements) console.warn("Not found", object);
         info.elements.forEach(element => {
             switch (info.extra) {
