@@ -1,12 +1,13 @@
 using Serilog;
+using Serilog.Events;
 using Photon.JobSeeker;
 
 var builder = WebApplication.CreateBuilder(args);
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
-    .WriteTo.Console()
-    .WriteTo.File(builder.Configuration["Logging:FilePath"].ToString(), rollingInterval: RollingInterval.Day)
+    .WriteTo.Console(Serilog.Events.LogEventLevel.Debug)
+    .WriteTo.File(builder.Configuration["Logging:FilePath"].ToString(), LogEventLevel.Information, rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
 Log.Information("Starting up ...");
