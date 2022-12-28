@@ -16,8 +16,12 @@ function OnPageLoad() {
     }, 5000);
 
     if (job_seeker_trends != null) {
-        setInterval(LoadTrands, 5000);
-        setInterval(CheckNewTrends, 10000);
+        CheckNewOrders();
+        LoadTrands();
+
+        var millisecnod = 10 * 1000;
+        setInterval(LoadTrands, millisecnod);
+        setInterval(CheckNewOrders, millisecnod * 2);
     }
 }
 
@@ -42,19 +46,19 @@ async function LoadTrands() {
         let trend = trends[t];
 
         html += `
-<div>
-        <a href="${trend.link}" target="_blank">${trend.agency}</a>
-        <span>${trend.type}</span>
-        <span>${trend.lastActivity}</span>
-</div>`;
+<tr>
+        <td scope="row">${t}</td>
+        <td><a href="${trend.link}" target="_blank">${trend.agency}</a></td>
+        <td><span>${trend.type}</span></td>
+        <td><span>${trend.lastActivity}</span></td>
+</tr>`;
     }
 
     job_seeker_trends.innerHTML = html;
 }
 
-async function CheckNewTrends() {
+async function CheckNewOrders() {
     const result = await BackgroundMessaging.Orders();
-    console.log("Orders", result.commands);
     ActionHandler.Handle(result.commands, true);
 }
 

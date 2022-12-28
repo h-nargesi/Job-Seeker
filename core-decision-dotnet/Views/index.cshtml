@@ -20,7 +20,7 @@
     </header>
     <main class="contaner">
         <div class="row">
-            <section class="col-md-9 jobs-list">
+            <section class="col-md-8 jobs-list">
                 @foreach (var job in Model)
                 {
                     <div id="Job_@job.JobID">
@@ -36,7 +36,19 @@
                     </div>
                 }
             </section>
-            <article id="job-seeker-trend-list" class="col-md-3">
+            <article class="col-md-4">
+                Trends List
+                <table class="table table-hover table-sm">
+                    <thead class="thead-dark">
+                        <tr>
+                            <td scope="col">#</td>
+                            <td scope="col">Agency</td>
+                            <td scope="col">Trend Type</td>
+                            <td scope="col">Latest Activity</td>
+                        </tr>
+                    </thead>
+                    <tbody id="job-seeker-trend-list"></tbody>
+                </table>
             </article>
         </div>
     </main>
