@@ -45,7 +45,7 @@ namespace Photon.JobSeeker.Analyze
 
             if (option.Options.StartsWith("salary"))
             {
-                var group = int.Parse(option.Options.Split("-")[2]);
+                var group = int.Parse(option.Options.Split("-")[1]);
                 var salary = long.Parse(option.Pattern.Match(job.Html ?? "").Groups[group].Value);
                 return salary * option.Score;
             }

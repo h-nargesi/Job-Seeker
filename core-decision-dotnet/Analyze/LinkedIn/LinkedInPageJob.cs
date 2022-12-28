@@ -38,7 +38,7 @@ namespace Photon.JobSeeker.LinkedIn
             }
 
             Log.Debug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log));
-            database.Job.Save(job, JobFilter.Log | JobFilter.State | JobFilter.Link);
+            database.Job.Save(job, JobFilter.Log | JobFilter.State | JobFilter.Link | JobFilter.Score);
 
             commands.Add(Command.Close());
             return commands.ToArray();
