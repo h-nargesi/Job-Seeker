@@ -47,7 +47,7 @@ namespace Photon.JobSeeker.IamExpat
                 }
             }
 
-            Log.Debug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log));
+            Log.Debug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log?.Replace("\n", " ")));
             database.Job.Save(job, JobFilter.Log | JobFilter.State | JobFilter.Link | JobFilter.Score);
 
             commands.Add(Command.Close());

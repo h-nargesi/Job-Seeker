@@ -1,3 +1,5 @@
+using Serilog;
+
 namespace Photon.JobSeeker
 {
     public class TrendsCheckpoint : IDisposable
@@ -28,6 +30,8 @@ namespace Photon.JobSeeker
 
             InjectOpenCommandForNewTrends(new_trends);
 
+            Log.Information("Trend final commands: {0}", result.Commands.StringJoin());
+
             return result;
         }
 
@@ -51,11 +55,16 @@ namespace Photon.JobSeeker
                         trend.State = result.State;
                         database.Trend.Save(trend, TrendFilter.LastActivity | TrendFilter.State | TrendFilter.Type);
                         database.Commit();
+                        Log.Debug("Trend (id:{0}) Agency({1}) {2}, {3}", 
+                            trend.TrendID, trend.AgencyID, trend.Type, trend.State);
                         return;
                     }
                 }
                 finally { database.Rollback(); }
             }
+            
+            Log.Debug("Trend (unknown) Agency({1}) {2}, {3}", 
+                result.AgencyID, result.Type, result.State);
 
             result.TrendID = null;
         }
@@ -89,19 +98,28 @@ namespace Photon.JobSeeker
 
             var trend = MatchingWithAnalyzedResult(agency, TrendType.Search, out var matched_analyzed_result);
 
+            var is_not_old = result.TrendID is null;
+
             if (trend is null)
                 if (matched_analyzed_result)
                     result.TrendID = GenerateANewTrend(result.AgencyID ?? 0, result.State).TrendID;
 
                 else new_trends.Add((agency, TrendType.Search));
 
-            else if (matched_analyzed_result && result.TrendID is null)
+            else if (matched_analyzed_result && is_not_old)
                 new_trends.Add((agency, TrendType.None));
 
             if (trend is null)
                 do_break = !(matched_analyzed_result && result.State > TrendState.Login);
 
             else do_break = trend.State <= TrendState.Login;
+
+            Log.Debug("Agency({0}-Searching){2} {3} {4} : order={5}", 
+                agency.Name,
+                matched_analyzed_result ? "*" : " ",
+                trend is null ? "hasn't trend" : "has trend   ",
+                is_not_old ? "new" : "old",
+                new_trends.Count > 0 ? new_trends[0].type : "");
 
             return new_trends;
         }
@@ -111,6 +129,8 @@ namespace Photon.JobSeeker
             var new_trends = new List<(Agency agency, TrendType type)>();
 
             var trend = MatchingWithAnalyzedResult(agency, TrendType.Job, out var matched_analyzed_result);
+
+            var is_not_old = result.TrendID is null;
 
             if (trend is null)
             {
@@ -126,6 +146,13 @@ namespace Photon.JobSeeker
 
                 else new_trends.Add((agency, TrendType.None));
             }
+
+            Log.Debug("Agency({0}-Job){2} {3} {4} : order={5}", 
+                agency.Name,
+                matched_analyzed_result ? "*" : " ",
+                trend is null ? "hasn't trend" : "has trend   ",
+                is_not_old ? "new" : "old",
+                new_trends.Count > 0 ? new_trends[0].type : "");
 
             return new_trends;
         }

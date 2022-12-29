@@ -27,7 +27,7 @@ namespace Photon.JobSeeker
                 if (commands != null)
                 {
                     Log.Information("Page checked: {0}", page.GetType().Name);
-                    Log.Information("Page commands: {0}", commands.StringJoin());
+                    Log.Debug("Page commands: {0}", commands.StringJoin());
                     return new Result { State = page.TrendState, Commands = commands };
                 }
             }
