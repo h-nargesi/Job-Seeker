@@ -41,7 +41,27 @@ namespace Photon.JobSeeker.LinkedIn
                 });
             }
 
-            return new Command[] { Command.Click(@"button[aria-current=""true""]@next") };
+            return GetNextPageButton(content);
+        }
+
+        private Command[] GetNextPageButton(string content)
+        {
+            var match = reg_search_page_panel.Match(content);
+            if (match == null) return Command.JustClose();
+            content = content.Substring(match.Index + match.Length);
+
+            match = reg_search_page_panel_end.Match(content);
+            if (match == null) return Command.JustClose();
+            content = content.Substring(0, match.Index);
+
+            match = reg_search_current_page.Match(content);
+            if (match == null) return Command.JustClose();
+            content = content.Substring(match.Index + match.Length);
+
+            match = reg_search_other_page.Match(content);
+            if (match == null) return Command.JustClose();
+
+            return new Command[] { Command.Click(@$"button[aria-label=""{match.Groups[1].Value}""]") };
         }
     }
 }

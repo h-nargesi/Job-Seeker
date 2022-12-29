@@ -16,6 +16,8 @@ namespace Photon.JobSeeker.IamExpat
 
         protected static readonly Regex reg_search_title = new(@"<h1>[^<]*IT[^<]*Technology[^<]*</h1>");
 
+        protected static readonly Regex reg_search_end = new(@"<a[^>]+title=[""']Go to next page[""']");
+
         protected static readonly Regex reg_job_url = new(@"/career/jobs-[\w-]+(/[\w-]+)*/it-technology/([\w-]+)(/(\d+))?");
 
         protected static readonly Regex reg_job_shortlink = new(@"<link\s+rel=[""']shortlink[""'] href=[""']/node/(\d+)[""']>");
