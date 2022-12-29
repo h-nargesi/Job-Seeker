@@ -24,7 +24,7 @@ namespace Photon.JobSeeker.Analyze
                 var option_score = CheckOptionIn(job, option);
 
                 if (option_score > 0)
-                    logs.Add(option.ToString('+'));
+                    logs.Add(option.ToString('+', option_score));
 
                 if (!hasField && option_score > 0 && option.Options == "field")
                 {
