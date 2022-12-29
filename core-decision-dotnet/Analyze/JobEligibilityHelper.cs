@@ -21,10 +21,14 @@ namespace Photon.JobSeeker.Analyze
 
             foreach (var option in options)
             {
-                var option_score = CheckOptionIn(job, option);
+                var option_score = CheckOptionIn(job, option, out var matched);
 
                 if (option_score > 0)
-                    logs.Add(option.ToString('+', option_score));
+                {
+                    logs.Add($"**{option.ToString('+', option_score)}**");
+                    logs.Add(matched ?? "?");
+                    logs.Add("");
+                }
 
                 if (!hasField && option_score > 0 && option.Options == "field")
                 {
@@ -34,15 +38,21 @@ namespace Photon.JobSeeker.Analyze
                 job.Score += option_score;
             }
 
-            job.Log = string.Join("|", logs);
+            job.Log = string.Join("\n", logs);
 
             if (!hasField) return false;
             else return job.Score >= MinEligibilityScore;
         }
 
-        private static long CheckOptionIn(Job job, JobOption option)
+        private static long CheckOptionIn(Job job, JobOption option, out string? matched)
         {
-            if (!option.Pattern.IsMatch(job.Html ?? "")) return 0;
+            var matched_option = option.Pattern.Match(job.Html ?? "");
+            if (!matched_option.Success)
+            {
+                matched = null;
+                return 0;
+            }
+            else matched = matched_option.Value;
 
             if (option.Options.StartsWith("salary"))
             {
@@ -51,17 +61,18 @@ namespace Photon.JobSeeker.Analyze
                                             .Select(o => int.Parse(o))
                                             .ToArray();
 
-                var salary_match = option.Pattern.Match(job.Html ?? "");
-
-                var money = salary_match.Groups[options[0]].Value;
-                var salary = double.Parse(money.Replace(",", ""));
-                var factor = salary_match.Groups[options[1]].Value;
+                var money = matched_option.Groups[options[0]].Value;
+                if (!double.TryParse(money?.Replace(",", ""), out var salary)) return 0;
+                var factor = matched_option.Groups[options[1]].Value;
 
                 switch (factor)
                 {
                     case "year":
                         salary /= 12;
                         break;
+                    case "month":
+                        break;
+                    default: return 0;
                 }
 
                 salary /= 1000;
