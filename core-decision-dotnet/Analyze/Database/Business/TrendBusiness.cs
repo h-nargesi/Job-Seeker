@@ -2,11 +2,10 @@
 
 namespace Photon.JobSeeker
 {
-    class TrendBusiness
+    class TrendBusiness : BaseBusiness<Trend>
     {
         public const int TREND_EXPIRATION_MINUTES = 5;
-        private Database database;
-        public TrendBusiness(Database database) => this.database = database;
+        public TrendBusiness(Database database) : base(database) { }
 
         public Trend? Get(long agency_id, TrendType type)
         {
@@ -50,6 +49,10 @@ namespace Photon.JobSeeker
 
             return list;
         }
+
+        protected override string[]? GetUniqueColumns { get; } = new string[] {
+            nameof(TrendFilter.AgencyID), nameof(TrendFilter.Type)
+        };
 
         public void Save(object model, TrendFilter filter = TrendFilter.All)
         {

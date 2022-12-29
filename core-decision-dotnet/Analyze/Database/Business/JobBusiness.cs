@@ -39,7 +39,9 @@ namespace Photon.JobSeeker
             return (string)reader["Url"];
         }
 
-        protected override string[]? GetUniqueColumns { get; } = new string[] { nameof(JobFilter.AgencyID), nameof(JobFilter.Code) };
+        protected override string[]? GetUniqueColumns { get; } = new string[] {
+            nameof(JobFilter.AgencyID), nameof(JobFilter.Code)
+        };
 
         public void Save(object model, JobFilter filter = JobFilter.All)
         {
