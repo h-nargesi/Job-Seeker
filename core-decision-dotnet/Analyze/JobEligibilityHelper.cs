@@ -48,7 +48,8 @@ namespace Photon.JobSeeker.Analyze
 
         private static long CheckOptionIn(Job job, JobOption option, out string? matched)
         {
-            var matched_option = option.Pattern.Match(job.Html ?? "");
+            var content = GetHtmlContent(job.Html ?? "");
+            var matched_option = option.Pattern.Match(content);
             if (!matched_option.Success)
             {
                 matched = null;
