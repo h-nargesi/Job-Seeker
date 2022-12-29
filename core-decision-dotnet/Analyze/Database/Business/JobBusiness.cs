@@ -93,7 +93,7 @@ ORDER BY Score DESC, RegTime DESC";
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
 
         private const string Q_FETCH_FIRST = @"
-SELECT Url FROM Job WHERE AgencyID = $agency AND State = 'saved' ORDER BY JobID";
+SELECT Url FROM Job WHERE AgencyID = $agency AND State = 'saved' ORDER BY JobID LIMIT 1";
 
     }
 }

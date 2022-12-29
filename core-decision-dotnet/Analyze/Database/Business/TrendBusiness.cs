@@ -4,12 +4,13 @@ namespace Photon.JobSeeker
 {
     class TrendBusiness
     {
+        public const int TREND_EXPIRATION_MINUTES = 5;
         private Database database;
         public TrendBusiness(Database database) => this.database = database;
 
-        public Trend? GetByID(long id)
+        public Trend? Get(long agency_id, TrendType type)
         {
-            using var reader = database.Read(Q_GET, id);
+            using var reader = database.Read(Q_GET, agency_id, type);
 
             if (!reader.Read()) return null;
 
@@ -27,10 +28,10 @@ namespace Photon.JobSeeker
                 var state = state_str == null ? (TrendState?)null : Enum.Parse<TrendState>(state_str);
                 list.Add(new
                 {
-                    TrendID = reader["TrendID"],
-                    Agency = reader["Agency"],
-                    Link = reader["Link"],
-                    LastActivity = reader["LastActivity"],
+                    TrendID = reader["TrendID"] as long?,
+                    Agency = reader["Agency"] as string ?? "-",
+                    Link = reader["Link"] as string ?? "-",
+                    LastActivity = reader["LastActivity"] as string ?? "-",
                     Type = state?.GetTrendType().ToString(),
                     State = state_str,
                 });
@@ -75,7 +76,7 @@ namespace Photon.JobSeeker
             else database.Update(nameof(Trend), model, id, filter);
         }
 
-        public void DeleteExpired(double minutes)
+        public void DeleteExpired(double minutes = TREND_EXPIRATION_MINUTES)
         {
             database.Execute(Q_DELETE_EXPIRED, DateTime.Now.AddMinutes(-minutes));
         }
@@ -100,7 +101,7 @@ SELECT a.Title AS Agency, a.Link, t.TrendID, t.State
 FROM Agency a LEFT JOIN Trend t ON t.AgencyID = a.AgencyID";
 
         private const string Q_GET = Q_INDEX + @"
-WHERE TrendID = $trend";
+WHERE AgencyID = $agency AND Type = $type";
 
         private const string Q_DELETE_EXPIRED = @"
 DELETE FROM Trend WHERE DATETIME(LastActivity) <= $expiration";

@@ -8,6 +8,7 @@ namespace Photon.JobSeeker
     {
         private readonly SqliteConnection connection;
         private readonly SqliteCommand executer;
+        private SqliteTransaction? transaction;
         private static string? connection_string;
         private static readonly Regex reg_parameter = new(@"\$[\w_]+");
 
@@ -41,6 +42,26 @@ namespace Photon.JobSeeker
             connection.Open();
 
             return new Database(connection, executer);
+        }
+
+        public void BeginTransaction()
+        {
+            transaction = connection.BeginTransaction();
+            executer.Transaction = transaction;
+        }
+
+        public void Commit()
+        {
+            transaction?.Commit();
+            transaction = null;
+            executer.Transaction = null;
+        }
+
+        public void Rollback()
+        {
+            transaction?.Rollback();
+            transaction = null;
+            executer.Transaction = null;
         }
 
         public long LastInsertRowId()
@@ -116,6 +137,7 @@ namespace Photon.JobSeeker
 
         public void Dispose()
         {
+            transaction?.Dispose();
             connection.Dispose();
             executer.Dispose();
         }
@@ -221,10 +243,7 @@ namespace Photon.JobSeeker
 
         private object ValueFromProperty(PropertyInfo property, object obj)
         {
-            if (property.PropertyType.IsEnum)
-                return property.GetValue(obj)?.ToString() ?? (object)typeof(string);
-
-            else return property.GetValue(obj) ?? property.PropertyType;
+            return property.GetValue(obj) ?? property.PropertyType;
         }
 
         private void AddParameters(string query, object[] parameters)

@@ -2,6 +2,6 @@ namespace Photon.JobSeeker
 {
     public enum TrendType
     {
-        Search, Job,
+        None, Search, Job,
     }
 }
