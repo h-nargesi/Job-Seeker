@@ -102,3 +102,7 @@ footer {
     padding-top: 0;
     color: var(--back-color);
 }
+
+.modal-body {
+    white-space: pre;
+}
