@@ -3,7 +3,7 @@ console.log("storage-handler");
 class StorageHandler {
 
     static SERVER_URL = "SERVER_URL";
-    static SERVER_URL_DEFAULT = "http://localhost/";
+    static SERVER_URL_DEFAULT = "http://localhost:8080/";
 
     static async Get(key, default_value) {
         return new Promise(function (resolve, reject) {
