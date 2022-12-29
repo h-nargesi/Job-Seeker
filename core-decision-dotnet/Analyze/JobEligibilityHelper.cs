@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
+using HtmlAgilityPack;
 
 namespace Photon.JobSeeker.Analyze
 {
@@ -80,6 +82,25 @@ namespace Photon.JobSeeker.Analyze
                 return ((int)salary * option.Score);
             }
             else return option.Score;
+        }
+
+        public static string GetHtmlContent(string html)
+        {
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
+
+            var root = doc.DocumentNode;
+            var result = new StringBuilder();
+            foreach (var node in root.DescendantsAndSelf())
+            {
+                // if (node.HasChildNodes) continue;
+
+                string text = node.InnerText;
+                if (!string.IsNullOrEmpty(text))
+                    result.Append(" ").Append(text.Trim());
+            }
+
+            return result.ToString();
         }
     }
 }
