@@ -51,7 +51,7 @@ async function SendingPageInfo(scope) {
     const commands = await BackgroundMessaging.Send({
         agency: scope.name,
         url: window.location.href,
-        content: document.body.innerHTML,
+        content: document.documentElement.outerHTML,
     });
 
     console.log('Page', "commands", commands);

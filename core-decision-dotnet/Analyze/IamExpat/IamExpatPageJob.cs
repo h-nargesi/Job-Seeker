@@ -60,32 +60,41 @@ namespace Photon.JobSeeker.IamExpat
             var code = GetJobCode(url_matched);
             var job = database.Job.Fetch(parent.ID, code);
 
-            var filter = JobFilter.Title | JobFilter.Html | JobFilter.Code;
+            var filter = JobFilter.Title | JobFilter.Html;
 
             code = reg_job_shortlink.Match(content).Groups[1].Value;
-            if (job == null)
+            if (job != null)
             {
-                job = database.Job.Fetch(parent.ID, code);
-                if (job != null)
+                var temp_job = database.Job.Fetch(parent.ID, code);
+                if (temp_job == null)
                 {
                     job.Code = code;
                     filter |= JobFilter.Code;
                 }
-            }
-
-            if (job == null)
-            {
-                var base_link = parent.Link.Trim().EndsWith("/") ? parent.Link[..^1] : parent.Link;
-
-                job = new Job
+                else
                 {
-                    AgencyID = parent.ID,
-                    Code = code,
-                    State = JobState.saved,
-                    Url = string.Join("", base_link, url_matched.Value),
-                };
+                    database.Job.Delete(job.JobID);
+                    job = temp_job;
+                }
+            }
+            else
+            {
+                job = database.Job.Fetch(parent.ID, code);
 
-                filter = JobFilter.All;
+                if (job == null)
+                {
+                    var base_link = parent.Link.Trim().EndsWith("/") ? parent.Link[..^1] : parent.Link;
+
+                    job = new Job
+                    {
+                        AgencyID = parent.ID,
+                        Code = code,
+                        State = JobState.saved,
+                        Url = string.Join("", base_link, url_matched.Value),
+                    };
+
+                    filter = JobFilter.All;
+                }
             }
 
             var title_match = reg_job_title.Match(content);
@@ -108,7 +117,7 @@ namespace Photon.JobSeeker.IamExpat
             var end_match = reg_job_content_end.Match(html);
             if (end_match == null) return html;
 
-            return html.Substring(start_match.Index, end_match.Index + end_match.Length);
+            return html.Substring(start_match.Index, end_match.Index + end_match.Length - start_match.Index);
         }
     }
 }

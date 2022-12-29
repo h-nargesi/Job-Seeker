@@ -2,10 +2,9 @@
 
 namespace Photon.JobSeeker
 {
-    class JobBusiness
+    class JobBusiness : BaseBusiness<Job>
     {
-        private Database database;
-        public JobBusiness(Database database) => this.database = database;
+        public JobBusiness(Database database) : base(database) { }
 
         public List<Job> Fetch(JobState state)
         {
@@ -39,6 +38,8 @@ namespace Photon.JobSeeker
 
             return (string)reader["Url"];
         }
+
+        protected override string[]? GetUniqueColumns { get; } = new string[] { nameof(JobFilter.AgencyID), nameof(JobFilter.Code) };
 
         public void Save(object model, JobFilter filter = JobFilter.All)
         {

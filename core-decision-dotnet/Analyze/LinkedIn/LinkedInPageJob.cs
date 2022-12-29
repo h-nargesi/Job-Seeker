@@ -85,7 +85,7 @@ namespace Photon.JobSeeker.LinkedIn
             var end_match = reg_job_content_end.Match(html);
             if (end_match == null) return html;
 
-            return html.Substring(start_match.Index + start_match.Length, end_match.Index);
+            return html.Substring(start_match.Index + start_match.Length, end_match.Index - start_match.Index - start_match.Length);
         }
     }
 }
