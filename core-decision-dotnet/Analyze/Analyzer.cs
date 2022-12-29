@@ -41,7 +41,7 @@ namespace Photon.JobSeeker
             if (context.Agency == null)
                 throw new BadJobRequest("Bad request (empty agency)");
 
-            Log.Debug("Analyzer.Analyze: {0}", context.Agency);
+            Log.Debug("Analyze request: {0}", context.Agency);
 
             if (!Agencies.ContainsKey(context.Agency))
                 throw new BadJobRequest($"{context.Agency} not found!");

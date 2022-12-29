@@ -18,7 +18,7 @@ namespace Photon.JobSeeker
 
         public Result AnalyzeContent(string url, string content)
         {
-            Log.Debug("AnalyzeContent: {0}", Name);
+            Log.Debug("AnalyzeContent in {0}", Name);
 
             foreach (var page in Pages)
             {
@@ -26,13 +26,13 @@ namespace Photon.JobSeeker
 
                 if (commands != null)
                 {
-                    Log.Information("page checked: {0}", page.GetType().Name);
-                    Log.Debug("page commands: {0}", commands.StringJoin());
+                    Log.Information("Page checked: {0}", page.GetType().Name);
+                    Log.Information("Page commands: {0}", commands.StringJoin());
                     return new Result { State = page.TrendState, Commands = commands };
                 }
             }
 
-            Log.Debug("Page not found: {0}", Name);
+            Log.Warning("Page not found: {0}", Name);
             return new Result { Commands = Command.JustClose() };
         }
 
