@@ -63,7 +63,7 @@ namespace Photon.JobSeeker
                 finally { database.Rollback(); }
             }
             
-            Log.Debug("Trend (unknown) Agency({1}) {2}, {3}", 
+            Log.Debug("Trend (unknown) Agency({0}) {1}, {2}", 
                 result.AgencyID, result.Type, result.State);
 
             result.TrendID = null;
@@ -114,7 +114,7 @@ namespace Photon.JobSeeker
 
             else do_break = trend.State <= TrendState.Login;
 
-            Log.Debug("Agency({0}-Searching){2} {3} {4} : order={5}", 
+            Log.Debug("Agency({0}-Searching){1} {2} {3} : order={4}", 
                 agency.Name,
                 matched_analyzed_result ? "*" : " ",
                 trend is null ? "hasn't trend" : "has trend   ",
@@ -147,7 +147,7 @@ namespace Photon.JobSeeker
                 else new_trends.Add((agency, TrendType.None));
             }
 
-            Log.Debug("Agency({0}-Job){2} {3} {4} : order={5}", 
+            Log.Debug("Agency({0}-Job){1} {2} {3} : order={4}", 
                 agency.Name,
                 matched_analyzed_result ? "*" : " ",
                 trend is null ? "hasn't trend" : "has trend   ",

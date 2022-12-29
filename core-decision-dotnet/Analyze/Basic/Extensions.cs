@@ -1,10 +1,33 @@
-﻿namespace Photon.JobSeeker
+﻿using System.Collections;
+
+namespace Photon.JobSeeker
 {
     static class Extensions
     {
-        public static string StringJoin<T>(this IEnumerable<T> values, string spliter = ", ")
+        public static string? StringJoin(this object value, string spliter = ", ")
         {
-            return string.Join(spliter, values.Where(v => v != null).Select(v => v?.ToString()));
+            if (value is string str) return str;
+
+            else if (value is IDictionary<string, object> dict)
+                return dict.DictStringJoin(spliter);
+
+            else if (value is IEnumerable list)
+                return list.Cast<object>().ListStringJoin(spliter);
+
+            else return value.ToString();
+        }
+
+        public static string ListStringJoin<T>(this IEnumerable<T> values, string spliter = ", ")
+        {
+            return $"[{string.Join(spliter, values.Where(v => v != null).Select(v => v?.StringJoin(spliter)))}]";
+        }
+
+        public static string DictStringJoin<K, V>(this IDictionary<K, V> values, string spliter = ", ")
+        {
+            var list = values.Where(p => p.Key != null)
+                             .Select(p => @$"{p.Key}: {p.Value}");
+
+            return $"{{{string.Join(spliter, list)}}}";
         }
 
         public static Command[] Shift(this Command[] commands, Command @new)
