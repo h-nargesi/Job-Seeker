@@ -48,7 +48,8 @@ namespace Photon.JobSeeker
                     if (trend != null && result.TrendID == trend.TrendID)
                     {
                         trend.LastActivity = DateTime.Now;
-                        database.Trend.Save(trend, TrendFilter.LastActivity);
+                        trend.State = result.State;
+                        database.Trend.Save(trend, TrendFilter.LastActivity | TrendFilter.State | TrendFilter.Type);
                         database.Commit();
                         return;
                     }
@@ -91,15 +92,15 @@ namespace Photon.JobSeeker
             if (trend is null)
                 if (matched_analyzed_result)
                     result.TrendID = GenerateANewTrend(result.AgencyID ?? 0, result.State).TrendID;
-                
+
                 else new_trends.Add((agency, TrendType.Search));
-            
+
             else if (matched_analyzed_result && result.TrendID is null)
                 new_trends.Add((agency, TrendType.None));
 
             if (trend is null)
                 do_break = !(matched_analyzed_result && result.State > TrendState.Login);
-            
+
             else do_break = trend.State <= TrendState.Login;
 
             return new_trends;
@@ -118,11 +119,13 @@ namespace Photon.JobSeeker
 
                 new_trends.Add((agency, TrendType.Job));
             }
-            else if (result.TrendID is not null)
-                new_trends.Add((agency, TrendType.Job));
-            
             else if (matched_analyzed_result)
-                new_trends.Add((agency, TrendType.None));
+            {
+                if (result.TrendID is not null)
+                    new_trends.Add((agency, TrendType.Job));
+
+                else new_trends.Add((agency, TrendType.None));
+            }
 
             return new_trends;
         }
