@@ -46,9 +46,27 @@ namespace Photon.JobSeeker.Analyze
 
             if (option.Options.StartsWith("salary"))
             {
-                var group = int.Parse(option.Options.Split("-")[1]);
-                var salary = long.Parse(option.Pattern.Match(job.Html ?? "").Groups[group].Value);
-                return salary * option.Score;
+                var options = option.Options.Split("-")
+                                            .Skip(1)
+                                            .Select(o => int.Parse(o))
+                                            .ToArray();
+
+                var salary_match = option.Pattern.Match(job.Html ?? "");
+
+                var money = salary_match.Groups[options[0]].Value;
+                var salary = double.Parse(money.Replace(",", ""));
+                var factor = salary_match.Groups[options[1]].Value;
+
+                switch (factor)
+                {
+                    case "year":
+                        salary /= 12;
+                        break;
+                }
+
+                salary /= 1000;
+
+                return ((int)salary * option.Score);
             }
             else return option.Score;
         }

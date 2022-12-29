@@ -21,7 +21,7 @@ values
 
 	--	Company Benefits
 	,	(99,	'Relocation',	'\brelocation\b|\bvisa\b(.+\bsupport)?', 'benefit')
-	,	(01,	'Salary',		'\bsalary\b.*([\d,]+).*\b(hour|day|week|month|year)\b', 'salary-1')
+	,	(01,	'Salary',		'\bsalary\b.*?(\d[\d,]*000).*?\b(month|year)\b', 'salary-1-2')
 	;
 
 /*
