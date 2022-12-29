@@ -101,9 +101,9 @@ class CoreMessaging {
         }
     }
 
-    async Reload() {
+    async Reset() {
         try {
-            const server_url = await this.CheckServerUrl() + "decision/reload";
+            const server_url = await this.CheckServerUrl() + "decision/reset";
 
             const data = {
                 method: 'POST',

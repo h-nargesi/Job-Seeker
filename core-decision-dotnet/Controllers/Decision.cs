@@ -40,7 +40,7 @@ namespace Photon.JobSeeker
         }
 
         [HttpPost]
-        public IActionResult Reload()
+        public IActionResult Reset()
         {
             try
             {

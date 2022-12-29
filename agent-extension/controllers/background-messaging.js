@@ -58,7 +58,7 @@ class BackgroundMessaging {
         return BackgroundMessaging.Message({ title: "orders" });
     }
 
-    static async Reload() {
-        return BackgroundMessaging.Message({ title: "reload" });
+    static async Reset() {
+        return BackgroundMessaging.Message({ title: "reset" });
     }
 }

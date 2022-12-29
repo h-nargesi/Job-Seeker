@@ -17,7 +17,7 @@ function OnPageLoad() {
 
     if (job_seeker_trends != null) {
         document.getElementById('reset-trends').addEventListener("click", function () {
-            BackgroundMessaging.Reload();
+            BackgroundMessaging.Reset();
             job_seeker_trends.innerHTML = "";
         }, false);
 
