@@ -6,17 +6,17 @@ namespace Photon.JobSeeker
     {
         public JobBusiness(Database database) : base(database) { }
 
-        public List<Job> Fetch(JobState state)
+        public List<object> Fetch(JobState state)
         {
             using var reader = database.Read(Q_INDEX, state.ToString());
-            var list = new List<Job>();
+            var list = new List<object>();
 
             while (reader.Read())
-            {
-                var job = ReadJob(reader);
-                job.AgencyName = (string)reader[nameof(Job.AgencyName)];
-                list.Add(job);
-            }
+                list.Add(new
+                {
+                    Job = ReadJob(reader),
+                    AgencyName = (string)reader["AgencyName"],
+                });
 
             return list;
         }
@@ -32,11 +32,34 @@ namespace Photon.JobSeeker
 
         public string? GetFirstJob(long agency_id)
         {
-            using var reader = database.Read(Q_FETCH_FIRST, agency_id);
+            try
+            {
+                database.BeginTransaction();
 
-            if (!reader.Read()) return default;
+                using var reader = database.Read(Q_FETCH_FIRST, agency_id);
 
-            return (string)reader["Url"];
+                if (!reader.Read()) return default;
+
+                var data = new
+                {
+                    JobID = (long)reader[nameof(Job.JobID)],
+                    Url = (string)reader[nameof(Job.Url)],
+                    Tries = reader[nameof(Job.Tries)] as string,
+                };
+
+                reader.Close();
+
+                var prv_tries = data.Tries?.Split("\n");
+                var this_time = 1 + (prv_tries?.Length ?? 0);
+
+                var this_tries = string.Join(": ", this_time, DateTime.Now) + (this_time > 1 ? "\n" + data.Tries : "");
+
+                Save(new { data.JobID, Tries = this_tries }, JobFilter.Tries);
+                database.Commit();
+
+                return data.Url;
+            }
+            finally { database.Rollback(); }
         }
 
         protected override string[]? GetUniqueColumns { get; } = new string[] {
@@ -96,7 +119,9 @@ ORDER BY Score DESC, RegTime DESC";
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
 
         private const string Q_FETCH_FIRST = @"
-SELECT Url FROM Job WHERE AgencyID = $agency AND State = 'saved' ORDER BY JobID LIMIT 1";
+SELECT JobID, Url, Tries FROM Job
+WHERE AgencyID = $agency AND State = 'saved' AND (Tries IS NULL OR Tries NOT LIKE '%4: %')
+ORDER BY Tries IS NULL DESC, Tries DESC, JobID LIMIT 1";
 
     }
 }

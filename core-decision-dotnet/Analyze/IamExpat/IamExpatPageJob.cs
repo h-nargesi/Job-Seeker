@@ -62,7 +62,7 @@ namespace Photon.JobSeeker.IamExpat
             var code = GetJobCode(url_matched);
             var job = database.Job.Fetch(parent.ID, code);
 
-            var filter = JobFilter.Title | JobFilter.Html;
+            var filter = JobFilter.Title | JobFilter.Html | JobFilter.Tries;
 
             var code_matched = reg_job_shortlink.Match(content);
             if (!code_matched.Success) throw new Exception($"Job shortlink not found ({parent.Name}).");

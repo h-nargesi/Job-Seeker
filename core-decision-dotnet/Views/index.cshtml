@@ -1,4 +1,4 @@
-@model List<Photon.JobSeeker.Job>
+@model List<dynamic>
 
 <!DOCTYPE html>
 <html>
@@ -37,25 +37,25 @@
                         </tr>
                     </thead>
                     <tbody id="job-list">
-                    @foreach (var job in Model)
+                    @foreach (var info in Model)
                     {
-                        <tr id="Job_@job.JobID">
-                            <td>@job.JobID</td>
-                            <td><span>@job.AgencyName</span></td>
-                            <td><a href="@job.Link" target="_blank">@job.Title</a></td>
-                            <td><strong>@job.Score</strong></td>
-                            <td><a href="@job.Url" target="_blank">Link</a></td>
-                            <td><span>@job.RegTime</span></td>
+                        <tr id="Job_@info.Job.JobID">
+                            <td>@info.Job.JobID</td>
+                            <td><span>@info.AgencyName</span></td>
+                            <td><a href="@info.Job.Link" target="_blank">@info.Job.Title</a></td>
+                            <td><strong>@info.Job.Score</strong></td>
+                            <td><a href="@info.Job.Url" target="_blank">Link</a></td>
+                            <td><span>@info.Job.RegTime</span></td>
                             <td>
-                                <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#logs-@job.JobID">Logs</button>
-                                <div class="modal fade" id="logs-@job.JobID" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                                <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#logs-@info.Job.JobID">Logs</button>
+                                <div class="modal fade" id="logs-@info.Job.JobID" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                                 <div class="modal-dialog">
                                     <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="exampleModalLabel">Logs</h5>
                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                     </div>
-                                    <div class="modal-body">@job.Log</div>
+                                    <div class="modal-body">@info.Job.Log</div>
                                     <div class="modal-footer"></div>
                                     </div>
                                 </div>
@@ -90,6 +90,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.min.js"
         integrity="sha384-cuYeSxntonz0PPNlHhBs68uyIAVpIIOZZ5JqeqvYYIcEL727kskC66kF92t6Xl2V"
         crossorigin="anonymous"></script>
+    <script src="/scripts/stmd.js"></script>
+    <script src="/scripts/render.js"></script>
 </body>
 
 </html>

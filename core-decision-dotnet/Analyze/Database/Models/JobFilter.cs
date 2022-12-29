@@ -11,6 +11,7 @@ namespace Photon.JobSeeker
         Html = 64,
         Link = 128,
         Log = 256,
-        All = 511,
+        Tries = 512,
+        All = 1023,
     }
 }

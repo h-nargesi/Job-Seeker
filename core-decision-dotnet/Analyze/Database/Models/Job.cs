@@ -24,6 +24,6 @@
 
         public string? Log { get; set; }
 
-        public string? AgencyName { get; set; }
+        public string? Tries { get; set; }
     }
 }

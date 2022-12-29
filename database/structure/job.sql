@@ -10,6 +10,7 @@ create table Job (
 	Html			text			null,
 	Link			text			null,
 	Log				text			null,
+	Tries			text			null,
 
 	unique			(AgencyID, Code),
 	foreign key		(AgencyID) references Agency (AgencyID) on delete no action

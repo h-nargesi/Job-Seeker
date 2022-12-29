@@ -52,7 +52,7 @@ namespace Photon.JobSeeker.LinkedIn
 
             var code = url_matched.Groups[1].Value;
             var job = database.Job.Fetch(parent.ID, code);
-            var filter = JobFilter.Title | JobFilter.Html;
+            var filter = JobFilter.Title | JobFilter.Html | JobFilter.Tries;
 
             if (job == null)
             {
