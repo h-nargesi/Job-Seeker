@@ -56,18 +56,32 @@ namespace Photon.JobSeeker.IamExpat
         private Job LoadJob(Database database, string url, string content)
         {
             var url_matched = reg_job_url.Match(url);
-            var code = url_matched.Groups[1].Value;
+            var code = GetJobCode(url_matched);
             var job = database.Job.Fetch(parent.ID, code);
-            var filter = JobFilter.Title | JobFilter.Html;
+
+            var filter = JobFilter.Title | JobFilter.Html | JobFilter.Code;
+
+            code = reg_job_shortlink.Match(content).Groups[1].Value;
+            if (job == null)
+            {
+                job = database.Job.Fetch(parent.ID, code);
+                if (job != null)
+                {
+                    job.Code = code;
+                    filter |= JobFilter.Code;
+                }
+            }
 
             if (job == null)
             {
+                var base_link = parent.Link.Trim().EndsWith("/") ? parent.Link[..^1] : parent.Link;
+
                 job = new Job
                 {
                     AgencyID = parent.ID,
                     Code = code,
                     State = JobState.saved,
-                    Url = url_matched.Value,
+                    Url = string.Join("", base_link, url_matched.Value),
                 };
 
                 filter = JobFilter.All;

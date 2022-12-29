@@ -16,9 +16,9 @@ namespace Photon.JobSeeker.IamExpat
 
         protected static readonly Regex reg_search_title = new(@"<h1>[^<]*IT[^<]*Technology[^<]*</h1>");
 
-        protected static readonly Regex reg_job_url = new(@"/career/jobs-[^/]+/it-technology/[^/]+/(\d+)/?");
+        protected static readonly Regex reg_job_url = new(@"/career/jobs-[\w-]+(/[\w-]+)*/it-technology/([\w-]+)(/(\d+))?");
 
-        protected static readonly Regex reg_job_link = new(@"href=[""'](/career/jobs-[^/]+/it-technology/[^/]+/(\d+)/?)[""']");
+        protected static readonly Regex reg_job_shortlink = new(@"<link\s+rel=[""']shortlink[""'] href=[""']/node/(\d+)[""']>");
 
         protected static readonly Regex reg_job_title = new(@"<h1[^>]+class=[""']article__title[""'][^>]*>([^<]*)</h1>");
 
@@ -27,7 +27,16 @@ namespace Photon.JobSeeker.IamExpat
         protected static readonly Regex reg_job_adding = new(@"<a[^>]+href=[""']#[""'][^>]+rel=[""']nofollow[""'][^>]+title=[""'][^""']*Add to favourites[""'][^>]*>");
 
         protected static readonly Regex reg_job_content_start = new(@"<article[^>]*>");
-        
+
         protected static readonly Regex reg_job_content_end = new(@"</article>");
+
+        protected static string GetJobCode(Match match)
+        {
+            var i = match.Groups.Count - 1;
+            var code = "";
+            while (string.IsNullOrEmpty(code) && --i >= 0)
+                code = match.Groups[i].Value;
+            return code;
+        }
     }
 }
