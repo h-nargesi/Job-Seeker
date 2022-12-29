@@ -30,7 +30,8 @@ function OnPageLoad() {
 
         document.getElementById('stop-start-ordering').addEventListener("click", function () {
             if (ordering_interval == null) {
-                ordering_interval = setInterval(CheckNewOrders, millisecnod * 60);
+                CheckNewOrders();
+                ordering_interval = setInterval(CheckNewOrders, millisecnod * 20);
                 document.getElementById('stop-start-ordering').className = "btn btn-danger";
                 document.getElementById('stop-start-ordering').innerText = "To Stop Ordering";
 

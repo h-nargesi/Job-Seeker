@@ -4,7 +4,7 @@ namespace Photon.JobSeeker
 {
     class TrendBusiness : BaseBusiness<Trend>
     {
-        public const int TREND_EXPIRATION_MINUTES = 5;
+        public const int TREND_EXPIRATION_MINUTES = 2;
         public TrendBusiness(Database database) : base(database) { }
 
         public Trend? Get(long agency_id, TrendType type)
