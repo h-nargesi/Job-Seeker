@@ -3,8 +3,8 @@ console.log("check-page");
 function OnPageLoad() {
     console.log('Page', 'loaded');
     setTimeout(async function () {
-        var scopes = await BackgroundMessaging.Scopes();
-        var host = window.location.hostname;
+        const scopes = await BackgroundMessaging.Scopes();
+        const host = window.location.hostname;
         console.log('Page', "hostname:", host);
         for (let s in scopes) {
             if (host.match(new RegExp(scopes[s].domain, 'i'))) {
@@ -16,17 +16,32 @@ function OnPageLoad() {
     }, 5000);
 
     if (job_seeker_trends != null) {
-        document.getElementById('reload-trends').addEventListener("click", function() {
+        document.getElementById('reset-trends').addEventListener("click", function () {
             BackgroundMessaging.Reload();
             job_seeker_trends.innerHTML = "";
         }, false);
 
-        LoadTrands();
         CheckNewOrders();
+        LoadTrands();
 
-        var millisecnod = 1000;
-        setInterval(LoadTrands, millisecnod * 5);
-        setInterval(CheckNewOrders, millisecnod * 30);
+        const millisecnod = 1000;
+        setInterval(LoadTrands, millisecnod * 3);
+        var ordering_interval = setInterval(CheckNewOrders, millisecnod * 20);
+
+        document.getElementById('stop-start-ordering').addEventListener("click", function () {
+            if (ordering_interval == null) {
+                ordering_interval = setInterval(CheckNewOrders, millisecnod * 60);
+                document.getElementById('stop-start-ordering').className = "btn btn-danger";
+                document.getElementById('stop-start-ordering').innerText = "To Stop Ordering";
+
+            } else {
+                clearInterval(ordering_interval);
+                ordering_interval = null;
+                document.getElementById('stop-start-ordering').className = "btn btn-primary";
+                document.getElementById('stop-start-ordering').innerText = "To Start Ordering";
+            }
+        }, false);
+
     }
 }
 
@@ -69,7 +84,7 @@ async function CheckNewOrders() {
 }
 
 function append(element, html) {
-    var temp = document.createElement('div');
+    const temp = document.createElement('div');
     temp.innerHTML = html;
 
     while (temp.firstChild) {
