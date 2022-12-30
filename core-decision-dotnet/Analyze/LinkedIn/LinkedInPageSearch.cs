@@ -20,7 +20,7 @@ namespace Photon.JobSeeker.LinkedIn
             {
                 return new Command[]
                 {
-                    Command.Go(@"/jobs/search/?f_E=3%2C4&geoId=102890719&keywords=developer&location=Netherlands&refresh=true"),
+                    Command.Go(@$"/jobs/search/?f_E=3%2C4&geoId=102890719&keywords=developer&location={parent.Location}&refresh=true"),
                 };
             }
 

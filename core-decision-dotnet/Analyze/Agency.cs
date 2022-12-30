@@ -18,7 +18,11 @@ namespace Photon.JobSeeker
 
         public Result AnalyzeContent(string url, string content)
         {
-            Log.Debug("Agency ({0}): AnalyzeContent", Name);
+            using var database = Database.Open();
+            dynamic? settings = database.Agency.LoadSetting(ID);
+
+            Log.Information("Agency ({0}): AnalyzeContent -running={1}", Name, settings?.running);
+            if (settings != null) PrepareNewSettings(settings);
 
             foreach (var page in Pages)
             {
@@ -47,6 +51,8 @@ namespace Photon.JobSeeker
 
             LoadPages();
         }
+
+        protected abstract void PrepareNewSettings(dynamic setting);
 
         protected abstract IEnumerable<Type> GetSubPages();
 

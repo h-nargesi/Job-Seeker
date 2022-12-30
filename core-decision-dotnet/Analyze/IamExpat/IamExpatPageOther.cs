@@ -10,7 +10,7 @@
 
         public override Command[]? IssueCommand(string url, string content)
         {
-            return new Command[] { Command.Go("https://iamexpat.nl/career/jobs-netherlands") };
+            return new Command[] { Command.Go("https://iamexpat." + parent.Search) };
         }
     }
 }
