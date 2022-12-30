@@ -26,10 +26,11 @@ namespace Photon.JobSeeker.LinkedIn
 
             var codes = new HashSet<long>();
             using var database = Database.Open();
+            var base_link = parent.Link.Trim().EndsWith("/") ? parent.Link[..^1] : parent.Link;
 
-            foreach (Match job in reg_job_url.Matches(content).Cast<Match>())
+            foreach (Match job_match in reg_job_url.Matches(content).Cast<Match>())
             {
-                var code = long.Parse(job.Groups[1].Value);
+                var code = long.Parse(job_match.Groups[1].Value);
 
                 if (codes.Contains(code)) continue;
                 codes.Add(code);
@@ -37,7 +38,7 @@ namespace Photon.JobSeeker.LinkedIn
                 database.Job.Save(new
                 {
                     AgencyID = parent.ID,
-                    Url = url,
+                    Url = string.Join("", base_link, job_match.Value),
                     Code = code.ToString(),
                     State = JobState.saved
                 });
