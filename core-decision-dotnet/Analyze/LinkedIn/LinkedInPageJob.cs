@@ -1,5 +1,4 @@
 ﻿using System.Web;
-using Photon.JobSeeker.Analyze;
 using Serilog;
 
 namespace Photon.JobSeeker.LinkedIn
@@ -52,7 +51,7 @@ namespace Photon.JobSeeker.LinkedIn
 
             var code = url_matched.Groups[1].Value;
             var job = database.Job.Fetch(parent.ID, code);
-            var filter = JobFilter.Title | JobFilter.Html | JobFilter.Tries;
+            var filter = JobFilter.Title | JobFilter.Html | JobFilter.Content | JobFilter.Tries;
 
             if (job == null)
             {
@@ -72,7 +71,7 @@ namespace Photon.JobSeeker.LinkedIn
                 Log.Warning("Title not found ({0}, {1})", parent.Name, code);
             else job.Title = HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim();
 
-            job.Html = GetContent(content);
+            job.SetHtml(GetContent(content));
 
             database.Job.Save(job, filter);
 

@@ -20,10 +20,18 @@
 
         public string? Html { get; set; }
 
+        public string? Content { get; set; }
+
         public string? Link { get; set; }
 
         public string? Log { get; set; }
 
         public string? Tries { get; set; }
+
+        public void SetHtml(string html)
+        {
+            Html = html;
+            Content = JobEligibilityHelper.GetHtmlContent(html);
+        }
     }
 }

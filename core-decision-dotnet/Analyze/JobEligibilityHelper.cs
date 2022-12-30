@@ -3,10 +3,11 @@ using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using Serilog;
 
-namespace Photon.JobSeeker.Analyze
+namespace Photon.JobSeeker
 {
     public static class JobEligibilityHelper
     {
+        private readonly static Regex remove_new_lines = new Regex(@"\n{2,}");
         public const long MinEligibilityScore = 100;
 
         public static bool EvaluateJobEligibility(Database database, Job job)
@@ -22,17 +23,17 @@ namespace Photon.JobSeeker.Analyze
             doc.LoadHtml(html);
 
             var root = doc.DocumentNode;
-            var result = new StringBuilder();
+            var buffer = new StringBuilder();
             foreach (var node in root.DescendantsAndSelf())
             {
                 // if (node.HasChildNodes) continue;
 
                 string text = node.InnerText;
                 if (!string.IsNullOrEmpty(text))
-                    result.Append(" ").Append(text.Trim());
+                    buffer.Append(" ").Append(text.Trim());
             }
 
-            return result.ToString();
+            return remove_new_lines.Replace(buffer.ToString(), "\n");
         }
 
         private static bool EvaluateEligibility(Job job, JobOption[] options)
@@ -68,8 +69,7 @@ namespace Photon.JobSeeker.Analyze
 
         private static long CheckOptionIn(Job job, JobOption option, out string? matched)
         {
-            var content = GetHtmlContent(job.Html ?? "");
-            var matched_option = option.Pattern.Match(content);
+            var matched_option = option.Pattern.Match(job.Content ?? "");
             if (!matched_option.Success)
             {
                 matched = null;

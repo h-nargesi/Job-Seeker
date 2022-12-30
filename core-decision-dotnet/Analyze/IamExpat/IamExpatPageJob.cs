@@ -1,5 +1,4 @@
 ﻿using System.Web;
-using Photon.JobSeeker.Analyze;
 using Serilog;
 
 namespace Photon.JobSeeker.IamExpat
@@ -62,7 +61,7 @@ namespace Photon.JobSeeker.IamExpat
             var code = GetJobCode(url_matched);
             var job = database.Job.Fetch(parent.ID, code);
 
-            var filter = JobFilter.Title | JobFilter.Html | JobFilter.Tries;
+            var filter = JobFilter.Title | JobFilter.Html | JobFilter.Content | JobFilter.Tries;
 
             var code_matched = reg_job_shortlink.Match(content);
             if (!code_matched.Success) throw new Exception($"Job shortlink not found ({parent.Name}).");
@@ -106,7 +105,7 @@ namespace Photon.JobSeeker.IamExpat
                 Log.Warning("Title not found ({0}, {1})", parent.Name, code);
             else job.Title = HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim();
 
-            job.Html = GetContent(content);
+            job.SetHtml(GetContent(content));
 
             database.Job.Save(job, filter);
 

@@ -27,7 +27,7 @@ namespace Photon.JobSeeker
 
             if (!reader.Read()) return default;
 
-            return ReadJob(reader);
+            return ReadJob(reader, true);
         }
 
         public string? GetFirstJob(long agency_id)
@@ -91,7 +91,7 @@ namespace Photon.JobSeeker
             else database.Update(nameof(Job), model, id, filter);
         }
 
-        private static Job ReadJob(SqliteDataReader reader)
+        private static Job ReadJob(SqliteDataReader reader, bool full = false)
         {
             return new Job
             {
@@ -103,7 +103,8 @@ namespace Photon.JobSeeker
                 State = Enum.Parse<JobState>((string)reader[nameof(Job.State)]),
                 Score = reader[nameof(Job.Score)] as long?,
                 Url = (string)reader[nameof(Job.Url)],
-                Html = reader[nameof(Job.Html)] as string,
+                Html = full ? reader[nameof(Job.Html)] as string : null,
+                Content = full ? reader[nameof(Job.Content)] as string : null,
                 Link = reader[nameof(Job.Link)] as string,
                 Log = reader[nameof(Job.Log)] as string,
             };
