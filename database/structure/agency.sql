@@ -1,7 +1,7 @@
 create table Agency (
 	AgencyID		integer not null	primary key,
 	Title			text	not null	unique,
-	Active			bit		not null	default 1,
+	Active			integer	not null	default 4,
 	Domain			text	not null,
 	Link			text	not null,
 	UserName		text		null,

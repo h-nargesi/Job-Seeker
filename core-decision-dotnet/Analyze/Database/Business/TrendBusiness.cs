@@ -99,10 +99,13 @@ namespace Photon.JobSeeker
         private const string Q_INDEX = @"
 SELECT * FROM Trend";
 
-        private const string Q_REPORT = @"
+        private const string Q_REPORT = @$"
 SELECT a.Title AS Agency, a.Link, t.TrendID, t.State
     , STRFTIME('%Y-%m-%d %H:%M:%S', t.LastActivity) AS LastActivity
-FROM Agency a LEFT JOIN Trend t ON t.AgencyID = a.AgencyID";
+FROM Agency a LEFT JOIN Trend t ON t.AgencyID = a.AgencyID
+WHERE a.Active != 0 AND
+     (t.Type == '{nameof(TrendType.Search)}' AND (a.Active & 1) == 1
+   OR t.Type == '{nameof(TrendType.Job)}' AND (a.Active & 2) == 2)";
 
         private const string Q_GET = Q_INDEX + @"
 WHERE AgencyID = $agency AND Type = $type";

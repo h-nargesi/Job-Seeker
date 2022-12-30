@@ -1,2 +1,2 @@
-Stop Searching mode and just procceed Analyzing mode
 Change the Searching mode way for each agency
+Stop Searching mode and just procceed Analyzing mode
