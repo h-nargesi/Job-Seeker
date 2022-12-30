@@ -39,6 +39,8 @@
 
         public static Command Click(string @object) => new(PageAction.click, @object, null);
 
+        public static Command Recheck() => new(PageAction.recheck, null, null);
+
         public static Command Close() => new(PageAction.close, null, null);
 
         public static Command Wait(int miliseconds) => new(PageAction.wait, null, new Dictionary<string, object>

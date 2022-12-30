@@ -6,7 +6,8 @@
         open = 2,
         fill = 3,
         click = 4,
-        close = 5,
-        wait = 6,
+        recheck = 5,
+        close = 6,
+        wait = 7,
     }
 }

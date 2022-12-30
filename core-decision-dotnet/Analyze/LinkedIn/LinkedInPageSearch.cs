@@ -64,7 +64,11 @@ namespace Photon.JobSeeker.LinkedIn
             match = reg_search_other_page.Match(content);
             if (!match.Success) return Command.JustClose();
 
-            return new Command[] { Command.Click(@$"button[aria-label=""{match.Groups[1].Value}""]") };
+            return new Command[]
+            {
+                Command.Click(@$"button[aria-label=""{match.Groups[1].Value}""]"),
+                Command.Recheck(),
+            };
         }
     }
 }

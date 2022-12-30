@@ -12,25 +12,30 @@ class ActionHandler {
         console.log("Action", command);
         switch (command?.action?.toLowerCase()) {
             case "go":
-                ActionHandler.Go(command.params);
+                ActionHandler.OnGo(command.params);
                 break;
             case "open":
-                ActionHandler.Open(command.params);
+                ActionHandler.OnOpen(command.params);
                 break;
             case "fill":
-                ActionHandler.Fill(command.object, command.params);
-                ActionHandler.Wait({ miliseconds: 300 });
+                ActionHandler.OnFill(command.object, command.params);
+                ActionHandler.OnWait({ miliseconds: 300 });
                 break;
             case "click":
-                ActionHandler.Click(command.object);
-                ActionHandler.Wait({ miliseconds: 300 });
+                ActionHandler.OnClick(command.object);
+                ActionHandler.OnWait({ miliseconds: 300 });
+                break;
+            case "recheck":
+                if (!ActionHandler.OnPageLoad)
+                    console.warn("The OnRecheck event is not set!");
+                ActionHandler.OnPageLoad();
                 break;
             case "close":
                 if (!dontclose)
-                    ActionHandler.Close();
+                    ActionHandler.OnClose();
                 break;
             case "wait":
-                await ActionHandler.Wait(command.params);
+                await ActionHandler.OnWait(command.params);
                 break;
             default:
                 console.error("Unkown action", command.action);
@@ -38,15 +43,15 @@ class ActionHandler {
         }
     }
 
-    static Go(params) {
+    static OnGo(params) {
         window.location = params.url;
     }
 
-    static Open(params) {
+    static OnOpen(params) {
         window.open(params.url);
     }
 
-    static Fill(object, params) {
+    static OnFill(object, params) {
         let elements = document.querySelectorAll(object);
         if (!elements) console.warn("Not found", object);
         elements.forEach(element => {
@@ -55,41 +60,22 @@ class ActionHandler {
         });
     }
 
-    static Click(object) {
-        const info = ActionHandler.GetElement(object);
-        if (!info.elements) console.warn("Not found", object);
-        else info.elements.forEach(element => {
-            if (!element) return;
-            if (info.extra)
-                switch (info.extra) {
-                    case "next":
-                        element = element.nextSibling;
-                        break;
-                }
-            if (element) element.click();
+    static OnClick(object) {
+        let elements = document.querySelectorAll(object);
+        if (!elements) console.warn("Not found", object);
+        elements.forEach(element => {
+            if (element) element.click()
         });
     }
 
-    static Close() {
+    static OnPageLoad = null;
+
+    static OnClose() {
         window.open('', '_self', '');
         window.close();
     }
 
-    static async Wait(params) {
+    static async OnWait(params) {
         await new Promise(r => setTimeout(r, params.miliseconds));
-    }
-
-    static GetElement(object) {
-        if (object.includes("@")) {
-            const parts = object.split("@");
-            return {
-                extra: parts[1],
-                elements: document.querySelectorAll(parts[0])
-            };
-
-        } else return {
-            extra: null,
-            elements: document.querySelectorAll(object)
-        };
     }
 }

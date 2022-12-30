@@ -1,19 +1,20 @@
 console.log("check-page");
 
-function OnPageLoad() {
+ActionHandler.OnPageLoad = function() {
     console.log('Page', 'loaded');
     setTimeout(async function () {
         const scopes = await BackgroundMessaging.Scopes();
         const host = window.location.hostname;
         console.log('Page', "hostname:", host);
         for (let s in scopes) {
+            console.log('Page', 'Checking for', scopes[s].domain);
             if (host.match(new RegExp(scopes[s].domain, 'i'))) {
                 console.log('Page', "matched", scopes[s].domain);
                 SendingPageInfo(scopes[s]);
                 break;
             }
         }
-    }, 1000);
+    }, 5000);
 
     if (job_seeker_trends != null) {
         document.getElementById('reset-trends').addEventListener("click", function () {
@@ -95,6 +96,6 @@ function append(element, html) {
 
 var job_seeker_trends = document.getElementById('job-seeker-trend-list');
 
-if (window.addEventListener) window.addEventListener("load", OnPageLoad, false);
-// else if (window.attachEvent) window.attachEvent("onload", OnPageLoad);
-else window.onload = OnPageLoad;
+if (window.addEventListener) window.addEventListener("load", ActionHandler.OnPageLoad, false);
+// else if (window.attachEvent) window.attachEvent("onload", ActionHandler.OnPageLoad);
+else window.onload = ActionHandler.OnPageLoad;
