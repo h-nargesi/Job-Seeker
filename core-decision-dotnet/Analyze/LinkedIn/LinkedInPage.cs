@@ -12,7 +12,11 @@ namespace Photon.JobSeeker.LinkedIn
 
         protected static readonly Regex reg_search_url = new(@"://[^/]*linkedin\.com/jobs/search");
 
-        protected static readonly Regex reg_search_keywords_url = new(@"f_E=3%2C4&geoId=102890719&keywords=developer&location=Netherlands&refresh=true");
+        protected static readonly Regex reg_search_location_url = new(@"(^|&)location=Netherlands(&|$)");
+
+        protected static readonly Regex reg_search_keywords_url = new(@"(^|&)keywords=developer(&|$)");
+
+        protected static readonly Regex reg_search_options_url = new(@"(^|&)f_E=3%2C4(&|$)");
 
         protected static readonly Regex reg_search_page_panel = new(@"<ul[^>]+class=[""']artdeco-pagination__pages[^""']*[""']>");
 

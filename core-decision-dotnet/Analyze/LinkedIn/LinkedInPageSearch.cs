@@ -14,7 +14,9 @@ namespace Photon.JobSeeker.LinkedIn
         {
             if (!reg_search_url.IsMatch(url)) return null;
 
-            if (!reg_search_keywords_url.IsMatch(url))
+            if (!reg_search_keywords_url.IsMatch(url) ||
+                !reg_search_location_url.IsMatch(url) ||
+                !reg_search_options_url.IsMatch(url))
             {
                 return new Command[]
                 {
