@@ -195,7 +195,7 @@ namespace Photon.JobSeeker
         private void LogCheckingSleptTrends(Agency agency, TrendType type, Trend? trend, 
             bool matched_analyzed_result, bool had_not_trend, IList<(Agency agency, TrendType type)> new_trends)
         {
-            Log.Debug("Agency({0}-{1}) -self={2} -db-trend={3} -had-trend-id={4} -order={5}",
+            Log.Debug("Trend ({0}-{1}) -self={2} -db-trend={3} -had-trend-id={4} -order={5}",
                 agency.Name,
                 type,
                 matched_analyzed_result ? "*" : "",

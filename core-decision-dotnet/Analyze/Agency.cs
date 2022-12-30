@@ -18,7 +18,7 @@ namespace Photon.JobSeeker
 
         public Result AnalyzeContent(string url, string content)
         {
-            Log.Debug("AnalyzeContent in {0}", Name);
+            Log.Debug("Agency ({0}): AnalyzeContent", Name);
 
             foreach (var page in Pages)
             {
@@ -32,7 +32,7 @@ namespace Photon.JobSeeker
                 }
             }
 
-            Log.Warning("Page not found: {0}", Name);
+            Log.Warning("Agency ({0}): Page not found", Name);
             return new Result { Commands = Command.JustClose() };
         }
 
