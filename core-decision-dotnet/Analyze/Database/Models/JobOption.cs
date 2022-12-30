@@ -4,13 +4,15 @@ namespace Photon.JobSeeker
 {
     struct JobOption
     {
+        public string Category { get; set; }
+
         public long Score { get; set; }
 
         public string Title { get; set; }
 
         public Regex Pattern { get; set; }
 
-        public string Options { get; set; }
+        public dynamic? Settings { get; set; }
 
         public override string ToString()
         {

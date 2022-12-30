@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace Photon.JobSeeker
 {
@@ -14,12 +15,15 @@ namespace Photon.JobSeeker
             var option_list = new List<JobOption>();
             while (reader.Read())
             {
+                var settings = reader[nameof(JobOption.Settings)] as string;
+
                 option_list.Add(new JobOption()
                 {
-                    Title = (string)reader["Title"],
-                    Score = (long)reader["Score"],
-                    Pattern = new Regex((string)reader["Pattern"]),
-                    Options = (string)reader["Options"],
+                    Category = (string)reader[nameof(JobOption.Category)],
+                    Score = (long)reader[nameof(JobOption.Score)],
+                    Title = (string)reader[nameof(JobOption.Title)],
+                    Pattern = new Regex((string)reader[nameof(JobOption.Pattern)]),
+                    Settings = settings is null ? null : JsonConvert.DeserializeObject<dynamic>(settings),
                 });
             }
 
@@ -27,6 +31,6 @@ namespace Photon.JobSeeker
         }
 
         private const string Q_FETCH_ALL = @"
-SELECT Score, Title, Pattern, Options FROM JobOption WHERE Efective != 0";
+SELECT Category, Score, Title, Pattern, Settings FROM JobOption WHERE Efective != 0";
     }
 }

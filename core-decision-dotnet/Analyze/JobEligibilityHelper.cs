@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
+using Serilog;
 
 namespace Photon.JobSeeker.Analyze
 {
@@ -13,6 +14,25 @@ namespace Photon.JobSeeker.Analyze
             var options = database.JobOption.FetchAll();
 
             return EvaluateEligibility(job, options);
+        }
+
+        public static string GetHtmlContent(string html)
+        {
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
+
+            var root = doc.DocumentNode;
+            var result = new StringBuilder();
+            foreach (var node in root.DescendantsAndSelf())
+            {
+                // if (node.HasChildNodes) continue;
+
+                string text = node.InnerText;
+                if (!string.IsNullOrEmpty(text))
+                    result.Append(" ").Append(text.Trim());
+            }
+
+            return result.ToString();
         }
 
         private static bool EvaluateEligibility(Job job, JobOption[] options)
@@ -32,7 +52,7 @@ namespace Photon.JobSeeker.Analyze
                     logs.Add("");
                 }
 
-                if (!hasField && option_score > 0 && option.Options == "field")
+                if (!hasField && option_score > 0 && option.Category == "field")
                 {
                     hasField = true;
                 }
@@ -57,51 +77,41 @@ namespace Photon.JobSeeker.Analyze
             }
             else matched = matched_option.Value;
 
-            if (option.Options.StartsWith("salary"))
+            return option.Category switch
             {
-                var options = option.Options.Split("-")
-                                            .Skip(1)
-                                            .Select(o => int.Parse(o))
-                                            .ToArray();
-
-                var money = matched_option.Groups[options[0]].Value;
-                if (!double.TryParse(money?.Replace(",", ""), out var salary)) return 0;
-                var factor = matched_option.Groups[options[1]].Value;
-
-                switch (factor)
-                {
-                    case "year":
-                        salary /= 12;
-                        break;
-                    case "month":
-                        break;
-                    default: return 0;
-                }
-
-                salary /= 1000;
-
-                return ((int)salary * option.Score);
-            }
-            else return option.Score;
+                "salary" => EvaluateSalaryScore(matched_option, option),
+                _ => option.Score
+            };
         }
 
-        public static string GetHtmlContent(string html)
+        private static long EvaluateSalaryScore(Match matched, JobOption option)
         {
-            var doc = new HtmlDocument();
-            doc.LoadHtml(html);
-
-            var root = doc.DocumentNode;
-            var result = new StringBuilder();
-            foreach (var node in root.DescendantsAndSelf())
+            if (option.Settings is null)
             {
-                // if (node.HasChildNodes) continue;
-
-                string text = node.InnerText;
-                if (!string.IsNullOrEmpty(text))
-                    result.Append(" ").Append(text.Trim());
+                Log.Warning("Invalid salary options");
+                return 0;
             }
 
-            return result.ToString();
+            var money_index = (int)option.Settings.money;
+            var period_index = (int)option.Settings.period;
+
+            var money = matched.Groups[money_index].Value;
+            if (!double.TryParse(money?.Replace(",", ""), out double salary)) return 0;
+            var period = matched.Groups[period_index].Value;
+
+            switch (period)
+            {
+                case "year":
+                    salary /= 12;
+                    break;
+                case "month":
+                    break;
+                default: return 0;
+            }
+
+            salary /= 1000;
+
+            return ((long)salary * option.Score);
         }
     }
 }
