@@ -22,7 +22,7 @@ namespace Photon.JobSeeker
                     Category = (string)reader[nameof(JobOption.Category)],
                     Score = (long)reader[nameof(JobOption.Score)],
                     Title = (string)reader[nameof(JobOption.Title)],
-                    Pattern = new Regex((string)reader[nameof(JobOption.Pattern)]),
+                    Pattern = new Regex((string)reader[nameof(JobOption.Pattern)], RegexOptions.IgnoreCase),
                     Settings = settings is null ? null : JsonConvert.DeserializeObject<dynamic>(settings),
                 });
             }

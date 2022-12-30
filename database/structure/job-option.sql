@@ -5,7 +5,7 @@ create table JobOption (
 	Score			integer	not null,
 	Title			text	not null,
 	Pattern			text	not null,
-	Settings	text		null,
+	Settings		text		null,
 
 	unique			(Title)
 );
@@ -15,14 +15,14 @@ create unique index UQ_JobOption_Name on JobOption (Title);
 insert into JobOption (Score, Category, Title, Pattern, Settings)
 values
 	--	Programming languages
-		(50,	'field',	'C# dot net',	'\b(c#|(dot ?|\.)net)\b', null)
-	,	(10,	'field',	'Java',			'\b(java|jvm)\b', null)
-	,	(50,	'field',	'Javascript',	'\b(javascript|typescript)\b', null)
-	,	(50,	'field',	'Angular',		'\bangular\b', null)
+		(99,	'field',	'C# dot net',	'(?<=\s|^)(c#|(dot ?|\.)net)(?=\s|$)', null)
+	,	(80,	'field',	'Java',			'\b(java|jvm)\b', null)
+	,	(45,	'field',	'Javascript',	'\b(javascript|typescript)\b', null)
+	,	(45,	'field',	'Angular',		'\bangular\b', null)
 
 	--	Company Benefits
-	,	(99,	'benefit',		'Relocation',	'\brelocation\b|\bvisa\b(.+\bsupport)?', null)
-	,	(01,	'salary',		'Salary',		'\bsalary\b.*?(\d[\d,]*000).*?\b(month|year)\b',
+	,	(99,	'benefit',	'Relocation',	'\brelocation\b|\bvisa\b(.+?\bsupport)?', null)
+	,	(02,	'salary',	'Salary',		'\bsalary\b.*?(\d[\d,]*000).*?\b(month|year)\b',
 				'{ "money": 1, "period": 2 }')
 	;
 

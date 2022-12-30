@@ -7,7 +7,7 @@ namespace Photon.JobSeeker
 {
     public static class JobEligibilityHelper
     {
-        private readonly static Regex remove_new_lines = new Regex(@"(?<=\n)[\n\s]+");
+        private readonly static Regex remove_new_lines = new(@"(?<=\n)[\n\s]+");
         public const long MinEligibilityScore = 100;
 
         public static bool EvaluateJobEligibility(Database database, Job job)
