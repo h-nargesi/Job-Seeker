@@ -17,7 +17,7 @@ namespace Photon.JobSeeker
 
             try
             {
-                Log.Information(context.ToString());
+                Log.Information("Taken: {0}", context.ToString());
 
                 var result = analyzer.Analyze(context);
 
