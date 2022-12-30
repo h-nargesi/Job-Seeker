@@ -47,7 +47,7 @@
                             <td><a href="@info.Job.Url" target="_blank">Link</a></td>
                             <td><span>@info.Job.RegTime</span></td>
                             <td>
-                                <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#logs-@info.Job.JobID">Logs</button>
+                                <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#logs-@info.Job.JobID" data-id="@info.Job.JobID">Logs</button>
                                 <div class="modal fade" id="logs-@info.Job.JobID" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                                 <div class="modal-dialog">
                                     <div class="modal-content">
@@ -55,7 +55,7 @@
                                         <h5 class="modal-title" id="exampleModalLabel">Logs</h5>
                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                     </div>
-                                    <div class="modal-body">@info.Job.Log</div>
+                                    <div id="logs-body-@info.Job.JobID" class="modal-body">@info.Job.Log</div>
                                     <div class="modal-footer"></div>
                                     </div>
                                 </div>
