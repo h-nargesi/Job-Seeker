@@ -92,6 +92,7 @@ namespace Photon.JobSeeker
                 AgencyID = (long)reader[nameof(Trend.AgencyID)],
                 LastActivity = DateTime.Parse((string)reader[nameof(Trend.LastActivity)]),
                 State = Enum.Parse<TrendState>((string)reader[nameof(Trend.State)]),
+                Reserved = 0 != (long)reader[nameof(Trend.Reserved)],
             };
         }
 

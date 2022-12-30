@@ -6,6 +6,7 @@ namespace Photon.JobSeeker
         LastActivity = 2,
         Type = 4,
         State = 8,
-        All = 15,
+        Reserved = 16,
+        All = 31,
     }
 }
