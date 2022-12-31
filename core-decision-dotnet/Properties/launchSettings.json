@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "core-decision": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:55548;http://localhost:55549"
+    }
+  }
+}
