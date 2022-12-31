@@ -26,7 +26,7 @@ namespace Photon.JobSeeker
         public Result Analyze(PageContext context)
         {
             var result = AnalyzeContent(context);
-            result.Trend = context.Trend;
+            result.TrendID = context.Trend;
             using var trends_checkpoint = new TrendsCheckpoint(this, result);
             return trends_checkpoint.CheckCurrentTrends();
         }
@@ -41,7 +41,7 @@ namespace Photon.JobSeeker
             if (context.Agency == null)
                 throw new BadJobRequest("Bad request (empty agency)");
 
-            Log.Debug("Analyzer.Analyze: {0}", context.Agency);
+            Log.Debug("Analyze request: {0}", context.Agency);
 
             if (!Agencies.ContainsKey(context.Agency))
                 throw new BadJobRequest($"{context.Agency} not found!");
@@ -49,9 +49,9 @@ namespace Photon.JobSeeker
             if (context.Url == null || context.Content == null)
                 throw new BadJobRequest($"{context.Agency} had empty url/content");
 
-            var agency_handler = Agencies[context.Agency];
-            var result = agency_handler.AnalyzeContent(context.Url, context.Content);
-            result.Agency = agency_handler.ID;
+            var agency = Agencies[context.Agency];
+            var result = agency.AnalyzeContent(context.Url, context.Content);
+            result.AgencyID = agency.ID;
             return result;
         }
 
@@ -71,7 +71,7 @@ namespace Photon.JobSeeker
 
                 agency.LoadFromDatabase(database);
 
-                if (agency.ID == default) return;
+                if (agency.ID == default) continue;
 
                 agencies.Add(agency.Name, agency);
                 Log.Debug("agency added: {0}", agency.Name);

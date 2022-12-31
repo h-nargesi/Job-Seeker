@@ -11,7 +11,7 @@ body {
 
 a,
 a:visited {
-    color: var(--main-color);
+    color: var(--blue-color);
     text-decoration: none;
 }
 
@@ -101,4 +101,8 @@ article ul {
 footer {
     padding-top: 0;
     color: var(--back-color);
+}
+
+.modal-body {
+    white-space: pre;
 }

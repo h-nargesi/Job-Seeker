@@ -1,15 +1,15 @@
 ﻿using System.Web;
 using Serilog;
 
-namespace Photon.JobSeeker.IamExpat
+namespace Photon.JobSeeker.LinkedIn
 {
-    class IamExpatPageJob : IamExpatPage
+    class LinkedInPageJob : LinkedInPage
     {
         public override int Order => 10;
 
         public override TrendState TrendState => TrendState.Analyzing;
 
-        public IamExpatPageJob(IamExpat parent) : base(parent) { }
+        public LinkedInPageJob(LinkedIn parent) : base(parent) { }
 
         public override Command[]? IssueCommand(string url, string content)
         {
@@ -30,23 +30,14 @@ namespace Photon.JobSeeker.IamExpat
 
                 if (reg_job_adding.IsMatch(content))
                 {
-                    commands.Add(Command.Click(@"a[rel=""nofollow""]"));
+                    commands.Add(Command.Click(@"button[class=""jobs-save-button""]"));
                     commands.Add(Command.Wait(3000));
                 }
 
-                var apply_match = reg_job_apply.Match(content);
-                if (!apply_match.Success) job.Log += "|Apply button not found!";
-                else
-                {
-                    job.Link = apply_match.Groups[1].Value;
-                    if (job.Link.StartsWith('#'))
-                    {
-                        // TODO: easy apply
-                    }
-                }
+                // TODO: apply link
             }
 
-            Log.Debug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log?.Replace("\n", " ")));
+            Log.Debug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log));
             database.Job.Save(job, JobFilter.Log | JobFilter.State | JobFilter.Link | JobFilter.Score);
 
             commands.Add(Command.Close());
@@ -58,46 +49,21 @@ namespace Photon.JobSeeker.IamExpat
             var url_matched = reg_job_url.Match(url);
             if (!url_matched.Success) throw new Exception($"Invalid job url ({parent.Name}).");
 
-            var code = GetJobCode(url_matched);
+            var code = url_matched.Groups[1].Value;
             var job = database.Job.Fetch(parent.ID, code);
-
             var filter = JobFilter.Title | JobFilter.Html | JobFilter.Content | JobFilter.Tries;
 
-            var code_matched = reg_job_shortlink.Match(content);
-            if (!code_matched.Success) throw new Exception($"Job shortlink not found ({parent.Name}).");
-            code = code_matched.Groups[1].Value;
-            if (job != null)
+            if (job == null)
             {
-                var temp_job = database.Job.Fetch(parent.ID, code);
-                if (temp_job == null)
+                job = new Job
                 {
-                    job.Code = code;
-                    filter |= JobFilter.Code;
-                }
-                else
-                {
-                    database.Job.Delete(job.JobID);
-                    job = temp_job;
-                }
-            }
-            else
-            {
-                job = database.Job.Fetch(parent.ID, code);
+                    AgencyID = parent.ID,
+                    Code = code,
+                    State = JobState.saved,
+                    Url = url_matched.Value,
+                };
 
-                if (job == null)
-                {
-                    var base_link = parent.Link.Trim().EndsWith("/") ? parent.Link[..^1] : parent.Link;
-
-                    job = new Job
-                    {
-                        AgencyID = parent.ID,
-                        Code = code,
-                        State = JobState.saved,
-                        Url = string.Join("", base_link, url_matched.Value),
-                    };
-
-                    filter = JobFilter.All;
-                }
+                filter = JobFilter.All;
             }
 
             var title_match = reg_job_title.Match(content);
@@ -120,7 +86,7 @@ namespace Photon.JobSeeker.IamExpat
             var end_match = reg_job_content_end.Match(html);
             if (!end_match.Success) return html;
 
-            return html.Substring(start_match.Index, end_match.Index + end_match.Length - start_match.Index);
+            return html.Substring(start_match.Index + start_match.Length, end_match.Index - start_match.Index - start_match.Length);
         }
     }
 }

@@ -18,7 +18,11 @@ namespace Photon.JobSeeker
 
         public Result AnalyzeContent(string url, string content)
         {
-            Log.Debug("AnalyzeContent: {0}", Name);
+            using var database = Database.Open();
+            dynamic? settings = database.Agency.LoadSetting(ID);
+
+            Log.Information("Agency ({0}): AnalyzeContent -running={1}", Name, settings?.running);
+            if (settings != null) PrepareNewSettings(settings);
 
             foreach (var page in Pages)
             {
@@ -26,20 +30,18 @@ namespace Photon.JobSeeker
 
                 if (commands != null)
                 {
-                    Log.Information("page checked: {0}", page.GetType().Name);
-                    Log.Debug("page commands: {0}", commands.StringJoin());
-                    return new Result { Type = page.TrendType, Commands = commands };
+                    Log.Information("Page checked: {0}", page.GetType().Name);
+                    Log.Debug("Page commands: {0}", commands.StringJoin());
+                    return new Result { State = page.TrendState, Commands = commands };
                 }
             }
 
-            Log.Debug("Page not found: {0}", Name);
-            return new Result { Type = TrendType.None, Commands = Command.JustClose() };
+            Log.Warning("Agency ({0}): Page not found", Name);
+            return new Result { Commands = Command.JustClose() };
         }
 
         public void LoadFromDatabase(Database database)
         {
-            if (database == null) throw new ArgumentNullException(nameof(database));
-
             var agency_info = database.Agency.LoadByName(Name);
             if (agency_info == default) return;
 
@@ -49,6 +51,8 @@ namespace Photon.JobSeeker
 
             LoadPages();
         }
+
+        protected abstract void PrepareNewSettings(dynamic setting);
 
         protected abstract IEnumerable<Type> GetSubPages();
 

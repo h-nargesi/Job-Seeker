@@ -34,53 +34,88 @@ class CoreMessaging {
     }
 
     async Scopes(reset) {
+        try {
+            if (reset === true) {
+                CoreMessaging.SCOPES = undefined;
+            }
 
-        if (reset === true) {
-            CoreMessaging.SCOPES = undefined;
+            if (CoreMessaging.SCOPES === undefined) {
+
+                const server_url = await this.CheckServerUrl() + "decision/scopes";
+
+                const data = {
+                    method: 'GET',
+                    headers: CoreMessaging.HEADERS
+                };
+
+                const response = await fetch(server_url, data);
+                CoreMessaging.SCOPES = await response.json();
+                console.log("CoreMessaging", "Scopes", CoreMessaging.SCOPES);
+            }
+
+            return CoreMessaging.SCOPES;
+
+        } catch (e) {
+            console.error(e);
+            return {};
         }
+    }
 
-        if (CoreMessaging.SCOPES === undefined) {
-
-            const server_url = await this.CheckServerUrl() + "decision/scopes";
+    async Trends() {
+        try {
+            const server_url = await this.CheckServerUrl() + "report/trends";
 
             const data = {
                 method: 'GET',
                 headers: CoreMessaging.HEADERS
             };
 
-            const response = await fetch(server_url, data);
-            CoreMessaging.SCOPES = await response.json();
-            console.log("CoreMessaging", "Scopes", CoreMessaging.SCOPES);
+            let response = await fetch(server_url, data);
+            response = await response.json();
+            console.log("CoreMessaging", "Trends", response);
+            return response;
+
+        } catch (e) {
+            console.error(e);
+            return {};
         }
-
-        return CoreMessaging.SCOPES;
-    }
-
-    async Trends() {
-        const server_url = await this.CheckServerUrl() + "report/trends";
-
-        const data = {
-            method: 'GET',
-            headers: CoreMessaging.HEADERS
-        };
-
-        let response = await fetch(server_url, data);
-        response = await response.json();
-        console.log("CoreMessaging", "Trends", response);
-        return response;
     }
 
     async Orders() {
-        const server_url = await this.CheckServerUrl() + "decision/orders";
+        try {
+            const server_url = await this.CheckServerUrl() + "decision/orders";
 
-        const data = {
-            method: 'GET',
-            headers: CoreMessaging.HEADERS
-        };
+            const data = {
+                method: 'GET',
+                headers: CoreMessaging.HEADERS
+            };
 
-        let response = await fetch(server_url, data);
-        response = await response.json();
-        console.log("CoreMessaging", "Orders", response);
-        return response;
+            let response = await fetch(server_url, data);
+            response = await response.json();
+            console.log("CoreMessaging", "Orders", response);
+            return response;
+
+        } catch (e) {
+            console.error(e);
+            return {};
+        }
+    }
+
+    async Reset() {
+        try {
+            const server_url = await this.CheckServerUrl() + "decision/reset";
+
+            const data = {
+                method: 'POST',
+                headers: CoreMessaging.HEADERS
+            };
+
+            await fetch(server_url, data);
+
+        } catch (e) {
+            console.error(e);
+        }
+        
+        return {};
     }
 }

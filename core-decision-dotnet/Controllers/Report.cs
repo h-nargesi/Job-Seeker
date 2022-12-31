@@ -16,6 +16,7 @@ namespace Photon.JobSeeker
             try
             {
                 using var database = Database.Open();
+                database.Trend.DeleteExpired();
                 var result = database.Trend.Report();
                 return Ok(result);
             }

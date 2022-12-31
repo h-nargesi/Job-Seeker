@@ -10,7 +10,7 @@ namespace Photon.JobSeeker
 
         public override string ToString()
         {
-            return $"trend: {Trend}, agency: {Agency}, url: {Url}";
+            return @$"trend-id: {Trend}, agency: {Agency}, url: ""{Url}""";
         }
     }
 }

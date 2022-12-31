@@ -6,7 +6,7 @@ namespace Photon.JobSeeker.IamExpat
     {
         public override int Order => 20;
 
-        public override TrendType TrendType => TrendType.Searching;
+        public override TrendState TrendState => TrendState.Seeking;
 
         public IamExpatPageSearch(IamExpat parent) : base(parent) { }
 
@@ -27,27 +27,29 @@ namespace Photon.JobSeeker.IamExpat
                 };
             }
 
-            var codes = new HashSet<long>();
+            var codes = new HashSet<string>();
             using var database = Database.Open();
             var base_link = parent.Link.Trim().EndsWith("/") ? parent.Link[..^1] : parent.Link;
 
-            foreach (Match job in reg_job_link.Matches(content).Cast<Match>())
+            var job_matches = reg_job_url.Matches(content).Cast<Match>();
+            foreach (Match job_match in job_matches)
             {
-                var code = long.Parse(job.Groups[2].Value);
+                var code = GetJobCode(job_match);
 
-                if (codes.Contains(code)) continue;
+                if (string.IsNullOrEmpty(code) || codes.Contains(code)) continue;
                 codes.Add(code);
 
                 database.Job.Save(new
                 {
                     AgencyID = parent.ID,
-                    Url = string.Join("", base_link, job.Groups[1].Value),
-                    Code = code.ToString(),
+                    Url = string.Join("", base_link, job_match.Value),
+                    Code = code,
                     State = JobState.saved
                 });
             }
 
-            return new Command[] { Command.Click(@"a[title=""Go to next page""]") };
+            if (!reg_search_end.IsMatch(content)) return Command.JustClose();
+            else return new Command[] { Command.Click(@"a[title=""Go to next page""]") };
         }
     }
 }

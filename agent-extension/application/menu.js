@@ -1,6 +1,7 @@
 console.log("menu.js");
 
 const Manifest = chrome.runtime.getManifest();
+const OpenServer = document.getElementById('OpenServer');
 const ServerUrl = document.getElementById('ServerUrl');
 const ManifestTitle = document.getElementById('ManifestTitle');
 const ManifestDescr = document.getElementById('ManifestDescr');
@@ -12,6 +13,10 @@ ServerUrl.addEventListener("keyup", function(event) {
         console.log("Menu", "ServerUrl", ServerUrl.value);
         StorageHandler.ServerUrl = ServerUrl.value;
     }
+});
+
+OpenServer.addEventListener("click", function() {
+    window.open(ServerUrl.value + "report/index");
 });
 
 async function LoadData() {

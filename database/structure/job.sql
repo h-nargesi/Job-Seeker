@@ -8,8 +8,10 @@ create table Job (
 	Score			integer			null,
 	Url				text		not null,
 	Html			text			null,
+	Content			text			null,
 	Link			text			null,
 	Log				text			null,
+	Tries			text			null,
 
 	unique			(AgencyID, Code),
 	foreign key		(AgencyID) references Agency (AgencyID) on delete no action

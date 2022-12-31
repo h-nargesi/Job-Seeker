@@ -17,14 +17,14 @@ namespace Photon.JobSeeker
 
             try
             {
-                Log.Information(context.ToString());
+                Log.Information("Taken: {0}", context.ToString());
 
                 var result = analyzer.Analyze(context);
 
                 return Ok(new
                 {
-                    result.Trend,
-                    result.Commands,
+                    trend = result.TrendID,
+                    commands = result.Commands,
                 });
             }
             catch (BadJobRequest bd)
@@ -40,10 +40,12 @@ namespace Photon.JobSeeker
         }
 
         [HttpPost]
-        public IActionResult Reload()
+        public IActionResult Reset()
         {
             try
             {
+                using var database = Database.Open();
+                database.Trend.DeleteExpired(0);
                 analyzer.ClearAgencies();
 
                 return Ok();

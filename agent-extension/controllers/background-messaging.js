@@ -33,8 +33,12 @@ class BackgroundMessaging {
         BackgroundMessaging.RunListener();
         return new Promise(function (resolve) {
             message.id = ++BackgroundMessaging.MESSAGE_ID;
-            BackgroundMessaging.CURRENT_REQUESTS[message.id] = resolve;
-            chrome.runtime.sendMessage(message);
+            try {
+                BackgroundMessaging.CURRENT_REQUESTS[message.id] = resolve;
+                chrome.runtime.sendMessage(message);
+            } catch {
+                delete BackgroundMessaging.CURRENT_REQUESTS[message.id];
+            }
         });
     }
 
@@ -52,5 +56,9 @@ class BackgroundMessaging {
 
     static async Orders() {
         return BackgroundMessaging.Message({ title: "orders" });
+    }
+
+    static async Reset() {
+        return BackgroundMessaging.Message({ title: "reset" });
     }
 }

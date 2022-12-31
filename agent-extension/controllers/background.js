@@ -23,6 +23,9 @@ chrome.runtime.onMessage.addListener(
             case "orders":
                 Respond(sender.tab, request.id, messaging.Orders());
                 break;
+            case "reset":
+                Respond(sender.tab, request.id, messaging.Reset());
+                break;
         }
     }
 );
@@ -30,8 +33,9 @@ chrome.runtime.onMessage.addListener(
 async function Respond(tab, id, promise) {
     let response = await promise;
 
-    if (response.trend) {
-        trends.set(tab.windowId, tab.index, response.trend);
+    if (response.trend !== undefined) {
+        if (response.trend)
+            trends.set(tab.windowId, tab.index, response.trend);
         response = response.commands;
     }
 

@@ -13,6 +13,13 @@ namespace Photon.JobSeeker
                 value = DBNull.Value;
             else type = value.GetType();
 
+            if (type.IsEnum)
+            {
+                type = typeof(string);
+                if (value is not DBNull)
+                    value = value.ToString() ?? (object)DBNull.Value;
+            }
+
             if (!SYSTEM_TYPE_MAP.ContainsKey(type))
                 throw new ArgumentOutOfRangeException(nameof(type), type.FullName);
 

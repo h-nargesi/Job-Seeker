@@ -2,22 +2,21 @@
 
 namespace Photon.JobSeeker
 {
-    class JobBusiness
+    class JobBusiness : BaseBusiness<Job>
     {
-        private Database database;
-        public JobBusiness(Database database) => this.database = database;
+        public JobBusiness(Database database) : base(database) { }
 
-        public List<Job> Fetch(JobState state)
+        public List<object> Fetch(JobState state)
         {
             using var reader = database.Read(Q_INDEX, state.ToString());
-            var list = new List<Job>();
+            var list = new List<object>();
 
             while (reader.Read())
-            {
-                var job = ReadJob(reader);
-                job.AgencyName = (string)reader[nameof(Job.AgencyName)];
-                list.Add(job);
-            }
+                list.Add(new
+                {
+                    Job = ReadJob(reader),
+                    AgencyName = (string)reader["AgencyName"],
+                });
 
             return list;
         }
@@ -28,17 +27,44 @@ namespace Photon.JobSeeker
 
             if (!reader.Read()) return default;
 
-            return ReadJob(reader);
+            return ReadJob(reader, true);
         }
 
         public string? GetFirstJob(long agency_id)
         {
-            using var reader = database.Read(Q_FETCH_FIRST, agency_id);
+            try
+            {
+                database.BeginTransaction();
 
-            if (!reader.Read()) return default;
+                using var reader = database.Read(Q_FETCH_FIRST, agency_id);
 
-            return (string)reader["Url"];
+                if (!reader.Read()) return default;
+
+                var data = new
+                {
+                    JobID = (long)reader[nameof(Job.JobID)],
+                    Url = (string)reader[nameof(Job.Url)],
+                    Tries = reader[nameof(Job.Tries)] as string,
+                };
+
+                reader.Close();
+
+                var prv_tries = data.Tries?.Split("\n");
+                var this_time = 1 + (prv_tries?.Length ?? 0);
+
+                var this_tries = string.Join(": ", this_time, DateTime.Now) + (this_time > 1 ? "\n" + data.Tries : "");
+
+                Save(new { data.JobID, Tries = this_tries }, JobFilter.Tries);
+                database.Commit();
+
+                return data.Url;
+            }
+            finally { database.Rollback(); }
         }
+
+        protected override string[]? GetUniqueColumns { get; } = new string[] {
+            nameof(JobFilter.AgencyID), nameof(JobFilter.Code)
+        };
 
         public void Save(object model, JobFilter filter = JobFilter.All)
         {
@@ -65,7 +91,7 @@ namespace Photon.JobSeeker
             else database.Update(nameof(Job), model, id, filter);
         }
 
-        private static Job ReadJob(SqliteDataReader reader)
+        private static Job ReadJob(SqliteDataReader reader, bool full = false)
         {
             return new Job
             {
@@ -73,13 +99,14 @@ namespace Photon.JobSeeker
                 RegTime = DateTime.Parse((string)reader[nameof(Job.RegTime)]),
                 AgencyID = (long)reader[nameof(Job.AgencyID)],
                 Code = (string)reader[nameof(Job.Code)],
-                Title = (string)reader[nameof(Job.Title)],
+                Title = reader[nameof(Job.Title)] as string,
                 State = Enum.Parse<JobState>((string)reader[nameof(Job.State)]),
                 Score = reader[nameof(Job.Score)] as long?,
                 Url = (string)reader[nameof(Job.Url)],
-                Html = (string)reader[nameof(Job.Html)],
-                Link = (string)reader[nameof(Job.Link)],
-                Log = (string)reader[nameof(Job.Log)],
+                Html = full ? reader[nameof(Job.Html)] as string : null,
+                Content = full ? reader[nameof(Job.Content)] as string : null,
+                Link = reader[nameof(Job.Link)] as string,
+                Log = reader[nameof(Job.Log)] as string,
             };
         }
 
@@ -93,7 +120,9 @@ ORDER BY Score DESC, RegTime DESC";
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
 
         private const string Q_FETCH_FIRST = @"
-SELECT Url FROM Job WHERE AgencyID = $agency AND State = 'saved' ORDER BY JobID";
+SELECT JobID, Url, Tries FROM Job
+WHERE AgencyID = $agency AND State = 'saved' AND (Tries IS NULL OR Tries NOT LIKE '%4: %')
+ORDER BY Tries IS NULL DESC, Tries DESC, JobID LIMIT 1";
 
     }
 }

@@ -9,8 +9,10 @@ namespace Photon.JobSeeker
         Score = 16,
         Url = 32,
         Html = 64,
-        Link = 128,
-        Log = 256,
-        All = 511,
+        Content = 128,
+        Link = 256,
+        Log = 512,
+        Tries = 1024,
+        All = 2047,
     }
 }
