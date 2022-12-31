@@ -1,4 +1,3 @@
-Stop Searching mode and just procceed Analyzing mode
 Job actions: applied, rejected, reevaluate
 Report page refresh
 Indeed

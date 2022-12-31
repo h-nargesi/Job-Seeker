@@ -7,6 +7,10 @@ namespace Photon.JobSeeker
         public const int TREND_EXPIRATION_MINUTES = 2;
         public TrendBusiness(Database database) : base(database) { }
 
+        protected override string[]? GetUniqueColumns { get; } = new string[] {
+            nameof(TrendFilter.AgencyID), nameof(TrendFilter.Type)
+        };
+
         public Trend? Get(long agency_id, TrendType type)
         {
             using var reader = database.Read(Q_GET, agency_id, type);
@@ -22,19 +26,15 @@ namespace Photon.JobSeeker
             var list = new List<object>();
 
             while (reader.Read())
-            {
-                var state_str = reader["State"] as string;
-                var state = state_str == null ? (TrendState?)null : Enum.Parse<TrendState>(state_str);
                 list.Add(new
                 {
                     TrendID = reader["TrendID"] as long?,
                     Agency = reader["Agency"] as string ?? "-",
                     Link = reader["Link"] as string ?? "-",
                     LastActivity = reader["LastActivity"] as string ?? "-",
-                    Type = state?.GetTrendType().ToString(),
-                    State = state_str,
+                    Type = reader["Type"] as string,
+                    State = reader["State"] as string,
                 });
-            }
 
             return list;
         }
@@ -49,10 +49,6 @@ namespace Photon.JobSeeker
 
             return list;
         }
-
-        protected override string[]? GetUniqueColumns { get; } = new string[] {
-            nameof(TrendFilter.AgencyID), nameof(TrendFilter.Type)
-        };
 
         public void Save(object model, TrendFilter filter = TrendFilter.All)
         {
@@ -84,6 +80,25 @@ namespace Photon.JobSeeker
             database.Execute(Q_DELETE_EXPIRED, DateTime.Now.AddMinutes(-minutes));
         }
 
+        public void Block(long agency_id, TrendType type)
+        {
+            Save(new
+            {
+                AgencyID = agency_id,
+                Type = type,
+                State = TrendState.Blocked,
+            });
+        }
+
+        public void Block(long trend_id)
+        {
+            Save(new
+            {
+                TrendID = trend_id,
+                State = TrendState.Blocked,
+            });
+        }
+
         private static Trend ReadTrend(SqliteDataReader reader)
         {
             return new Trend
@@ -100,12 +115,10 @@ namespace Photon.JobSeeker
 SELECT * FROM Trend";
 
         private const string Q_REPORT = @$"
-SELECT a.Title AS Agency, a.Link, t.TrendID, t.State
+SELECT a.Title AS Agency, a.Link, t.TrendID, t.Type
+    , CASE a.Active WHEN 0 THEN '{nameof(TrendState.Blocked)}' ELSE t.State END AS State
     , STRFTIME('%Y-%m-%d %H:%M:%S', t.LastActivity) AS LastActivity
-FROM Agency a LEFT JOIN Trend t ON t.AgencyID = a.AgencyID
-WHERE a.Active != 0 AND
-     (t.Type == '{nameof(TrendType.Search)}' AND (a.Active & 1) == 1
-   OR t.Type == '{nameof(TrendType.Job)}' AND (a.Active & 2) == 2)";
+FROM Agency a LEFT JOIN Trend t ON t.AgencyID = a.AgencyID";
 
         private const string Q_GET = Q_INDEX + @"
 WHERE AgencyID = $agency AND Type = $type";

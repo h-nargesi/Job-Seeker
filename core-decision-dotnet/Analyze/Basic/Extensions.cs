@@ -40,17 +40,18 @@ namespace Photon.JobSeeker
         public static TrendType GetTrendType(this TrendState state)
         {
             if (state >= TrendState.Analyzing) return TrendType.Job;
-            else return TrendType.Search;
+            else if (state >= TrendState.Auth) return TrendType.Search;
+            else return TrendType.Blocked;
         }
 
         public static TrendState GetTrendState(this TrendType type)
         {
-            switch (type)
+            return type switch
             {
-                case TrendType.Job: return TrendState.Analyzing;
-                case TrendType.Search:
-                default: return TrendState.Auth;
-            }
+                TrendType.Job => TrendState.Analyzing,
+                TrendType.Search => TrendState.Auth,
+                _ => TrendState.Blocked
+            };
         }
     }
 }

@@ -16,12 +16,18 @@ namespace Photon.JobSeeker
             return settings is null ? null : JsonConvert.DeserializeObject<dynamic>(settings);
         }
 
-        public (long id, string domain, string link) LoadByName(string name)
+        public dynamic? LoadByName(string name)
         {
             using var reader = database.Read(Q_LOAD_BY_NAME, name);
-            if (!reader.Read()) return default;
+            if (!reader.Read()) return null;
 
-            return ((long)reader["AgencyID"], (string)reader["Domain"], (string)reader["Link"]);
+            return new
+            {
+                AgencyID = (long)reader["AgencyID"],
+                Domain = (string)reader["Domain"],
+                Link = (string)reader["Link"],
+                Active = (long)reader["Active"]
+            };
         }
 
         public (string user, string pass) GetUserPass(string agency)
@@ -40,7 +46,7 @@ namespace Photon.JobSeeker
 SELECT Settings FROM Agency WHERE AgencyID = $agency";
 
         private const string Q_LOAD_BY_NAME = @"
-SELECT AgencyID, Domain, Link FROM Agency WHERE Title = $title AND Active != 0";
+SELECT AgencyID, Domain, Link, Active FROM Agency WHERE Title = $title AND Active != 0";
 
         private const string Q_GET_USER_PASS = @"
 SELECT UserName, Password FROM Agency WHERE Title = $title";
