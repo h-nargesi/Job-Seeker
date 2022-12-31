@@ -1,3 +1,4 @@
 Job actions: applied, rejected, reevaluate
 Report page refresh
 Indeed
+Type and State Seperation
