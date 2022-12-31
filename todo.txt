@@ -1,4 +1,7 @@
+All found in log
 Job actions: applied, rejected, reevaluate
 Report page refresh
 Indeed
 Type and State Seperation
+Change running on report page
+Using english dictionary to find language
