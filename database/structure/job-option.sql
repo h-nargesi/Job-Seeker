@@ -21,6 +21,9 @@ values
 	,	(45,	'field',	'Angular',		'\bangular\b', null)
 
 	--	Company Benefits
+	,	(30,	'production',	'ERP',		'\berp\b', null)
+
+	--	Company Benefits
 	,	(99,	'benefit',	'Relocation',	'\brelocation\b|\bvisa\b(.+?\bsupport)?', null)
 	,	(02,	'salary',	'Salary',		'\bsalary\b.*?(\d[\d,]*000).*?\b(month|year)\b',
 				'{ "money": 1, "period": 2 }')
