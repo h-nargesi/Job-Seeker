@@ -15,55 +15,44 @@ namespace Photon.JobSeeker.IamExpat
         {
             if (!reg_job_url.IsMatch(url)) return null;
 
-            using var database = Database.Open();
+            var job = LoadJob(url, content);
 
-            var job = LoadJob(database, url, content);
-
-            var eligibility = JobEligibilityHelper.EvaluateJobEligibility(database, job);
+            using var evaluator = new JobEligibilityHelper();
+            var state = evaluator.EvaluateJobEligibility(job);
 
             var commands = new List<Command>();
 
-            if (!eligibility) job.State = JobState.rejected;
-            else
+            if (state == JobState.attention)
             {
-                job.State = JobState.attention;
-
                 if (reg_job_adding.IsMatch(content))
                 {
                     commands.Add(Command.Click(@"a[rel=""nofollow""]"));
                     commands.Add(Command.Wait(3000));
                 }
-
-                var apply_match = reg_job_apply.Match(content);
-                if (!apply_match.Success) job.Log += "|Apply button not found!";
-                else
+                
+                if (job.Link?.StartsWith("#") == true)
                 {
-                    job.Link = apply_match.Groups[1].Value;
-                    if (job.Link.StartsWith('#'))
-                    {
-                        // TODO: easy apply
-                    }
+                    // TODO: easy apply
                 }
             }
-
-            Log.Debug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log?.Replace("\n", " ")));
-            database.Job.Save(job, JobFilter.Log | JobFilter.State | JobFilter.Link | JobFilter.Score);
 
             commands.Add(Command.Close());
             return commands.ToArray();
         }
 
-        private Job LoadJob(Database database, string url, string content)
+        private Job LoadJob(string url, string html)
         {
+            using var database = Database.Open();
+
             var url_matched = reg_job_url.Match(url);
             if (!url_matched.Success) throw new Exception($"Invalid job url ({parent.Name}).");
 
             var code = GetJobCode(url_matched);
             var job = database.Job.Fetch(parent.ID, code);
 
-            var filter = JobFilter.Title | JobFilter.Html | JobFilter.Content | JobFilter.Tries;
+            var filter = JobFilter.Title | JobFilter.Html | JobFilter.Content | JobFilter.Link | JobFilter.Tries;
 
-            var code_matched = reg_job_shortlink.Match(content);
+            var code_matched = reg_job_shortlink.Match(html);
             if (!code_matched.Success) throw new Exception($"Job shortlink not found ({parent.Name}).");
             code = code_matched.Groups[1].Value;
             if (job != null)
@@ -100,13 +89,17 @@ namespace Photon.JobSeeker.IamExpat
                 }
             }
 
-            var title_match = reg_job_title.Match(content);
+            var apply_match = reg_job_apply.Match(html);
+            if (apply_match.Success) job.Link = apply_match.Groups[1].Value;
+            
+            var title_match = reg_job_title.Match(html);
             if (!title_match.Success)
                 Log.Warning("Title not found ({0}, {1})", parent.Name, code);
             else job.Title = HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim();
 
-            job.SetHtml(GetContent(content));
+            job.SetHtml(GetContent(html));
 
+            Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
             database.Job.Save(job, filter);
 
             return job;

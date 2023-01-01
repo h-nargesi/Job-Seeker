@@ -218,13 +218,19 @@ namespace Photon.JobSeeker
             {
                 if (!IsPropertyAllowed(filter, property.Name)) continue;
 
-                parameters.Add(property.Name + " = $" + property.Name);
+                parameters.Add($"{property.Name} = ${property.Name}");
 
                 values.Add(ValueFromProperty(property, job));
             }
 
             if (values.Count == 0)
                 throw new Exception("No column found for update");
+
+            if (!Enum.TryParse(filter.GetType(), "ModifiedOn", true, out var flag))
+            {
+                parameters.Add($"ModifiedOn = $ModifiedOn");
+                values.Add(DateTime.Now);
+            }
 
             values.Add(id);
 

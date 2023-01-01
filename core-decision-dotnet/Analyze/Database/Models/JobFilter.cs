@@ -14,5 +14,6 @@ namespace Photon.JobSeeker
         Log = 512,
         Tries = 1024,
         All = 2047,
+        ModifiedOn = 2048,
     }
 }

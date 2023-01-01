@@ -21,6 +21,15 @@ namespace Photon.JobSeeker
             return list;
         }
 
+        public Job? FetchFrom(DateTime time)
+        {
+            using var reader = database.Read(Q_FETCH_FROM, time);
+
+            if (!reader.Read()) return default;
+
+            return ReadJob(reader, true);
+        }
+
         public Job? Fetch(long agency_id, string code)
         {
             using var reader = database.Read(Q_FETCH, agency_id, code);
@@ -62,10 +71,6 @@ namespace Photon.JobSeeker
             finally { database.Rollback(); }
         }
 
-        protected override string[]? GetUniqueColumns { get; } = new string[] {
-            nameof(JobFilter.AgencyID), nameof(JobFilter.Code)
-        };
-
         public void Save(object model, JobFilter filter = JobFilter.All)
         {
             long id;
@@ -90,6 +95,15 @@ namespace Photon.JobSeeker
             }
             else database.Update(nameof(Job), model, id, filter);
         }
+
+        public void ChangeState(long id, JobState state)
+        {
+            Save(new { JobID = id, State = state });
+        }
+
+        protected override string[]? GetUniqueColumns { get; } = new string[] {
+            nameof(JobFilter.AgencyID), nameof(JobFilter.Code)
+        };
 
         private static Job ReadJob(SqliteDataReader reader, bool full = false)
         {
@@ -118,6 +132,9 @@ ORDER BY Score DESC, RegTime DESC";
 
         private const string Q_FETCH = @"
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
+
+        private const string Q_FETCH_FROM = @"
+SELECT * FROM Job WHERE ModifiedOn <= $date";
 
         private const string Q_FETCH_FIRST = @"
 SELECT JobID, Url, Tries FROM Job

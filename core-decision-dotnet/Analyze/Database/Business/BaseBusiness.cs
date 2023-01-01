@@ -26,18 +26,18 @@ namespace Photon.JobSeeker
                 var unique = GetUniqueColumns == null ? null :
                     $"ON CONFLICT({string.Join(", ", GetUniqueColumns)}) DO NOTHING;";
                 
-                database.Insert(nameof(Job), model, filter, unique);
+                database.Insert(typeof(T).Name, model, filter, unique);
 
                 if (job != null)
                     job.JobID = database.LastInsertRowId();
             }
-            else database.Update(nameof(Job), model, id, filter);
+            else database.Update(typeof(T).Name, model, id, filter);
         }
 
-        public void Delete(long job_id)
+        public void Delete(long id)
         {
             var name = typeof(T).Name;
-            database.Execute($"DELETE FROM {name} WHERE {typeof(T).Name}ID = ${name.ToLower()}", job_id);
+            database.Execute($"DELETE FROM {name} WHERE {typeof(T).Name}ID = ${name.ToLower()}", id);
         }
     }
 }

@@ -15,19 +15,15 @@ namespace Photon.JobSeeker.LinkedIn
         {
             if (!reg_job_url.IsMatch(url)) return null;
 
-            using var database = Database.Open();
+            var job = LoadJob(url, content);
 
-            var job = LoadJob(database, url, content);
-
-            var eligibility = JobEligibilityHelper.EvaluateJobEligibility(database, job);
+            using var evaluator = new JobEligibilityHelper();
+            var state = evaluator.EvaluateJobEligibility(job);
 
             var commands = new List<Command>();
 
-            if (!eligibility) job.State = JobState.rejected;
-            else
+            if (state == JobState.attention)
             {
-                job.State = JobState.attention;
-
                 if (reg_job_adding.IsMatch(content))
                 {
                     commands.Add(Command.Click(@"button[class=""jobs-save-button""]"));
@@ -37,15 +33,14 @@ namespace Photon.JobSeeker.LinkedIn
                 // TODO: apply link
             }
 
-            Log.Debug(string.Join(", ", parent.Name, job.Title, job.Code, job.Log));
-            database.Job.Save(job, JobFilter.Log | JobFilter.State | JobFilter.Link | JobFilter.Score);
-
             commands.Add(Command.Close());
             return commands.ToArray();
         }
 
-        private Job LoadJob(Database database, string url, string content)
+        private Job LoadJob(string url, string html)
         {
+            using var database = Database.Open();
+
             var url_matched = reg_job_url.Match(url);
             if (!url_matched.Success) throw new Exception($"Invalid job url ({parent.Name}).");
 
@@ -66,13 +61,14 @@ namespace Photon.JobSeeker.LinkedIn
                 filter = JobFilter.All;
             }
 
-            var title_match = reg_job_title.Match(content);
+            var title_match = reg_job_title.Match(html);
             if (!title_match.Success)
                 Log.Warning("Title not found ({0}, {1})", parent.Name, code);
             else job.Title = HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim();
 
-            job.SetHtml(GetContent(content));
+            job.SetHtml(GetContent(html));
 
+            Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
             database.Job.Save(job, filter);
 
             return job;
