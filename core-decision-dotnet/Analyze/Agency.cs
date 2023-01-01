@@ -14,6 +14,10 @@ namespace Photon.JobSeeker
 
         public string Link { get; private set; } = "";
 
+        public bool IsActiveSeeking { get; private set; }
+
+        public bool IsActiveAnalyzing { get; private set; }
+
         public IReadOnlyList<Page> Pages => pages;
 
         public Result AnalyzeContent(string url, string content)
@@ -43,11 +47,17 @@ namespace Photon.JobSeeker
         public void LoadFromDatabase(Database database)
         {
             var agency_info = database.Agency.LoadByName(Name);
-            if (agency_info == default) return;
+            if (agency_info == null) return;
 
-            ID = agency_info.id;
-            Domain = agency_info.domain;
-            Link = agency_info.link;
+            var Active = agency_info.Active;
+            if ((Active & 3) == 0) return;
+            
+            IsActiveSeeking = (Active & 1) == 1;
+            IsActiveAnalyzing = (Active & 2) == 2;
+
+            ID = agency_info.AgencyID;
+            Domain = agency_info.Domain;
+            Link = agency_info.Link;
 
             LoadPages();
         }

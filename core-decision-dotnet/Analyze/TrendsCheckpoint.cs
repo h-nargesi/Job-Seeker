@@ -48,21 +48,23 @@ namespace Photon.JobSeeker
                 {
                     database.BeginTransaction();
                     var trend = database.Trend.Get(result.AgencyID.Value, result.State.GetTrendType());
-                    if (trend != null &&
-                        (result.TrendID == trend.TrendID || !result.TrendID.HasValue && trend.Reserved))
+                    if (trend != null)
                     {
-                        trend.LastActivity = DateTime.Now;
-                        trend.State = result.State;
-                        trend.Reserved = false;
-                        database.Trend.Save(trend, TrendFilter.All & ~TrendFilter.AgencyID);
-                        database.Commit();
-
                         Log.Debug("Trend (id:{0}{4}) Agency({1}) {2}, {3}",
                             trend.TrendID, trend.AgencyID, trend.Type, trend.State,
                             result.TrendID.HasValue ? "" : "-reserved");
-                        
-                        result.TrendID = trend.TrendID;
-                        return;
+
+                        if (result.TrendID == trend.TrendID || !result.TrendID.HasValue && trend.Reserved)
+                        {
+                            trend.LastActivity = DateTime.Now;
+                            trend.State = result.State;
+                            trend.Reserved = false;
+                            database.Trend.Save(trend, TrendFilter.All & ~TrendFilter.AgencyID);
+                            database.Commit();
+
+                            result.TrendID = trend.TrendID;
+                            return;
+                        }
                     }
                 }
                 finally { database.Rollback(); }
@@ -75,15 +77,20 @@ namespace Photon.JobSeeker
 
         private List<(Agency agency, TrendType type)> CheckingSleptTrends()
         {
+            TrendType? new_trend;
             var new_trends = new List<(Agency agency, TrendType type)>();
 
             foreach (var agency in analyzer.Agencies.Values)
             {
-                new_trends.AddRange(CheckingSleptSearchingTrends(agency, out var do_break));
+                new_trend = CheckingSleptSearchingTrends(agency, out var do_break);
+                if (new_trend != null)
+                    new_trends.Add((agency, new_trend.Value));
 
                 if (do_break) continue;
 
-                new_trends.AddRange(CheckingSleptJobTrends(agency));
+                new_trend = CheckingSleptJobTrends(agency);
+                if (new_trend != null)
+                    new_trends.Add((agency, new_trend.Value));
             }
 
             return new_trends;
@@ -96,59 +103,95 @@ namespace Photon.JobSeeker
             return trend;
         }
 
-        private List<(Agency agency, TrendType type)> CheckingSleptSearchingTrends(Agency agency, out bool do_break)
+        private TrendType? CheckingSleptSearchingTrends(Agency agency, out bool do_break)
         {
-            var new_trends = new List<(Agency agency, TrendType type)>();
+            TrendType? new_trend = null;
 
             var trend = MatchingWithAnalyzedResult(agency, TrendType.Search, out var matched_analyzed_result);
 
             var had_not_trend = result.TrendID is null;
 
             if (trend is null)
-                if (matched_analyzed_result)
-                    result.TrendID = GenerateNewTrend(result.AgencyID ?? 0, result.State).TrendID;
-
-                else new_trends.Add((agency, TrendType.Search));
-
-            else if (matched_analyzed_result && had_not_trend)
-                new_trends.Add((agency, TrendType.None));
-
-            if (trend is null)
                 do_break = !(matched_analyzed_result && result.State > TrendState.Login);
 
             else do_break = trend.State <= TrendState.Login;
 
-            LogCheckingSleptTrends(agency, TrendType.Search, trend, matched_analyzed_result, had_not_trend, new_trends);
+            if (!do_break && !agency.IsActiveSeeking)
+            {
+                if (trend is null)
+                    database.Trend.Block(agency.ID, TrendType.Search);
+                else
+                    database.Trend.Block(trend.TrendID);
 
-            return new_trends;
+                if (matched_analyzed_result)
+                    new_trend = TrendType.Blocked;
+            }
+            else
+            {
+                if (trend is null)
+                    if (matched_analyzed_result)
+                        result.TrendID = GenerateNewTrend(result.AgencyID ?? 0, result.State).TrendID;
+
+                    else new_trend = TrendType.Search;
+
+                else if (matched_analyzed_result && had_not_trend)
+                    new_trend = TrendType.Blocked;
+            }
+
+            LogCheckingSleptTrends(agency, TrendType.Search, trend, matched_analyzed_result, had_not_trend, new_trend);
+
+            return new_trend;
         }
 
-        private List<(Agency agency, TrendType type)> CheckingSleptJobTrends(Agency agency)
+        private TrendType? CheckingSleptJobTrends(Agency agency)
         {
-            var new_trends = new List<(Agency agency, TrendType type)>();
+            TrendType? new_trend = null;
 
             var trend = MatchingWithAnalyzedResult(agency, TrendType.Job, out var matched_analyzed_result);
 
             var had_not_trend = result.TrendID is null;
 
-            if (trend is null)
+            if (!agency.IsActiveAnalyzing)
             {
+                if (trend is null)
+                    database.Trend.Block(agency.ID, TrendType.Search);
+                else
+                    database.Trend.Block(trend.TrendID);
+
                 if (matched_analyzed_result)
-                    result.TrendID = GenerateNewTrend(result.AgencyID ?? 0, result.State).TrendID;
-
-                new_trends.Add((agency, TrendType.Job));
+                    new_trend = TrendType.Blocked;
             }
-            else if (matched_analyzed_result)
+            else
             {
-                if (result.TrendID is not null)
-                    new_trends.Add((agency, TrendType.Job));
+                if (trend is null)
+                {
+                    if (!agency.IsActiveSeeking)
+                    {
+                        GenerateNewTrend(agency.ID, TrendState.Blocked);
 
-                else new_trends.Add((agency, TrendType.None));
+                        if (matched_analyzed_result)
+                            new_trend = TrendType.Blocked;
+                    }
+                    else
+                    {
+                        if (matched_analyzed_result)
+                            result.TrendID = GenerateNewTrend(result.AgencyID ?? 0, result.State).TrendID;
+
+                        new_trend = TrendType.Job;
+                    }
+                }
+                else if (matched_analyzed_result)
+                {
+                    if (result.TrendID is not null)
+                        new_trend = TrendType.Job;
+
+                    else new_trend = TrendType.Blocked;
+                }
             }
 
-            LogCheckingSleptTrends(agency, TrendType.Job, trend, matched_analyzed_result, had_not_trend, new_trends);
+            LogCheckingSleptTrends(agency, TrendType.Job, trend, matched_analyzed_result, had_not_trend, new_trend);
 
-            return new_trends;
+            return new_trend;
         }
 
         private void InjectOpenCommandForNewTrends(IEnumerable<(Agency agency, TrendType type)> new_trends)
@@ -179,7 +222,7 @@ namespace Photon.JobSeeker
                         else commands.Insert(0, Command.Open(url));
                         break;
 
-                    case TrendType.None:
+                    case TrendType.Blocked:
                         if (!commands.Any(c => c.page_action == PageAction.close))
                             commands.Add(Command.Close());
                         break;
@@ -202,15 +245,19 @@ namespace Photon.JobSeeker
         }
 
         private void LogCheckingSleptTrends(Agency agency, TrendType type, Trend? trend,
-            bool matched_analyzed_result, bool had_not_trend, IList<(Agency agency, TrendType type)> new_trends)
+            bool matched_analyzed_result, bool had_not_trend, TrendType? new_trend)
         {
-            Log.Debug("Trend ({0}-{1}) -self={2} -db-trend={3} -had-trend-id={4} -order={5}",
+            var active = type == TrendType.Search ? agency.IsActiveSeeking : agency.IsActiveAnalyzing;
+            var type_str = type.ToString();
+
+            Log.Debug("Trend ({0}-{1}) -self={2} -db-trend={3} -had-trend-id={4} -blocked={6} -order={5}",
                 agency.Name,
-                type,
-                matched_analyzed_result ? "*" : "",
-                trend is null ? "no" : "yes",
-                had_not_trend ? "no" : "yes",
-                new_trends.Count > 0 ? new_trends[0].type : "");
+                type_str + new string(' ', 6 - type_str.Length),
+                matched_analyzed_result ? "*" : " ",
+                trend is null ? "no " : "yes",
+                had_not_trend ? "no " : "yes",
+                new_trend,
+                active ? "no " : "yes");
         }
     }
 }
