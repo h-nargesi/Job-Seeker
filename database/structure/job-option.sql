@@ -26,7 +26,7 @@ values
 	
 	--	Technologies
 	,	(10,	'tech',		'Web-API',		'\b((web[- ]?)?api|web services)\b', null)
-	,	(10,	'tech',		'Git',			'\bgit\b', null)
+	,	(05,	'tech',		'Git',			'\bgit\b', null)
 
 	--	Company Benefits
 	,	(30,	'production',	'ERP',		'\berp\b', null)
@@ -37,7 +37,7 @@ values
 				'{ "money": 1, "period": 2 }')
 
 	--	Keywords
-	,	(03,	'keywords',	'Full-stack',	'\b(full[ -]?stack|fron( |-| and )back[\s-]end)\b', null)
+	,	(03,	'keywords',	'Full-stack',	'\b(full[- ]?stack|fron( |-| and )back[- ]end)\b', null)
 	,	(01,	'keywords',	'Developer',	'\bdeveloper\b', null)
 	,	(05,	'keywords',	'Mid-Level',	'\b((mid|medium)[- ]level)\b', null)
 	,	(02,	'keywords',	'Front-End',	'\b(front[- ]end)\b', null)
