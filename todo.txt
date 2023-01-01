@@ -2,7 +2,8 @@ Store all found job-options in log
 Job actions: applied, rejected, reevaluate
 Report page refresh
 Indeed
-Type and State Seperation
+Add new 'TrendType': Login
+    In trend we decied to go a seeking or job mode
 Change running mode of agencies on report page
 Using english dictionary to find language
     to ignore none english
