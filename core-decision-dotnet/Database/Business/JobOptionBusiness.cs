@@ -14,18 +14,14 @@ namespace Photon.JobSeeker
 
             var option_list = new List<JobOption>();
             while (reader.Read())
-            {
-                var settings = reader[nameof(JobOption.Settings)] as string;
-
                 option_list.Add(new JobOption()
                 {
                     Category = (string)reader[nameof(JobOption.Category)],
                     Score = (long)reader[nameof(JobOption.Score)],
                     Title = (string)reader[nameof(JobOption.Title)],
                     Pattern = new Regex((string)reader[nameof(JobOption.Pattern)], RegexOptions.IgnoreCase),
-                    Settings = settings is null ? null : JsonConvert.DeserializeObject<dynamic>(settings),
+                    Settings = reader[nameof(JobOption.Settings)] is not string settings ? null : JsonConvert.DeserializeObject<dynamic>(settings),
                 });
-            }
 
             return option_list.ToArray();
         }

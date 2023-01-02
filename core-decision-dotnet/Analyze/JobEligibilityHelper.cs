@@ -11,7 +11,7 @@ namespace Photon.JobSeeker
         public const long MinEligibilityScore = 100;
 
         private readonly Database database;
-        private JobOption[] options;
+        private readonly JobOption[] options;
 
         public JobEligibilityHelper()
         {
@@ -61,6 +61,7 @@ namespace Photon.JobSeeker
         public void Dispose()
         {
             database.Dispose();
+            GC.SuppressFinalize(this);
         }
 
         public static string GetHtmlContent(string html)
@@ -76,7 +77,7 @@ namespace Photon.JobSeeker
 
                 string text = node.InnerText;
                 if (!string.IsNullOrEmpty(text))
-                    buffer.Append(" ").Append(text.Trim());
+                    buffer.Append(' ').Append(text.Trim());
             }
 
             return remove_new_lines.Replace(buffer.ToString(), "\n");
