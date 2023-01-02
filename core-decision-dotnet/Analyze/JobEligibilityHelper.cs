@@ -5,16 +5,62 @@ using Serilog;
 
 namespace Photon.JobSeeker
 {
-    public static class JobEligibilityHelper
+    public class JobEligibilityHelper : IDisposable
     {
         private readonly static Regex remove_new_lines = new(@"(?<=\n)[\n\s]+");
         public const long MinEligibilityScore = 100;
 
-        public static bool EvaluateJobEligibility(Database database, Job job)
-        {
-            var options = database.JobOption.FetchAll();
+        private readonly Database database;
+        private JobOption[] options;
 
-            return EvaluateEligibility(job, options);
+        public JobEligibilityHelper()
+        {
+            database = Database.Open();
+            options = database.JobOption.FetchAll();
+        }
+
+        public void Revaluate()
+        {
+            var start_time = DateTime.Now.AddSeconds(-1);
+
+            while (true)
+                try
+                {
+                    database.BeginTransaction();
+
+                    var job = database.Job.FetchFrom(start_time);
+
+                    if (job == null) break;
+
+                    EvaluateJobEligibility(job);
+
+                    database.Job.Save(job);
+
+                    database.Commit();
+                }
+                finally
+                {
+                    database.Rollback();
+                }
+        }
+
+        public JobState EvaluateJobEligibility(Job job)
+        {
+            var eligibility = EvaluateEligibility(job);
+
+            if (!eligibility) job.State = JobState.rejected;
+            else job.State = JobState.attention;
+
+            Log.Information("Job ({1}): score={0}", job.Score, job.Code);
+            Log.Debug("Job ({1}): log={0}", job.Log, job.Code);
+            database.Job.Save(job, JobFilter.Log | JobFilter.State | JobFilter.Score);
+
+            return job.State;
+        }
+
+        public void Dispose()
+        {
+            database.Dispose();
         }
 
         public static string GetHtmlContent(string html)
@@ -36,7 +82,7 @@ namespace Photon.JobSeeker
             return remove_new_lines.Replace(buffer.ToString(), "\n");
         }
 
-        private static bool EvaluateEligibility(Job job, JobOption[] options)
+        private bool EvaluateEligibility(Job job)
         {
             var logs = new List<string>(options.Length);
             var hasField = false;

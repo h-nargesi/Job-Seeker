@@ -1,6 +1,7 @@
 create table Job (
 	JobID			integer		not null	primary key,
 	RegTime			timestamp	not null	default current_timestamp,
+	ModifiedOn		timestamp	not null	default current_timestamp,
 	AgencyID		integer 	not null,
 	Code			text		not null,
 	Title			text			null,
