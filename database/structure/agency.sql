@@ -15,7 +15,7 @@ insert into Agency (Title, Domain, Link, UserName, Password, Settings)
 values
 	('Indeed',		'(.+\.)?indeed\.com$',			'https://indedd.com',
 					'hamed.nargesi.jar@gmail.com', 's@lm0nElla-009',
-					null),
+					'{ "running": 0, "locations": ["Australia", "Netherlands", "Germany", "Sweden"] }'),
 
 	('IamExpat',	'(.+\.)?iamexpat\.(nl|de|ch|com)$',	'http://iamexpat.nl',
 					'hamed.nargesi.jar@gmail.com', 's@lm0nElla',
