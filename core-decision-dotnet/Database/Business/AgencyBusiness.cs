@@ -12,8 +12,7 @@ namespace Photon.JobSeeker
             using var reader = database.Read(Q_LOAD_SETTING, id);
             if (!reader.Read()) return null;
 
-            var settings = reader[nameof(JobOption.Settings)] as string;
-            return settings is null ? null : JsonConvert.DeserializeObject<dynamic>(settings);
+            return reader[nameof(JobOption.Settings)] is not string settings ? null : JsonConvert.DeserializeObject<dynamic>(settings);
         }
 
         public dynamic? LoadByName(string name)
@@ -30,7 +29,7 @@ namespace Photon.JobSeeker
             };
         }
 
-        public (string user, string pass) GetUserPass(string agency)
+        public static (string user, string pass) GetUserPass(string agency)
         {
             using var database = Database.Open();
             using var reader = database.Read(Q_GET_USER_PASS, agency);
