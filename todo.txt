@@ -1,6 +1,3 @@
-Using english dictionary to find language
-    to ignore none english
-    https://github.com/benjihillard/English-Dictionary-Database
 Job actions: applied, rejected, reevaluate
 Indeed
 Report page refresh

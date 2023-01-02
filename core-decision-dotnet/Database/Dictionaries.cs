@@ -35,12 +35,15 @@ namespace Photon.JobSeeker
             return new Dictionaries(connection, executer);
         }
 
-        public bool Contains(string[] words)
+        public long EnglishCount(string[] words)
         {
             var word_set = string.Join("','", words);
             executer.CommandText = string.Format(Q_CONTAINS, word_set);
+            
             using var reader = executer.ExecuteReader();
-            return reader.Read();
+            if (reader.Read()) return (long)reader[0];
+
+            return 0;
         }
 
         public void Dispose()
@@ -51,6 +54,6 @@ namespace Photon.JobSeeker
         }
 
         private const string Q_CONTAINS = @"
-SELECT 1 FROM En_US WHERE Word IN ('{0}')";
+SELECT COUNT(DISTINCT Word) FROM en_US WHERE Word IN ('{0}')";
     }
 }
