@@ -17,7 +17,7 @@ namespace Photon.JobSeeker
         private AgencyBusiness? agency_business;
         private JobOptionBusiness? job_option_business;
 
-        private Database(SqliteConnection connection, SqliteCommand executer)
+        public Database(SqliteConnection connection, SqliteCommand executer)
         {
             this.connection = connection;
             this.executer = executer;
@@ -140,51 +140,16 @@ namespace Photon.JobSeeker
             transaction?.Dispose();
             connection.Dispose();
             executer.Dispose();
+            GC.SuppressFinalize(this);
         }
 
-        internal TrendBusiness Trend
-        {
-            get
-            {
-                if (trend_business == null)
-                    trend_business = new TrendBusiness(this);
+        internal TrendBusiness Trend => trend_business ??= new TrendBusiness(this);
 
-                return trend_business;
-            }
-        }
+        internal JobBusiness Job => job_business ??= new JobBusiness(this);
 
-        internal JobBusiness Job
-        {
-            get
-            {
-                if (job_business == null)
-                    job_business = new JobBusiness(this);
+        internal AgencyBusiness Agency => agency_business ??= new AgencyBusiness(this);
 
-                return job_business;
-            }
-        }
-
-        internal AgencyBusiness Agency
-        {
-            get
-            {
-                if (agency_business == null)
-                    agency_business = new AgencyBusiness(this);
-
-                return agency_business;
-            }
-        }
-
-        internal JobOptionBusiness JobOption
-        {
-            get
-            {
-                if (job_option_business == null)
-                    job_option_business = new JobOptionBusiness(this);
-
-                return job_option_business;
-            }
-        }
+        internal JobOptionBusiness JobOption => job_option_business ??= new JobOptionBusiness(this);
 
         internal void Insert(string name, object job, Enum filter, string? conflict = null)
         {
@@ -226,7 +191,7 @@ namespace Photon.JobSeeker
             if (values.Count == 0)
                 throw new Exception("No column found for update");
 
-            if (!Enum.TryParse(filter.GetType(), "ModifiedOn", true, out var flag))
+            if (!Enum.TryParse(filter.GetType(), "ModifiedOn", true, out var _))
             {
                 parameters.Add($"ModifiedOn = $ModifiedOn");
                 values.Add(DateTime.Now);
@@ -238,16 +203,14 @@ namespace Photon.JobSeeker
             Execute(query, values.ToArray());
         }
 
-        private bool IsPropertyAllowed(Enum filter, string name)
+        private static bool IsPropertyAllowed(Enum filter, string name)
         {
             if (!Enum.TryParse(filter.GetType(), name, true, out var flag)) return false;
             if (flag == null) return false;
-            if (!filter.HasFlag((Enum)flag)) return false;
-
-            return true;
+            return filter.HasFlag((Enum)flag);
         }
 
-        private object ValueFromProperty(PropertyInfo property, object obj)
+        private static object ValueFromProperty(PropertyInfo property, object obj)
         {
             return property.GetValue(obj) ?? property.PropertyType;
         }
@@ -255,11 +218,11 @@ namespace Photon.JobSeeker
         private void AddParameters(string query, object[] parameters)
         {
             var index = 0;
-            foreach (Match param in reg_parameter.Matches(query))
+            foreach (var param in reg_parameter.Matches(query).Cast<Match>())
                 Parameter(param.Value, parameters[index++]);
         }
 
-        private string[] GetColumns(SqliteDataReader reader)
+        private static string[] GetColumns(SqliteDataReader reader)
         {
             var result = new string[reader.FieldCount];
             for (var i = 0; i < result.Length; i++)
