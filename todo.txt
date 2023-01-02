@@ -1,6 +1,7 @@
 Job actions: applied, rejected, reevaluate
 Using english dictionary to find language
     to ignore none english
+    https://github.com/benjihillard/English-Dictionary-Database
 Indeed
 Report page refresh
 Show and Change running mode of agencies on report page
