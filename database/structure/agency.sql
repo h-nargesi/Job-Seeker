@@ -13,7 +13,7 @@ create unique index UQ_Agency_Title on Agency (Title);
 
 insert into Agency (Title, Domain, Link, UserName, Password, Settings)
 values
-	('Indeed',		'(.+\.)?indeed\.com$',			'https://indedd.com',
+	('Indeed',		'(.+\.)?indeed\.com$',			'https://indeed.com',
 					'hamed.nargesi.jar@gmail.com', 's@lm0nElla-009',
 					'{ "running": 0, "locations": ["Australia", "Netherlands", "Germany", "Sweden"] }'),
 
