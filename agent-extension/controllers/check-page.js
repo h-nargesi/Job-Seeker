@@ -14,7 +14,7 @@ ActionHandler.OnPageLoad = function() {
                 break;
             }
         }
-    }, 5000);
+    }, 1000);
 
     if (job_seeker_trends != null) {
         document.getElementById('reset-trends').addEventListener("click", function () {

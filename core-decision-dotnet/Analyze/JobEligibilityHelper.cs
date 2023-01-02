@@ -8,13 +8,16 @@ namespace Photon.JobSeeker
     public class JobEligibilityHelper : IDisposable
     {
         private readonly static Regex remove_new_lines = new(@"(?<=\n)[\n\s]+");
+        private readonly static Regex words = new(@"[a-zA-Z]{3,}");
         public const long MinEligibilityScore = 100;
 
+        private readonly Dictionaries dictionaries;
         private readonly Database database;
-        private JobOption[] options;
+        private readonly JobOption[] options;
 
         public JobEligibilityHelper()
         {
+            dictionaries = Dictionaries.Open();
             database = Database.Open();
             options = database.JobOption.FetchAll();
         }
@@ -46,13 +49,17 @@ namespace Photon.JobSeeker
 
         public JobState EvaluateJobEligibility(Job job)
         {
-            var eligibility = EvaluateEligibility(job);
+            job.Log = "";
+
+            var correct_language = LanguageIsMatch(job);
+
+            var eligibility = correct_language && EvaluateEligibility(job);
 
             if (!eligibility) job.State = JobState.rejected;
             else job.State = JobState.attention;
 
-            Log.Information("Job ({1}): score={0}", job.Score, job.Code);
-            Log.Debug("Job ({1}): log={0}", job.Log, job.Code);
+            Log.Information("Job ({0}): state={1} score={2} lang={3}", job.State, job.Code, job.Score, correct_language);
+            Log.Debug("Job ({0}): log={1}", job.Code, job.Log);
             database.Job.Save(job, JobFilter.Log | JobFilter.State | JobFilter.Score);
 
             return job.State;
@@ -61,6 +68,7 @@ namespace Photon.JobSeeker
         public void Dispose()
         {
             database.Dispose();
+            GC.SuppressFinalize(this);
         }
 
         public static string GetHtmlContent(string html)
@@ -76,10 +84,37 @@ namespace Photon.JobSeeker
 
                 string text = node.InnerText;
                 if (!string.IsNullOrEmpty(text))
-                    buffer.Append(" ").Append(text.Trim());
+                    buffer.Append(' ').Append(text.Trim());
             }
 
             return remove_new_lines.Replace(buffer.ToString(), "\n");
+        }
+
+        private bool LanguageIsMatch(Job job)
+        {
+            if (job.Content == null) return false;
+
+            var word_set = words.Matches(job.Content)
+                                .Select(c => c.Value.ToLower())
+                                .OrderBy(w => w)
+                                .ToHashSet();
+
+            var total_count = word_set.Count;
+            if (total_count < 1) return false;
+
+            var splited = word_set.Select((w, i) => new { Word = w, Index = i })
+                                  .GroupBy(k => k.Index / 100)
+                                  .Select(g => g.Select(w => w.Word).ToArray())
+                                  .ToArray();
+
+            var langu_count = 0L;
+            foreach (var set in splited)
+                langu_count += dictionaries.EnglishCount(set);
+
+            var point = (int)(100 * langu_count / (double)total_count);
+            job.Log += string.Format("English: ({0}%)\n", point);
+
+            return 50 <= point;
         }
 
         private bool EvaluateEligibility(Job job)
@@ -107,7 +142,7 @@ namespace Photon.JobSeeker
                 job.Score += option_score;
             }
 
-            job.Log = string.Join("\n", logs);
+            job.Log += string.Join("\n", logs);
 
             if (!hasField) return false;
             else return job.Score >= MinEligibilityScore;

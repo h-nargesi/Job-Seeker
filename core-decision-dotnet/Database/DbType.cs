@@ -21,12 +21,12 @@ namespace Photon.JobSeeker
             }
 
             if (!SYSTEM_TYPE_MAP.ContainsKey(type))
-                throw new ArgumentOutOfRangeException(nameof(type), type.FullName);
+                throw new ArgumentOutOfRangeException(nameof(value), type.FullName);
 
             return (SYSTEM_TYPE_MAP[type], value);
         }
 
-        private readonly static Dictionary<Type, SqliteType> SYSTEM_TYPE_MAP = new Dictionary<Type, SqliteType>
+        private readonly static Dictionary<Type, SqliteType> SYSTEM_TYPE_MAP = new()
         {
             [typeof(byte)] = SqliteType.Integer,
             [typeof(sbyte)] = SqliteType.Integer,

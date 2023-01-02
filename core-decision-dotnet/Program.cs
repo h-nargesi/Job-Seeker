@@ -15,6 +15,7 @@ Log.Logger = new LoggerConfiguration()
 Log.Information("Starting up ...");
 
 Database.SetConfiguration(path: builder.Configuration["Database:Path"].ToString());
+Dictionaries.SetConfiguration(path: builder.Configuration["Database:Dictionaries"].ToString());
 
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<TrendsCheckpoint>();

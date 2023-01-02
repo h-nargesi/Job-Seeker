@@ -6,10 +6,6 @@ namespace Photon.JobSeeker
     [Route("[controller]/[action]")]
     public class ReportController : Controller
     {
-        private readonly Analyzer analyzer;
-
-        public ReportController(Analyzer analyzer) => this.analyzer = analyzer;
-
         [HttpGet]
         public IActionResult Trends()
         {
