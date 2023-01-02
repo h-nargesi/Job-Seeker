@@ -8,10 +8,12 @@ namespace Photon.JobSeeker
     public class JobEligibilityHelper : IDisposable
     {
         private readonly static Regex remove_new_lines = new(@"(?<=\n)[\n\s]+");
+        private readonly static Regex words = new(@"\w+");
         public const long MinEligibilityScore = 100;
 
+        private readonly Dictionaries language_checker;
         private readonly Database database;
-        private JobOption[] options;
+        private readonly JobOption[] options;
 
         public JobEligibilityHelper()
         {
@@ -46,13 +48,15 @@ namespace Photon.JobSeeker
 
         public JobState EvaluateJobEligibility(Job job)
         {
-            var eligibility = EvaluateEligibility(job);
+            var correct_language = LanguageIsMatch(job);
+
+            var eligibility = correct_language && EvaluateEligibility(job);
 
             if (!eligibility) job.State = JobState.rejected;
             else job.State = JobState.attention;
 
-            Log.Information("Job ({1}): score={0}", job.Score, job.Code);
-            Log.Debug("Job ({1}): log={0}", job.Log, job.Code);
+            Log.Information("Job ({0}): state={1} score={2} lang={3}", job.State, job.Code, job.Score, correct_language);
+            Log.Debug("Job ({0}): log={1}", job.Code, job.Log);
             database.Job.Save(job, JobFilter.Log | JobFilter.State | JobFilter.Score);
 
             return job.State;
@@ -61,6 +65,7 @@ namespace Photon.JobSeeker
         public void Dispose()
         {
             database.Dispose();
+            GC.SuppressFinalize(this);
         }
 
         public static string GetHtmlContent(string html)
@@ -76,10 +81,22 @@ namespace Photon.JobSeeker
 
                 string text = node.InnerText;
                 if (!string.IsNullOrEmpty(text))
-                    buffer.Append(" ").Append(text.Trim());
+                    buffer.Append(' ').Append(text.Trim());
             }
 
             return remove_new_lines.Replace(buffer.ToString(), "\n");
+        }
+
+        private bool LanguageIsMatch(Job job)
+        {
+            if (job.Content == null) return false;
+
+            var word_set = words.Matches(job.Content)
+                                .Select(c => c.Value)
+                                .Distinct()
+                                .ToArray();
+
+            return language_checker.Contains(word_set);
         }
 
         private bool EvaluateEligibility(Job job)
