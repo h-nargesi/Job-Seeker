@@ -1,4 +1,3 @@
-Job actions: applied, rejected, reevaluate
 Indeed
 Report page refresh
 Show and Change running mode of agencies on report page

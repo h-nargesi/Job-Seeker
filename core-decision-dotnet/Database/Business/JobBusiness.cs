@@ -6,9 +6,9 @@ namespace Photon.JobSeeker
     {
         public JobBusiness(Database database) : base(database) { }
 
-        public List<object> Fetch(JobState state)
+        public List<object> Fetch()
         {
-            using var reader = database.Read(Q_INDEX, state.ToString());
+            using var reader = database.Read(Q_INDEX);
             var list = new List<object>();
 
             while (reader.Read())
@@ -124,11 +124,16 @@ namespace Photon.JobSeeker
             };
         }
 
-        private const string Q_INDEX = @"
+        private const string Q_INDEX = @$"
 SELECT Job.*, Agency.Title as AgencyName
+    , CASE State WHEN '{nameof(JobState.attention)}' THEN 1
+                 WHEN '{nameof(JobState.rejected)}' THEN 3
+                 WHEN '{nameof(JobState.applied)}' THEN 3
+                 ELSE 100
+      END AS Ordering
 FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
-WHERE State = $state
-ORDER BY Score DESC, RegTime DESC";
+--WHERE State != '{nameof(JobState.attention)}'
+ORDER BY Ordering, Score DESC, RegTime DESC";
 
         private const string Q_FETCH = @"
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";

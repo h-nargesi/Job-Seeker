@@ -23,7 +23,7 @@ namespace Photon.JobSeeker
         }
 
         [HttpPost]
-        public IActionResult Applied([FromBody] long jobid)
+        public IActionResult Apply([FromQuery] long jobid)
         {
             try
             {
@@ -39,7 +39,7 @@ namespace Photon.JobSeeker
         }
 
         [HttpPost]
-        public IActionResult Rejected([FromBody] long jobid)
+        public IActionResult Reject([FromQuery] long jobid)
         {
             try
             {

@@ -29,7 +29,7 @@ namespace Photon.JobSeeker
             try
             {
                 using var database = Database.Open();
-                var list = database.Job.Fetch(JobState.attention);
+                var list = database.Job.Fetch();
 
                 return View("~/views/index.cshtml", list);
             }
