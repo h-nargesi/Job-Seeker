@@ -14,19 +14,15 @@ ActionHandler.OnPageLoad = function() {
                 break;
             }
         }
-    }, 5000);
+    }, 1000);
 
-    if (job_seeker_trends != null) {
+    if (document.getElementById('job-seeker-trend-list') != null) {
         document.getElementById('reset-trends').addEventListener("click", function () {
             BackgroundMessaging.Reset();
             job_seeker_trends.innerHTML = "";
         }, false);
 
-        CheckNewOrders();
-        LoadTrands();
-
         const millisecnod = 1000;
-        setInterval(LoadTrands, millisecnod * 3);
         var ordering_interval = setInterval(CheckNewOrders, millisecnod * 20);
 
         document.getElementById('stop-start-ordering').addEventListener("click", function () {
@@ -60,41 +56,10 @@ async function SendingPageInfo(scope) {
     ActionHandler.Handle(commands, false);
 }
 
-async function LoadTrands() {
-    let html = "";
-
-    const trends = await BackgroundMessaging.Trends();
-    for (let t in trends) {
-        let trend = trends[t];
-
-        html += `
-<tr>
-        <td scope="row">${Number(t) + 1}</td>
-        <td><a href="${trend.link}" target="_blank">${trend.agency}</a></td>
-        <td><span>${trend.type}</span></td>
-        <td><span>${trend.state}</span></td>
-        <td><span>${trend.lastActivity}</span></td>
-</tr>`;
-    }
-
-    job_seeker_trends.innerHTML = html;
-}
-
 async function CheckNewOrders() {
     const result = await BackgroundMessaging.Orders();
     ActionHandler.Handle(result.commands, true);
 }
-
-function append(element, html) {
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
-
-    while (temp.firstChild) {
-        element.appendChild(temp.firstChild);
-    }
-}
-
-var job_seeker_trends = document.getElementById('job-seeker-trend-list');
 
 if (window.addEventListener) window.addEventListener("load", ActionHandler.OnPageLoad, false);
 // else if (window.attachEvent) window.attachEvent("onload", ActionHandler.OnPageLoad);

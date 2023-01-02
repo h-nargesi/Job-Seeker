@@ -6,10 +6,6 @@ namespace Photon.JobSeeker
     [Route("[controller]/[action]")]
     public class JobController : Controller
     {
-        private readonly Analyzer analyzer;
-
-        public JobController(Analyzer analyzer) => this.analyzer = analyzer;
-
         [HttpPost]
         public IActionResult Reevaluate()
         {
@@ -27,7 +23,7 @@ namespace Photon.JobSeeker
         }
 
         [HttpPost]
-        public IActionResult Applied([FromBody] long jobid)
+        public IActionResult Apply([FromQuery] long jobid)
         {
             try
             {
@@ -43,7 +39,7 @@ namespace Photon.JobSeeker
         }
 
         [HttpPost]
-        public IActionResult Rejected([FromBody] long jobid)
+        public IActionResult Reject([FromQuery] long jobid)
         {
             try
             {

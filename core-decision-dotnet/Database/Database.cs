@@ -191,7 +191,7 @@ namespace Photon.JobSeeker
             if (values.Count == 0)
                 throw new Exception("No column found for update");
 
-            if (!Enum.TryParse(filter.GetType(), "ModifiedOn", true, out var _))
+            if (Enum.TryParse(filter.GetType(), "ModifiedOn", true, out var _))
             {
                 parameters.Add($"ModifiedOn = $ModifiedOn");
                 values.Add(DateTime.Now);

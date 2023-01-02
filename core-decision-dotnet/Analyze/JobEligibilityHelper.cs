@@ -8,15 +8,16 @@ namespace Photon.JobSeeker
     public class JobEligibilityHelper : IDisposable
     {
         private readonly static Regex remove_new_lines = new(@"(?<=\n)[\n\s]+");
-        private readonly static Regex words = new(@"\w+");
+        private readonly static Regex words = new(@"[a-zA-Z]{3,}");
         public const long MinEligibilityScore = 100;
 
-        private readonly Dictionaries language_checker;
+        private readonly Dictionaries dictionaries;
         private readonly Database database;
         private readonly JobOption[] options;
 
         public JobEligibilityHelper()
         {
+            dictionaries = Dictionaries.Open();
             database = Database.Open();
             options = database.JobOption.FetchAll();
         }
@@ -48,6 +49,8 @@ namespace Photon.JobSeeker
 
         public JobState EvaluateJobEligibility(Job job)
         {
+            job.Log = "";
+
             var correct_language = LanguageIsMatch(job);
 
             var eligibility = correct_language && EvaluateEligibility(job);
@@ -92,11 +95,26 @@ namespace Photon.JobSeeker
             if (job.Content == null) return false;
 
             var word_set = words.Matches(job.Content)
-                                .Select(c => c.Value)
-                                .Distinct()
-                                .ToArray();
+                                .Select(c => c.Value.ToLower())
+                                .OrderBy(w => w)
+                                .ToHashSet();
 
-            return language_checker.Contains(word_set);
+            var total_count = word_set.Count;
+            if (total_count < 1) return false;
+
+            var splited = word_set.Select((w, i) => new { Word = w, Index = i })
+                                  .GroupBy(k => k.Index / 100)
+                                  .Select(g => g.Select(w => w.Word).ToArray())
+                                  .ToArray();
+
+            var langu_count = 0L;
+            foreach (var set in splited)
+                langu_count += dictionaries.EnglishCount(set);
+
+            var point = (int)(100 * langu_count / (double)total_count);
+            job.Log += string.Format("English: ({0}%)\n", point);
+
+            return 50 <= point;
         }
 
         private bool EvaluateEligibility(Job job)
@@ -124,7 +142,7 @@ namespace Photon.JobSeeker
                 job.Score += option_score;
             }
 
-            job.Log = string.Join("\n", logs);
+            job.Log += string.Join("\n", logs);
 
             if (!hasField) return false;
             else return job.Score >= MinEligibilityScore;

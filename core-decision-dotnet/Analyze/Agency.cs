@@ -73,7 +73,7 @@ namespace Photon.JobSeeker
 
             var types = GetSubPages();
 
-            foreach (var type in GetSubPages())
+            foreach (var type in types)
             {
                 if (Activator.CreateInstance(type, this) is not Page page) continue;
 

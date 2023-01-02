@@ -32,7 +32,7 @@ namespace Photon.JobSeeker
         protected (string user, string pass) GetUserPass()
         {
             using var database = Database.Open();
-            return database.Agency.GetUserPass(Parent.Name);
+            return AgencyBusiness.GetUserPass(Parent.Name);
         }
     }
 }

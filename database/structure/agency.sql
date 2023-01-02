@@ -24,5 +24,3 @@ values
 	('LinkedIn',	'(.+\.)?linkedin\.com$',		'http://linkedin.com',
 					'hamed.nargesi.jar@gmail.com', 'CrguFW7SmtbHDDi',
 					'{ "running": 0, "locations": ["Netherlands", "Germany", "Australia", "Sweden"]}');
-
--- update Agency set Active = 0 where Title in ('Indeed', 'IamExpat');

@@ -61,26 +61,6 @@ class CoreMessaging {
         }
     }
 
-    async Trends() {
-        try {
-            const server_url = await this.CheckServerUrl() + "report/trends";
-
-            const data = {
-                method: 'GET',
-                headers: CoreMessaging.HEADERS
-            };
-
-            let response = await fetch(server_url, data);
-            response = await response.json();
-            console.log("CoreMessaging", "Trends", response);
-            return response;
-
-        } catch (e) {
-            console.error(e);
-            return {};
-        }
-    }
-
     async Orders() {
         try {
             const server_url = await this.CheckServerUrl() + "decision/orders";

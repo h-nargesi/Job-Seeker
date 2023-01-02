@@ -6,10 +6,6 @@ namespace Photon.JobSeeker
     [Route("[controller]/[action]")]
     public class ReportController : Controller
     {
-        private readonly Analyzer analyzer;
-
-        public ReportController(Analyzer analyzer) => this.analyzer = analyzer;
-
         [HttpGet]
         public IActionResult Trends()
         {
@@ -33,7 +29,7 @@ namespace Photon.JobSeeker
             try
             {
                 using var database = Database.Open();
-                var list = database.Job.Fetch(JobState.attention);
+                var list = database.Job.Fetch();
 
                 return View("~/views/index.cshtml", list);
             }
