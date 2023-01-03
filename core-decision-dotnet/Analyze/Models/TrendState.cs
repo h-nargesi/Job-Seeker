@@ -5,10 +5,8 @@ namespace Photon.JobSeeker.Analyze.Models
         Blocked = 0,
         Auth,
         Login,
-        Seeking,
         Other,
+        Seeking,
         Analyzing,
-        // InternalApplying,
-        // ExternalApplying,
     }
 }
