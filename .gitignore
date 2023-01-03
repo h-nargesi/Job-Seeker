@@ -9,6 +9,7 @@
 
 # Dotnet Build results
 *.sln
+*.csproj.user
 .vs/
 [Dd]ebug/
 [Dd]ebugPublic/

@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using Photon.JobSeeker.Analyze.Models;
 
 namespace Photon.JobSeeker
 {
@@ -40,7 +41,8 @@ namespace Photon.JobSeeker
         public static TrendType GetTrendType(this TrendState state)
         {
             if (state >= TrendState.Analyzing) return TrendType.Job;
-            else if (state >= TrendState.Auth) return TrendType.Search;
+            else if (state >= TrendState.Seeking) return TrendType.Search;
+            else if (state >= TrendState.Auth) return TrendType.Login;
             else return TrendType.Blocked;
         }
 
@@ -49,7 +51,8 @@ namespace Photon.JobSeeker
             return type switch
             {
                 TrendType.Job => TrendState.Analyzing,
-                TrendType.Search => TrendState.Auth,
+                TrendType.Search => TrendState.Seeking,
+                TrendType.Login => TrendState.Auth,
                 _ => TrendState.Blocked
             };
         }

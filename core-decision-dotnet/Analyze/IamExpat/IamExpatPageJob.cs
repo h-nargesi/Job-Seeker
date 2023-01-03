@@ -1,4 +1,5 @@
 ﻿using System.Web;
+using Photon.JobSeeker.Analyze.Models;
 using Serilog;
 
 namespace Photon.JobSeeker.IamExpat

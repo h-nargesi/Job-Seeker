@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace Photon.JobSeeker
+namespace Photon.JobSeeker.Analyze.Models
 {
     struct JobOption
     {
