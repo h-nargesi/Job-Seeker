@@ -4,11 +4,13 @@ var job_seeker_trends = document.getElementById('job-seeker-trend-list');
 var reset_trends = document.getElementById('reset-trends');
 
 async function LoadTrands() {
-    job_seeker_trends.innerHTML = await fetch("/report/trends", { method: 'GET' });
+    var response = await fetch("/report/trends", { method: 'GET' });
+    job_seeker_trends.innerHTML = await response.text();
 }
 
 async function LoadJobs() {
-    job_seeker_jobs.innerHTML = await fetch("/report/jobs", { method: 'GET' });
+    var response = await fetch("/report/jobs", { method: 'GET' });
+    job_seeker_jobs.innerHTML = await response.text();
 }
 
 async function apply(jobid) {
