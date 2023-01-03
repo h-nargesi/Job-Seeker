@@ -24,5 +24,7 @@ values
 	('LinkedIn',	'(.+\.)?linkedin\.com$',		'http://linkedin.com',
 					'hamed.nargesi.jar@gmail.com', 'CrguFW7SmtbHDDi',
 					'{ "running": 0, "locations": ["Netherlands", "Germany", "Australia", "Sweden"]}')
-on conflict (Title)
-do update set Domain = Domain, Link = Link, UserName = UserName, Password = Password, Settings = Settings;
+on conflict (Title) do update set 
+	Domain = excluded.Domain, Link = excluded.Link,
+	UserName = excluded.UserName, Password = excluded.Password, 
+	Settings = excluded.Settings;
