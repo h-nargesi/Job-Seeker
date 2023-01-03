@@ -8,7 +8,7 @@ namespace Photon.JobSeeker
 
         public TrendState State { get; set; }
 
-        public Command[] Commands { get; set; } = Command.JustClose();
+        public Command[] Commands { get; set; } = new Command[0];
 
         public TrendType Type => State.GetTrendType();
     }

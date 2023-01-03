@@ -7,7 +7,6 @@ ActionHandler.OnPageLoad = function() {
         const host = window.location.hostname;
         console.log('Page', "hostname:", host);
         for (let s in scopes) {
-            console.log('Page', 'Checking for', scopes[s].domain);
             if (host.match(new RegExp(scopes[s].domain, 'i'))) {
                 console.log('Page', "matched", scopes[s].domain);
                 SendingPageInfo(scopes[s]);

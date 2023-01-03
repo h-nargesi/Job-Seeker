@@ -36,7 +36,6 @@ namespace Photon.JobSeeker.IamExpat
                 }
             }
 
-            commands.Add(Command.Close());
             return commands.ToArray();
         }
 

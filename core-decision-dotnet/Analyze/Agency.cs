@@ -20,6 +20,10 @@ namespace Photon.JobSeeker
 
         public IReadOnlyList<Page> Pages => pages;
 
+        public abstract int RunningMethodIndex { get; set; }
+
+        public abstract string[] RunnableMethods { get; }
+
         public Result AnalyzeContent(string url, string content)
         {
             using var database = Database.Open();
@@ -41,7 +45,7 @@ namespace Photon.JobSeeker
             }
 
             Log.Warning("Agency ({0}): Page not found", Name);
-            return new Result { Commands = Command.JustClose() };
+            return new Result();
         }
 
         public void LoadFromDatabase(Database database)
@@ -64,9 +68,7 @@ namespace Photon.JobSeeker
             LoadPages();
         }
 
-        public abstract int RunningMethodIndex { get; set; }
-
-        public abstract string[] RunnableMethods { get; }
+        public abstract string SearchLink();
 
         protected abstract void PrepareNewSettings(dynamic setting);
 

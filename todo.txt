@@ -1,4 +1,2 @@
 Indeed
-Add new 'TrendType': Login
-    In trend we decied to go a seeking or job mode
 Store all found job-options in log

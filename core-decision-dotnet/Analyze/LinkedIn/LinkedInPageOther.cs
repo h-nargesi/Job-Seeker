@@ -10,7 +10,7 @@
 
         public override Command[]? IssueCommand(string url, string content)
         {
-            return new Command[] { Command.Go("https://www.linkedin.com/jobs/search/") };
+            return new Command[0];
         }
     }
 }
