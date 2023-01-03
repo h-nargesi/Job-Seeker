@@ -1,4 +1,5 @@
-drop table JobOption;
+drop table if exists JobOption;
+
 create table JobOption (
 	JobOptionID		integer	not null	primary key,
 	Efective		bit		not null	default 1,

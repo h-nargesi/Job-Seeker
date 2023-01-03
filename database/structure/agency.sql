@@ -1,4 +1,4 @@
-create table Agency (
+create table if not exists Agency (
 	AgencyID		integer not null	primary key,
 	Title			text	not null	unique,
 	Active			integer	not null	default 3,
@@ -6,10 +6,10 @@ create table Agency (
 	Link			text	not null,
 	UserName		text		null,
 	Password		text		null,
-	Settings		text		null
-);
+	Settings		text		null,
 
-create unique index UQ_Agency_Title on Agency (Title);
+	unique			(Title)
+);
 
 insert into Agency (Title, Domain, Link, UserName, Password, Settings)
 values
@@ -23,4 +23,6 @@ values
 
 	('LinkedIn',	'(.+\.)?linkedin\.com$',		'http://linkedin.com',
 					'hamed.nargesi.jar@gmail.com', 'CrguFW7SmtbHDDi',
-					'{ "running": 0, "locations": ["Netherlands", "Germany", "Australia", "Sweden"]}');
+					'{ "running": 0, "locations": ["Netherlands", "Germany", "Australia", "Sweden"]}')
+on conflict (Title)
+do update set Domain = Domain, Link = Link, UserName = UserName, Password = Password, Settings = Settings;

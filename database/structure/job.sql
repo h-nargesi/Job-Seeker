@@ -1,4 +1,4 @@
-create table Job (
+create table if not exists Job (
 	JobID			integer		not null	primary key,
 	RegTime			timestamp	not null	default current_timestamp,
 	ModifiedOn		timestamp	not null	default current_timestamp,
@@ -17,5 +17,3 @@ create table Job (
 	unique			(AgencyID, Code),
 	foreign key		(AgencyID) references Agency (AgencyID) on delete no action
 );
-
-create unique index UQ_Job_Url on Job (AgencyID, Code);

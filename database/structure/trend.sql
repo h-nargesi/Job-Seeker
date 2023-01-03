@@ -1,3 +1,5 @@
+drop table if exists Trend;
+
 create table Trend (
 	TrendID			integer 	not null	primary key,
 	AgencyID		integer		not null,
