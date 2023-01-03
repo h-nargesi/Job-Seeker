@@ -8,9 +8,17 @@ namespace Photon.JobSeeker.LinkedIn
 
         public override string Name => "LinkedIn";
 
-        internal int Running { get; private set; } = -1;
+        private int Running = 0;
 
-        internal string Location { get; private set; } = "Netherlands";
+        private string[] LocationSet = new string[] { "Netherlands" };
+
+        internal string Location => LocationSet[Running];
+
+        public override string[] Runnables(out int current)
+        {
+            current = Running;
+            return LocationSet.ToArray();
+        }
 
         protected override void PrepareNewSettings(dynamic settings)
         {
@@ -19,7 +27,7 @@ namespace Photon.JobSeeker.LinkedIn
                 if (Running == (int)settings.running) return;
 
                 Running = (int)settings.running;
-                Location = (string)settings.locations[Running];
+                LocationSet = (string[])settings.locations;
 
                 LinkedInPage.reg_search_location_url = new Regex(@$"(^|&)location={Location}(&|$)", RegexOptions.IgnoreCase);
             }

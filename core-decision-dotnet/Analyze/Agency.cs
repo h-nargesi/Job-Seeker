@@ -62,6 +62,8 @@ namespace Photon.JobSeeker
             LoadPages();
         }
 
+        public abstract string[] Runnables(out int current);
+
         protected abstract void PrepareNewSettings(dynamic setting);
 
         protected abstract IEnumerable<Type> GetSubPages();
