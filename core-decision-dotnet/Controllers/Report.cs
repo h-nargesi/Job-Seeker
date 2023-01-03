@@ -67,8 +67,9 @@ namespace Photon.JobSeeker
                 database.Trend.DeleteExpired();
                 var trends = database.Trend.Report();
                 var jobs = database.Job.Fetch();
+                var agencies = GetAgencies();
 
-                return View("~/views/index.cshtml", new { Trends = trends, Jobs = jobs });
+                return View("~/views/index.cshtml", new { Trends = trends, Jobs = jobs, Agencies = agencies });
             }
             catch (Exception ex)
             {
@@ -77,15 +78,17 @@ namespace Photon.JobSeeker
             }
         }
 
-        internal object GetAgencies()
+        private object GetAgencies()
         {
             return analyzer.Agencies.Select(a =>
                 {
                     var result = a.Value.Runnables(out var current);
                     return new
                     {
+                        AgencyID = a.Value.ID,
+                        Name = a.Key,
                         Current = current,
-                        Agencies = result
+                        Methods = result
                     };
                 })
                 .ToArray();

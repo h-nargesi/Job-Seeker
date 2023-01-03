@@ -39,6 +39,21 @@ async function reset() {
     }
 }
 
+async function change_running(agency, running) {
+    try {
+        params = {
+            agency: agency,
+            running: running
+        };
+        await fetch("/agency/running", { method: 'POST', body: JSON.stringify(params) });
+        document.querySelectorAll(`button[id^="RM-${agency}"]`).forEach((button) => { button.className = ''; });
+        document.getElementById(`RM-${agency}-${running}`).className = 'current';
+
+    } catch (e) {
+        console.error(e);
+    }
+}
+
 function OnPageLoad() {
     const millisecnod = 1000;
     setInterval(LoadTrands, millisecnod * 3);

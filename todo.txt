@@ -1,5 +1,4 @@
 Indeed
-Show and Change running mode of agencies on report page
 Add new 'TrendType': Login
     In trend we decied to go a seeking or job mode
 Store all found job-options in log
