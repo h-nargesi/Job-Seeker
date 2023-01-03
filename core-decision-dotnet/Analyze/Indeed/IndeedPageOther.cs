@@ -10,7 +10,7 @@
 
         public override Command[]? IssueCommand(string url, string content)
         {
-            return new Command[] { Command.Go(parent.SearchDomain + "jobs?q=developer") };
+            return new Command[0];
         }
     }
 }

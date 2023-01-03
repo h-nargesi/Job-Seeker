@@ -42,7 +42,7 @@ namespace Photon.JobSeeker.Indeed
                 });
             }
 
-            if (!reg_search_end.IsMatch(content)) return Command.JustClose();
+            if (!reg_search_end.IsMatch(content)) return new Command[0];
             else return new Command[] { Command.Click(@"a[aria-label=""Next Page""]") };
         }
     }

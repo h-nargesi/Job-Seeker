@@ -34,7 +34,6 @@ namespace Photon.JobSeeker.Indeed
                 // TODO: apply link
             }
 
-            commands.Add(Command.Close());
             return commands.ToArray();
         }
 
