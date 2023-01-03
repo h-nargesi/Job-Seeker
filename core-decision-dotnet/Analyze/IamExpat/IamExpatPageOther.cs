@@ -1,4 +1,6 @@
-﻿namespace Photon.JobSeeker.IamExpat
+﻿using Photon.JobSeeker.Analyze.Models;
+
+namespace Photon.JobSeeker.IamExpat
 {
     class IamExpatPageOther : IamExpatPage
     {

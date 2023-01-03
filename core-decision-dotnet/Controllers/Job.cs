@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Photon.JobSeeker.Analyze.Models;
 using Serilog;
 
 namespace Photon.JobSeeker
