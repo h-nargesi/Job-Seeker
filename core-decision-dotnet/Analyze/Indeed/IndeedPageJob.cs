@@ -1,19 +1,20 @@
 ﻿using System.Web;
+using HtmlAgilityPack;
 using Serilog;
 
-namespace Photon.JobSeeker.LinkedIn
+namespace Photon.JobSeeker.Indeed
 {
-    class LinkedInPageJob : LinkedInPage
+    class IndeedPageJob : IndeedPage
     {
         public override int Order => 10;
 
         public override TrendState TrendState => TrendState.Analyzing;
 
-        public LinkedInPageJob(LinkedIn parent) : base(parent) { }
+        public IndeedPageJob(Indeed parent) : base(parent) { }
 
         public override Command[]? IssueCommand(string url, string content)
         {
-            if (!reg_job_url.IsMatch(url)) return null;
+            if (!reg_job_view.IsMatch(url)) return null;
 
             var job = LoadJob(url, content);
 
@@ -41,7 +42,7 @@ namespace Photon.JobSeeker.LinkedIn
         {
             using var database = Database.Open();
 
-            var url_matched = reg_job_url.Match(url);
+            var url_matched = reg_job_view.Match(url);
             if (!url_matched.Success) throw new Exception($"Invalid job url ({parent.Name}).");
 
             var code = url_matched.Groups[1].Value;
@@ -76,13 +77,13 @@ namespace Photon.JobSeeker.LinkedIn
 
         private string GetHtmlContent(string html)
         {
-            var start_match = reg_job_content_start.Match(html);
-            if (!start_match.Success) return html;
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
 
-            var end_match = reg_job_content_end.Match(html);
-            if (!end_match.Success) return html;
+            var main_content = doc.DocumentNode.SelectNodes("//div[@class='jobsearch-ViewJobLayout-jobDisplay']")
+                                               .FirstOrDefault();
 
-            return html.Substring(start_match.Index + start_match.Length, end_match.Index - start_match.Index - start_match.Length);
+            return main_content?.InnerHtml ?? "";
         }
     }
 }

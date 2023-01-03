@@ -71,7 +71,7 @@ namespace Photon.JobSeeker
             GC.SuppressFinalize(this);
         }
 
-        public static string GetHtmlContent(string html)
+        public static string GetTextContent(string html)
         {
             var doc = new HtmlDocument();
             doc.LoadHtml(html);

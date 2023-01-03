@@ -1,4 +1,4 @@
-﻿namespace Photon.JobSeeker.IamExpat
+﻿namespace Photon.JobSeeker.Indeed
 {
     class IndeedPageAuth : IndeedPage
     {
@@ -6,13 +6,13 @@
 
         public override TrendState TrendState => TrendState.Auth;
 
-        public IndeedPageAuth(IamExpat parent) : base(parent) { }
+        public IndeedPageAuth(Indeed parent) : base(parent) { }
 
         public override Command[]? IssueCommand(string url, string content)
         {
             if (!reg_login_but.IsMatch(content)) return null;
 
-            return new Command[] { Command.Click(@"a[href=""/login""]") };
+            return new Command[] { Command.Click(@"a[href^=""https://secure.indeed.com/account/login""]") };
         }
     }
 }

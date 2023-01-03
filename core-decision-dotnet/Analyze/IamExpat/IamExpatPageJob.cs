@@ -97,7 +97,7 @@ namespace Photon.JobSeeker.IamExpat
                 Log.Warning("Title not found ({0}, {1})", parent.Name, code);
             else job.Title = HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim();
 
-            job.SetHtml(GetContent(html));
+            job.SetHtml(GetHtmlContent(html));
 
             Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
             database.Job.Save(job, filter);
@@ -105,7 +105,7 @@ namespace Photon.JobSeeker.IamExpat
             return job;
         }
 
-        private string GetContent(string html)
+        private string GetHtmlContent(string html)
         {
             var start_match = reg_job_content_start.Match(html);
             if (!start_match.Success) return html;

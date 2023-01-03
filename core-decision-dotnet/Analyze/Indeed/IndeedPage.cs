@@ -1,28 +1,28 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace Photon.JobSeeker.IamExpat
+namespace Photon.JobSeeker.Indeed
 {
     abstract class IndeedPage : Page
     {
-        protected readonly IamExpat parent;
+        protected readonly Indeed parent;
 
-        protected IndeedPage(IamExpat parent) : base(parent) => this.parent = parent;
+        protected IndeedPage(Indeed parent) : base(parent) => this.parent = parent;
 
-        protected static readonly Regex reg_login_but = new(@"<a[^>]+href=[""']https://secure.indeed.com/account/login[^""']*[""'][^>]*>Sign in</a>", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_login_but = new(@"<a[^>]+href=[""']https://secure\.indeed\.com/account/login[^""']*[""'][^>]*>Sign in</a>", RegexOptions.IgnoreCase); //
 
-        protected static readonly Regex reg_login_url = new(@"iamexpat\.com/login", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_login_url = new(@"indeed\.com/account/login", RegexOptions.IgnoreCase); //
 
-        internal static Regex reg_search_url = new(@"://[^/]*iamexpat\.nl/career/jobs-netherlands", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_search_url = new(@"://[^/]*indeed\.com/jobs\?", RegexOptions.IgnoreCase); // 
 
-        protected static readonly Regex reg_search_title = new(@"<h1>[^<]*IT[^<]*Technology[^<]*</h1>", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_search_keywords_url = new(@"(^|&)q=developer(&|$)", RegexOptions.IgnoreCase); //
 
-        protected static readonly Regex reg_search_end = new(@"<a[^>]+title=[""']Go to next page[""']", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_search_end = new(@"<a[^>]+aria-label=[""']Next Page[""']", RegexOptions.IgnoreCase);
 
-        protected static readonly Regex reg_job_url = new(@"/career/jobs-[\w-]+(/[\w-]+)*/it-technology/([\w-]+)(/(\d+))?", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_job_url = new(@"/rc/clk?jk=([0-9a-f]+)", RegexOptions.IgnoreCase); // 
 
-        protected static readonly Regex reg_job_shortlink = new(@"<link\s+rel=[""']shortlink[""'] href=[""']/node/(\d+)[""']>", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_job_view = new(@"/viewjob?jk=([0-9a-f]+)", RegexOptions.IgnoreCase); // 
 
-        protected static readonly Regex reg_job_title = new(@"<h1[^>]+class=[""']article__title[""'][^>]*>([^<]*)</h1>", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_job_title = new(@"<h1[^>]*>([^<]*)</h1>", RegexOptions.IgnoreCase); //
 
         protected static readonly Regex reg_job_apply = new(@"<a[^>]+href=[""']([^""']+)[""'][^>]*>Apply\s+Now</a>", RegexOptions.IgnoreCase);
 

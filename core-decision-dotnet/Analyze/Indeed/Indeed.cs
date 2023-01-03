@@ -11,7 +11,7 @@ namespace Photon.JobSeeker.Indeed
 
         internal int Running { get; private set; } = -1;
 
-        internal string Search { get; private set; } = "nl/career/jobs-netherlands";
+        internal string SearchDomain { get; private set; } = "https://au.indeed.com/";
 
         protected override void PrepareNewSettings(dynamic settings)
         {
@@ -20,9 +20,7 @@ namespace Photon.JobSeeker.Indeed
                 if (Running == (int)settings.running) return;
 
                 Running = (int)settings.running;
-                Search = (string)settings.searchs[Running];
-
-                IndeedPage.reg_search_url = new Regex(@$"://[^/]*iamexpat\.{Search}", RegexOptions.IgnoreCase);
+                SearchDomain = (string)settings.domains[Running];
             }
         }
 
