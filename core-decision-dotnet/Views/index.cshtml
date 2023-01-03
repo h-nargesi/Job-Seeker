@@ -34,7 +34,7 @@
                             <td scope="col">Action</td>
                         </tr>
                     </thead>
-                    <tbody id="job-list"><partial name="~/views/jobs.cshtml" model="Model.Jobs" /></tbody>
+                    <tbody id="job-list">@await Html.PartialAsync("~/views/jobs.cshtml", (List<dynamic>)Model.Jobs)</tbody>
                 </table>
             </section>
             <article class="col-md-4">
@@ -49,7 +49,7 @@
                             <td scope="col">Latest Activity</td>
                         </tr>
                     </thead>
-                    <tbody id="job-seeker-trend-list"><partial name="~/views/trends.cshtml" model="Model.Trends" /></tbody>
+                    <tbody id="job-seeker-trend-list">@await Html.PartialAsync("~/views/trends.cshtml", (List<dynamic>)Model.Trends)</tbody>
                 </table>
                 <div class="agency-list">
                     <partial name="~/views/agencies.cshtml" model="Model.Agencies" />

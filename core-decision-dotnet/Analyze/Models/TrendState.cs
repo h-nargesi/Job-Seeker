@@ -1,14 +1,12 @@
-namespace Photon.JobSeeker
+namespace Photon.JobSeeker.Analyze.Models
 {
     public enum TrendState : byte
     {
         Blocked = 0,
         Auth,
         Login,
-        Seeking,
         Other,
+        Seeking,
         Analyzing,
-        // InternalApplying,
-        // ExternalApplying,
     }
 }

@@ -1,4 +1,4 @@
-namespace Photon.JobSeeker
+namespace Photon.JobSeeker.Analyze.Models
 {
     enum TrendFilter
     {
