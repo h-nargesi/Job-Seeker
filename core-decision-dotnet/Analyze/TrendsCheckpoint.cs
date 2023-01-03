@@ -1,4 +1,3 @@
-using Photon.JobSeeker.Analyze.Models;
 using Serilog;
 
 namespace Photon.JobSeeker

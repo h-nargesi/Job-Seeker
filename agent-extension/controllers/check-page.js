@@ -17,11 +17,6 @@ ActionHandler.OnPageLoad = function() {
     }, 1000);
 
     if (document.getElementById('job-seeker-trend-list') != null) {
-        document.getElementById('reset-trends').addEventListener("click", function () {
-            BackgroundMessaging.Reset();
-            job_seeker_trends.innerHTML = "";
-        }, false);
-
         const millisecnod = 1000;
         var ordering_interval = setInterval(CheckNewOrders, millisecnod * 20);
 

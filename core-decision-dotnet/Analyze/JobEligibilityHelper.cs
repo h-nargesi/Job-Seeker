@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
-using Photon.JobSeeker.Analyze.Models;
 using Serilog;
 
 namespace Photon.JobSeeker

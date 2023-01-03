@@ -1,0 +1,14 @@
+@model dynamic[]
+@foreach (var agency in Model)
+{
+    var index = -1;
+    <div class="agency mt-3" aria-title="@agency.Name">
+        <h4>@agency.Name</h4>
+        @foreach (var method in agency.Methods)
+        {
+            index += 1;
+            var current = index == (int)agency.Running ? "btn-primary" : "btn-outline-primary";
+            <button id="RM-@(agency.Name)-@(index)" class="btn @current mt-1" onclick="change_running('@agency.Name', @index)">@method</button>
+        }
+    </div>
+}

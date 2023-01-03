@@ -92,5 +92,21 @@ namespace Photon.JobSeeker
                 throw;
             }
         }
+
+        [HttpPost]
+        public IActionResult Running([FromBody] RunningMethodContext context)
+        {
+            try
+            {
+                if (context.Agency == null) return BadRequest();
+                analyzer.Agencies[context.Agency].RunningMethodIndex = context.Running;
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+                throw;
+            }
+        }
     }
 }

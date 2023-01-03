@@ -1,0 +1,36 @@
+@model List<dynamic>
+
+@foreach (var info in Model)
+{
+    <tr id="Job_@info.Job.JobID" class="@info.Job.State">
+        <td>@info.Job.JobID</td>
+        <td><span>@info.AgencyName</span></td>
+        <td><a href="@info.Job.Link" target="_blank">@info.Job.Title</a></td>
+        <td><strong>@info.Job.Score</strong></td>
+        <td><a href="@info.Job.Url" target="_blank">Link</a></td>
+        <td><span>@info.Job.RegTime</span></td>
+        <td>
+            <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#logs-@info.Job.JobID"
+                data-id="@info.Job.JobID">
+                Logs
+            </button>
+            <div class="modal fade" id="logs-@info.Job.JobID" tabindex="-1" aria-labelledby="exampleModalLabel"
+             aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="exampleModalLabel">Logs</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div id="logs-body-@info.Job.JobID" class="modal-body">@info.Job.Log</div>
+                        <div class="modal-footer"></div>
+                    </div>
+                </div>
+            </div>
+        </td>
+        <td class="flex-column">
+            <a href="#" onclick="apply(@info.Job.JobID)" class="text-success">Applied</a>
+            <a href="#" onclick="reject(@info.Job.JobID)" class="text-danger">Rejected</a>
+        </td>
+    </tr>
+}
