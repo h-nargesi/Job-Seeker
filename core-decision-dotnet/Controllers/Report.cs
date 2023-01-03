@@ -80,16 +80,11 @@ namespace Photon.JobSeeker
 
         private dynamic[] GetAgencies()
         {
-            return analyzer.Agencies.Select(a =>
+            return analyzer.Agencies.Select(a => new
                 {
-                    // var result = a.Value.Runnables(out var current);
-                    return new
-                    {
-                        AgencyID = a.Value.ID,
-                        Name = a.Key,
-                        // Current = current,
-                        // Methods = result
-                    };
+                    Name = a.Key,
+                    Running = a.Value.RunningMethodIndex,
+                    Methods = a.Value.RunnableMethods
                 })
                 .ToArray();
 

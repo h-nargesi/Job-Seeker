@@ -6,28 +6,24 @@ namespace Photon.JobSeeker.IamExpat
     {
         private static readonly object @lock = new();
 
-        private int Running = 0;
+        public override string Name => "IamExpat";
 
         private string[] SearchSet = new string[] { "nl/career/jobs-netherlands" };
 
-        public override string Name => "IamExpat";
+        internal string Search => SearchSet[RunningMethodIndex];
 
-        internal string Search => SearchSet[Running];
+        public override int RunningMethodIndex { get; set; }
 
-        public override string[] Runnables(out int current)
-        {
-            current = Running;
-            return SearchSet.ToArray();
-        }
+        public override string[] RunnableMethods => SearchSet;
 
         protected override void PrepareNewSettings(dynamic settings)
         {
             lock (@lock)
             {
-                if (Running == (int)settings.running) return;
+                RunningMethodIndex = (int)settings.running;
+                SearchSet = settings.searchs.ToObject<string[]>();
 
-                Running = (int)settings.running;
-                SearchSet = (string[])settings.searchs;
+                if (RunningMethodIndex == (int)settings.running) return;
 
                 IamExpatPage.reg_search_url = new Regex(@$"://[^/]*iamexpat\.{Search}", RegexOptions.IgnoreCase);
             }

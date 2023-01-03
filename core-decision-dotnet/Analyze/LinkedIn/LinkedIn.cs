@@ -8,26 +8,22 @@ namespace Photon.JobSeeker.LinkedIn
 
         public override string Name => "LinkedIn";
 
-        private int Running = 0;
-
         private string[] LocationSet = new string[] { "Netherlands" };
 
-        internal string Location => LocationSet[Running];
+        public override int RunningMethodIndex { get; set; }
 
-        public override string[] Runnables(out int current)
-        {
-            current = Running;
-            return LocationSet.ToArray();
-        }
+        public override string[] RunnableMethods => LocationSet;
+
+        internal string Location => LocationSet[RunningMethodIndex];
 
         protected override void PrepareNewSettings(dynamic settings)
         {
             lock (@lock)
             {
-                if (Running == (int)settings.running) return;
+                RunningMethodIndex = (int)settings.running;
+                LocationSet = settings.locations.ToObject<string[]>();
 
-                Running = (int)settings.running;
-                LocationSet = (string[])settings.locations;
+                if (RunningMethodIndex == (int)settings.running) return;
 
                 LinkedInPage.reg_search_location_url = new Regex(@$"(^|&)location={Location}(&|$)", RegexOptions.IgnoreCase);
             }

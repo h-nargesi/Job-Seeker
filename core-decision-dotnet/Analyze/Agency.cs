@@ -51,7 +51,7 @@ namespace Photon.JobSeeker
 
             var Active = agency_info.Active;
             if ((Active & 3) == 0) return;
-            
+
             IsActiveSeeking = (Active & 1) == 1;
             IsActiveAnalyzing = (Active & 2) == 2;
 
@@ -59,10 +59,14 @@ namespace Photon.JobSeeker
             Domain = agency_info.Domain;
             Link = agency_info.Link;
 
+            PrepareNewSettings(agency_info.Settings);
+
             LoadPages();
         }
 
-        public abstract string[] Runnables(out int current);
+        public abstract int RunningMethodIndex { get; set; }
+
+        public abstract string[] RunnableMethods { get; }
 
         protected abstract void PrepareNewSettings(dynamic setting);
 
@@ -73,9 +77,7 @@ namespace Photon.JobSeeker
             pages.Clear();
             Log.Debug("loading pages of", Name);
 
-            var types = GetSubPages();
-
-            foreach (var type in types)
+            foreach (var type in GetSubPages())
             {
                 if (Activator.CreateInstance(type, this) is not Page page) continue;
 

@@ -43,13 +43,22 @@ async function reset() {
 
 async function change_running(agency, running) {
     try {
-        params = {
-            agency: agency,
-            running: running
-        };
-        await fetch("/agency/running", { method: 'POST', body: JSON.stringify(params) });
-        document.querySelectorAll(`button[id^="RM-${agency}"]`).forEach((button) => { button.className = ''; });
-        document.getElementById(`RM-${agency}-${running}`).className = 'current';
+        const data = {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                agency: agency,
+                running: running
+            })
+        }
+        await fetch("/decision/running", data);
+        document.querySelectorAll(`button[id^="RM-${agency}"]`).forEach((button) => {
+            button.className = 'btn btn-outline-primary mt-1';
+        });
+        document.getElementById(`RM-${agency}-${running}`).className = 'btn btn-primary mt-1';
 
     } catch (e) {
         console.error(e);
