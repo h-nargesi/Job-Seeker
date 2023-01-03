@@ -1,7 +1,6 @@
 
 var job_seeker_jobs = document.getElementById('job-list');
 var job_seeker_trends = document.getElementById('job-seeker-trend-list');
-var reset_trends = document.getElementById('reset-trends');
 
 async function LoadTrands() {
     job_seeker_trends.innerHTML = await fetch("/report/trends", { method: 'GET' });
@@ -26,6 +25,15 @@ async function reject(jobid) {
         await fetch("/job/reject?jobid=" + jobid, { method: 'POST' });
         document.getElementById('Job_' + jobid).className = 'rejected';
 
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function reset() {
+    try {
+        await fetch("/decision/reset", { method: 'POST' });
+        job_seeker_trends.innerHTML = "";
     } catch (e) {
         console.error(e);
     }
