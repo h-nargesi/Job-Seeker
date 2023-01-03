@@ -9,9 +9,15 @@ namespace Photon.JobSeeker.Indeed
 
         public override string Name => "Indeed";
 
+        private string[] SearchDomainSet = new string[] { "https://au.indeed.com/" };
+
         internal int Running { get; private set; } = -1;
 
-        internal string SearchDomain { get; private set; } = "https://au.indeed.com/";
+        public override int RunningMethodIndex { get; set; }
+
+        public override string[] RunnableMethods => SearchDomainSet;
+
+        internal string SearchDomain => SearchDomainSet[RunningMethodIndex];
 
         protected override void PrepareNewSettings(dynamic settings)
         {
@@ -20,7 +26,7 @@ namespace Photon.JobSeeker.Indeed
                 if (Running == (int)settings.running) return;
 
                 Running = (int)settings.running;
-                SearchDomain = (string)settings.domains[Running];
+                SearchDomainSet = settings.domains.ToObject<string[]>();
             }
         }
 
