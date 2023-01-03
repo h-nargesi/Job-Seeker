@@ -16,9 +16,10 @@
 
             // TODO: complete the page
             return new Command[] {
-                Command.Fill(@"input[id=""edit-name""]", user),
-                Command.Fill(@"input[id=""edit-pass""]", pass),
-                Command.Click(@"input[id=""edit-submit""]")
+                Command.Fill(@"#ifl-InputFormField-3", user),
+                // Command.Click(@"#auth-page-google-password-fallback"),
+                // Command.Fill(@"#ifl-InputFormField-16", pass),
+                Command.Click(@"button[type=""submit""]")
             };
         }
     }

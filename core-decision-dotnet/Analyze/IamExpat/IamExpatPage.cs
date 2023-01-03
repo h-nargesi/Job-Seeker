@@ -10,9 +10,9 @@ namespace Photon.JobSeeker.IamExpat
 
         protected static readonly Regex reg_login_but = new(@"<a[^>]+href=[""']/login[""']", RegexOptions.IgnoreCase);
 
-        protected static readonly Regex reg_login_url = new(@"iamexpat\.com/login", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_login_url = new(@"^https?://[^/]*iamexpat\.com/login", RegexOptions.IgnoreCase);
 
-        internal static Regex reg_search_url = new(@"://[^/]*iamexpat\.nl/career/jobs-netherlands", RegexOptions.IgnoreCase);
+        internal static Regex reg_search_url = new(@"^https?://[^/]*iamexpat\.nl/career/jobs-netherlands", RegexOptions.IgnoreCase);
 
         protected static readonly Regex reg_search_title = new(@"<h1>[^<]*IT[^<]*Technology[^<]*</h1>", RegexOptions.IgnoreCase);
 

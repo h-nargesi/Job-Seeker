@@ -17,10 +17,10 @@
 		{
 			"matches": ["*://*/*"],
 			"js": [
-				"assets/scripts/jquery-3.6.1.min.js",
 				"controllers/storage-handler.js",
 				"controllers/background-messaging.js",
 				"controllers/action-handler.js",
+				"controllers/keyboard.js",
 				"controllers/check-page.js"
 			]
 		}

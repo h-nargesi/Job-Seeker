@@ -10,7 +10,7 @@ namespace Photon.JobSeeker.LinkedIn
 
         protected static readonly Regex reg_login_but = new(@"<button[^>]+type=[""']submit[""'][^>]+>\s*Sign\s+in\s*</button>", RegexOptions.IgnoreCase);
 
-        protected static readonly Regex reg_search_url = new(@"://[^/]*linkedin\.com/jobs/search", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_search_url = new(@"^https?://[^/]*linkedin\.com/jobs/search", RegexOptions.IgnoreCase);
 
         internal static Regex reg_search_location_url = new(@"(^|&)location=Netherlands(&|$)", RegexOptions.IgnoreCase);
 
