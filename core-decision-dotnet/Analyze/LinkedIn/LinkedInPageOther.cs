@@ -1,6 +1,4 @@
-﻿using Photon.JobSeeker.Analyze.Models;
-
-namespace Photon.JobSeeker.LinkedIn
+﻿namespace Photon.JobSeeker.LinkedIn
 {
     class LinkedInPageOther : LinkedInPage
     {

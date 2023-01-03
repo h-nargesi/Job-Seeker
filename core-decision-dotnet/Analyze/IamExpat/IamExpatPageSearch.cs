@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using Photon.JobSeeker.Analyze.Models;
 
 namespace Photon.JobSeeker.IamExpat
 {

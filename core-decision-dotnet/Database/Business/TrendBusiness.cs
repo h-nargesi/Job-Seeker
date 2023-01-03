@@ -1,5 +1,4 @@
 ﻿using Microsoft.Data.Sqlite;
-using Photon.JobSeeker.Analyze.Models;
 
 namespace Photon.JobSeeker
 {
@@ -21,10 +20,10 @@ namespace Photon.JobSeeker
             return ReadTrend(reader);
         }
 
-        public List<object> Report()
+        public List<dynamic> Report()
         {
             using var reader = database.Read(Q_REPORT);
-            var list = new List<object>();
+            var list = new List<dynamic>();
 
             while (reader.Read())
                 list.Add(new

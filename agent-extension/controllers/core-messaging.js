@@ -80,22 +80,4 @@ class CoreMessaging {
             return {};
         }
     }
-
-    async Reset() {
-        try {
-            const server_url = await this.CheckServerUrl() + "decision/reset";
-
-            const data = {
-                method: 'POST',
-                headers: CoreMessaging.HEADERS
-            };
-
-            await fetch(server_url, data);
-
-        } catch (e) {
-            console.error(e);
-        }
-        
-        return {};
-    }
 }
