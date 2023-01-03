@@ -1,0 +1,13 @@
+﻿@{
+    var index = 0;
+}
+@foreach(var trend in Model)
+{
+    <tr>
+        <td scope="row">@(++index)</td>
+        <td><a href="@trend.Link" target="_blank">@trend.Agency</a></td>
+        <td><span>@trend.Type</span></td>
+        <td><span>@trend.State</span></td>
+        <td><span>@trend.LastActivity</span></td>
+    </tr>
+}
