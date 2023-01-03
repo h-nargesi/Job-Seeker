@@ -51,13 +51,13 @@
                     </thead>
                     <tbody id="job-seeker-trend-list">@await Html.PartialAsync("~/views/trends.cshtml", (List<dynamic>)Model.Trends)</tbody>
                 </table>
-                <div class="agency-list">
-                    <partial name="~/views/agencies.cshtml" model="Model.Agencies" />
-                </div>
                 <div class="flex-column">
                     <button id="stop-start-ordering" type="button" class="btn btn-danger">To Stop Ordering</button>
                     <button id="reset-trends" type="button" class="btn btn-outline-primary">Reset Trends</button>
                     <button id="reevaluate" type="button" class="btn btn-outline-primary">Reevaluate</button>
+                </div>
+                <div class="agency-list">
+                    @await Html.PartialAsync("~/views/agencies.cshtml", (dynamic[])Model.Agencies)
                 </div>
             </article>
         </div>

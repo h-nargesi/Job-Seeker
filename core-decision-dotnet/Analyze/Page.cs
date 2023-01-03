@@ -1,5 +1,3 @@
-using Photon.JobSeeker.Analyze.Models;
-
 namespace Photon.JobSeeker
 {
     public abstract class Page : IComparable<Page>

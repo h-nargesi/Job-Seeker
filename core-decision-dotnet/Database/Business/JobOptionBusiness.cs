@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using Photon.JobSeeker.Analyze.Models;
 
 namespace Photon.JobSeeker
 {

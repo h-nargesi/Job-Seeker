@@ -1,4 +1,4 @@
-namespace Photon.JobSeeker.Analyze.Models
+namespace Photon.JobSeeker
 {
     public enum TrendType
     {

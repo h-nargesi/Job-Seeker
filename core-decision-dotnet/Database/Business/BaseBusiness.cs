@@ -1,5 +1,3 @@
-using Photon.JobSeeker.Analyze.Models;
-
 namespace Photon.JobSeeker
 {
     abstract class BaseBusiness<T> where T : class

@@ -1,5 +1,4 @@
 using Newtonsoft.Json;
-using Photon.JobSeeker.Analyze.Models;
 
 namespace Photon.JobSeeker
 {

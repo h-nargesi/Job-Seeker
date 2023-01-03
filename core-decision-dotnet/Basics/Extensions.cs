@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using Photon.JobSeeker.Analyze.Models;
 
 namespace Photon.JobSeeker
 {
