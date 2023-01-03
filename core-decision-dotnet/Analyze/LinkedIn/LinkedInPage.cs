@@ -8,7 +8,7 @@ namespace Photon.JobSeeker.LinkedIn
 
         protected LinkedInPage(LinkedIn parent) : base(parent) => this.parent = parent;
 
-        protected static readonly Regex reg_login_butl = new(@"<button[^>]+type=[""']submit[""'][^>]+>\s*Sign\s+in\s*</button>", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_login_but = new(@"<button[^>]+type=[""']submit[""'][^>]+>\s*Sign\s+in\s*</button>", RegexOptions.IgnoreCase);
 
         protected static readonly Regex reg_search_url = new(@"://[^/]*linkedin\.com/jobs/search", RegexOptions.IgnoreCase);
 

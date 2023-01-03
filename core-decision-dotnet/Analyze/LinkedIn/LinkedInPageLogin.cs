@@ -10,7 +10,7 @@
 
         public override Command[]? IssueCommand(string url, string content)
         {
-            if (!reg_login_butl.IsMatch(content)) return null;
+            if (!reg_login_but.IsMatch(content)) return null;
 
             var (user, pass) = GetUserPass();
 
