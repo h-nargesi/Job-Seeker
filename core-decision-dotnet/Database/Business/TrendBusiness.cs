@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.Sqlite;
+using Photon.JobSeeker.Analyze.Models;
 
 namespace Photon.JobSeeker
 {
