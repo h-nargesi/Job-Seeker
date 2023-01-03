@@ -6,15 +6,20 @@ namespace Photon.JobSeeker.IamExpat
     {
         private static readonly object @lock = new();
 
-        public override string Name => "IamExpat";
-
         private string[] SearchSet = new string[] { "nl/career/jobs-netherlands" };
 
-        internal string Search => SearchSet[RunningMethodIndex];
+        public override string Name => "IamExpat";
 
         public override int RunningMethodIndex { get; set; }
 
         public override string[] RunnableMethods => SearchSet;
+        
+        internal string Search => SearchSet[RunningMethodIndex];
+
+        public override string SearchLink()
+        {
+            return "https://iamexpat." + Search;
+        }
 
         protected override void PrepareNewSettings(dynamic settings)
         {

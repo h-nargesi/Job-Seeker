@@ -47,8 +47,5 @@
         {
             [nameof(miliseconds)] = miliseconds,
         });
-
-
-        public static Command[] JustClose() => new Command[] { Close() };
     }
 }

@@ -33,7 +33,6 @@ namespace Photon.JobSeeker.LinkedIn
                 // TODO: apply link
             }
 
-            commands.Add(Command.Close());
             return commands.ToArray();
         }
 

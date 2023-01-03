@@ -7,11 +7,11 @@ const trends = new TrendCollection();
 
 chrome.runtime.onMessage.addListener(
     function (request, sender) {
-        // console.log("Background", request, sender.tab);
+        // console.log("Background", request, sender.tab.windowId, sender.tab.id);
 
         switch (request.title.toLowerCase()) {
             case "send":
-                request.params["trend"] = trends.get(sender.tab.windowId, sender.tab.index);
+                request.params["trend"] = trends.get(sender.tab.windowId, sender.tab.id);
                 Respond(sender.tab, request.id, messaging.Send(request.params));
                 break;
             case "scopes":
@@ -28,8 +28,10 @@ async function Respond(tab, id, promise) {
     let response = await promise;
 
     if (response.trend !== undefined) {
-        if (response.trend)
-            trends.set(tab.windowId, tab.index, response.trend);
+        if (response.trend) {
+            // console.log("Background", tab.windowId, tab.id);
+            trends.set(tab.windowId, tab.id, response.trend);
+        }
         response = response.commands;
     }
 
