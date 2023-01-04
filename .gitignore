@@ -6,6 +6,7 @@
 
 /documents/
 /selenium/driver/
+database/structure/passwords.sql
 
 # Dotnet Build results
 *.sln
