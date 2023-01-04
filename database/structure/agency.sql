@@ -14,7 +14,7 @@ create table if not exists Agency (
 insert into Agency (Title, Domain, Link, UserName, Password, Settings)
 values
 	('Indeed',		'(.+\.)?indeed\.com$',			'https://indeed.com',
-					'hamed.nargesi.jar@gmail.com', 's@lm0nElla-009',
+					'hamed.nargesi.jar@gmail.com', 's@lm0nElla-007',
 					'{ "running": 0, "domains": ["https://au.indeed.com/", "https://nl.indeed.com/", "https://de.indeed.com/"] }'),
 
 	('IamExpat',	'(.+\.)?iamexpat\.(nl|de|ch|com)$',	'http://iamexpat.nl',
