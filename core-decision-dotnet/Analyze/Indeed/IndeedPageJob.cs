@@ -79,10 +79,10 @@ namespace Photon.JobSeeker.Indeed
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
 
-            var main_content = doc.DocumentNode.SelectNodes("//div[@class='jobsearch-ViewJobLayout-jobDisplay']")
+            var main_content = doc.DocumentNode.SelectNodes("//div[contains(@class,'jobsearch-ViewJobLayout-jobDisplay')]")?
                                                .FirstOrDefault();
 
-            return main_content?.InnerHtml ?? "";
+            return main_content?.OuterHtml ?? "";
         }
     }
 }

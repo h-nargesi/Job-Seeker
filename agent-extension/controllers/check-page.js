@@ -34,7 +34,7 @@ ActionHandler.OnPageLoad = function() {
             }
         }, false);
 
-    }
+    } else setTimeout(ActionHandler.OnClose, 15000);
 }
 
 async function SendingPageInfo(scope) {

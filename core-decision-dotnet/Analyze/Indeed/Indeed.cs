@@ -26,8 +26,6 @@ namespace Photon.JobSeeker.Indeed
         {
             lock (@lock)
             {
-                if (RunningMethodIndex == (int)settings.running) return;
-
                 RunningMethodIndex = (int)settings.running;
                 SearchDomainSet = settings.domains.ToObject<string[]>();
             }

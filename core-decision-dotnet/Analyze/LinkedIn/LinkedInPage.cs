@@ -18,7 +18,7 @@ namespace Photon.JobSeeker.LinkedIn
 
         protected static readonly Regex reg_search_options_url = new(@"(^|&)f_E=3%2C4(&|$)", RegexOptions.IgnoreCase);
 
-        protected static readonly Regex reg_search_page_panel = new(@"<ul[^>]+class=[""']artdeco-pagination__pages[^""']*[""']>", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_search_page_panel = new(@"<ul[^>]+class=[""'][^""']*artdeco-pagination__pages[^""']*[""']>", RegexOptions.IgnoreCase);
 
         protected static readonly Regex reg_search_page_panel_end = new(@"</ul>", RegexOptions.IgnoreCase);
 
@@ -36,6 +36,6 @@ namespace Photon.JobSeeker.LinkedIn
 
         protected static readonly Regex reg_job_content_start = new(@"role=[""']main[""'][^>]*>", RegexOptions.IgnoreCase);
         
-        protected static readonly Regex reg_job_content_end = new(@"<div class=[""']jobs-similar-jobs[^""']*[""']>", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_job_content_end = new(@"<div[^>]+class=[""'][^""']*jobs-similar-jobs[^""']*[""'][^>]*>", RegexOptions.IgnoreCase);
     }
 }

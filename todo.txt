@@ -1,2 +1,1 @@
-Indeed
 Store all found job-options in log

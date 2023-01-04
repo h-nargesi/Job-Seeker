@@ -22,7 +22,7 @@ namespace Photon.JobSeeker.IamExpat
 
         protected static readonly Regex reg_job_shortlink = new(@"<link\s+rel=[""']shortlink[""'] href=[""']/node/(\d+)[""']>", RegexOptions.IgnoreCase);
 
-        protected static readonly Regex reg_job_title = new(@"<h1[^>]+class=[""']article__title[""'][^>]*>([^<]*)</h1>", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_job_title = new(@"<h1[^>]+class=[""'][^""']*article__title[^""']*[""'][^>]*>([^<]*)</h1>", RegexOptions.IgnoreCase);
 
         protected static readonly Regex reg_job_apply = new(@"<a[^>]+href=[""']([^""']+)[""'][^>]*>Apply\s+Now</a>", RegexOptions.IgnoreCase);
 
