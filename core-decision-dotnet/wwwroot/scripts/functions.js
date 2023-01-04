@@ -68,7 +68,7 @@ async function change_running(agency, running) {
 function OnPageLoad() {
     const millisecnod = 1000;
     setInterval(LoadTrands, millisecnod * 3);
-    setInterval(LoadJobs, millisecnod * 7);
+    setInterval(LoadJobs, millisecnod * 30);
 }
 
 if (window.addEventListener) window.addEventListener("load", OnPageLoad, false);
