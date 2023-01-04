@@ -112,7 +112,7 @@ namespace Photon.JobSeeker
                 langu_count += dictionaries.EnglishCount(set);
 
             var point = (int)(100 * langu_count / (double)total_count);
-            job.Log += string.Format("English: ({0}%)\n", point);
+            job.Log += string.Format("English: ({0}%)\n\n", point);
 
             return 50 <= point;
         }
