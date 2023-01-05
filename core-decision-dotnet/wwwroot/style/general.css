@@ -71,7 +71,7 @@ section ul {
     margin-bottom: 0;
 }
 
-article {
+section, article {
     padding-top: 15pt;
     padding-bottom: 5pt;
 }
