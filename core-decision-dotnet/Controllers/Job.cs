@@ -28,7 +28,7 @@ namespace Photon.JobSeeker
             try
             {
                 using var database = Database.Open();
-                database.Job.ChangeState(jobid, JobState.applied);
+                database.Job.ChangeState(jobid, JobState.Applied);
                 return Ok();
             }
             catch (Exception ex)
@@ -44,7 +44,7 @@ namespace Photon.JobSeeker
             try
             {
                 using var database = Database.Open();
-                database.Job.ChangeState(jobid, JobState.rejected);
+                database.Job.ChangeState(jobid, JobState.Rejected);
                 return Ok();
             }
             catch (Exception ex)

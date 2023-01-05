@@ -55,8 +55,8 @@ namespace Photon.JobSeeker
 
             var eligibility = correct_language && EvaluateEligibility(job);
 
-            if (!eligibility) job.State = JobState.rejected;
-            else job.State = JobState.attention;
+            if (!eligibility) job.State = JobState.Rejected;
+            else job.State = JobState.Attention;
 
             Log.Information("Job ({0}): state={1} score={2} lang={3}", job.State, job.Code, job.Score, correct_language);
             Log.Debug("Job ({0}): log={1}", job.Code, job.Log);

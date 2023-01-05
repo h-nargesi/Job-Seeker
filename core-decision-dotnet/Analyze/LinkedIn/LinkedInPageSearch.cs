@@ -40,7 +40,7 @@ namespace Photon.JobSeeker.LinkedIn
                     AgencyID = parent.ID,
                     Url = string.Join("", base_link, job_match.Value),
                     Code = code.ToString(),
-                    State = JobState.saved
+                    State = JobState.Saved
                 });
             }
 

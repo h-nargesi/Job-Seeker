@@ -125,14 +125,24 @@ namespace Photon.JobSeeker
         }
 
         private const string Q_INDEX = @$"
-SELECT Job.*, Agency.Title as AgencyName
-    , CASE State WHEN '{nameof(JobState.attention)}' THEN 1
-                 WHEN '{nameof(JobState.rejected)}' THEN 3
-                 WHEN '{nameof(JobState.applied)}' THEN 3
-                 ELSE 100
-      END AS Ordering
-FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
---WHERE State != '{nameof(JobState.attention)}'
+SELECT *
+FROM (
+    SELECT job.*
+        , ROW_NUMBER() OVER(PARTITION BY State ORDER BY Score DESC, RegTime DESC) AS Ranking
+    FROM (
+        SELECT Job.JobID, Job.RegTime, Job.AgencyID, Job.Code, Job.Title
+            , Job.State, Job.Score, Job.Url, Job.Link, Job.Log
+            , Agency.Title as AgencyName
+            , CASE State WHEN '{nameof(JobState.Attention)}' THEN 1
+                        WHEN '{nameof(JobState.Rejected)}' THEN 3
+                        WHEN '{nameof(JobState.Applied)}' THEN 3
+                        ELSE 100
+            END AS Ordering
+        FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+        --WHERE State != '{nameof(JobState.Attention)}'
+    ) job
+)
+WHERE Ranking <= 50
 ORDER BY Ordering, Score DESC, RegTime DESC";
 
         private const string Q_FETCH = @"
@@ -141,9 +151,9 @@ SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
         private const string Q_FETCH_FROM = @"
 SELECT * FROM Job WHERE ModifiedOn <= $date";
 
-        private const string Q_FETCH_FIRST = @"
+        private const string Q_FETCH_FIRST = @$"
 SELECT JobID, Url, Tries FROM Job
-WHERE AgencyID = $agency AND State = 'saved' AND (Tries IS NULL OR Tries NOT LIKE '%4: %')
+WHERE AgencyID = $agency AND State = '{nameof(JobState.Saved)}' AND (Tries IS NULL OR Tries NOT LIKE '%4: %')
 ORDER BY Tries IS NULL DESC, Tries DESC, JobID LIMIT 1";
 
     }

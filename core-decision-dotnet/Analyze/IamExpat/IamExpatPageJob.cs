@@ -22,7 +22,7 @@ namespace Photon.JobSeeker.IamExpat
 
             var commands = new List<Command>();
 
-            if (state == JobState.attention)
+            if (state == JobState.Attention)
             {
                 if (reg_job_adding.IsMatch(content))
                 {
@@ -80,7 +80,7 @@ namespace Photon.JobSeeker.IamExpat
                     {
                         AgencyID = parent.ID,
                         Code = code,
-                        State = JobState.saved,
+                        State = JobState.Saved,
                         Url = string.Join("", base_link, url_matched.Value),
                     };
 

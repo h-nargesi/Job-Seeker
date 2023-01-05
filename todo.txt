@@ -1,4 +1,3 @@
 Closing of pages
 Ignore javascript on content?
 Store all found job-options in log
-Job report pagonation or top 50 for each section

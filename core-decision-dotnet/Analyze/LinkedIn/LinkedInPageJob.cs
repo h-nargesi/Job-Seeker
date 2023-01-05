@@ -22,7 +22,7 @@ namespace Photon.JobSeeker.LinkedIn
 
             var commands = new List<Command>();
 
-            if (state == JobState.attention)
+            if (state == JobState.Attention)
             {
                 if (reg_job_adding.IsMatch(content))
                 {
@@ -53,7 +53,7 @@ namespace Photon.JobSeeker.LinkedIn
                 {
                     AgencyID = parent.ID,
                     Code = code,
-                    State = JobState.saved,
+                    State = JobState.Saved,
                     Url = url_matched.Value,
                 };
 
