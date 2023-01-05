@@ -9,10 +9,18 @@ namespace Photon.JobSeeker
         private readonly Result result;
         private Dictionary<(long, TrendType), Trend> AllCurrentTrends;
 
-        public TrendsCheckpoint(Analyzer analyzer, Result? result = null)
+        public TrendsCheckpoint(Analyzer analyzer)
         {
             this.analyzer = analyzer;
-            this.result = result ?? new Result();
+            this.result = new Result();
+            database = Database.Open();
+            AllCurrentTrends = new Dictionary<(long, TrendType), Trend>();
+        }
+
+        public TrendsCheckpoint(Analyzer analyzer, Result result)
+        {
+            this.analyzer = analyzer;
+            this.result = result;
             database = Database.Open();
             AllCurrentTrends = new Dictionary<(long, TrendType), Trend>();
         }
