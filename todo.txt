@@ -2,5 +2,4 @@ Closing of pages
 Change the running method
 Ignore javascript on content?
 Store all found job-options in log
-Reset the agent-extension after change the active column of agency
 Job report pagonation or top 50 for each section
