@@ -295,13 +295,21 @@ namespace Photon.JobSeeker
             var type_str = type.ToString();
 
             Log.Debug("Trend ({0}-{1}) -self={2} -db-trend={3} -had-trend-id={4} -blocked={6} -order={5}",
-                agency.Name,
-                type_str + new string(' ', 6 - type_str.Length),
+                FillSpace(agency.Name, AgencyNameLength = Math.Max(AgencyNameLength, agency.Name.Length)),
+                FillSpace(type_str, TrednTypeLength = Math.Max(TrednTypeLength, type_str.Length)),
                 matched_analyzed_result ? "*" : " ",
                 trend is null ? "no " : "yes",
                 had_not_trend ? "no " : "yes",
                 new_trend,
                 active ? "no " : "yes");
+        }
+
+        private static int AgencyNameLength = 6;
+        private static int TrednTypeLength = 6;
+
+        private string FillSpace(string text, int max = 6)
+        {
+            return string.Join("", text, new string(' ', max - text.Length));
         }
     }
 }
