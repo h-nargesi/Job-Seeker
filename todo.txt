@@ -1,4 +1,5 @@
-Active/Deactive Agences
-Closing of pages
-Ignore javascript on content?
+Active/Deactive Agencies
+reevaluation
 Store all found job-options in log
+Salary bug
+Ignore javascript/json on content?
