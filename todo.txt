@@ -1,5 +1,4 @@
 Active/Deactive Agences
-Linkedin: change the search options
 Closing of pages
 Ignore javascript on content?
 Store all found job-options in log
