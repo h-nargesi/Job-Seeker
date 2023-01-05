@@ -36,6 +36,7 @@ async function Respond(tab, id, promise) {
     }
 
     chrome.tabs.query({ windowId: tab.windowId, index: tab.index }, function (tabs) {
+        if (!tabs) return;
         chrome.tabs.sendMessage(tabs[0].id, { id, body: response });
     });
 }
