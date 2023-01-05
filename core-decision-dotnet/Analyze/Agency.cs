@@ -28,9 +28,9 @@ namespace Photon.JobSeeker
         {
             using var database = Database.Open();
             dynamic? settings = database.Agency.LoadSetting(ID);
-
-            Log.Information("Agency ({0}): AnalyzeContent -running={1}", Name, settings?.running);
             if (settings != null) PrepareNewSettings(settings);
+
+            Log.Information("Agency ({0}): AnalyzeContent -running={1}", Name, RunnableMethods[RunningMethodIndex]);
 
             foreach (var page in Pages)
             {
