@@ -8,6 +8,25 @@ namespace Photon.JobSeeker
         private readonly Database database;
         public AgencyBusiness(Database database) => this.database = database;
 
+        public Dictionary<long, object> JobRateReport()
+        {
+            using var reader = database.Read(Q_JOB_RATE_REPORT);
+            var list = new Dictionary<long, object>();
+
+            while (reader.Read())
+            {
+                var AgencyID = (long)reader["AgencyID"];
+                list.Add(AgencyID, new
+                {
+                    Saved = (long)reader["Saved"],
+                    Analyzed = (long)reader["Analyzed"],
+                    Rate = (long)reader["Rate"],
+                });
+            }
+
+            return list;
+        }
+
         public void ChangeRunningMethod(Agency agency)
         {
             string? settings;
@@ -59,6 +78,17 @@ namespace Photon.JobSeeker
                 return ((string)reader["UserName"], (string)reader["Password"]);
             }
         }
+
+        private const string Q_JOB_RATE_REPORT = @$"
+SELECT job.*
+	, CAST(100 * CAST(Analyzed AS REAL) / Saved AS INTEGER) AS Rate
+FROM (
+	SELECT AgencyID
+		, SUM(CASE State WHEN '{nameof(JobState.Saved)}' THEN 0 ELSE 1 END) AS Saved
+		, SUM(CASE State WHEN '{nameof(JobState.Saved)}' THEN 1 ELSE 0 END) AS Analyzed
+	FROM Job
+	GROUP BY AgencyID
+) job";
 
         private const string Q_LOAD_SETTING = @"
 SELECT Settings FROM Agency WHERE AgencyID = $agency";
