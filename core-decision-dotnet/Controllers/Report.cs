@@ -91,8 +91,8 @@ namespace Photon.JobSeeker
                         AgencyID = a.Value.ID,
                         SearchLink = a.Value.SearchLink(),
                         Name = a.Key,
-                        Saved = agency_report?.Saved,
                         Analyzed = agency_report?.Analyzed,
+                        JobCount = agency_report?.JobCount,
                         Rate = agency_report?.Rate,
                         Running = a.Value.RunningMethodIndex,
                         Methods = a.Value.SearchingMethods
