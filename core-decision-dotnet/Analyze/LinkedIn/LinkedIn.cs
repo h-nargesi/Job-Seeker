@@ -28,7 +28,9 @@ namespace Photon.JobSeeker.LinkedIn
 
                 if (RunningMethodIndex == (int)settings.running) return;
 
-                LinkedInPage.reg_search_location_url = new Regex(@$"(^|&)location={Location}(&|$)", RegexOptions.IgnoreCase);
+                LinkedInPage.reg_search_location = new(
+                    @$"data-job-search-box-location-input-trigger=[""']{Location}[""']", 
+                    RegexOptions.IgnoreCase);
             }
         }
 

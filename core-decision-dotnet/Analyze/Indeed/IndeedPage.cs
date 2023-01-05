@@ -14,7 +14,7 @@ namespace Photon.JobSeeker.Indeed
 
         protected static readonly Regex reg_search_url = new(@"^https?://[^/]*indeed\.com/jobs\?", RegexOptions.IgnoreCase);
 
-        protected static readonly Regex reg_search_keywords_url = new(@"(^|&|\?)q=developer(&|$)", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_search_keywords_url = new(@$"(^|&|\?)q={Agency.SearchTitle}(&|$)", RegexOptions.IgnoreCase);
 
         protected static readonly Regex reg_search_end = new(@"<a[^>]+aria-label=[""']Next Page[""']", RegexOptions.IgnoreCase);
 

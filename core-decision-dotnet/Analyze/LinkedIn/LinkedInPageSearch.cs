@@ -14,13 +14,26 @@ namespace Photon.JobSeeker.LinkedIn
         {
             if (!reg_search_url.IsMatch(url)) return null;
 
-            if (!reg_search_keywords_url.IsMatch(url) ||
-                !reg_search_location_url.IsMatch(url) ||
-                !reg_search_options_url.IsMatch(url))
+            if (!reg_search_keyword.IsMatch(content) ||
+                !reg_search_location.IsMatch(content))
             {
                 return new Command[]
                 {
-                    Command.Go(@$"/jobs/search/?f_E=3%2C4&geoId=102890719&keywords=developer&location={parent.Location}&refresh=true"),
+                    Command.Fill(@"#jobs-search-box-keyword-id-ember25", Agency.SearchTitle),
+                    Command.Fill(@"#jobs-search-box-location-id-ember25]", parent.Location),
+                    Command.Wait(1000),
+                    Command.Click(@"button.jobs-search-box__submit-button")
+                };
+            }
+
+            if (!reg_search_options.IsMatch(content))
+            {
+                return new Command[]
+                {
+                    Command.Click(@"label[for=""experience-3""]"),
+                    Command.Click(@"label[for=""experience-4""]"),
+                    Command.Wait(3000),
+                    Command.Click(@"#ember167")
                 };
             }
 

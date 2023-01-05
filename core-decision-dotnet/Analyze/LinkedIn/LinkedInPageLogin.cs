@@ -15,8 +15,8 @@
             var (user, pass) = GetUserPass();
 
             return new Command[] {
-                Command.Fill(@"input[id=""session_key""]", user),
-                Command.Fill(@"input[id=""session_password""]", pass),
+                Command.Fill(@"#session_key", user),
+                Command.Fill(@"#session_password", pass),
                 Command.Click(@"button[type=""submit""]")
             };
         }

@@ -6,6 +6,8 @@ namespace Photon.JobSeeker
     {
         private readonly List<Page> pages = new();
 
+        public const string SearchTitle = "developer";
+
         public abstract string Name { get; }
 
         public long ID { get; private set; }

@@ -15,9 +15,9 @@
             var (user, pass) = GetUserPass();
 
             return new Command[] {
-                Command.Fill(@"input[id=""edit-name""]", user),
-                Command.Fill(@"input[id=""edit-pass""]", pass),
-                Command.Click(@"input[id=""edit-submit""]")
+                Command.Fill(@"#edit-name", user),
+                Command.Fill(@"#edit-pass", pass),
+                Command.Click(@"#edit-submit")
             };
         }
     }

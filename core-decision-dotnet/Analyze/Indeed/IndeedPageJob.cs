@@ -27,7 +27,7 @@ namespace Photon.JobSeeker.Indeed
             {
                 if (reg_job_adding.IsMatch(content))
                 {
-                    commands.Add(Command.Click(@"button[class=""jobs-save-button""]"));
+                    commands.Add(Command.Click(@"button.jobs-save-button"));
                     commands.Add(Command.Wait(3000));
                 }
 

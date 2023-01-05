@@ -12,11 +12,11 @@ namespace Photon.JobSeeker.LinkedIn
 
         protected static readonly Regex reg_search_url = new(@"^https?://[^/]*linkedin\.com/jobs/search", RegexOptions.IgnoreCase);
 
-        internal static Regex reg_search_location_url = new(@"(^|&)location=Netherlands(&|$)", RegexOptions.IgnoreCase);
+        internal static Regex reg_search_location = new(@$"data-job-search-box-location-input-trigger=[""']Netherlands[""']", RegexOptions.IgnoreCase);
 
-        protected static readonly Regex reg_search_keywords_url = new(@"(^|&)keywords=developer(&|$)", RegexOptions.IgnoreCase);
-
-        protected static readonly Regex reg_search_options_url = new(@"(^|&)f_E=3%2C4(&|$)", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_search_keyword = new(@$"data-job-search-box-keywords-input-trigger=[""']{Agency.SearchTitle}[""']", RegexOptions.IgnoreCase);
+        
+        protected static readonly Regex reg_search_options = new(@"(^|&)f_E=3%2C4(&|$)", RegexOptions.IgnoreCase);
 
         protected static readonly Regex reg_search_page_panel = new(@"<ul[^>]+class=[""'][^""']*artdeco-pagination__pages[^""']*[""']>", RegexOptions.IgnoreCase);
 

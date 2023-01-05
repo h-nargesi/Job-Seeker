@@ -15,7 +15,7 @@ namespace Photon.JobSeeker.Indeed
 
         public override string SearchLink()
         {
-            return SearchingMethods[RunningMethodIndex] + "jobs?q=developer";
+            return SearchingMethods[RunningMethodIndex] + "jobs?q=" + Agency.SearchTitle;
         }
 
         protected override void ChangeSettings(dynamic settings)
