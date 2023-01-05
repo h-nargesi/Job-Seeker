@@ -20,7 +20,7 @@ namespace Photon.JobSeeker.LinkedIn
                 return new Command[]
                 {
                     Command.Fill(@"#jobs-search-box-keyword-id-ember25", Agency.SearchTitle),
-                    Command.Fill(@"#jobs-search-box-location-id-ember25]", parent.Location),
+                    Command.Fill(@"#jobs-search-box-location-id-ember25", parent.Location),
                     Command.Wait(1000),
                     Command.Click(@"button.jobs-search-box__submit-button")
                 };
