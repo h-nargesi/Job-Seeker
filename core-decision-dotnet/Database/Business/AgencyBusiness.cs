@@ -19,8 +19,10 @@ namespace Photon.JobSeeker
                 list.Add(AgencyID, new
                 {
                     JobCount = (long)reader["JobCount"],
+                    Accepted = (long)reader["Accepted"],
                     Analyzed = (long)reader["Analyzed"],
-                    Rate = (long)reader["Rate"],
+                    AnalyzingRate = (long)reader["AnalyzingRate"],
+                    AcceptingRate = (long)reader["AcceptingRate"],
                 });
             }
 
@@ -81,11 +83,15 @@ namespace Photon.JobSeeker
 
         private const string Q_JOB_RATE_REPORT = @$"
 SELECT job.*
-	, CAST(100 * CAST(Analyzed AS REAL) / JobCount AS INTEGER) AS Rate
+	, CAST(100 * CAST(Analyzed AS REAL) / JobCount AS INTEGER) AS AnalyzingRate
+	, CAST(100 * CAST(Accepted AS REAL) / Analyzed AS INTEGER) AS AcceptingRate
 FROM (
 	SELECT AgencyID
 		, COUNT(*) AS JobCount
 		, SUM(CASE State WHEN '{nameof(JobState.Saved)}' THEN 0 ELSE 1 END) AS Analyzed
+		, SUM(CASE State WHEN '{nameof(JobState.Attention)}' THEN 1
+                         WHEN '{nameof(JobState.Applied)}' THEN 1
+                         ELSE 0 END) AS Accepted
 	FROM Job
 	GROUP BY AgencyID
 ) job";
