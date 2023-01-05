@@ -6,27 +6,25 @@ namespace Photon.JobSeeker.LinkedIn
     {
         private static readonly object @lock = new();
 
-        private string[] LocationSet = new string[] { "Netherlands" };
-
         public override string Name => "LinkedIn";
 
         public override int RunningMethodIndex { get; set; }
 
-        public override string[] RunnableMethods => LocationSet;
+        public override string[] SearchingMethods { get; protected set; } = new string[] { "Netherlands" };
 
-        internal string Location => LocationSet[RunningMethodIndex];
+        internal string Location => SearchingMethods[RunningMethodIndex];
 
         public override string SearchLink()
         {
             return "https://www.linkedin.com/jobs/search/";
         }
 
-        protected override void PrepareNewSettings(dynamic settings)
+        protected override void ChangeSettings(dynamic settings)
         {
             lock (@lock)
             {
                 RunningMethodIndex = (int)settings.running;
-                LocationSet = settings.locations.ToObject<string[]>();
+                SearchingMethods = settings.locations.ToObject<string[]>();
 
                 if (RunningMethodIndex == (int)settings.running) return;
 

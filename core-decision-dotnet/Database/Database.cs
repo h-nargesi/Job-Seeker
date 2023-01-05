@@ -203,6 +203,27 @@ namespace Photon.JobSeeker
             Execute(query, values.ToArray());
         }
 
+        internal void Update(string name, object job, long id)
+        {
+            var parameters = new List<string>();
+            var values = new List<object>();
+
+            foreach (var property in job.GetType().GetProperties())
+            {
+                parameters.Add($"{property.Name} = ${property.Name}");
+
+                values.Add(ValueFromProperty(property, job));
+            }
+
+            if (values.Count == 0)
+                throw new Exception("No column found for update");
+
+            values.Add(id);
+
+            var query = string.Format(Q_UPDATE, name, string.Join(", ", parameters), $"{name}ID = ${name}ID");
+            Execute(query, values.ToArray());
+        }
+
         private static bool IsPropertyAllowed(Enum filter, string name)
         {
             if (!Enum.TryParse(filter.GetType(), name, true, out var flag)) return false;

@@ -84,7 +84,7 @@ namespace Photon.JobSeeker
                 {
                     Name = a.Key,
                     Running = a.Value.RunningMethodIndex,
-                    Methods = a.Value.RunnableMethods
+                    Methods = a.Value.SearchingMethods
                 })
                 .ToArray();
 

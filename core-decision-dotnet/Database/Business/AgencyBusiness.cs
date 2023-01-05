@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 
 namespace Photon.JobSeeker
@@ -6,6 +7,23 @@ namespace Photon.JobSeeker
     {
         private readonly Database database;
         public AgencyBusiness(Database database) => this.database = database;
+
+        public void ChangeRunningMethod(Agency agency)
+        {
+            string? settings;
+            using (var reader = database.Read(Q_LOAD_SETTING, agency.ID))
+            {
+                if (!reader.Read()) return;
+                settings = reader["Settings"] as string;
+                if (settings == null) return;
+            }
+
+            settings = Regex.Replace(settings, @"(""running"":)\s*\d+,", @$"$1 {agency.RunningMethodIndex},");
+            database.Update(
+                nameof(Agency),
+                new { Settings = settings },
+                agency.ID);
+        }
 
         public dynamic? LoadSetting(long id)
         {

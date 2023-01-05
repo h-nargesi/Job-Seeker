@@ -22,15 +22,15 @@ namespace Photon.JobSeeker
 
         public abstract int RunningMethodIndex { get; set; }
 
-        public abstract string[] RunnableMethods { get; }
+        public abstract string[] SearchingMethods { get; protected set; }
 
         public Result AnalyzeContent(string url, string content)
         {
             using var database = Database.Open();
             dynamic? settings = database.Agency.LoadSetting(ID);
-            if (settings != null) PrepareNewSettings(settings);
+            if (settings != null) ChangeSettings(settings);
 
-            Log.Information("Agency ({0}): AnalyzeContent -running={1}", Name, RunnableMethods[RunningMethodIndex]);
+            Log.Information("Agency ({0}): AnalyzeContent -running={1}", Name, SearchingMethods[RunningMethodIndex]);
 
             foreach (var page in Pages)
             {
@@ -63,14 +63,14 @@ namespace Photon.JobSeeker
             Domain = agency_info.Domain;
             Link = agency_info.Link;
 
-            PrepareNewSettings(agency_info.Settings);
+            ChangeSettings(agency_info.Settings);
 
             LoadPages();
         }
 
         public abstract string SearchLink();
 
-        protected abstract void PrepareNewSettings(dynamic setting);
+        protected abstract void ChangeSettings(dynamic setting);
 
         protected abstract IEnumerable<Type> GetSubPages();
 
