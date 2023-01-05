@@ -3,7 +3,7 @@
 {
     var index = -1;
     <div class="agency mt-3" aria-title="@agency.Name">
-        <h4>@agency.Name<small> - @agency.Analyzed / @agency.Saved (@agency.Rate)</small></h4>
+        <h4><a href="@agency.SearchLink">@agency.Name</a><small> - @agency.Analyzed / @agency.Saved (@agency.Rate %)</small></h4>
         @foreach (var method in agency.Methods)
         {
             index += 1;

@@ -33,6 +33,11 @@ footer {
     text-decoration: none;
 }
 
+h4 a, h4 a:visited {
+    color: var(--title-color);
+    text-decoration: none;
+}
+
 main {
     padding-top: 5pt;
     padding-bottom: 0;

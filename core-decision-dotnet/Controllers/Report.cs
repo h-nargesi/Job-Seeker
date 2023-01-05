@@ -89,6 +89,7 @@ namespace Photon.JobSeeker
                     return new
                     {
                         AgencyID = a.Value.ID,
+                        SearchLink = a.Value.SearchLink(),
                         Name = a.Key,
                         Saved = agency_report?.Saved,
                         Analyzed = agency_report?.Analyzed,
