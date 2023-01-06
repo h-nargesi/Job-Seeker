@@ -141,6 +141,7 @@ namespace Photon.JobSeeker
         {
             var logs = new List<string>(options.Length);
             var hasField = false;
+            var rejected = false;
             job.Score = 0L;
 
             foreach (var option in options)
@@ -154,9 +155,14 @@ namespace Photon.JobSeeker
                     logs.Add("");
                 }
 
-                if (!hasField && option_score > 0 && option.Category == "field")
+                switch (option.Category)
                 {
-                    hasField = true;
+                    case "field":
+                        hasField |= option_score > 0;
+                        break;
+                    case "rejected":
+                        rejected |= option_score > 0;
+                        break;
                 }
 
                 job.Score += option_score;
@@ -164,7 +170,7 @@ namespace Photon.JobSeeker
 
             job.Log += string.Join("\n", logs);
 
-            if (!hasField) return false;
+            if (!hasField || rejected) return false;
             else return job.Score >= MinEligibilityScore;
         }
 
