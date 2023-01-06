@@ -1,5 +1,4 @@
 Popup under when openning a page
 Examine the job-options and current jobs
 Ignore javascript/json on content?
-Remove content and html for Rejected jobs
 Active/Deactive Agencies
