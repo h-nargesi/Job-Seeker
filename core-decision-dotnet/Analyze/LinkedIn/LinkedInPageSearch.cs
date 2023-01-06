@@ -20,9 +20,10 @@ namespace Photon.JobSeeker.LinkedIn
             {
                 return new Command[]
                 {
-                    Command.Go(@$"/jobs/search/?f_E=3%2C4&geoId=102890719&keywords={Agency.SearchTitle}&location={parent.Location}&refresh=true"),
+                    Command.Go(@$"/jobs/search/?f_E=3%2C4&keywords={Agency.SearchTitle}&location={parent.Location}&refresh=true"),
                 };
             }
+
             var codes = new HashSet<long>();
             using var database = Database.Open();
             var base_link = parent.Link.Trim().EndsWith("/") ? parent.Link[..^1] : parent.Link;
