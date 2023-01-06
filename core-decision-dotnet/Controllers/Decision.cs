@@ -100,7 +100,7 @@ namespace Photon.JobSeeker
             {
                 if (context.Agency == null) return BadRequest();
                 var agency = analyzer.Agencies[context.Agency];
-                agency.RunningMethodIndex = context.Running;
+                agency.RunningSearchingMethodIndex = context.Running;
                 using var database = Database.Open();
                 database.Agency.ChangeRunningMethod(agency);
                 return Ok();

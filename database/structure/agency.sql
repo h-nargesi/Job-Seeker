@@ -17,7 +17,7 @@ values
 					'{ "running": 0, "domains": ["https://au.indeed.com/", "https://nl.indeed.com/", "https://de.indeed.com/"] }'),
 
 	('IamExpat',	'(.+\.)?iamexpat\.(nl|de|ch|com)$',	'http://iamexpat.nl',	'username', 'passwords',
-					'{ "running": 0, "searchs": ["nl/career/jobs-netherlands", "de/career/jobs-germany", "ch/career/jobs-switzerland"]}'),
+					'{ "running": 0, "urls": ["nl/career/jobs-netherlands", "de/career/jobs-germany", "ch/career/jobs-switzerland"]}'),
 
 	('LinkedIn',	'(.+\.)?linkedin\.com$',		'http://linkedin.com',		'username', 'password',
 					'{ "running": 0, "locations": ["Netherlands", "Germany", "Australia", "Sweden"]}')

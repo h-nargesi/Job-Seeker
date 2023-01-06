@@ -6,29 +6,37 @@ namespace Photon.JobSeeker.LinkedIn
     {
         private static readonly object @lock = new();
 
+        private string[] Locations { get; set; } = new string[0];
+
+
         public override string Name => "LinkedIn";
 
-        public override int RunningMethodIndex { get; set; }
+        public override string[] SearchingMethodTitles => Locations;
 
-        public override string[] SearchingMethods { get; protected set; } = new string[] { "Netherlands" };
+        internal string Location => Locations[RunningSearchingMethodIndex];
 
-        internal string Location => SearchingMethods[RunningMethodIndex];
+        public override string SearchLink => "https://www.linkedin.com/jobs/search/";
 
-        public override string SearchLink()
-        {
-            return "https://www.linkedin.com/jobs/search/";
-        }
-
-        protected override void ChangeSettings(dynamic settings)
+        protected override void ChangeSettings(dynamic? settings)
         {
             lock (@lock)
             {
-                RunningMethodIndex = (int)settings.running;
-                SearchingMethods = settings.locations.ToObject<string[]>();
+                if (settings == null)
+                {
+                    Locations = new string[] { string.Empty };
+                    RunningSearchingMethodIndex = 0;
+                }
+                else
+                {
+                    if (RunningSearchingMethodIndex == (int)settings.running) return;
 
-                if (RunningMethodIndex == (int)settings.running) return;
+                    Locations = settings.locations.ToObject<string[]>();
+                    RunningSearchingMethodIndex = (int)settings.running;
 
-                LinkedInPage.reg_search_location_url = new Regex(@$"(^|&)location={Location}(&|$)", RegexOptions.IgnoreCase);
+                    LinkedInPage.reg_search_location_url = new Regex(
+                        @$"(^|&)location={Location}(&|$)",
+                        RegexOptions.IgnoreCase);
+                }
             }
         }
 

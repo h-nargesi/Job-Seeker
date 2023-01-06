@@ -6,29 +6,36 @@ namespace Photon.JobSeeker.IamExpat
     {
         private static readonly object @lock = new();
 
+        private string[] LocationUrls { get; set; } = new string[0];
+
+
         public override string Name => "IamExpat";
 
-        public override int RunningMethodIndex { get; set; }
+        public override string[] SearchingMethodTitles => LocationUrls;
 
-        public override string[] SearchingMethods { get; protected set; } = new string[] { "nl/career/jobs-netherlands" };
+        public override string SearchLink => "https://iamexpat." + LocationUrls[RunningSearchingMethodIndex];
 
-        public override string SearchLink()
-        {
-            return "https://iamexpat." + SearchingMethods[RunningMethodIndex];
-        }
 
-        protected override void ChangeSettings(dynamic settings)
+        protected override void ChangeSettings(dynamic? settings)
         {
             lock (@lock)
             {
-                RunningMethodIndex = (int)settings.running;
-                SearchingMethods = settings.searchs.ToObject<string[]>();
+                if (settings == null)
+                {
+                    LocationUrls = new string[] { string.Empty };
+                    RunningSearchingMethodIndex = 0;
+                }
+                else
+                {
+                    if (RunningSearchingMethodIndex == (int)settings.running) return;
 
-                if (RunningMethodIndex == (int)settings.running) return;
+                    LocationUrls = settings.urls.ToObject<string[]>();
+                    RunningSearchingMethodIndex = (int)settings.running;
 
-                IamExpatPage.reg_search_url = new Regex(
-                    @$"://[^/]*iamexpat\.{SearchingMethods[RunningMethodIndex]}", 
-                    RegexOptions.IgnoreCase);
+                    IamExpatPage.reg_search_url = new Regex(
+                        @$"://[^/]*iamexpat\.{LocationUrls[RunningSearchingMethodIndex]}",
+                        RegexOptions.IgnoreCase);
+                }
             }
         }
 

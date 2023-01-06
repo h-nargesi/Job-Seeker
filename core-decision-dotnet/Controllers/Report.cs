@@ -89,15 +89,15 @@ namespace Photon.JobSeeker
                     return new
                     {
                         AgencyID = a.Value.ID,
-                        SearchLink = a.Value.SearchLink(),
+                        SearchLink = a.Value.SearchLink,
                         Name = a.Key,
                         Analyzed = agency_report?.Analyzed,
                         Accepted = agency_report?.Accepted,
                         JobCount = agency_report?.JobCount,
                         AnalyzingRate = agency_report?.AnalyzingRate,
                         AcceptingRate = agency_report?.AcceptingRate,
-                        Running = a.Value.RunningMethodIndex,
-                        Methods = a.Value.SearchingMethods
+                        Running = a.Value.RunningSearchingMethodIndex,
+                        Methods = a.Value.SearchingMethodTitles
                     };
                 })
                 .OrderBy(r => r.AgencyID)

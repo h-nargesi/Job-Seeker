@@ -237,7 +237,7 @@ namespace Photon.JobSeeker
                         open_new_page_in_agencies.Add(agency.ID);
 
                         GenerateNewTrend(agency.ID, type.GetTrendState(), true);
-                        commands.Insert(0, Command.Open(agency.SearchLink()));
+                        commands.Insert(0, Command.Open(agency.SearchLink));
                         break;
 
                     case TrendType.Job:

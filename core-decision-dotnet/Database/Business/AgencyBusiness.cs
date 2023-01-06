@@ -39,7 +39,7 @@ namespace Photon.JobSeeker
                 if (settings == null) return;
             }
 
-            settings = Regex.Replace(settings, @"(""running"":)\s*\d+,", @$"$1 {agency.RunningMethodIndex},");
+            settings = Regex.Replace(settings, @"(""running"":)\s*\d+,", @$"$1 {agency.RunningSearchingMethodIndex},");
             database.Update(
                 nameof(Agency),
                 new { Settings = settings },

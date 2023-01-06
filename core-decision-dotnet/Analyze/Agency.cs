@@ -4,13 +4,16 @@ namespace Photon.JobSeeker
 {
     public abstract class Agency
     {
+        private int running_searching_method_index = -1;
+
         private readonly List<Page> pages = new();
 
         public const string SearchTitle = "developer";
 
-        public abstract string Name { get; }
 
         public long ID { get; private set; }
+
+        public abstract string Name { get; }
 
         public string Domain { get; private set; } = "";
 
@@ -22,17 +25,31 @@ namespace Photon.JobSeeker
 
         public IReadOnlyList<Page> Pages => pages;
 
-        public abstract int RunningMethodIndex { get; set; }
 
-        public abstract string[] SearchingMethods { get; protected set; }
+        public int RunningSearchingMethodIndex
+        {
+            get => running_searching_method_index;
+            set
+            {
+                if (value < 0 || value >= SearchingMethodTitles.Length)
+                    throw new ArgumentOutOfRangeException(nameof(RunningSearchingMethodIndex));
+
+                running_searching_method_index = value;
+            }
+        }
+
+        public abstract string[] SearchingMethodTitles { get; }
+
+        public abstract string SearchLink { get; }
+
 
         public Result AnalyzeContent(string url, string content)
         {
             using var database = Database.Open();
             dynamic? settings = database.Agency.LoadSetting(ID);
-            if (settings != null) ChangeSettings(settings);
+            ChangeSettings(settings);
 
-            Log.Information("Agency ({0}): AnalyzeContent -running={1}", Name, SearchingMethods[RunningMethodIndex]);
+            Log.Information("Agency ({0}): AnalyzeContent -running={1}", Name, RunningSearchingMethodIndex);
 
             foreach (var page in Pages)
             {
@@ -70,9 +87,7 @@ namespace Photon.JobSeeker
             LoadPages();
         }
 
-        public abstract string SearchLink();
-
-        protected abstract void ChangeSettings(dynamic setting);
+        protected abstract void ChangeSettings(dynamic? settings);
 
         protected abstract IEnumerable<Type> GetSubPages();
 
