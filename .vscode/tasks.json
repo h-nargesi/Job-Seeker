@@ -26,6 +26,8 @@
             "args": [
                 "publish",
                 "${workspaceFolder}/core-decision-dotnet/core-decision.csproj",
+                "--output",
+                "${workspaceFolder}/publish",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
