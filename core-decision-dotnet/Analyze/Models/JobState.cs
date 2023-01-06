@@ -3,8 +3,9 @@
     public enum JobState
     {
         Saved = 1,
-        Rejected = 2,
-        Attention = 3,
-        Applied = 4,
+        Revaluation,
+        Rejected,
+        Attention,
+        Applied,
     }
 }

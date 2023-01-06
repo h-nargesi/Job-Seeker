@@ -2,7 +2,6 @@ Popup under when openning a page
 Salary bug
 Examine the job-options and current jobs
 Ignore javascript/json on content?
-reevaluation
 Store all found job-options in log
 Remove content and html for Rejected jobs
 Active/Deactive Agencies

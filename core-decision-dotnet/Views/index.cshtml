@@ -58,7 +58,7 @@
                 <div>
                     <button id="stop-start-ordering" type="button" class="btn btn-danger">To Stop Ordering</button>
                     <button id="reset-trends" onclick="reset()" type="button" class="btn btn-outline-primary">Reset Trends</button>
-                    <button id="reevaluate" onclick="reevaluate()" type="button" class="btn btn-outline-primary">Reevaluate</button>
+                    <button onclick="revaluate()" type="button" class="btn btn-outline-primary">Revaluate</button>
                 </div>
                 <div class="agency-list mt-3 d-flex flex-column">
                     @await Html.PartialAsync("~/views/agencies.cshtml", (dynamic[])Model.Agencies)

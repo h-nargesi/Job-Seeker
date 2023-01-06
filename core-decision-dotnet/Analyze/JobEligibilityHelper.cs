@@ -15,6 +15,9 @@ namespace Photon.JobSeeker
         private readonly Database database;
         private readonly JobOption[] options;
 
+        private static object revaluation_lock = new();
+        public static RevaluationProcess? CurrentRevaluationProcess { get; private set; }
+
         public JobEligibilityHelper()
         {
             dictionaries = Dictionaries.Open();
@@ -24,27 +27,44 @@ namespace Photon.JobSeeker
 
         public void Revaluate()
         {
-            var start_time = DateTime.Now.AddSeconds(-1);
-
-            while (true)
-                try
+            lock (revaluation_lock)
+            {
+                if (CurrentRevaluationProcess == null)
                 {
-                    database.BeginTransaction();
+                    var start_time = DateTime.Now.AddSeconds(-1);
+                    var total_count = (int)database.Job.FetchFromCount(start_time);
+                    CurrentRevaluationProcess = new RevaluationProcess(start_time, total_count);
+                }
 
-                    var job = database.Job.FetchFrom(start_time);
+                CurrentRevaluationProcess.ProcessCount++;
+            }
+
+            try
+            {
+                while (true)
+                {
+                    var job = database.Job.FetchFrom(CurrentRevaluationProcess.StartTime);
 
                     if (job == null) break;
 
                     EvaluateJobEligibility(job);
 
-                    database.Job.Save(job);
-
-                    database.Commit();
+                    lock (revaluation_lock)
+                        CurrentRevaluationProcess.Passed++;
                 }
-                finally
+            }
+            finally
+            {
+                lock (revaluation_lock)
                 {
-                    database.Rollback();
+                    if (CurrentRevaluationProcess != null)
+                    {
+                        CurrentRevaluationProcess.ProcessCount--;
+                        if (CurrentRevaluationProcess.ProcessCount < 1)
+                            CurrentRevaluationProcess = null;
+                    }
                 }
+            }
         }
 
         public JobState EvaluateJobEligibility(Job job)
@@ -193,6 +213,39 @@ namespace Photon.JobSeeker
             salary /= 1000;
 
             return ((long)salary * option.Score);
+        }
+
+        public class RevaluationProcess
+        {
+            public RevaluationProcess(DateTime start_time, int total_count)
+            {
+                StartTime = start_time;
+                StartTimeTitle = start_time.ToString();
+                TotalCount = total_count;
+            }
+
+            public DateTime StartTime { get; }
+
+            public string StartTimeTitle { get; }
+
+            public long TotalCount { get; }
+
+            public int ProcessCount { get; internal set; }
+
+            public int Passed { get; internal set; }
+
+            public object GetReportObject()
+            {
+                return new
+                {
+                    TrendID = -1,
+                    Agency = $"Revaluation ({ProcessCount})",
+                    Link = "",
+                    Type = Passed.ToString(),
+                    State = TotalCount.ToString(),
+                    LastActivity = StartTimeTitle,
+                };
+            }
         }
     }
 }

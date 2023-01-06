@@ -7,12 +7,16 @@ namespace Photon.JobSeeker
     public class JobController : Controller
     {
         [HttpPost]
-        public IActionResult Reevaluate()
+        public IActionResult Revaluate()
         {
             try
             {
-                using var evaluator = new JobEligibilityHelper();
-                evaluator.Revaluate();
+                Task.Run(() =>
+                {
+                    using var evaluator = new JobEligibilityHelper();
+                    evaluator.Revaluate();
+                });
+
                 return Ok();
             }
             catch (Exception ex)

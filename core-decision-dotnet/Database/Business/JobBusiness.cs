@@ -21,13 +21,35 @@ namespace Photon.JobSeeker
             return list;
         }
 
+        public long FetchFromCount(DateTime time)
+        {
+            database.Execute(Q_FETCH_UPDATE_REVAL);
+
+            using var reader = database.Read(Q_FETCH_FROM_COUNT, time);
+            if (!reader.Read()) return default;
+            return (long)reader[0];
+        }
+
         public Job? FetchFrom(DateTime time)
         {
-            using var reader = database.Read(Q_FETCH_FROM, time);
+            Job result;
+            database.BeginTransaction();
+            try
+            {
+                using (var reader = database.Read(Q_FETCH_FROM, time))
+                {
+                    if (!reader.Read()) return default;
+                    result = ReadJob(reader, true);
+                }
 
-            if (!reader.Read()) return default;
+                Save(new { result.JobID, State = JobState.Revaluation });
 
-            return ReadJob(reader, true);
+                return result;
+            }
+            finally
+            {
+                database.Commit();
+            }
         }
 
         public Job? Fetch(long agency_id, string code)
@@ -151,8 +173,14 @@ ORDER BY Ordering, Score DESC, RegTime DESC";
         private const string Q_FETCH = @"
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
 
-        private const string Q_FETCH_FROM = @"
-SELECT * FROM Job WHERE ModifiedOn <= $date";
+        private const string Q_FETCH_FROM = @$"
+SELECT * FROM Job WHERE State != '{nameof(JobState.Revaluation)}' AND Content IS NOT NULL AND ModifiedOn <= $date";
+
+        private const string Q_FETCH_FROM_COUNT = @$"
+SELECT COUNT(*) FROM Job WHERE Content IS NOT NULL AND ModifiedOn <= $date";
+
+        private const string Q_FETCH_UPDATE_REVAL = @$"
+UPDATE Job SET State = '{nameof(JobState.Saved)}' WHERE State != '{nameof(JobState.Revaluation)}'";
 
         private const string Q_FETCH_FIRST = @$"
 SELECT JobID, Url, Tries FROM Job

@@ -18,6 +18,10 @@ namespace Photon.JobSeeker
                 using var database = Database.Open();
                 database.Trend.DeleteExpired();
                 var result = database.Trend.Report();
+
+                if (JobEligibilityHelper.CurrentRevaluationProcess != null)
+                    result.Add(JobEligibilityHelper.CurrentRevaluationProcess.GetReportObject());
+
                 return View("~/views/trends.cshtml", result);
             }
             catch (Exception ex)
@@ -82,7 +86,7 @@ namespace Photon.JobSeeker
         {
             using var database = Database.Open();
             var report = database.Agency.JobRateReport();
-            
+
             return analyzer.Agencies.Select(a =>
                 {
                     report.TryGetValue(a.Value.ID, out dynamic? agency_report);

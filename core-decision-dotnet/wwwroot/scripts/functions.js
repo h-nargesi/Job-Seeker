@@ -41,6 +41,14 @@ async function reset() {
     }
 }
 
+async function revaluate() {
+    try {
+        await fetch("/job/revaluate", { method: 'POST' });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
 async function change_running(agency, running) {
     try {
         const data = {
