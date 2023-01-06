@@ -2,6 +2,9 @@ console.log("action-handler");
 
 class ActionHandler {
 
+    static CloseTimer = null;
+    static OnPageLoad = null;
+
     static async Handle(commands, dontclose) {
         for (let c in commands)
             if (commands[c])
@@ -68,8 +71,6 @@ class ActionHandler {
         });
     }
 
-    static OnPageLoad = null;
-
     static OnClose() {
         window.open('', '_self', '');
         window.close();
@@ -77,5 +78,11 @@ class ActionHandler {
 
     static async OnWait(params) {
         await new Promise(r => setTimeout(r, params.miliseconds));
+    }
+
+    static SetCloseTimer() {
+        if (ActionHandler.CloseTimer)
+            clearTimeout(ActionHandler.CloseTimer);
+        ActionHandler.CloseTimer = setTimeout(ActionHandler.OnClose, 90000);
     }
 }
