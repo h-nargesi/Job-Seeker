@@ -48,7 +48,9 @@ class ActionHandler {
     }
 
     static OnOpen(params) {
-        window.open(params.url);
+        let handle = window.open(params.url);
+        handle.blur();
+        window.focus();
     }
 
     static OnFill(object, params) {
