@@ -200,9 +200,21 @@ namespace Photon.JobSeeker
             var money_index = (int)option.Settings.money;
             var period_index = (int)option.Settings.period;
 
-            var money = matched.Groups[money_index].Value;
-            if (!double.TryParse(money?.Replace(",", ""), out double salary)) return 0;
-            var period = matched.Groups[period_index].Value;
+            var money_matched = matched.Groups[money_index];
+
+            if (money_matched.Index - matched.Index > 24)
+                return 1; // have the min score
+
+            if (!double.TryParse(money_matched.Value?.Replace(",", ""), out double salary))
+                return 1; // have the min score
+
+            string? period = null;
+
+            if (period_index < 0 &&
+                matched.Groups[period_index].Index - (matched.Index + matched.Length) <= 24)
+            {
+                period = matched.Groups[period_index].Value;
+            }
 
             switch (period)
             {
@@ -211,12 +223,14 @@ namespace Photon.JobSeeker
                     break;
                 case "month":
                     break;
-                default: return 0;
+                default:
+                    // check the salary range
+                    if (salary > 35000)
+                        salary /= 12;
+                    break;
             }
 
-            salary /= 1000;
-
-            return ((long)salary * option.Score);
+            return ((long)(salary / 1000) * option.Score);
         }
 
         public class RevaluationProcess
