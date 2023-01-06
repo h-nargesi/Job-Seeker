@@ -1,5 +1,4 @@
 Popup under when openning a page
-Linkedin Search Page
 Active/Deactive Agencies
 reevaluation
 Store all found job-options in log
