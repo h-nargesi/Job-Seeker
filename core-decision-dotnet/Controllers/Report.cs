@@ -16,11 +16,7 @@ namespace Photon.JobSeeker
             try
             {
                 using var database = Database.Open();
-                database.Trend.DeleteExpired();
-                var result = database.Trend.Report();
-
-                if (JobEligibilityHelper.CurrentRevaluationProcess != null)
-                    result.Add(JobEligibilityHelper.CurrentRevaluationProcess.GetReportObject());
+                var result = GetTrends(database);
 
                 return View("~/views/trends.cshtml", result);
             }
@@ -53,7 +49,8 @@ namespace Photon.JobSeeker
         {
             try
             {
-                return View("~/views/agencies.cshtml", GetAgencies());
+                using var database = Database.Open();
+                return View("~/views/agencies.cshtml", GetAgencies(database));
             }
             catch (Exception ex)
             {
@@ -68,10 +65,9 @@ namespace Photon.JobSeeker
             try
             {
                 using var database = Database.Open();
-                database.Trend.DeleteExpired();
-                var trends = database.Trend.Report();
                 var jobs = database.Job.Fetch();
-                var agencies = GetAgencies();
+                var trends = GetTrends(database);
+                var agencies = GetAgencies(database);
 
                 return View("~/views/index.cshtml", new { Trends = trends, Jobs = jobs, Agencies = agencies });
             }
@@ -82,9 +78,19 @@ namespace Photon.JobSeeker
             }
         }
 
-        private dynamic[] GetAgencies()
+        private List<dynamic> GetTrends(Database database)
         {
-            using var database = Database.Open();
+            database.Trend.DeleteExpired();
+            var result = database.Trend.Report();
+
+            if (JobEligibilityHelper.CurrentRevaluationProcess != null)
+                result.Add(JobEligibilityHelper.CurrentRevaluationProcess.GetReportObject());
+
+            return result;
+        }
+
+        private dynamic[] GetAgencies(Database database)
+        {
             var report = database.Agency.JobRateReport();
 
             return analyzer.Agencies.Select(a =>
