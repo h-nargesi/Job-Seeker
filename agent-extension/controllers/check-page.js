@@ -1,4 +1,5 @@
 console.log("check-page");
+window.blur();
 
 ActionHandler.OnPageLoad = function() {
     console.log('Page', 'loaded');
@@ -55,6 +56,11 @@ async function SendingPageInfo(scope) {
 async function CheckNewOrders() {
     const result = await BackgroundMessaging.Orders();
     ActionHandler.Handle(result.commands, true);
+}
+
+function Unfocus(main_window) {
+    window.blur();
+    main_window.focus();
 }
 
 if (window.addEventListener) window.addEventListener("load", ActionHandler.OnPageLoad, false);
