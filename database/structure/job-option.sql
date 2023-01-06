@@ -35,7 +35,7 @@ values
 
 	--	Company Benefits
 	,	(99,	'benefit',	'Relocation',	'\brelocation(\s+package)?\b|\bvisa(\s+(support|sponsorship))?\b', null)
-	,	(02,	'salary',	'Salary',		'\bsalary\b.*?(\d[\d,]*000)(.*?\b(month|year)\b)?',
+	,	(02,	'salary',	'Salary',		'\bsalary\b.*?(\d[\d,]*000)(.+?\b(month|year)\b)?',
 				'{ "money": 1, "period": 3 }')
 
 	--	Keywords
