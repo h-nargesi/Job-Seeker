@@ -98,7 +98,10 @@ namespace Photon.JobSeeker
 
         public void ChangeState(long id, JobState state)
         {
-            Save(new { JobID = id, State = state });
+            if (state == JobState.Rejected)
+                Save(new { JobID = id, State = state, Html = DBNull.Value, Content = DBNull.Value });
+            else
+                Save(new { JobID = id, State = state });
         }
 
         protected override string[]? GetUniqueColumns { get; } = new string[] {
