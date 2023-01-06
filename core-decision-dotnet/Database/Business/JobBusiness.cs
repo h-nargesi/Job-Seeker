@@ -121,7 +121,7 @@ namespace Photon.JobSeeker
         public void ChangeState(long id, JobState state)
         {
             if (state == JobState.Rejected)
-                Save(new { JobID = id, State = state, Html = DBNull.Value, Content = DBNull.Value });
+                Save(new { JobID = id, State = state, Html = typeof(string), Content = typeof(string) });
             else
                 Save(new { JobID = id, State = state });
         }
