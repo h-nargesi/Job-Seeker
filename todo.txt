@@ -5,3 +5,4 @@ reevaluation
 Store all found job-options in log
 Salary bug
 Ignore javascript/json on content?
+Remove content and html for Rejected jobs
