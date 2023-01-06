@@ -84,7 +84,7 @@ namespace Photon.JobSeeker
         private const string Q_JOB_RATE_REPORT = @$"
 SELECT job.*
 	, CAST(100 * CAST(Analyzed AS REAL) / JobCount AS INTEGER) AS AnalyzingRate
-	, CAST(100 * CAST(Accepted AS REAL) / Analyzed AS INTEGER) AS AcceptingRate
+	, CASE Analyzed WHEN 0 THEN 0 ELSE CAST(100 * CAST(Accepted AS REAL) / Analyzed AS INTEGER) END AS AcceptingRate
 FROM (
 	SELECT AgencyID
 		, COUNT(*) AS JobCount

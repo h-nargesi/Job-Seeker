@@ -29,8 +29,8 @@ namespace Photon.JobSeeker
                 list.Add(new
                 {
                     TrendID = reader["TrendID"] as long?,
-                    Agency = reader["Agency"] as string ?? "-",
-                    Link = reader["Link"] as string ?? "-",
+                    Agency = reader["Agency"] as string ?? "None",
+                    Link = reader["Link"] as string ?? "",
                     LastActivity = reader["LastActivity"] as string ?? "-",
                     Type = reader["Type"] as string,
                     State = reader["State"] as string,

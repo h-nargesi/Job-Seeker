@@ -1,11 +1,11 @@
-tr.applied {
-    background-color: rgba(0,255,128,0.1);
+tr.Applied {
+    background-color: rgba(0,255,128,0.3);
 }
 
-tr.rejected {
-    background-color: rgba(255,0,128,0.05);
+tr.Rejected {
+    background-color: rgba(255,0,128,0.2);
 }
 
-tr.saved {
-    background-color: rgba(255,255,0,0.1);
+tr.Saved {
+    background-color: rgba(255,255,0,0.3);
 }
