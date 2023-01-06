@@ -170,19 +170,23 @@ namespace Photon.JobSeeker
 
         private static long CheckOptionIn(Job job, JobOption option, out string? matched)
         {
-            var matched_option = option.Pattern.Match(job.Content ?? "");
-            if (!matched_option.Success)
+            var score = 0L;
+            var matches = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Match matched_option in option.Pattern.Matches(job.Content ?? ""))
             {
-                matched = null;
-                return 0;
-            }
-            else matched = matched_option.Value;
+                if (matched_option.Success)
+                    matches.Add(matched_option.Value);
 
-            return option.Category switch
-            {
-                "salary" => EvaluateSalaryScore(matched_option, option),
-                _ => option.Score
-            };
+                if (score <= 1)
+                    score = option.Category switch
+                    {
+                        "salary" => EvaluateSalaryScore(matched_option, option),
+                        _ => option.Score
+                    };
+            }
+
+            matched = string.Join("\n", matches);
+            return score;
         }
 
         private static long EvaluateSalaryScore(Match matched, JobOption option)
