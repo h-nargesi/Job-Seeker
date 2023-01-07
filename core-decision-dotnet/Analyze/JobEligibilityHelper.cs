@@ -25,7 +25,16 @@ namespace Photon.JobSeeker
             options = database.JobOption.FetchAll();
         }
 
-        public void Revaluate()
+        public static Task RunRevaluateProcess()
+        {
+            return Task.Run(async () =>
+            {
+                using var evaluator = new JobEligibilityHelper();
+                await evaluator.Revaluate();
+            });
+        }
+
+        public Task Revaluate()
         {
             lock (revaluation_lock)
             {
@@ -39,11 +48,13 @@ namespace Photon.JobSeeker
                 CurrentRevaluationProcess.ProcessCount++;
             }
 
-            try
+            return Task.Run(() =>
             {
-                while (true)
+                try
                 {
-                    var job = database.Job.FetchFrom(CurrentRevaluationProcess.StartTime);
+                    while (true)
+                    {
+                        var job = database.Job.FetchFrom(CurrentRevaluationProcess.StartTime);
 
                     if (job == null) break;
 
@@ -63,40 +74,51 @@ namespace Photon.JobSeeker
                         database.Job.Save(job, JobFilter.Content);
                     }
 
-                    EvaluateJobEligibility(job);
+                        EvaluateJobEligibility(job);
 
-                    lock (revaluation_lock)
-                        CurrentRevaluationProcess.Passed++;
-                }
-            }
-            finally
-            {
-                lock (revaluation_lock)
-                {
-                    if (CurrentRevaluationProcess != null)
-                    {
-                        CurrentRevaluationProcess.ProcessCount--;
-                        if (CurrentRevaluationProcess.ProcessCount < 1)
-                            CurrentRevaluationProcess = null;
+                        lock (revaluation_lock)
+                            CurrentRevaluationProcess.Passed++;
                     }
                 }
-            }
+                finally
+                {
+                    lock (revaluation_lock)
+                    {
+                        if (CurrentRevaluationProcess != null)
+                        {
+                            CurrentRevaluationProcess.ProcessCount--;
+                            if (CurrentRevaluationProcess.ProcessCount < 1)
+                                CurrentRevaluationProcess = null;
+                        }
+                    }
+                }
+            });
         }
 
         public JobState EvaluateJobEligibility(Job job)
         {
             job.Log = "";
 
-            var correct_language = LanguageIsMatch(job);
+            bool rejected;
+            var correct_language = rejected = LanguageIsMatch(job);
 
-            var eligibility = correct_language && EvaluateEligibility(job);
+            var eligibility = correct_language && EvaluateEligibility(job, out rejected);
 
             if (!eligibility) job.State = JobState.Rejected;
             else job.State = JobState.Attention;
 
+            var filter = JobFilter.Log | JobFilter.State | JobFilter.Score;
+
+            if (rejected)
+            {
+                filter |= JobFilter.Html | JobFilter.Content;
+                job.Html = null;
+                job.Content = null;
+            }
+
             Log.Information("Job ({0}): state={1} score={2} lang={3}", job.State, job.Code, job.Score, correct_language);
             Log.Debug("Job ({0}): log={1}", job.Code, job.Log);
-            database.Job.Save(job, JobFilter.Log | JobFilter.State | JobFilter.Score);
+            database.Job.Save(job, filter);
 
             return job.State;
         }
@@ -147,17 +169,17 @@ namespace Photon.JobSeeker
             foreach (var set in splited)
                 langu_count += dictionaries.EnglishCount(set);
 
-            var point = (int)(100 * langu_count / (double)total_count);
-            job.Log += string.Format("English: ({0}%)\n\n", point);
+            var point = 100 * langu_count / (double)total_count;
+            job.Log += string.Format("English: ({0}%)\n\n", (int)point);
 
             return 50 <= point;
         }
 
-        private bool EvaluateEligibility(Job job)
+        private bool EvaluateEligibility(Job job, out bool rejected)
         {
             var logs = new List<string>(options.Length);
             var hasField = false;
-            var rejected = false;
+            rejected = false;
             job.Score = 0L;
 
             foreach (var option in options)

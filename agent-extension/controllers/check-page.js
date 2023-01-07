@@ -19,7 +19,7 @@ ActionHandler.OnPageLoad = function() {
         document.getElementById('reset-trends').addEventListener("click", BackgroundMessaging.Scopes(true), false);
 
         const millisecnod = 1000;
-        var ordering_interval = setInterval(CheckNewOrders, millisecnod * 20);
+        var ordering_interval = null;
 
         document.getElementById('stop-start-ordering').addEventListener("click", function () {
             if (ordering_interval == null) {
