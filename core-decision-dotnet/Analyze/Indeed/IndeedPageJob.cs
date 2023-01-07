@@ -74,7 +74,7 @@ namespace Photon.JobSeeker.Indeed
             return job;
         }
 
-        private string GetHtmlContent(string html)
+        public static string GetHtmlContent(string html)
         {
             var doc = new HtmlDocument();
             doc.LoadHtml(html);

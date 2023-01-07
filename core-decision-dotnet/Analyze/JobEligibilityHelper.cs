@@ -47,6 +47,22 @@ namespace Photon.JobSeeker
 
                     if (job == null) break;
 
+                    if (job.Html != null)
+                    {
+                        var html = job.Html;
+                        if (html.StartsWith("<html"))
+                            html = job.AgencyID switch
+                            {
+                                1 => Indeed.IndeedPageJob.GetHtmlContent(job.Html ?? ""),
+                                2 => IamExpat.IamExpatPageJob.GetHtmlContent(job.Html ?? ""),
+                                3 => LinkedIn.LinkedInPageJob.GetHtmlContent(job.Html ?? ""),
+                                _ => "",
+                            };
+
+                        job.Content = GetTextContent(html);
+                        database.Job.Save(job, JobFilter.Content);
+                    }
+
                     EvaluateJobEligibility(job);
 
                     lock (revaluation_lock)

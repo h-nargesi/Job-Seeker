@@ -104,7 +104,7 @@ namespace Photon.JobSeeker.IamExpat
             return job;
         }
 
-        private string GetHtmlContent(string html)
+        public static string GetHtmlContent(string html)
         {
             var start_match = reg_job_content_start.Match(html);
             if (!start_match.Success) return html;
