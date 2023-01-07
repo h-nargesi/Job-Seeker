@@ -1,3 +1,5 @@
+Bug: Finding main content tag from html document
+    Remove html column
 Popup under when openning a page
 Examine the job-options and current jobs
 Ignore javascript/json on content?
