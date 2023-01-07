@@ -25,7 +25,16 @@ namespace Photon.JobSeeker
             options = database.JobOption.FetchAll();
         }
 
-        public void Revaluate()
+        public static Task RunRevaluateProcess()
+        {
+            return Task.Run(async () =>
+            {
+                using var evaluator = new JobEligibilityHelper();
+                await evaluator.Revaluate();
+            });
+        }
+
+        public Task Revaluate()
         {
             lock (revaluation_lock)
             {
@@ -39,41 +48,45 @@ namespace Photon.JobSeeker
                 CurrentRevaluationProcess.ProcessCount++;
             }
 
-            try
+            return Task.Run(() =>
             {
-                while (true)
+                try
                 {
-                    var job = database.Job.FetchFrom(CurrentRevaluationProcess.StartTime);
-
-                    if (job == null) break;
-
-                    EvaluateJobEligibility(job);
-
-                    lock (revaluation_lock)
-                        CurrentRevaluationProcess.Passed++;
-                }
-            }
-            finally
-            {
-                lock (revaluation_lock)
-                {
-                    if (CurrentRevaluationProcess != null)
+                    while (true)
                     {
-                        CurrentRevaluationProcess.ProcessCount--;
-                        if (CurrentRevaluationProcess.ProcessCount < 1)
-                            CurrentRevaluationProcess = null;
+                        var job = database.Job.FetchFrom(CurrentRevaluationProcess.StartTime);
+
+                        if (job == null) break;
+
+                        EvaluateJobEligibility(job);
+
+                        lock (revaluation_lock)
+                            CurrentRevaluationProcess.Passed++;
                     }
                 }
-            }
+                finally
+                {
+                    lock (revaluation_lock)
+                    {
+                        if (CurrentRevaluationProcess != null)
+                        {
+                            CurrentRevaluationProcess.ProcessCount--;
+                            if (CurrentRevaluationProcess.ProcessCount < 1)
+                                CurrentRevaluationProcess = null;
+                        }
+                    }
+                }
+            });
         }
 
         public JobState EvaluateJobEligibility(Job job)
         {
             job.Log = "";
 
-            var correct_language = LanguageIsMatch(job);
+            bool rejected;
+            var correct_language = rejected = LanguageIsMatch(job);
 
-            var eligibility = correct_language && EvaluateEligibility(job, out bool rejected);
+            var eligibility = correct_language && EvaluateEligibility(job, out rejected);
 
             if (!eligibility) job.State = JobState.Rejected;
             else job.State = JobState.Attention;
@@ -146,7 +159,7 @@ namespace Photon.JobSeeker
             return 50 <= point;
         }
 
-        private bool EvaluateEligibility(Job jobm, out bool rejected)
+        private bool EvaluateEligibility(Job job, out bool rejected)
         {
             var logs = new List<string>(options.Length);
             var hasField = false;

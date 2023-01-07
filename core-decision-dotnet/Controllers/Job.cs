@@ -11,12 +11,7 @@ namespace Photon.JobSeeker
         {
             try
             {
-                Task.Run(() =>
-                {
-                    using var evaluator = new JobEligibilityHelper();
-                    evaluator.Revaluate();
-                });
-
+                JobEligibilityHelper.RunRevaluateProcess();
                 return Ok();
             }
             catch (Exception ex)
