@@ -27,12 +27,12 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-        let letters = new Set();
-        for (let k in KEYS) {
-            let class_name = k.replace('_', '-').toLowerCase();
+        const letters = new Set();
+        for (const k in KEYS) {
+            const class_name = k.replace('_', '-').toLowerCase();
             if (KEYS[k]) {
-                let parts = class_name.split('_');
-                for (let p in parts) {
+                const parts = class_name.split('-');
+                for (const p in parts) {
                     if (!letters.has(parts[p][0])) {
                         letters.add(parts[p][0]);
                         break;
@@ -40,7 +40,7 @@
                 }
 
             } else {
-                let elements = document.querySelectorAll('.key-' + class_name);
+                const elements = document.querySelectorAll('.key-' + class_name);
                 for (let e = 0; e < elements.length; e++)
                     elements[e].style.display = 'none !important';
             }
@@ -48,7 +48,7 @@
 
         const skills = Array.from(letters).join('');
 
-        document.title += '-' + VERSION + '-' + skills;('');
+        document.title += '-' + VERSION + '-' + skills;
         document.getElementById('version').innerText = VERSION + ' | ' + skills;
         document.getElementById('date').innerText = new Date().toISOString().substring(0, 10);
     });
