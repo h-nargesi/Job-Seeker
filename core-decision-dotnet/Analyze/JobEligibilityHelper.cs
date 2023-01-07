@@ -70,8 +70,9 @@ namespace Photon.JobSeeker
                                     _ => "",
                                 };
 
+                            job.Html = html;
                             job.Content = GetTextContent(html);
-                            database.Job.Save(job, JobFilter.Content);
+                            database.Job.Save(job, JobFilter.Content | JobFilter.Html);
                         }
 
                         EvaluateJobEligibility(job);

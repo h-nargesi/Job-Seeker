@@ -180,7 +180,7 @@ SELECT * FROM Job WHERE State != '{nameof(JobState.Revaluation)}' AND Content IS
 SELECT COUNT(*) FROM Job WHERE Content IS NOT NULL AND ModifiedOn <= $date";
 
         private const string Q_FETCH_UPDATE_REVAL = @$"
-UPDATE Job SET State = '{nameof(JobState.Saved)}' WHERE State != '{nameof(JobState.Revaluation)}'";
+UPDATE Job SET State = '{nameof(JobState.Saved)}' WHERE State = '{nameof(JobState.Revaluation)}'";
 
         private const string Q_FETCH_FIRST = @$"
 SELECT JobID, Url, Tries FROM Job
