@@ -1,6 +1,6 @@
-Bug: Finding main content tag from html document
-    Remove html column
+Refresh Agency info in index page
 Popup under when openning a page
 Examine the job-options and current jobs
+Remove html column?
 Ignore javascript/json on content?
 Active/Deactive Agencies
