@@ -100,7 +100,7 @@ namespace Photon.JobSeeker
             var buffer = new StringBuilder();
             foreach (var node in root.DescendantsAndSelf())
             {
-                // if (node.HasChildNodes) continue;
+                if (node.HasChildNodes) continue;
 
                 string text = node.InnerText;
                 if (!string.IsNullOrEmpty(text))
