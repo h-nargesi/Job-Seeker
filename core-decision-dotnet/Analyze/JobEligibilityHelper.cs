@@ -73,14 +73,23 @@ namespace Photon.JobSeeker
 
             var correct_language = LanguageIsMatch(job);
 
-            var eligibility = correct_language && EvaluateEligibility(job);
+            var eligibility = correct_language && EvaluateEligibility(job, out bool rejected);
 
             if (!eligibility) job.State = JobState.Rejected;
             else job.State = JobState.Attention;
 
+            var filter = JobFilter.Log | JobFilter.State | JobFilter.Score;
+
+            if (rejected)
+            {
+                filter |= JobFilter.Html | JobFilter.Content;
+                job.Html = null;
+                job.Content = null;
+            }
+
             Log.Information("Job ({0}): state={1} score={2} lang={3}", job.State, job.Code, job.Score, correct_language);
             Log.Debug("Job ({0}): log={1}", job.Code, job.Log);
-            database.Job.Save(job, JobFilter.Log | JobFilter.State | JobFilter.Score);
+            database.Job.Save(job, filter);
 
             return job.State;
         }
@@ -131,17 +140,17 @@ namespace Photon.JobSeeker
             foreach (var set in splited)
                 langu_count += dictionaries.EnglishCount(set);
 
-            var point = (int)(100 * langu_count / (double)total_count);
-            job.Log += string.Format("English: ({0}%)\n\n", point);
+            var point = 100 * langu_count / (double)total_count;
+            job.Log += string.Format("English: ({0}%)\n\n", (int)point);
 
             return 50 <= point;
         }
 
-        private bool EvaluateEligibility(Job job)
+        private bool EvaluateEligibility(Job jobm, out bool rejected)
         {
             var logs = new List<string>(options.Length);
             var hasField = false;
-            var rejected = false;
+            rejected = false;
             job.Score = 0L;
 
             foreach (var option in options)
