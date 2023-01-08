@@ -1,11 +1,15 @@
+tr.NotApproved {
+    background-color: rgba(255,0,0,0.1);
+}
+
 tr.Applied {
-    background-color: rgba(0,255,128,0.3);
+    background-color: rgba(0,255,0,0.2);
 }
 
 tr.Rejected {
-    background-color: rgba(255,0,128,0.2);
+    background-color: rgba(128,0,128,0.2);
 }
 
 tr.Saved {
-    background-color: rgba(255,255,0,0.3);
+    background-color: rgba(255,255,0,0.1);
 }

@@ -83,15 +83,19 @@ namespace Photon.JobSeeker
         {
             job.Log = "";
 
-            bool rejected;
-            var correct_language = rejected = LanguageIsMatch(job);
+            var filter = JobFilter.Log | JobFilter.Score;
+            var user_changes = job.State > JobState.Attention;
 
+            var correct_language = LanguageIsMatch(job);
+            var rejected = !correct_language;
             var eligibility = correct_language && EvaluateEligibility(job, out rejected);
 
-            if (!eligibility) job.State = JobState.Rejected;
-            else job.State = JobState.Attention;
-
-            var filter = JobFilter.Log | JobFilter.State | JobFilter.Score;
+            if (!user_changes)
+            {
+                filter |= JobFilter.State;
+                if (!eligibility) job.State = JobState.NotApproved;
+                else job.State = JobState.Attention;
+            }
 
             if (rejected)
             {

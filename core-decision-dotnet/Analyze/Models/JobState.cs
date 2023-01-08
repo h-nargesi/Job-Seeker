@@ -4,8 +4,9 @@
     {
         Saved = 1,
         Revaluation,
-        Rejected,
+        NotApproved,
         Attention,
+        Rejected,
         Applied,
     }
 }

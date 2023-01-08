@@ -120,10 +120,7 @@ namespace Photon.JobSeeker
 
         public void ChangeState(long id, JobState state)
         {
-            if (state == JobState.Rejected)
-                Save(new { JobID = id, State = state, Html = typeof(string), Content = typeof(string) });
-            else
-                Save(new { JobID = id, State = state });
+            Save(new { JobID = id, State = state });
         }
 
         protected override string[]? GetUniqueColumns { get; } = new string[] {
@@ -159,15 +156,15 @@ FROM (
             , Job.State, Job.Score, Job.Url, Job.Link, Job.Log
             , Agency.Title as AgencyName
             , CASE State WHEN '{nameof(JobState.Attention)}' THEN 1
-                        WHEN '{nameof(JobState.Rejected)}' THEN 3
-                        WHEN '{nameof(JobState.Applied)}' THEN 3
-                        ELSE 100
+                         WHEN '{nameof(JobState.NotApproved)}' THEN 2
+                         WHEN '{nameof(JobState.Applied)}' THEN 3
+                         WHEN '{nameof(JobState.Rejected)}' THEN 3
+                         ELSE 100
             END AS Ordering
         FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
-        --WHERE State != '{nameof(JobState.Attention)}'
     ) job
 )
-WHERE Ranking <= 50
+WHERE Ranking <= 5 OR (Ordering <= 3 AND Ranking <= 30)
 ORDER BY Ordering, Score DESC, RegTime DESC";
 
         private const string Q_FETCH = @"
