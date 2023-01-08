@@ -112,7 +112,15 @@ namespace Photon.JobSeeker.IamExpat
             var end_match = reg_job_content_end.Match(html);
             if (!end_match.Success) return html;
 
-            return html.Substring(start_match.Index, end_match.Index + end_match.Length - start_match.Index);
+            html = html.Substring(start_match.Index, end_match.Index + end_match.Length - start_match.Index);
+            
+            start_match = reg_job_content_apply_start.Match(html);
+            if (!start_match.Success) return html;
+
+            end_match = reg_job_content_apply_end.Match(html);
+            if (!end_match.Success) return html;
+
+            return html.Remove(start_match.Index, end_match.Index + end_match.Length - start_match.Index);
         }
     }
 }

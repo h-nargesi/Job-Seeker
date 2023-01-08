@@ -32,6 +32,10 @@ namespace Photon.JobSeeker.IamExpat
 
         protected static readonly Regex reg_job_content_end = new(@"</article>", RegexOptions.IgnoreCase);
 
+        protected static readonly Regex reg_job_content_apply_start = new(@"<form[^>]*>", RegexOptions.IgnoreCase);
+
+        protected static readonly Regex reg_job_content_apply_end = new(@"</form>", RegexOptions.IgnoreCase);
+
         protected static string GetJobCode(Match match)
         {
             var i = match.Groups.Count;
