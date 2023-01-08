@@ -1,14 +1,16 @@
 
-var job_seeker_jobs = document.getElementById('job-list');
-var job_seeker_trends = document.getElementById('job-seeker-trend-list');
+let job_seeker_jobs = document.getElementById('job-list');
+let job_seeker_trends = document.getElementById('job-seeker-trend-list');
+let interval_trends = null;
+let interval_jobs = null;
 
 async function LoadTrands() {
-    var response = await fetch("/report/trends", { method: 'GET' });
+    let response = await fetch("/report/trends", { method: 'GET' });
     job_seeker_trends.innerHTML = await response.text();
 }
 
 async function LoadJobs() {
-    var response = await fetch("/report/jobs", { method: 'GET' });
+    let response = await fetch("/report/jobs", { method: 'GET' });
     job_seeker_jobs.innerHTML = await response.text();
 }
 
@@ -73,12 +75,20 @@ async function change_running(agency, running) {
     }
 }
 
-function OnPageLoad() {
-    const millisecnod = 1000;
-    setInterval(LoadTrands, millisecnod * 3);
-    setInterval(LoadJobs, millisecnod * 30);
-}
+function ordering() {
+    if (interval_trends == null || interval_jobs == null) {
+        const millisecnod = 1000;
+        interval_trends = setInterval(LoadTrands, millisecnod * 3);
+        interval_jobs = setInterval(LoadJobs, millisecnod * 30);
+        document.getElementById('stop-start-ordering').className = "btn btn-danger";
+        document.getElementById('stop-start-ordering').innerText = "To Stop Ordering";
 
-if (window.addEventListener) window.addEventListener("load", OnPageLoad, false);
-// else if (window.attachEvent) window.attachEvent("onload", OnPageLoad);
-else window.onload = OnPageLoad;
+    } else {
+        clearInterval(interval_trends);
+        clearInterval(interval_jobs);
+        interval_trends = null;
+        interval_jobs = null;
+        document.getElementById('stop-start-ordering').className = "btn btn-primary";
+        document.getElementById('stop-start-ordering').innerText = "To Start Ordering";
+    }
+}
