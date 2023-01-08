@@ -1,5 +1,3 @@
-Lop Modal problem
-
 Popup under when openning a page
 Examine the job-options and current jobs
 Remove html column?

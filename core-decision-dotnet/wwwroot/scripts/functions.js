@@ -12,11 +12,12 @@ async function LoadTrands() {
 async function LoadJobs() {
     let response = await fetch("/report/jobs", { method: 'GET' });
     job_seeker_jobs.innerHTML = await response.text();
+    render();
 }
 
 async function LoadAgencies() {
     let response = await fetch("/report/agencies", { method: 'GET' });
-    job_seeker_jobs.innerHTML = await response.text();
+    job_seeker_agencies.innerHTML = await response.text();
 }
 
 async function apply(jobid) {

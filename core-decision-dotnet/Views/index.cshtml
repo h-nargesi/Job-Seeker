@@ -38,6 +38,22 @@
                         @await Html.PartialAsync("~/views/jobs.cshtml", (List<dynamic>)Model.Jobs)
                     </tbody>
                 </table>
+                <button id="show-logs" type="button" class="btn btn-link" style="visibility: hidden;" data-bs-toggle="modal" data-bs-target="#logs-modal">
+                    Logs
+                </button>
+                <div class="modal fade" id="logs-modal" tabindex="-1" aria-labelledby="exampleModalLabel"
+                aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="exampleModalLabel">Logs</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div id="logs-body" class="modal-body"></div>
+                            <div class="modal-footer"></div>
+                        </div>
+                    </div>
+                </div>
             </section>
             <article class="col-md-4">
                 <h6>Trend List</h6>
