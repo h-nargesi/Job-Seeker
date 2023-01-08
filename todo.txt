@@ -1,4 +1,3 @@
-Refresh Agency info in index page
 Lop Modal problem
 
 Popup under when openning a page
