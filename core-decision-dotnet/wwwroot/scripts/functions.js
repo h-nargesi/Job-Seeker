@@ -1,8 +1,8 @@
 
 let job_seeker_jobs = document.getElementById('job-list');
 let job_seeker_trends = document.getElementById('job-seeker-trend-list');
-let interval_trends = null;
-let interval_jobs = null;
+let job_seeker_agencies = document.getElementById('job-seeker-agency-list');
+let intervals = null;
 
 async function LoadTrands() {
     let response = await fetch("/report/trends", { method: 'GET' });
@@ -11,6 +11,11 @@ async function LoadTrands() {
 
 async function LoadJobs() {
     let response = await fetch("/report/jobs", { method: 'GET' });
+    job_seeker_jobs.innerHTML = await response.text();
+}
+
+async function LoadAgencies() {
+    let response = await fetch("/report/agencies", { method: 'GET' });
     job_seeker_jobs.innerHTML = await response.text();
 }
 
@@ -76,18 +81,19 @@ async function change_running(agency, running) {
 }
 
 function ordering() {
-    if (interval_trends == null || interval_jobs == null) {
+    if (intervals == null) {
         const millisecnod = 1000;
-        interval_trends = setInterval(LoadTrands, millisecnod * 3);
-        interval_jobs = setInterval(LoadJobs, millisecnod * 30);
+        intervals = [];
+        intervals.push(setInterval(LoadTrands, millisecnod * 3));
+        intervals.push(setInterval(LoadJobs, millisecnod * 30));
+        intervals.push(setInterval(LoadAgencies, millisecnod * 10));
         document.getElementById('stop-start-ordering').className = "btn btn-danger";
         document.getElementById('stop-start-ordering').innerText = "To Stop Ordering";
 
     } else {
-        clearInterval(interval_trends);
-        clearInterval(interval_jobs);
-        interval_trends = null;
-        interval_jobs = null;
+        for (let i in intervals)
+            clearInterval(intervals[i]);
+        intervals = null;
         document.getElementById('stop-start-ordering').className = "btn btn-primary";
         document.getElementById('stop-start-ordering').innerText = "To Start Ordering";
     }
