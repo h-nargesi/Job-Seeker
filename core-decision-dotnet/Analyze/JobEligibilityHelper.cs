@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿#undef RENDER_CONTETN
+
+using System.Text;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using Serilog;
@@ -52,12 +54,28 @@ namespace Photon.JobSeeker
             {
                 try
                 {
+                    var check = new Regex(@"<h3\s+class=""t-20"">[\s\n\r]*About\s+the\s+company[\s\n\r]*</h3>");
+                    
                     while (true)
                     {
                         var job = database.Job.FetchFrom(CurrentRevaluationProcess.StartTime);
 
                         if (job == null) break;
+#if RENDER_CONTETN
+                        if (job.Html != null && (job.Html.StartsWith("<html") || check.IsMatch(job.Html)))
+                        {
+                            job.Html = job.AgencyID switch
+                            {
+                                1 => Indeed.IndeedPageJob.GetHtmlContent(job.Html ?? ""),
+                                2 => IamExpat.IamExpatPageJob.GetHtmlContent(job.Html ?? ""),
+                                3 => LinkedIn.LinkedInPageJob.GetHtmlContent(job.Html ?? ""),
+                                _ => "",
+                            };
 
+                            job.Content = GetTextContent(job.Html);
+                            database.Job.Save(job, JobFilter.Content | JobFilter.Html);
+                        }
+#endif
                         EvaluateJobEligibility(job);
 
                         lock (revaluation_lock)
@@ -83,7 +101,8 @@ namespace Photon.JobSeeker
         {
             job.Log = "";
 
-            var filter = JobFilter.Log | JobFilter.Score;
+            // The state of the current job always should be set because it was converted to 'Revaluation'
+            var filter = JobFilter.Log | JobFilter.Score | JobFilter.State;
             var user_changes = job.State > JobState.Attention;
 
             var correct_language = LanguageIsMatch(job);
@@ -92,7 +111,6 @@ namespace Photon.JobSeeker
 
             if (!user_changes)
             {
-                filter |= JobFilter.State;
                 if (!eligibility) job.State = JobState.NotApproved;
                 else job.State = JobState.Attention;
             }
