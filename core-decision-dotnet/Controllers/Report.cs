@@ -92,22 +92,22 @@ namespace Photon.JobSeeker
         private dynamic[] GetAgencies(Database database)
         {
             var report = database.Agency.JobRateReport();
+            var agencies = analyzer.Agencies;
 
-            return analyzer.Agencies.Select(a =>
-                {
-                    report.TryGetValue(a.Value.ID, out dynamic? agency_report);
+            return report.Select(r => {
+                    agencies.TryGetValue(r.Title, out Agency agency);
                     return new
                     {
-                        AgencyID = a.Value.ID,
-                        SearchLink = a.Value.SearchLink,
-                        Name = a.Key,
-                        Analyzed = agency_report?.Analyzed,
-                        Accepted = agency_report?.Accepted,
-                        JobCount = agency_report?.JobCount,
-                        AnalyzingRate = agency_report?.AnalyzingRate,
-                        AcceptingRate = agency_report?.AcceptingRate,
-                        Running = a.Value.RunningSearchingMethodIndex,
-                        Methods = a.Value.SearchingMethodTitles
+                        AgencyID = r.AgencyID,
+                        Name = r.Title,
+                        SearchLink = agency?.SearchLink,
+                        JobCount = r.JobCount,
+                        Analyzed = r.Analyzed,
+                        Accepted = r.Accepted,
+                        AnalyzingRate = r.AnalyzingRate,
+                        AcceptingRate = r.AcceptingRate,
+                        Running = agency?.RunningSearchingMethodIndex,
+                        Methods = agency?.SearchingMethodTitles
                     };
                 })
                 .OrderBy(r => r.AgencyID)

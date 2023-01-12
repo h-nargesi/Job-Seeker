@@ -4,11 +4,14 @@
     var index = -1;
     <div class="agency mt-3" aria-title="@agency.Name">
         <h4><a href="@agency.SearchLink">@agency.Name</a><small> - @agency.Accepted <small>(@agency.AcceptingRate %)</small> / @agency.Analyzed <small>(@agency.AnalyzingRate %)</small> / @agency.JobCount</small></h4>
-        @foreach (var method in agency.Methods)
+        @if (agency.Running is int running)
         {
-            index += 1;
-            var current = index == (int)agency.Running ? "btn-primary" : "btn-outline-primary";
-            <button id="RM-@(agency.Name)-@(index)" class="btn @current mt-1" onclick="change_running('@agency.Name', @index)">@method</button>
+            @foreach (var method in agency.Methods)
+            {
+                index += 1;
+                var current = index == running ? "btn-primary" : "btn-outline-primary";
+                <button id="RM-@(agency.Name)-@(index)" class="btn @current mt-1" onclick="change_running('@agency.Name', @index)">@method</button>
+            }
         }
     </div>
 }
