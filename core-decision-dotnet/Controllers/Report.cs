@@ -28,12 +28,18 @@ namespace Photon.JobSeeker
         }
 
         [HttpGet]
-        public IActionResult Jobs()
+        public IActionResult Jobs(string? agencies)
         {
             try
             {
+                var agencyids = agencies?.Split(',')
+                                         .Where(id => !string.IsNullOrEmpty(id))
+                                         .Select(id => { int.TryParse(id, out var value); return value; })
+                                         .Where(id => id > 0)
+                                         .ToArray() ?? new int[0];
+
                 using var database = Database.Open();
-                var list = database.Job.Fetch();
+                var list = database.Job.Fetch(agencyids);
 
                 return View("~/views/jobs.cshtml", list);
             }
@@ -65,7 +71,7 @@ namespace Photon.JobSeeker
             try
             {
                 using var database = Database.Open();
-                var jobs = database.Job.Fetch();
+                var jobs = GetJobs(database, null);
                 var trends = GetTrends(database);
                 var agencies = GetAgencies(database);
 
@@ -76,6 +82,17 @@ namespace Photon.JobSeeker
                 Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
                 throw;
             }
+        }
+
+        private List<dynamic> GetJobs(Database database, string? agencies)
+        {
+            var agencyids = agencies?.Split(',')
+                                     .Where(id => !string.IsNullOrEmpty(id))
+                                     .Select(id => { int.TryParse(id, out var value); return value; })
+                                     .Where(id => id > 0)
+                                     .ToArray() ?? new int[0];
+
+            return database.Job.Fetch(agencyids);
         }
 
         private List<dynamic> GetTrends(Database database)
@@ -94,22 +111,23 @@ namespace Photon.JobSeeker
             var report = database.Agency.JobRateReport();
             var agencies = analyzer.Agencies;
 
-            return report.Select(r => {
-                    agencies.TryGetValue(r.Title, out Agency agency);
-                    return new
-                    {
-                        AgencyID = r.AgencyID,
-                        Name = r.Title,
-                        SearchLink = agency?.SearchLink,
-                        JobCount = r.JobCount,
-                        Analyzed = r.Analyzed,
-                        Accepted = r.Accepted,
-                        AnalyzingRate = r.AnalyzingRate,
-                        AcceptingRate = r.AcceptingRate,
-                        Running = agency?.RunningSearchingMethodIndex,
-                        Methods = agency?.SearchingMethodTitles
-                    };
-                })
+            return report.Select(r =>
+            {
+                agencies.TryGetValue(r.Title, out Agency agency);
+                return new
+                {
+                    AgencyID = r.AgencyID,
+                    Name = r.Title,
+                    SearchLink = agency?.SearchLink,
+                    JobCount = r.JobCount,
+                    Analyzed = r.Analyzed,
+                    Accepted = r.Accepted,
+                    AnalyzingRate = r.AnalyzingRate,
+                    AcceptingRate = r.AcceptingRate,
+                    Running = agency?.RunningSearchingMethodIndex,
+                    Methods = agency?.SearchingMethodTitles
+                };
+            })
                 .OrderBy(r => r.AgencyID)
                 .ToArray();
 
