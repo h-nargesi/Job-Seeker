@@ -150,21 +150,21 @@ namespace Photon.JobSeeker
 SELECT *
 FROM (
     SELECT job.*
-        , ROW_NUMBER() OVER(PARTITION BY State ORDER BY Score DESC, RegTime DESC) AS Ranking
+        , ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY Score DESC, RegTime DESC) AS Ranking
     FROM (
         SELECT Job.JobID, Job.RegTime, Job.AgencyID, Job.Code, Job.Title
             , Job.State, Job.Score, Job.Url, Job.Link, Job.Log
             , Agency.Title as AgencyName
             , CASE State WHEN '{nameof(JobState.Attention)}' THEN 1
                          WHEN '{nameof(JobState.NotApproved)}' THEN 2
-                         WHEN '{nameof(JobState.Applied)}' THEN 3
-                         WHEN '{nameof(JobState.Rejected)}' THEN 3
-                         ELSE 100
+                         WHEN '{nameof(JobState.Applied)}' THEN 4
+                         WHEN '{nameof(JobState.Rejected)}' THEN 4
+                         ELSE 12
             END AS Ordering
         FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
     ) job
 )
-WHERE Ranking <= 5 OR (Ordering <= 3 AND Ranking <= 30)
+WHERE Ranking <= (12 / Ordering)
 ORDER BY Ordering, Score DESC, RegTime DESC";
 
         private const string Q_FETCH = @"
