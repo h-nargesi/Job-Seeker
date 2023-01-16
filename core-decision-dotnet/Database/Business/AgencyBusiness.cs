@@ -89,7 +89,7 @@ FROM (
     SELECT agc.AgencyID, agc.Title
         , IFNULL(job.JobCount, 0) AS JobCount
         , IFNULL(job.Analyzed, 0) AS Analyzed
-        , IFNULL(job.Attention, 0) + IFNULL(job.Attention, 0) AS Accepted
+        , IFNULL(job.Attention, 0) + IFNULL(job.Applied, 0) AS Accepted
         , IFNULL(job.Applied, 0) AS Applied
     FROM Agency agc
     LEFT JOIN  (
