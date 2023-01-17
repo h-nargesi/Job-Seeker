@@ -150,9 +150,12 @@ namespace Photon.JobSeeker
 SELECT *
 FROM (
     SELECT job.*
-        , ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY Score DESC, RegTime DESC) AS Ranking
+        , CASE Ordering
+          WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY ModifiedOn DESC, Score DESC, RegTime DESC)
+          ELSE ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY Score DESC, RegTime DESC)
+          END AS Ranking
     FROM (
-        SELECT Job.JobID, Job.RegTime, Job.AgencyID, Job.Code, Job.Title
+        SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
             , Job.State, Job.Score, Job.Url, Job.Link, Job.Log
             , Agency.Title as AgencyName
             , CASE State WHEN '{nameof(JobState.Attention)}' THEN 1
@@ -165,7 +168,7 @@ FROM (
     ) job
 )
 WHERE Ranking <= (12 / Ordering)
-ORDER BY Ordering, Score DESC, RegTime DESC";
+ORDER BY Ordering, Ranking";
 
         private const string Q_FETCH = @"
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
