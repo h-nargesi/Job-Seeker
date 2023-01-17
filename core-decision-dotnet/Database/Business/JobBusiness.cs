@@ -148,9 +148,13 @@ namespace Photon.JobSeeker
 
         private const string Q_INDEX = @$"
 SELECT *
+    , CASE Category
+        WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, Score DESC, RegTime DESC)
+        ELSE ROW_NUMBER() OVER(PARTITION BY Category ORDER BY Score DESC, RegTime DESC)
+        END AS Ordering
 FROM (
-    SELECT job.*
-        , CASE Ordering
+    SELECT *
+        , CASE Category
           WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY ModifiedOn DESC, Score DESC, RegTime DESC)
           ELSE ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY Score DESC, RegTime DESC)
           END AS Ranking
@@ -163,12 +167,12 @@ FROM (
                          WHEN '{nameof(JobState.Applied)}' THEN 4
                          WHEN '{nameof(JobState.Rejected)}' THEN 4
                          ELSE 12
-            END AS Ordering
+            END AS Category
         FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
     ) job
-)
-WHERE Ranking <= (12 / Ordering)
-ORDER BY Ordering, Ranking";
+) job
+WHERE Ranking <= (12 / Category)
+ORDER BY Category, Ordering";
 
         private const string Q_FETCH = @"
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
