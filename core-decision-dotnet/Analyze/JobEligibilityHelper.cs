@@ -1,4 +1,4 @@
-﻿#undef RENDER_CONTETN
+﻿#undef RENDER_CONTENT
 
 using System.Text;
 using System.Text.RegularExpressions;
@@ -27,21 +27,13 @@ namespace Photon.JobSeeker
             options = database.JobOption.FetchAll();
         }
 
-        public static Task RunRevaluateProcess()
-        {
-            return Task.Run(async () =>
-            {
-                using var evaluator = new JobEligibilityHelper();
-                await evaluator.Revaluate();
-            });
-        }
-
-        public Task Revaluate()
+        public static Task RunRevaluateProcess(Analyzer analyzer)
         {
             lock (revaluation_lock)
             {
                 if (CurrentRevaluationProcess == null)
                 {
+                    using var database = Database.Open();
                     var start_time = DateTime.Now.AddSeconds(-1);
                     var total_count = (int)database.Job.FetchFromCount(start_time);
                     CurrentRevaluationProcess = new RevaluationProcess(start_time, total_count);
@@ -52,62 +44,78 @@ namespace Photon.JobSeeker
 
             return Task.Run(() =>
             {
-                try
-                {
-                    var check = new Regex(@"<h3\s+class=""t-20"">[\s\n\r]*About\s+the\s+company[\s\n\r]*</h3>");
-                    
-                    while (true)
-                    {
-                        var job = database.Job.FetchFrom(CurrentRevaluationProcess.StartTime);
-
-                        if (job == null) break;
-#if RENDER_CONTETN
-                        if (job.Html != null && (job.Html.StartsWith("<html") || check.IsMatch(job.Html)))
-                        {
-                            job.Html = job.AgencyID switch
-                            {
-                                1 => Indeed.IndeedPageJob.GetHtmlContent(job.Html ?? ""),
-                                2 => IamExpat.IamExpatPageJob.GetHtmlContent(job.Html ?? ""),
-                                3 => LinkedIn.LinkedInPageJob.GetHtmlContent(job.Html ?? ""),
-                                _ => "",
-                            };
-
-                            job.Content = GetTextContent(job.Html);
-                            database.Job.Save(job, JobFilter.Content | JobFilter.Html);
-                        }
-#endif
-                        EvaluateJobEligibility(job);
-
-                        lock (revaluation_lock)
-                            CurrentRevaluationProcess.Passed++;
-                    }
-                }
-                finally
-                {
-                    lock (revaluation_lock)
-                    {
-                        if (CurrentRevaluationProcess != null)
-                        {
-                            CurrentRevaluationProcess.ProcessCount--;
-                            if (CurrentRevaluationProcess.ProcessCount < 1)
-                                CurrentRevaluationProcess = null;
-                        }
-                    }
-                }
+                using var evaluator = new JobEligibilityHelper();
+                evaluator.Revaluate(analyzer);
             });
         }
 
-        public JobState EvaluateJobEligibility(Job job)
+        public void Revaluate(Analyzer analyzer)
+        {
+            if (CurrentRevaluationProcess == null) return;
+
+            try
+            {
+                while (true)
+                {
+                    var job = database.Job.FetchFrom(CurrentRevaluationProcess.StartTime);
+
+                    if (job == null) break;
+                    
+                    var agency = analyzer.AgenciesByID[job.AgencyID];
+
+#if RENDER_CONTENT
+                    var check = new Regex(@"<h3\s+class=""t-20"">[\s\n\r]*About\s+the\s+company[\s\n\r]*</h3>");
+                    if (job.Html != null && (job.Html.StartsWith("<html") || check.IsMatch(job.Html)))
+                    {
+                        job.Html = job.AgencyID switch
+                        {
+                            1 => Indeed.IndeedPageJob.GetHtmlContent(job.Html ?? ""),
+                            2 => IamExpat.IamExpatPageJob.GetHtmlContent(job.Html ?? ""),
+                            3 => LinkedIn.LinkedInPageJob.GetHtmlContent(job.Html ?? ""),
+                            _ => "",
+                        };
+                        database.Job.Save(job, JobFilter.Content | JobFilter.Html);
+                    }
+#endif
+
+                    EvaluateJobEligibility(job, agency.JobAcceptabilityChecker);
+
+                    lock (revaluation_lock)
+                        CurrentRevaluationProcess.Passed++;
+                }
+            }
+            finally
+            {
+                lock (revaluation_lock)
+                {
+                    if (CurrentRevaluationProcess != null)
+                    {
+                        CurrentRevaluationProcess.ProcessCount--;
+                        if (CurrentRevaluationProcess.ProcessCount < 1)
+                            CurrentRevaluationProcess = null;
+                    }
+                }
+            }
+        }
+
+        public JobState EvaluateJobEligibility(Job job, Regex? job_acceptability_check)
         {
             job.Log = "";
+            job.Score = null;
 
             // The state of the current job always should be set because it was converted to 'Revaluation'
             var filter = JobFilter.Log | JobFilter.Score | JobFilter.State;
             var user_changes = job.State > JobState.Attention;
 
-            var correct_language = LanguageIsMatch(job);
-            var rejected = !correct_language;
-            var eligibility = correct_language && EvaluateEligibility(job, out rejected);
+            var job_acceptability = job_acceptability_check?.IsMatch(job.Content ?? "");
+            var correct_language = job_acceptability != false ? LanguageIsMatch(job) : (bool?)null;
+            var rejected = correct_language != true;
+            var eligibility = correct_language == true ? EvaluateEligibility(job, out rejected) : false;
+
+            if (job_acceptability == false)
+            {
+                job.Log = @"Expired!" + (string.IsNullOrEmpty(job.Log) ? "" : "\n") + job.Log;
+            }
 
             if (!user_changes)
             {
@@ -122,7 +130,10 @@ namespace Photon.JobSeeker
                 job.Content = null;
             }
 
-            Log.Information("Job ({0}): state={1} score={2} lang={3}", job.State, job.Code, job.Score, correct_language);
+            Log.Information("Job ({0}): state={1} score={2} acceptable={4} lang={3}",
+                job.State, job.Code, job.Score,
+                correct_language?.ToString() ?? "?",
+                job_acceptability?.ToString() ?? "?");
             Log.Debug("Job ({0}): log={1}", job.Code, job.Log);
             database.Job.Save(job, filter);
 

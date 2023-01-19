@@ -15,6 +15,8 @@ namespace Photon.JobSeeker.IamExpat
 
         public override string SearchLink => "https://iamexpat." + LocationUrls[RunningSearchingMethodIndex];
 
+        public override Regex? JobAcceptabilityChecker => null;
+
 
         protected override void ChangeSettings(dynamic? settings)
         {

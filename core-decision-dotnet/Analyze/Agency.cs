@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Serilog;
 
 namespace Photon.JobSeeker
@@ -24,6 +25,8 @@ namespace Photon.JobSeeker
         public bool IsActiveAnalyzing { get; private set; }
 
         public IReadOnlyList<Page> Pages => pages;
+
+        public abstract Regex? JobAcceptabilityChecker { get; }
 
 
         public int RunningSearchingMethodIndex
