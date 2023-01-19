@@ -18,8 +18,20 @@ namespace Photon.JobSeeker.LinkedIn
 
             var job = LoadJob(url, content);
 
-            using var evaluator = new JobEligibilityHelper();
-            var state = evaluator.EvaluateJobEligibility(job);
+            JobState state;
+
+            if (reg_job_no_longer_accepting.IsMatch(job.Content ?? ""))
+            {
+                using var database = Database.Open();
+                job.State = state = JobState.NotApproved;
+                job.Log += @"\nNo longer accepting applications";
+                database.Job.Save(job, JobFilter.Log | JobFilter.State);
+            }
+            else
+            {
+                using var evaluator = new JobEligibilityHelper();
+                state = evaluator.EvaluateJobEligibility(job);
+            }
 
             var commands = new List<Command>();
 

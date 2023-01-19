@@ -35,5 +35,7 @@ namespace Photon.JobSeeker.LinkedIn
         protected static readonly Regex reg_job_adding = new(@"<span\s+aria-hidden=[""']true[""']>Save</span>", RegexOptions.IgnoreCase);
 
         protected static readonly Regex reg_job_apply = new(@"<span\s+aria-hidden=[""']true[""']>Save</span>", RegexOptions.IgnoreCase);
+
+        protected static readonly Regex reg_job_no_longer_accepting = new(@"No longer accepting applications", RegexOptions.IgnoreCase);
     }
 }
