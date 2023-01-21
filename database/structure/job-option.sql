@@ -24,7 +24,7 @@ values
 	,	(90,	'field',	'Expert-SQL',		'\b(oracle|sql server|pl[- /]?sql|t[/-]?sql|ms[- ]?sql|sql|database)\b', null)
 	,	(10,	'field',	'Low-Level',		'\b(html|css|json)\b', null)
 	,	(10,	'field',	'Machine-Learning',	'\b((machine|deep)[- ]learning|natural[- ]network|(?-i)ML|(?-i)AI)\b', null)
-	,	(10,	'field',	'Python',			'\bpython\b', null)
+	,	(20,	'field',	'Python',			'\bpython\b', null)
 
 	--	Technologies
 	,	(10,	'tech',		'Web-API',			'\b((web[- ]?)?api|web services)\b', null)
