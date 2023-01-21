@@ -19,7 +19,7 @@ values
 	--	Programming languages
 	 	(90,	'field',	'C#.NET',			'\basp\.net\b|\bc# ?\.net\b|\bc#|(\bdot ?|\.)net\b', null)
 	,	(80,	'field',	'Java',				'\b(java|jvm)\b', null)
-	,	(60,	'field',	'GO-Lang',			'\b(go[- ]?lang|(?-i)G[Oo])\b', null)
+	,	(40,	'field',	'GO-Lang',			'\b(go[- ]?lang|(?-i)G[Oo])\b', null)
 	,	(60,	'field',	'Frontend',			'\b(angular|javascript|typescript|jquery|client[- ]side script(ing)?)\b', null)
 	,	(90,	'field',	'Expert-SQL',		'\b(oracle|sql server|pl[- /]?sql|t[/-]?sql|ms[- ]?sql|sql|database)\b', null)
 	,	(10,	'field',	'Low-Level',		'\b(html|css|json)\b', null)
