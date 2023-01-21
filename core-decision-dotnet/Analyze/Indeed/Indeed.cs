@@ -1,5 +1,4 @@
-﻿using Photon.JobSeeker.IamExpat;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace Photon.JobSeeker.Indeed
 {
@@ -19,6 +18,8 @@ namespace Photon.JobSeeker.Indeed
 
         public override Regex? JobAcceptabilityChecker => IndeedPage.reg_job_acceptability_checker;
 
+
+        public override string GetMainHtml(string html) => IndeedPageJob.GetHtmlContent(html);
 
         protected override void ChangeSettings(dynamic? settings)
         {

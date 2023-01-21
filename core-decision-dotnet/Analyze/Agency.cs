@@ -46,6 +46,8 @@ namespace Photon.JobSeeker
         public abstract string SearchLink { get; }
 
 
+        public abstract string GetMainHtml(string html);
+
         public Result AnalyzeContent(string url, string content)
         {
             using var database = Database.Open();

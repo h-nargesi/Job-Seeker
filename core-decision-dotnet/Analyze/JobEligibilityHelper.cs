@@ -1,6 +1,4 @@
-﻿#undef RENDER_CONTENT
-
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using Serilog;
@@ -61,26 +59,18 @@ namespace Photon.JobSeeker
 
                     if (job == null) break;
                     
-                    var agency = analyzer.AgenciesByID[job.AgencyID];
+                    analyzer.AgenciesByID.TryGetValue(job.AgencyID, out var agency);
 
-#if RENDER_CONTENT
-                    var check = new Regex(@"<h3\s+class=""t-20"">[\s\n\r]*About\s+the\s+company[\s\n\r]*</h3>");
-                    if (job.Html != null && (job.Html.StartsWith("<html") || check.IsMatch(job.Html)))
+                    if (agency != null && job.Html != null && 
+                        (job.Html.StartsWith("<html") || job.Html.StartsWith("<rerender/>")))
                     {
-                        job.Html = job.AgencyID switch
-                        {
-                            1 => Indeed.IndeedPageJob.GetHtmlContent(job.Html ?? ""),
-                            2 => IamExpat.IamExpatPageJob.GetHtmlContent(job.Html ?? ""),
-                            3 => LinkedIn.LinkedInPageJob.GetHtmlContent(job.Html ?? ""),
-                            _ => "",
-                        };
+                        job.Html = agency.GetMainHtml(job.Html ?? "");
                         database.Job.Save(job, JobFilter.Content | JobFilter.Html);
                     }
-#endif
 
                     if (job.Content != null)
                     {
-                        EvaluateJobEligibility(job, agency.JobAcceptabilityChecker);
+                        EvaluateJobEligibility(job, agency?.JobAcceptabilityChecker);
                     }
 
                     lock (revaluation_lock)

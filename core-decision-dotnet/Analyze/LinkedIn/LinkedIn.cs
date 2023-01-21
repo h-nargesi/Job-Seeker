@@ -20,6 +20,8 @@ namespace Photon.JobSeeker.LinkedIn
         public override Regex? JobAcceptabilityChecker => LinkedInPage.reg_job_no_longer_accepting;
 
 
+        public override string GetMainHtml(string html) => LinkedInPageJob.GetHtmlContent(html);
+
         protected override void ChangeSettings(dynamic? settings)
         {
             lock (@lock)

@@ -18,6 +18,8 @@ namespace Photon.JobSeeker.IamExpat
         public override Regex? JobAcceptabilityChecker => null;
 
 
+        public override string GetMainHtml(string html) => IamExpatPageJob.GetHtmlContent(html);
+
         protected override void ChangeSettings(dynamic? settings)
         {
             lock (@lock)
