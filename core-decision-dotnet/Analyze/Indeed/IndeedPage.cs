@@ -26,6 +26,6 @@ namespace Photon.JobSeeker.Indeed
 
         protected static readonly Regex reg_job_adding = new(@"<a[^>]+href=[""']#[""'][^>]+rel=[""']nofollow[""'][^>]+title=[""'][^""']*Add to favourites[""'][^>]*>", RegexOptions.IgnoreCase);
 
-        public static readonly Regex reg_job_acceptability_checker = new(@"This job has expired on Indeed", RegexOptions.IgnoreCase);
+        public static readonly Regex reg_job_acceptability_checker = new(@"\bThis job has expired on Indeed\b", RegexOptions.IgnoreCase);
     }
 }
