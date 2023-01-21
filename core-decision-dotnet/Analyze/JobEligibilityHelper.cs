@@ -258,6 +258,10 @@ namespace Photon.JobSeeker
             if (money_matched.Index - matched.Index > 24)
                 return 1; // have the min score
 
+            var salary_text = money_matched.Value;
+            if (salary_text.ToLower().EndsWith("k"))
+                salary_text = salary_text[0..^1] + "000";
+            
             if (!double.TryParse(money_matched.Value?.Replace(",", ""), out double salary))
                 return 1; // have the min score
 
