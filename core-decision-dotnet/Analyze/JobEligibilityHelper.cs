@@ -64,14 +64,11 @@ namespace Photon.JobSeeker
                     if (agency != null && job.Html != null && 
                         (job.Html.StartsWith("<html") || job.Html.StartsWith("<rerender/>")))
                     {
-                        job.Html = agency.GetMainHtml(job.Html ?? "");
+                        job.Html = agency.GetMainHtml(job.Html);
                         database.Job.Save(job, JobFilter.Content | JobFilter.Html);
                     }
 
-                    if (job.Content != null)
-                    {
-                        EvaluateJobEligibility(job, agency?.JobAcceptabilityChecker);
-                    }
+                    EvaluateJobEligibility(job, agency?.JobAcceptabilityChecker);
 
                     lock (revaluation_lock)
                         CurrentRevaluationProcess.Passed++;
@@ -93,6 +90,8 @@ namespace Photon.JobSeeker
 
         public JobState EvaluateJobEligibility(Job job, Regex? job_acceptability_check)
         {
+            if (job.Content == null) return JobState.NotApproved;
+
             job.Log = "";
             job.Score = null;
 
@@ -100,12 +99,12 @@ namespace Photon.JobSeeker
             var filter = JobFilter.Log | JobFilter.Score | JobFilter.State;
             var user_changes = job.State > JobState.Attention;
 
-            var job_acceptability = job_acceptability_check?.IsMatch(job.Content ?? "");
-            var correct_language = job_acceptability != false ? LanguageIsMatch(job) : (bool?)null;
+            var job_expired = job_acceptability_check?.IsMatch(job.Content);
+            var correct_language = job_expired != true ? LanguageIsMatch(job) : (bool?)null;
             var rejected = correct_language != true;
-            var eligibility = correct_language == true ? EvaluateEligibility(job, out rejected) : false;
+            var eligibility = !rejected ? EvaluateEligibility(job, out rejected) : false;
 
-            if (job_acceptability == false)
+            if (job_expired == true)
             {
                 job.Log = @"Expired!" + (string.IsNullOrEmpty(job.Log) ? "" : "\n") + job.Log;
             }
@@ -126,7 +125,7 @@ namespace Photon.JobSeeker
             Log.Information("Job ({0}): state={1} score={2} acceptable={4} lang={3}",
                 job.State, job.Code, job.Score,
                 correct_language?.ToString() ?? "?",
-                job_acceptability?.ToString() ?? "?");
+                job_expired?.ToString() ?? "?");
             Log.Debug("Job ({0}): log={1}", job.Code, job.Log);
             database.Job.Save(job, filter);
 
