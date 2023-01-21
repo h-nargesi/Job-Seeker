@@ -76,7 +76,10 @@ namespace Photon.JobSeeker
                             database.Job.Save(job, JobFilter.Content | JobFilter.Html);
                         }
 #endif
-                        EvaluateJobEligibility(job);
+                        if (job.Content != null)
+                        {
+                            EvaluateJobEligibility(job);
+                        }
 
                         lock (revaluation_lock)
                             CurrentRevaluationProcess.Passed++;

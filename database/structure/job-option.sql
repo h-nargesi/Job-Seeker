@@ -17,9 +17,10 @@ create unique index UQ_JobOption_Name on JobOption (Title);
 insert into JobOption (Score, Category, Title, Pattern, Settings)
 values
 	--	Programming languages
-		(90,	'field',	'C#.NET',		'\basp\.net\b|\bc# ?\.net\b|\bc#|(\bdot ?|\.)net\b', null)
+	 	(90,	'field',	'C#.NET',		'\basp\.net\b|\bc# ?\.net\b|\bc#|(\bdot ?|\.)net\b', null)
 	,	(80,	'field',	'Java',			'\b(java|jvm)\b', null)
-	,	(20,	'field',	'Frontend',		'\b(angular|javascript|typescript|jquery|client[- ]side script(ing)?)\b', null)
+	,	(60,	'field',	'GO-Lang',		'\b((?-i)G[Oo]|(?i)go[- ]?lang)\b', null)
+	,	(60,	'field',	'Frontend',		'\b(angular|javascript|typescript|jquery|client[- ]side script(ing)?)\b', null)
 	,	(90,	'field',	'Expert-SQL',	'\b(oracle|sql server|pl[- /]?sql|t[/-]?sql|ms[- ]?sql|sql|database)\b', null)
 	,	(10,	'field',	'Low-Level',	'\b(html|css|json)\b', null)
 	
@@ -43,6 +44,7 @@ values
 	,	(02,	'keywords',	'Back-End',		'\b(back[- ]end)\b', null)
 
 	--	Rejection
+	--,	(01,	'rejected',	'react',		'\b(react)\b', null)
 	;
 
 /*
