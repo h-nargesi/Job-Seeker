@@ -78,7 +78,10 @@ namespace Photon.JobSeeker
                     }
 #endif
 
-                    EvaluateJobEligibility(job, agency.JobAcceptabilityChecker);
+                    if (job.Content != null)
+                    {
+                        EvaluateJobEligibility(job, agency.JobAcceptabilityChecker);
+                    }
 
                     lock (revaluation_lock)
                         CurrentRevaluationProcess.Passed++;
@@ -217,7 +220,7 @@ namespace Photon.JobSeeker
                         break;
                     case "rejected":
                         rejected |= option_score > 0;
-                        break;
+                        continue;
                 }
 
                 job.Score += option_score;
