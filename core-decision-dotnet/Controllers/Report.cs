@@ -122,6 +122,7 @@ namespace Photon.JobSeeker
                     JobCount = r.JobCount,
                     Analyzed = r.Analyzed,
                     Accepted = r.Accepted,
+                    Applied = r.Applied,
                     AnalyzingRate = r.AnalyzingRate,
                     AcceptingRate = r.AcceptingRate,
                     Running = agency?.RunningSearchingMethodIndex,

@@ -55,7 +55,7 @@ namespace Photon.JobSeeker
                 try
                 {
                     var check = new Regex(@"<h3\s+class=""t-20"">[\s\n\r]*About\s+the\s+company[\s\n\r]*</h3>");
-                    
+
                     while (true)
                     {
                         var job = database.Job.FetchFrom(CurrentRevaluationProcess.StartTime);
@@ -76,7 +76,10 @@ namespace Photon.JobSeeker
                             database.Job.Save(job, JobFilter.Content | JobFilter.Html);
                         }
 #endif
-                        EvaluateJobEligibility(job);
+                        if (job.Content != null)
+                        {
+                            EvaluateJobEligibility(job);
+                        }
 
                         lock (revaluation_lock)
                             CurrentRevaluationProcess.Passed++;
@@ -206,7 +209,7 @@ namespace Photon.JobSeeker
                         break;
                     case "rejected":
                         rejected |= option_score > 0;
-                        break;
+                        continue;
                 }
 
                 job.Score += option_score;

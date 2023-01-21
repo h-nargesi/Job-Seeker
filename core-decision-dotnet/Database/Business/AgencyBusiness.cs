@@ -21,6 +21,7 @@ namespace Photon.JobSeeker
                     JobCount = (long)reader["JobCount"],
                     Analyzed = (long)reader["Analyzed"],
                     Accepted = (long)reader["Accepted"],
+                    Applied = (long)reader["Applied"],
                     AnalyzingRate = (long)reader["AnalyzingRate"],
                     AcceptingRate = (long)reader["AcceptingRate"],
                 });
@@ -88,15 +89,15 @@ FROM (
     SELECT agc.AgencyID, agc.Title
         , IFNULL(job.JobCount, 0) AS JobCount
         , IFNULL(job.Analyzed, 0) AS Analyzed
-        , IFNULL(job.Accepted, 0) AS Accepted
+        , IFNULL(job.Attention, 0) + IFNULL(job.Applied, 0) AS Accepted
+        , IFNULL(job.Applied, 0) AS Applied
     FROM Agency agc
     LEFT JOIN  (
         SELECT AgencyID
             , COUNT(*) AS JobCount
             , SUM(CASE State WHEN '{nameof(JobState.Saved)}' THEN 0 ELSE 1 END) AS Analyzed
-            , SUM(CASE State WHEN '{nameof(JobState.Attention)}' THEN 1
-                            WHEN '{nameof(JobState.Applied)}' THEN 1
-                            ELSE 0 END) AS Accepted
+            , SUM(CASE State WHEN '{nameof(JobState.Attention)}' THEN 1 ELSE 0 END) AS Attention
+            , SUM(CASE State WHEN '{nameof(JobState.Applied)}' THEN 1 ELSE 0 END) AS Applied
         FROM Job
         GROUP BY AgencyID
     

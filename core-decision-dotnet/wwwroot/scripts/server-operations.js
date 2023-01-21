@@ -24,6 +24,7 @@ async function apply(jobid) {
         await fetch("/job/apply?jobid=" + jobid, { method: 'POST' });
         document.getElementById('Job_' + jobid).className = 'applied';
         LoadJobs();
+        LoadAgencies();
     } catch (e) {
         console.error(e);
     }
@@ -34,6 +35,7 @@ async function reject(jobid) {
         await fetch("/job/reject?jobid=" + jobid, { method: 'POST' });
         document.getElementById('Job_' + jobid).className = 'rejected';
         LoadJobs();
+        LoadAgencies();
     } catch (e) {
         console.error(e);
     }

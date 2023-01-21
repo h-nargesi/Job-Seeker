@@ -152,25 +152,32 @@ namespace Photon.JobSeeker
 
         private const string Q_INDEX = @$"
 SELECT *
+    , CASE Category
+        WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, Score DESC, RegTime DESC)
+        ELSE ROW_NUMBER() OVER(PARTITION BY Category ORDER BY Score DESC, RegTime DESC)
+        END AS Ordering
 FROM (
-    SELECT job.*
-        , ROW_NUMBER() OVER(PARTITION BY State ORDER BY Score DESC, RegTime DESC) AS Ranking
+    SELECT *
+        , CASE Category
+          WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY ModifiedOn DESC, Score DESC, RegTime DESC)
+          ELSE ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY Score DESC, RegTime DESC)
+          END AS Ranking
     FROM (
-        SELECT Job.JobID, Job.RegTime, Job.AgencyID, Job.Code, Job.Title
+        SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
             , Job.State, Job.Score, Job.Url, Job.Link, Job.Log
             , Agency.Title as AgencyName
             , CASE State WHEN '{nameof(JobState.Attention)}' THEN 1
                          WHEN '{nameof(JobState.NotApproved)}' THEN 2
-                         WHEN '{nameof(JobState.Applied)}' THEN 3
-                         WHEN '{nameof(JobState.Rejected)}' THEN 3
-                         ELSE 100
-            END AS Ordering
+                         WHEN '{nameof(JobState.Applied)}' THEN 4
+                         WHEN '{nameof(JobState.Rejected)}' THEN 4
+                         ELSE 12
+            END AS Category
         FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
         @where@
     ) job
-)
-WHERE Ranking <= 5 OR (Ordering <= 3 AND Ranking <= 30)
-ORDER BY Ordering, Score DESC, RegTime DESC";
+) job
+WHERE Ranking <= (12 / Category)
+ORDER BY Category, Ordering";
 
         private const string Q_FETCH = @"
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
