@@ -6,12 +6,16 @@ namespace Photon.JobSeeker
     [Route("[controller]/[action]")]
     public class JobController : Controller
     {
+        private readonly Analyzer analyzer;
+
+        public JobController(Analyzer analyzer) => this.analyzer = analyzer;
+
         [HttpPost]
         public IActionResult Revaluate()
         {
             try
             {
-                JobEligibilityHelper.RunRevaluateProcess();
+                JobEligibilityHelper.RunRevaluateProcess(analyzer);
                 return Ok();
             }
             catch (Exception ex)

@@ -5,13 +5,14 @@ namespace Photon.JobSeeker
     public class Analyzer
     {
         private readonly object lock_loader = new();
-        private readonly Dictionary<string, Agency> agencies = new();
+        private readonly Dictionary<string, Agency> agencies_by_name = new();
+        private readonly Dictionary<long, Agency> agencies_by_id = new();
 
         public IReadOnlyDictionary<string, Agency> Agencies
         {
             get
             {
-                if (agencies.Count == 0)
+                if (agencies_by_name.Count == 0)
                 {
                     lock (lock_loader)
                     {
@@ -19,7 +20,23 @@ namespace Photon.JobSeeker
                     }
                 }
 
-                return agencies;
+                return agencies_by_name;
+            }
+        }
+
+        public IReadOnlyDictionary<long, Agency> AgenciesByID
+        {
+            get
+            {
+                if (agencies_by_id.Count == 0)
+                {
+                    lock (lock_loader)
+                    {
+                        LoadAgencies();
+                    }
+                }
+
+                return agencies_by_id;
             }
         }
 
@@ -33,7 +50,8 @@ namespace Photon.JobSeeker
 
         public void ClearAgencies()
         {
-            agencies.Clear();
+            agencies_by_name.Clear();
+            agencies_by_id.Clear();
         }
 
         private Result AnalyzeContent(PageContext context)
@@ -57,7 +75,8 @@ namespace Photon.JobSeeker
 
         private void LoadAgencies()
         {
-            agencies.Clear();
+            agencies_by_name.Clear();
+            agencies_by_id.Clear();
             Log.Debug("loading agencies");
 
             var types = TypeHelper.GetSubTypes(typeof(Agency));
@@ -73,8 +92,11 @@ namespace Photon.JobSeeker
 
                 if (agency.ID == default) continue;
 
-                agencies.Add(agency.Name, agency);
-                Log.Debug("agency added: {0}", agency.Name);
+                if (agency.IsActiveSeeking || agency.IsActiveAnalyzing)
+                    agencies_by_name.Add(agency.Name, agency);
+                agencies_by_id.Add(agency.ID, agency);
+                Log.Debug("agency added: {0} ({1}) - seeking={2}, analyzin={3}", 
+                    agency.Name, agency.ID, agency.IsActiveSeeking, agency.IsActiveAnalyzing);
             }
         }
     }

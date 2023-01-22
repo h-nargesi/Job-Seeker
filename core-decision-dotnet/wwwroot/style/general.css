@@ -33,7 +33,8 @@ footer {
     text-decoration: none;
 }
 
-h4 a, h4 a:visited {
+h4 a,
+h4 a:visited {
     color: var(--title-color);
     text-decoration: none;
 }
@@ -71,7 +72,8 @@ section ul {
     margin-bottom: 0;
 }
 
-section, article {
+section,
+article {
     padding-top: 15pt;
     padding-bottom: 5pt;
 }
@@ -109,5 +111,5 @@ footer {
 }
 
 .modal-body {
-    white-space: pre;
+    white-space: pre-line;
 }

@@ -152,28 +152,38 @@ namespace Photon.JobSeeker
 
         private const string Q_INDEX = @$"
 SELECT *
-    , CASE Category
-        WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, Score DESC, RegTime DESC)
-        ELSE ROW_NUMBER() OVER(PARTITION BY Category ORDER BY Score DESC, RegTime DESC)
-        END AS Ordering
+     , CASE Category
+       WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, RankScore DESC, RegTime DESC)
+       ELSE ROW_NUMBER() OVER(PARTITION BY Category ORDER BY RankScore DESC, RegTime DESC)
+       END AS Ordering
 FROM (
     SELECT *
         , CASE Category
-          WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY ModifiedOn DESC, Score DESC, RegTime DESC)
-          ELSE ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY Score DESC, RegTime DESC)
+          WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY ModifiedOn DESC, RankScore DESC, RegTime DESC)
+          ELSE ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY RankScore DESC, RegTime DESC)
           END AS Ranking
     FROM (
-        SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
-            , Job.State, Job.Score, Job.Url, Job.Link, Job.Log
-            , Agency.Title as AgencyName
-            , CASE State WHEN '{nameof(JobState.Attention)}' THEN 1
-                         WHEN '{nameof(JobState.NotApproved)}' THEN 2
-                         WHEN '{nameof(JobState.Applied)}' THEN 4
-                         WHEN '{nameof(JobState.Rejected)}' THEN 4
-                         ELSE 12
-            END AS Category
-        FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
-        @where@
+        SELECT *
+             , Score + 10 * SUM(ChangeDays) OVER(PARTITION BY AgencyID, State ORDER BY RegTime DESC RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS RankScore
+        FROM (
+            SELECT *
+                 , CASE WHEN RegDate != LAG(RegDate) OVER(PARTITION BY AgencyID, State ORDER BY RegTime DESC) THEN 1 ELSE 0
+                   END AS ChangeDays
+            FROM (
+                SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
+                     , Job.State, Job.Score, Job.Url, Job.Link, Job.Log
+                     , Agency.Title as AgencyName
+                     , CASE State 
+                       WHEN '{nameof(JobState.Attention)}' THEN 1
+                       WHEN '{nameof(JobState.NotApproved)}' THEN 2
+                       WHEN '{nameof(JobState.Applied)}' THEN 4
+                       WHEN '{nameof(JobState.Rejected)}' THEN 4
+                       ELSE 12
+                       END AS Category
+                     , SUBSTR(Job.RegTime, 1, 10) AS RegDate
+                FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+            ) job
+        ) job
     ) job
 ) job
 WHERE Ranking <= (12 / Category)
