@@ -224,7 +224,7 @@ namespace Photon.JobSeeker
 
             foreach (var category in option_scores)
             {
-                logs.Add($"*{category.Key[0..1].ToUpper() + category.Key[1..]}*");
+                logs.Add($"*{category.Key[0..1].ToUpper() + category.Key[1..]}:*");
                 logs.Add("");
 
                 category.Value.Sort((a, b) => b.score.CompareTo(a.score));
