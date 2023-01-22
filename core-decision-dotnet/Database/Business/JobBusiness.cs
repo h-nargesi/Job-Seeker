@@ -6,9 +6,13 @@ namespace Photon.JobSeeker
     {
         public JobBusiness(Database database) : base(database) { }
 
-        public List<object> Fetch()
+        public List<object> Fetch(int[] agencyids)
         {
-            using var reader = database.Read(Q_INDEX);
+            string agencies;
+            if (agencyids.Length < 1) agencies = string.Empty;
+            else agencies = $"WHERE Agency.AgencyID IN ({string.Join(",", agencyids)})";
+
+            using var reader = database.Read(Q_INDEX.Replace("@where@", agencies));
             var list = new List<object>();
 
             while (reader.Read())
