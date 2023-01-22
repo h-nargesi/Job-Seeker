@@ -35,9 +35,9 @@ values
 	,	(30,	'production',	'ERP',			'\berp\b', null)
 
 	--	Company Benefits
-	,	(150,	'benefit',	'Relocation',		'\brelocation(\s+(support|package))?\b|\bvisa(\s+(support|sponsorship))\b', null)
+	,	(170,	'benefit',	'Relocation',		'\brelocation(\s+(support|package))?\b|\bvisa(\s+(support|sponsorship))\b', null)
 	,	(02,	'salary',	'Salary',			'\bsalary\b.*?(\d[\d,]*(000|k))(.+?\b(month|year)\b)?',
-				'{ "money": 1, "period": 3 }')
+				'{ "money": 1, "period": 4 }')
 
 	--	Keywords
 	,	(02,	'keywords',	'Full-stack',		'\bfull[- ]?stack\b', null)
@@ -47,7 +47,7 @@ values
 	,	(02,	'keywords',	'Back-End',			'\bback[- ]?end\b', null)
 
 	--	Rejection
-	--,	(01,	'rejected',	'react',			'\b(react)\b', null)
+	--,	(01,	'reject',	'react',			'\b(react)\b', null)
 	;
 
 update JobOption set Efective = 0 where Title in ('Machine-Learning', 'TensorFlow');
