@@ -50,8 +50,6 @@ values
 	--,	(01,	'reject',	'react',			'\b(react)\b', null)
 	;
 
-update JobOption set Efective = 0 where Title in ('Machine-Learning', 'TensorFlow');
-
 /*
 	return if re.{\b(c#|(dot ?|\.)net)\b'} ok else not ok
 
