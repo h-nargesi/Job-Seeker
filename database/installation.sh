@@ -2,6 +2,7 @@
 # rm -f data.sqlite3
 
 ##### Structure
+sqlite3 data.sqlite3 < structure/setting.sql;
 sqlite3 data.sqlite3 < structure/agency.sql;
 sqlite3 data.sqlite3 < structure/job-option.sql;
 sqlite3 data.sqlite3 < structure/job.sql;

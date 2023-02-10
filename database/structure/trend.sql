@@ -10,4 +10,4 @@ create table Trend (
 	
 	unique			(AgencyID, Type),
 	foreign key		(AgencyID) references Agency (AgencyID) on delete no action
-)
+);
