@@ -15,7 +15,7 @@ insert into Agency (Title, Domain, Link, UserName, Password, Settings)
 values
 	('Indeed',		'(.+\.)?indeed\.com$',			'https://indeed.com',		'username', 'password',
 					'{ "running": 0,
-						"domains": ["https://nl.indeed.com/", "https://de.indeed.com/, "https://au.indeed.com/"],
+						"domains": ["https://nl.indeed.com/", "https://de.indeed.com/", "https://au.indeed.com/"],
 						"search-titles": ["developer", "data scientist"] }'),
 
 	('IamExpat',	'(.+\.)?iamexpat\.(nl|de|ch|com)$',	'http://iamexpat.nl',	'username', 'passwords',
@@ -29,5 +29,4 @@ values
 						"search-titles": ["developer", "data scientist"] }')
 on conflict (Title) do update set 
 	Domain = excluded.Domain, Link = excluded.Link,
-	UserName = excluded.UserName, Password = excluded.Password, 
 	Settings = excluded.Settings;

@@ -7,9 +7,9 @@ namespace Photon.JobSeeker.IamExpat
     {
         public override int Order => 10;
 
-        public override TrendState TrendState => TrendState.Analyzing;
-
         public IamExpatPageJob(IamExpat parent) : base(parent) { }
+
+        public override TrendState TrendState => TrendState.Analyzing;
 
         public override Command[]? IssueCommand(string url, string content)
         {
@@ -18,7 +18,7 @@ namespace Photon.JobSeeker.IamExpat
             var job = LoadJob(url, content);
 
             using var evaluator = new JobEligibilityHelper();
-            var state = evaluator.EvaluateJobEligibility(job);
+            var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
 
             var commands = new List<Command>();
 

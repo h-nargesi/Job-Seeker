@@ -109,7 +109,7 @@ FROM (
 SELECT Settings FROM Agency WHERE AgencyID = $agency";
 
         private const string Q_LOAD_BY_NAME = @"
-SELECT AgencyID, Domain, Link, Active, Settings FROM Agency WHERE Title = $title AND Active != 0";
+SELECT AgencyID, Domain, Link, Active, Settings FROM Agency WHERE Title = $title";
 
         private const string Q_GET_USER_PASS = @"
 SELECT UserName, Password FROM Agency WHERE Title = $title";
