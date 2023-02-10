@@ -62,23 +62,36 @@ namespace Photon.JobSeeker
 
                 if (commands != null)
                 {
+                    var trend_state = page.TrendState;
+
                     if (page.TrendState == TrendState.Seeking && commands.Length == 0)
                     {
-                        if (RunningSearchingMethodIndex + 1 < SearchingMethodTitles.Length)
+                        if (settings != null)
                         {
-                            RunningSearchingMethodIndex += 1;
-                            commands = new Command[] { Command.Go(SearchLink) };
+                            if (RunningSearchingMethodIndex + 1 < SearchingMethodTitles.Length)
+                            {
+                                settings.running += 1;
+                                commands = new Command[] { Command.Go(SearchLink) };
+                            }
+                            else
+                            {
+                                settings.running = 0;
+                                trend_state = TrendState.Finished;
+                            }
+
+                            ChangeSettings(settings);
+                            database.Agency.ChangeRunningMethod(this);
                         }
                         else
                         {
-                            // TODO: finish
+                            trend_state = TrendState.Finished;
                         }
                     }
 
-                    Log.Information("Page checked: {0}", page.GetType().Name);
+                    Log.Information("Page checked: {0}, {1}", page.GetType().Name, trend_state);
                     Log.Debug("Page commands: {0}", commands.StringJoin());
 
-                    return new Result { State = page.TrendState, Commands = commands };
+                    return new Result { State = trend_state, Commands = commands };
                 }
             }
 
