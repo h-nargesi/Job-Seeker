@@ -62,8 +62,22 @@ namespace Photon.JobSeeker
 
                 if (commands != null)
                 {
+                    if (page.TrendState == TrendState.Seeking && commands.Length == 0)
+                    {
+                        if (RunningSearchingMethodIndex + 1 < SearchingMethodTitles.Length)
+                        {
+                            RunningSearchingMethodIndex += 1;
+                            commands = new Command[] { Command.Go(SearchLink) };
+                        }
+                        else
+                        {
+                            // TODO: finish
+                        }
+                    }
+
                     Log.Information("Page checked: {0}", page.GetType().Name);
                     Log.Debug("Page commands: {0}", commands.StringJoin());
+
                     return new Result { State = page.TrendState, Commands = commands };
                 }
             }
