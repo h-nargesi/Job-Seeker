@@ -9,11 +9,11 @@ namespace Photon.JobSeeker.Pages
 
         public override TrendState TrendState => TrendState.Analyzing;
 
-        protected JobPage(Agency parent, IPageHandler handler) : base(parent, handler) { }
+        protected JobPage(Agency parent) : base(parent) { }
 
         public override Command[]? IssueCommand(string url, string content)
         {
-            if (Handler.CheckUrl(content, out var command)) return command;
+            if (CheckInvalidUrl(content, out var command)) return command;
 
             var job = LoadJob(url, content);
 

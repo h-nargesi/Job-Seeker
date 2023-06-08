@@ -1,6 +1,8 @@
-﻿namespace Photon.JobSeeker.IamExpat
+﻿using Photon.JobSeeker.Pages;
+
+namespace Photon.JobSeeker.IamExpat
 {
-    class IamExpatPageLogin : IamExpatPage
+    class IamExpatPageLogin : LoginPage, IamExpatPageInterface
     {
         public override int Order => 1;
 
@@ -8,13 +10,18 @@
 
         public IamExpatPageLogin(IamExpat parent) : base(parent) { }
 
-        public override Command[]? IssueCommand(string url, string content)
+        protected override bool CheckInvalidUrl(string text, out Command[]? commands)
         {
-            if (!reg_login_url.IsMatch(url)) return null;
+            commands = null;
+            return !IamExpatPageInterface.reg_login_url.IsMatch(text);
+        }
 
+        protected override Command[] LoginCommands()
+        {
             var (user, pass) = GetUserPass();
 
-            return new Command[] {
+            return new Command[]
+            {
                 Command.Fill(@"#edit-name", user),
                 Command.Fill(@"#edit-pass", pass),
                 Command.Click(@"#edit-submit")

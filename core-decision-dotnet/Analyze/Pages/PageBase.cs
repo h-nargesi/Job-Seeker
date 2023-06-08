@@ -1,13 +1,10 @@
-using System.Text.RegularExpressions;
-
 namespace Photon.JobSeeker.Pages
 {
     public abstract class PageBase : IComparable<PageBase>
     {
-        protected PageBase(Agency parent, IPageHandler hanlder)
+        protected PageBase(Agency parent)
         {
             Parent = parent ?? throw new ArgumentNullException(nameof(parent));
-            Handler = hanlder ?? throw new ArgumentNullException(nameof(hanlder));
         }
 
         public Agency Parent { get; }
@@ -15,8 +12,6 @@ namespace Photon.JobSeeker.Pages
         public abstract int Order { get; }
 
         public abstract TrendState TrendState { get; }
-
-        protected IPageHandler Handler { get; }
 
         public abstract Command[]? IssueCommand(string url, string content);
 
@@ -40,11 +35,6 @@ namespace Photon.JobSeeker.Pages
             return AgencyBusiness.GetUserPass(Parent.Name);
         }
 
-        protected interface IPageHandler
-        {
-            bool CheckUrl(string text, out Command[] commands);
-
-            string GetJobCode(Match match);
-        }
+        protected abstract bool CheckInvalidUrl(string text, out Command[]? commands);
     }
 }

@@ -6,15 +6,15 @@
 
         public override TrendState TrendState => TrendState.Auth;
 
-        protected AuthPage(Agency parent, IPageHandler handler) : base(parent, handler) { }
-
-        public abstract Command[] LoginUrl { get; }
-
+        protected AuthPage(Agency parent) : base(parent) { }
+        
         public override Command[]? IssueCommand(string url, string content)
         {
-            if (Handler.CheckUrl(content, out var command)) return command;
+            if (CheckInvalidUrl(content, out var command)) return command;
 
-            return LoginUrl;
+            return LoginUrl();
         }
+        
+        protected abstract Command[] LoginUrl();
     }
 }

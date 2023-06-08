@@ -2,8 +2,12 @@
 
 namespace Photon.JobSeeker.IamExpat
 {
-    interface IamExpatPageInterface
+    abstract class IamExpatPage : Page
     {
+        protected readonly IamExpat parent;
+
+        protected IamExpatPage(IamExpat parent) : base(parent) => this.parent = parent;
+
         protected static readonly Regex reg_login_but = new(@"<a[^>]+href=[""']/login[""']", RegexOptions.IgnoreCase);
 
         protected static readonly Regex reg_login_url = new(@"^https?://[^/]*iamexpat\.com/login", RegexOptions.IgnoreCase);

@@ -1,14 +1,13 @@
 ﻿using System.Web;
-using Photon.JobSeeker.Pages;
 using Serilog;
 
 namespace Photon.JobSeeker.IamExpat
 {
-    class IamExpatPageJob : JobPage, IamExpatPageInterface
+    class _IamExpatPageJob : IamExpatPage
     {
         public override int Order => 10;
 
-        public IamExpatPageJob(IamExpat parent) : base(parent) { }
+        public _IamExpatPageJob(IamExpat parent) : base(parent) { }
 
         public override TrendState TrendState => TrendState.Analyzing;
 
@@ -105,44 +104,20 @@ namespace Photon.JobSeeker.IamExpat
             return job;
         }
 
-        protected override bool CheckInvalidUrl(string text, out Command[]? commands)
+        public static string GetHtmlContent(string html)
         {
-            commands = null;
-            return !IamExpatPageInterface.reg_job_url.IsMatch(text);
-        }
-
-        protected override string GetJobCode(string text)
-        {
-            var url_matched = IamExpatPageInterface.reg_job_url.Match(text);
-            if (!url_matched.Success) return string.Empty;
-
-            return IamExpatPageInterface.GetJobCode(url_matched);
-        }
-
-        protected override bool JobFallow(string text, out Command[] commands)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override void GetJobContent(string html, out string? code, out string? apply, out string? title)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override string GetHtmlContent(string html)
-        {
-            var start_match = IamExpatPageInterface.reg_job_content_start.Match(html);
+            var start_match = reg_job_content_start.Match(html);
             if (!start_match.Success) return html;
 
-            var end_match = IamExpatPageInterface.reg_job_content_end.Match(html);
+            var end_match = reg_job_content_end.Match(html);
             if (!end_match.Success) return html;
 
             html = html.Substring(start_match.Index, end_match.Index + end_match.Length - start_match.Index);
             
-            start_match = IamExpatPageInterface.reg_job_content_apply_start.Match(html);
+            start_match = reg_job_content_apply_start.Match(html);
             if (!start_match.Success) return html;
 
-            end_match = IamExpatPageInterface.reg_job_content_apply_end.Match(html);
+            end_match = reg_job_content_apply_end.Match(html);
             if (!end_match.Success) return html;
 
             return html.Remove(start_match.Index, end_match.Index + end_match.Length - start_match.Index);

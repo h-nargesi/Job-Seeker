@@ -1,16 +1,13 @@
-﻿namespace Photon.JobSeeker.IamExpat
+﻿using Photon.JobSeeker.Pages;
+
+namespace Photon.JobSeeker.IamExpat
 {
-    class IamExpatPageOther : IamExpatPage
+    class IamExpatPageOther : OtherPages, IamExpatPageInterface
     {
         public override int Order => 100;
 
         public override TrendState TrendState => TrendState.Other;
 
         public IamExpatPageOther(IamExpat parent) : base(parent) { }
-
-        public override Command[]? IssueCommand(string url, string content)
-        {
-            return new Command[0];
-        }
     }
 }
