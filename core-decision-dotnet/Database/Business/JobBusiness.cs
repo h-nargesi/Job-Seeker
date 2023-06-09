@@ -150,7 +150,53 @@ namespace Photon.JobSeeker
             };
         }
 
-        private const string Q_INDEX = @$"
+        /*
+        c=\frac{b\cdot6}{7}
+        X=x-b
+        Y=ae^{-\frac{X^{2}}{2c^{2}}}
+        U=-e^{\left(\frac{2\cdot X}{c}\right)}
+        Y+U
+        */
+        private const int DaysPriod = 14;
+
+        private readonly static string Q_INDEX = @$"
+WITH date_diff AS (
+    SELECT job.*
+         , JulianDay(latest.LatestTime) - JulianDay(job.RegTime) - {DaysPriod} AS X
+         , latest.TopScore AS A
+         , {DaysPriod} * 6 / 7 AS C
+    FROM (
+        SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
+             , Job.State, Job.Score, Job.Url, Job.Link, Job.Log
+             , Agency.Title as AgencyName
+             , CASE State 
+               WHEN '{nameof(JobState.Attention)}' THEN 1
+               WHEN '{nameof(JobState.NotApproved)}' THEN 2
+               WHEN '{nameof(JobState.Applied)}' THEN 4
+               WHEN '{nameof(JobState.Rejected)}' THEN 4
+               ELSE 12
+               END AS Category
+             , SUBSTR(Job.RegTime, 1, 10) AS RegDate
+        FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+    ) job
+    CROSS JOIN (
+        SELECT MAX(RegTime) AS LatestTime, MAX(Score) / 2 AS TopScore FROM Job
+    ) latest
+
+), ranking AS (
+    SELECT job.JobID, job.RegTime, job.ModifiedOn, job.AgencyID, job.Code, job.Title
+         , job.State, job.Score, job.Url, job.Link, job.Log
+         , job.AgencyName, job.Category, job.RegDate
+         --*, A * EXP(YF) AS Y, - EXP(UF) AS U, A * EXP(YF) - EXP(UF) AS TimeScore
+         , Score + A * EXP(YF) - EXP(UF) AS RankScore
+    FROM (
+        SELECT *
+             , POWER(X, 2) / (-2 * POWER(C, 2)) AS YF
+             , 2 * X / C AS UF
+        FROM date_diff
+    ) job
+)
+
 SELECT *
      , CASE Category
        WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, RankScore DESC, RegTime DESC)
@@ -162,27 +208,7 @@ FROM (
           WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY ModifiedOn DESC, RankScore DESC, RegTime DESC)
           ELSE ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY RankScore DESC, RegTime DESC)
           END AS Ranking
-    FROM (
-        SELECT *
-             , Score - Cast((JulianDay(job.RegTime) - JulianDay(beginning.TheTime)) As Integer) AS RankScore
-        FROM (
-            SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
-                 , Job.State, Job.Score, Job.Url, Job.Link, Job.Log
-                 , Agency.Title as AgencyName
-                 , CASE State 
-                   WHEN '{nameof(JobState.Attention)}' THEN 1
-                   WHEN '{nameof(JobState.NotApproved)}' THEN 2
-                   WHEN '{nameof(JobState.Applied)}' THEN 4
-                   WHEN '{nameof(JobState.Rejected)}' THEN 4
-                   ELSE 12
-                   END AS Category
-                 , SUBSTR(Job.RegTime, 1, 10) AS RegDate
-            FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
-        ) job
-        CROSS JOIN (
-            SELECT MIN(RegTime) AS TheTime FROM Job
-        ) beginning
-    ) job
+    FROM ranking
 ) job
 WHERE Ranking <= (12 / Category)
 ORDER BY Category, Ordering";
