@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using System.Data.SQLite;
 
 namespace Photon.JobSeeker
 {
@@ -131,12 +131,12 @@ namespace Photon.JobSeeker
             nameof(JobFilter.AgencyID), nameof(JobFilter.Code)
         };
 
-        private static Job ReadJob(SqliteDataReader reader, bool full = false)
+        private static Job ReadJob(SQLiteDataReader reader, bool full = false)
         {
             return new Job
             {
                 JobID = (long)reader[nameof(Job.JobID)],
-                RegTime = DateTime.Parse((string)reader[nameof(Job.RegTime)]),
+                RegTime = (DateTime)reader[nameof(Job.RegTime)],
                 AgencyID = (long)reader[nameof(Job.AgencyID)],
                 Code = (string)reader[nameof(Job.Code)],
                 Title = reader[nameof(Job.Title)] as string,
