@@ -1,14 +1,14 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using System.Data.SQLite;
 
 namespace Photon.JobSeeker
 {
     public class Dictionaries : IDisposable
     {
-        private readonly SqliteConnection connection;
-        private readonly SqliteCommand executer;
+        private readonly SQLiteConnection connection;
+        private readonly SQLiteCommand executer;
         private static string? connection_string;
 
-        public Dictionaries(SqliteConnection connection, SqliteCommand executer)
+        public Dictionaries(SQLiteConnection connection, SQLiteCommand executer)
         {
             this.connection = connection;
             this.executer = executer;
@@ -27,7 +27,7 @@ namespace Photon.JobSeeker
             if (connection_string == null)
                 throw new Exception("The configuration is not set.");
 
-            var connection = new SqliteConnection(connection_string);
+            var connection = new SQLiteConnection(connection_string);
             var executer = connection.CreateCommand();
 
             connection.Open();

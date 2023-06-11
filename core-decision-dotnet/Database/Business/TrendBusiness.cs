@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using System.Data.SQLite;
 
 namespace Photon.JobSeeker
 {
@@ -53,7 +53,7 @@ namespace Photon.JobSeeker
         public void Save(object model, TrendFilter filter = TrendFilter.All)
         {
             long id;
-
+            
             var trend = model as Trend;
             if (trend != null) id = trend.TrendID;
             else
@@ -99,15 +99,15 @@ namespace Photon.JobSeeker
             });
         }
 
-        private static Trend ReadTrend(SqliteDataReader reader)
+        private static Trend ReadTrend(SQLiteDataReader reader)
         {
             return new Trend
             {
                 TrendID = (long)reader[nameof(Trend.TrendID)],
                 AgencyID = (long)reader[nameof(Trend.AgencyID)],
-                LastActivity = DateTime.Parse((string)reader[nameof(Trend.LastActivity)]),
+                LastActivity = (DateTime)reader[nameof(Trend.LastActivity)],
                 State = Enum.Parse<TrendState>((string)reader[nameof(Trend.State)]),
-                Reserved = 0 != (long)reader[nameof(Trend.Reserved)],
+                Reserved = (bool)reader[nameof(Trend.Reserved)],
             };
         }
 
