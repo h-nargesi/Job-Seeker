@@ -56,7 +56,7 @@ class CoreMessaging {
             return CoreMessaging.SCOPES;
 
         } catch (e) {
-            console.error(e);
+            console.log(e);
             return {};
         }
     }
@@ -76,7 +76,7 @@ class CoreMessaging {
             return response;
 
         } catch (e) {
-            console.error(e);
+            console.log(e);
             return {};
         }
     }

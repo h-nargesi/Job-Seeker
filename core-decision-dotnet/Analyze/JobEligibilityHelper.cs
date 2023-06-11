@@ -125,7 +125,7 @@ namespace Photon.JobSeeker
                 }
 
                 Log.Information("Job ({0}): state={1} score={2} acceptable={4} lang={3}",
-                    job.State, job.Code, job.Score,
+                    job.Code, job.State.ToString(), job.Score,
                     correct_language?.ToString() ?? "?",
                     job_expired?.ToString() ?? "?");
                 Log.Debug("Job ({0}): log={1}", job.Code, job.Log);
