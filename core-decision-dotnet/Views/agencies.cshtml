@@ -3,7 +3,13 @@
 {
     var index = -1;
     <div class="agency mt-3" aria-title="@agency.Name">
-        <h4><a href="@agency.SearchLink">@agency.Name</a><small><small> (@agency.Applied)</small> - @agency.Accepted <small>(@agency.AcceptingRate %)</small> / @agency.Analyzed <small>(@agency.AnalyzingRate %)</small> / @agency.JobCount</small></h4>
+        <h4><a href="@agency.SearchLink">@agency.Name</a></h4>
+        <p>
+            <span title="Applied">(<small>Applied:</small> @agency.Applied)</span> - 
+            <span title="Accepted">@agency.Accepted</span> <small title="Accepting Rate">(@agency.AcceptingRate %)</small> / 
+            <span title="Analyzed">@agency.Analyzed</span> <small title="Analyzing Rate">(@agency.AnalyzingRate %)</small> / 
+            <span title="Tital Jobs">@agency.JobCount</span>
+        </p>
         @if (agency.Running is int running)
         {
             @foreach (var method in agency.Methods)

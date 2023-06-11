@@ -99,6 +99,11 @@ namespace Photon.JobSeeker
             });
         }
 
+        public void ClearSearching(long agency_id)
+        {
+            database.Execute(Q_DELETE_AGENCY, agency_id);
+        }
+
         private static Trend ReadTrend(SQLiteDataReader reader)
         {
             return new Trend
@@ -125,6 +130,9 @@ WHERE AgencyID = $agency AND Type = $type";
 
         private const string Q_DELETE_EXPIRED = @"
 DELETE FROM Trend WHERE DATETIME(LastActivity) <= $expiration";
+
+        private const string Q_DELETE_AGENCY = @$"
+DELETE FROM Trend WHERE AgencyID = $agencyid AND Type = '{nameof(TrendType.Search)}'";
 
     }
 }
