@@ -1,14 +1,14 @@
 ﻿using System.Reflection;
 using System.Text.RegularExpressions;
-using Microsoft.Data.Sqlite;
+using System.Data.SQLite;
 
 namespace Photon.JobSeeker
 {
     public class Database : IDisposable
     {
-        private readonly SqliteConnection connection;
-        private readonly SqliteCommand executer;
-        private SqliteTransaction? transaction;
+        private readonly SQLiteConnection connection;
+        private readonly SQLiteCommand executer;
+        private SQLiteTransaction? transaction;
         private static string? connection_string;
         private static readonly Regex reg_parameter = new(@"\$[\w_]+");
 
@@ -17,7 +17,7 @@ namespace Photon.JobSeeker
         private AgencyBusiness? agency_business;
         private JobOptionBusiness? job_option_business;
 
-        public Database(SqliteConnection connection, SqliteCommand executer)
+        public Database(SQLiteConnection connection, SQLiteCommand executer)
         {
             this.connection = connection;
             this.executer = executer;
@@ -36,11 +36,11 @@ namespace Photon.JobSeeker
             if (connection_string == null)
                 throw new Exception("The configuration is not set.");
 
-            var connection = new SqliteConnection(connection_string);
+            var connection = new SQLiteConnection(connection_string);
             var executer = connection.CreateCommand();
 
             connection.Open();
-
+            
             return new Database(connection, executer);
         }
 
@@ -78,25 +78,25 @@ namespace Photon.JobSeeker
 
         public Database Parameter(string name, object value)
         {
-            SqliteType type;
+            System.Data.DbType type;
 
             (type, value) = DbType.GetSqliteType(value);
 
             if (!name.StartsWith("$")) name = "$" + name;
 
-            SqliteParameter parameter;
+            SQLiteParameter parameter;
             if (executer.Parameters.Contains(name))
             {
                 parameter = executer.Parameters[name];
-                parameter.SqliteType = type;
+                parameter.DbType = type;
                 parameter.Value = value;
             }
             else
             {
-                executer.Parameters.Add(new SqliteParameter()
+                executer.Parameters.Add(new SQLiteParameter()
                 {
                     ParameterName = name,
-                    SqliteType = type,
+                    DbType = type,
                     Value = value,
                 });
             }
@@ -111,7 +111,7 @@ namespace Photon.JobSeeker
             return executer.ExecuteNonQuery();
         }
 
-        public SqliteDataReader Read(string query, params object[] parameters)
+        public SQLiteDataReader Read(string query, params object[] parameters)
         {
             executer.CommandText = query;
             AddParameters(query, parameters);
@@ -243,7 +243,7 @@ namespace Photon.JobSeeker
                 Parameter(param.Value, parameters[index++]);
         }
 
-        private static string[] GetColumns(SqliteDataReader reader)
+        private static string[] GetColumns(SQLiteDataReader reader)
         {
             var result = new string[reader.FieldCount];
             for (var i = 0; i < result.Length; i++)
