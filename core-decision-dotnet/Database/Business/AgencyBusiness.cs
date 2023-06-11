@@ -40,9 +40,10 @@ namespace Photon.JobSeeker
             }
 
             settings = Regex.Replace(settings, @"(""running"":)\s*\d+,", @$"$1 {agency.RunningSearchingMethodIndex},");
+
             database.Update(
                 nameof(Agency),
-                new { Settings = settings },
+                new { Settings = settings, Active = (long)agency.Status },
                 agency.ID);
         }
 

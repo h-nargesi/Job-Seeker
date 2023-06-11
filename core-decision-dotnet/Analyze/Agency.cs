@@ -20,9 +20,11 @@ namespace Photon.JobSeeker
 
         public string Link { get; private set; } = "";
 
-        public bool IsActiveSeeking { get; private set; }
+        public AgencyStatus Status { get; set; }
 
-        public bool IsActiveAnalyzing { get; private set; }
+        public bool IsActiveSeeking => Status.HasFlag(AgencyStatus.ActiveSeeking);
+
+        public bool IsActiveAnalyzing => Status.HasFlag(AgencyStatus.ActiveAnalyzing);
 
         public IReadOnlyList<Page> Pages => pages;
 
@@ -77,15 +79,18 @@ namespace Photon.JobSeeker
                             {
                                 settings.running = 0;
                                 trend_state = TrendState.Finished;
+                                Status &= ~AgencyStatus.ActiveSeeking;
                             }
 
                             ChangeSettings(settings);
-                            database.Agency.ChangeRunningMethod(this);
                         }
                         else
                         {
                             trend_state = TrendState.Finished;
+                            Status &= ~AgencyStatus.ActiveSeeking;
                         }
+
+                        database.Agency.ChangeRunningMethod(this);
                     }
 
                     Log.Information("Page checked: {0}, {1}", page.GetType().Name, trend_state);
@@ -104,11 +109,8 @@ namespace Photon.JobSeeker
             var agency_info = database.Agency.LoadByName(Name);
             if (agency_info == null) return;
 
-            var Active = agency_info.Active;
-            if ((Active & 3) == 0) return;
-
-            IsActiveSeeking = (Active & 1) == 1;
-            IsActiveAnalyzing = (Active & 2) == 2;
+            Status = (AgencyStatus)(long)agency_info.Active;
+            if (Status == AgencyStatus.None) return;
 
             ID = agency_info.AgencyID;
             Domain = agency_info.Domain;
