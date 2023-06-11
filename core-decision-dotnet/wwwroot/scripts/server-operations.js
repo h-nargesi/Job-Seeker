@@ -60,6 +60,11 @@ async function revaluate() {
 
 async function change_running(agency, running) {
     try {
+        const current_element = document.getElementById(`RM-${agency}-${running}`);
+        if (!current_element) return;
+
+        let enabled = current_element.classList.contains('btn-primary');
+
         const data = {
             method: 'POST',
             headers: {
@@ -68,14 +73,15 @@ async function change_running(agency, running) {
             },
             body: JSON.stringify({
                 agency: agency,
-                running: running
+                running: enabled ? null : running
             })
         }
         await fetch("/decision/running", data);
+
         document.querySelectorAll(`button[id^="RM-${agency}"]`).forEach((button) => {
             button.className = 'btn btn-outline-primary mt-1';
         });
-        document.getElementById(`RM-${agency}-${running}`).className = 'btn btn-primary mt-1';
+        if (!enabled) current_element.className = 'btn btn-primary mt-1';
 
     } catch (e) {
         console.error(e);

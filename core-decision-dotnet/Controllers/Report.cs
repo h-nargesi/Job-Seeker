@@ -125,7 +125,7 @@ namespace Photon.JobSeeker
                     Applied = r.Applied,
                     AnalyzingRate = r.AnalyzingRate,
                     AcceptingRate = r.AcceptingRate,
-                    Running = agency?.RunningSearchingMethodIndex,
+                    Running = agency == null ? null : agency.Status.HasFlag(AgencyStatus.ActiveSeeking) ? agency.RunningSearchingMethodIndex : (int?)-1,
                     Methods = agency?.SearchingMethodTitles
                 };
             })

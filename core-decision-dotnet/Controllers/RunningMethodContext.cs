@@ -4,6 +4,6 @@ namespace Photon.JobSeeker
     public class RunningMethodContext
     {
         public string? Agency { get; set; }
-        public int Running { get; set; }
+        public int? Running { get; set; }
     }
 }
