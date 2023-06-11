@@ -1,4 +1,5 @@
 ﻿using System.Web;
+using HtmlAgilityPack;
 using Serilog;
 
 namespace Photon.JobSeeker.LinkedIn
@@ -18,7 +19,7 @@ namespace Photon.JobSeeker.LinkedIn
             var job = LoadJob(url, content);
 
             using var evaluator = new JobEligibilityHelper();
-            var state = evaluator.EvaluateJobEligibility(job);
+            var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
 
             var commands = new List<Command>();
 
@@ -73,15 +74,20 @@ namespace Photon.JobSeeker.LinkedIn
             return job;
         }
 
-        private string GetHtmlContent(string html)
+        public static string GetHtmlContent(string html)
         {
-            var start_match = reg_job_content_start.Match(html);
-            if (!start_match.Success) return html;
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
 
-            var end_match = reg_job_content_end.Match(html);
-            if (!end_match.Success) return html;
+            var main_content = doc.DocumentNode.SelectNodes("//article")?
+                                               .FirstOrDefault();
 
-            return html.Substring(start_match.Index + start_match.Length, end_match.Index - start_match.Index - start_match.Length);
+            if (main_content == null) return html;
+
+            var title_content = doc.DocumentNode.SelectNodes("//div[contains(@class,'jobs-unified-top-card')]")?
+                                                .FirstOrDefault();
+
+            return string.Join("\n", title_content?.OuterHtml, main_content.OuterHtml);
         }
     }
 }

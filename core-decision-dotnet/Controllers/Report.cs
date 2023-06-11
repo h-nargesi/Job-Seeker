@@ -16,8 +16,8 @@ namespace Photon.JobSeeker
             try
             {
                 using var database = Database.Open();
-                database.Trend.DeleteExpired();
-                var result = database.Trend.Report();
+                var result = GetTrends(database);
+
                 return View("~/views/trends.cshtml", result);
             }
             catch (Exception ex)
@@ -28,12 +28,18 @@ namespace Photon.JobSeeker
         }
 
         [HttpGet]
-        public IActionResult Jobs()
+        public IActionResult Jobs(string? agencies)
         {
             try
             {
+                var agencyids = agencies?.Split(',')
+                                         .Where(id => !string.IsNullOrEmpty(id))
+                                         .Select(id => { int.TryParse(id, out var value); return value; })
+                                         .Where(id => id > 0)
+                                         .ToArray() ?? new int[0];
+
                 using var database = Database.Open();
-                var list = database.Job.Fetch();
+                var list = database.Job.Fetch(agencyids);
 
                 return View("~/views/jobs.cshtml", list);
             }
@@ -49,7 +55,8 @@ namespace Photon.JobSeeker
         {
             try
             {
-                return View("~/views/agencies.cshtml", GetAgencies());
+                using var database = Database.Open();
+                return View("~/views/agencies.cshtml", GetAgencies(database));
             }
             catch (Exception ex)
             {
@@ -64,10 +71,9 @@ namespace Photon.JobSeeker
             try
             {
                 using var database = Database.Open();
-                database.Trend.DeleteExpired();
-                var trends = database.Trend.Report();
-                var jobs = database.Job.Fetch();
-                var agencies = GetAgencies();
+                var jobs = GetJobs(database, null);
+                var trends = GetTrends(database);
+                var agencies = GetAgencies(database);
 
                 return View("~/views/index.cshtml", new { Trends = trends, Jobs = jobs, Agencies = agencies });
             }
@@ -78,28 +84,51 @@ namespace Photon.JobSeeker
             }
         }
 
-        private dynamic[] GetAgencies()
+        private List<dynamic> GetJobs(Database database, string? agencies)
         {
-            using var database = Database.Open();
+            var agencyids = agencies?.Split(',')
+                                     .Where(id => !string.IsNullOrEmpty(id))
+                                     .Select(id => { int.TryParse(id, out var value); return value; })
+                                     .Where(id => id > 0)
+                                     .ToArray() ?? new int[0];
+
+            return database.Job.Fetch(agencyids);
+        }
+
+        private List<dynamic> GetTrends(Database database)
+        {
+            database.Trend.DeleteExpired();
+            var result = database.Trend.Report();
+
+            if (JobEligibilityHelper.CurrentRevaluationProcess != null)
+                result.Add(JobEligibilityHelper.CurrentRevaluationProcess.GetReportObject());
+
+            return result;
+        }
+
+        private dynamic[] GetAgencies(Database database)
+        {
             var report = database.Agency.JobRateReport();
-            
-            return analyzer.Agencies.Select(a =>
+            var agencies = analyzer.Agencies;
+
+            return report.Select(r =>
+            {
+                agencies.TryGetValue(r.Title, out Agency agency);
+                return new
                 {
-                    report.TryGetValue(a.Value.ID, out dynamic? agency_report);
-                    return new
-                    {
-                        AgencyID = a.Value.ID,
-                        SearchLink = a.Value.SearchLink,
-                        Name = a.Key,
-                        Analyzed = agency_report?.Analyzed,
-                        Accepted = agency_report?.Accepted,
-                        JobCount = agency_report?.JobCount,
-                        AnalyzingRate = agency_report?.AnalyzingRate,
-                        AcceptingRate = agency_report?.AcceptingRate,
-                        Running = a.Value.RunningSearchingMethodIndex,
-                        Methods = a.Value.SearchingMethodTitles
-                    };
-                })
+                    AgencyID = r.AgencyID,
+                    Name = r.Title,
+                    SearchLink = agency?.SearchLink,
+                    JobCount = r.JobCount,
+                    Analyzed = r.Analyzed,
+                    Accepted = r.Accepted,
+                    Applied = r.Applied,
+                    AnalyzingRate = r.AnalyzingRate,
+                    AcceptingRate = r.AcceptingRate,
+                    Running = agency == null ? null : agency.Status.HasFlag(AgencyStatus.ActiveSeeking) ? agency.RunningSearchingMethodIndex : (int?)-1,
+                    Methods = agency?.SearchingMethodTitles
+                };
+            })
                 .OrderBy(r => r.AgencyID)
                 .ToArray();
 

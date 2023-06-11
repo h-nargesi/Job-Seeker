@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using System.Data.SQLite;
 
 namespace Photon.JobSeeker
 {
@@ -29,8 +29,8 @@ namespace Photon.JobSeeker
                 list.Add(new
                 {
                     TrendID = reader["TrendID"] as long?,
-                    Agency = reader["Agency"] as string ?? "-",
-                    Link = reader["Link"] as string ?? "-",
+                    Agency = reader["Agency"] as string ?? "None",
+                    Link = reader["Link"] as string ?? "",
                     LastActivity = reader["LastActivity"] as string ?? "-",
                     Type = reader["Type"] as string,
                     State = reader["State"] as string,
@@ -53,7 +53,7 @@ namespace Photon.JobSeeker
         public void Save(object model, TrendFilter filter = TrendFilter.All)
         {
             long id;
-
+            
             var trend = model as Trend;
             if (trend != null) id = trend.TrendID;
             else
@@ -99,15 +99,20 @@ namespace Photon.JobSeeker
             });
         }
 
-        private static Trend ReadTrend(SqliteDataReader reader)
+        public void ClearSearching(long agency_id)
+        {
+            database.Execute(Q_DELETE_AGENCY, agency_id);
+        }
+
+        private static Trend ReadTrend(SQLiteDataReader reader)
         {
             return new Trend
             {
                 TrendID = (long)reader[nameof(Trend.TrendID)],
                 AgencyID = (long)reader[nameof(Trend.AgencyID)],
-                LastActivity = DateTime.Parse((string)reader[nameof(Trend.LastActivity)]),
+                LastActivity = (DateTime)reader[nameof(Trend.LastActivity)],
                 State = Enum.Parse<TrendState>((string)reader[nameof(Trend.State)]),
-                Reserved = 0 != (long)reader[nameof(Trend.Reserved)],
+                Reserved = (bool)reader[nameof(Trend.Reserved)],
             };
         }
 
@@ -125,6 +130,9 @@ WHERE AgencyID = $agency AND Type = $type";
 
         private const string Q_DELETE_EXPIRED = @"
 DELETE FROM Trend WHERE DATETIME(LastActivity) <= $expiration";
+
+        private const string Q_DELETE_AGENCY = @$"
+DELETE FROM Trend WHERE AgencyID = $agencyid AND Type = '{nameof(TrendType.Search)}'";
 
     }
 }

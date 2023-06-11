@@ -8,23 +8,23 @@ namespace Photon.JobSeeker
         private readonly Database database;
         public AgencyBusiness(Database database) => this.database = database;
 
-        public Dictionary<long, object> JobRateReport()
+        public List<dynamic> JobRateReport()
         {
             using var reader = database.Read(Q_JOB_RATE_REPORT);
-            var list = new Dictionary<long, object>();
+            var list = new List<dynamic>();
 
             while (reader.Read())
-            {
-                var AgencyID = (long)reader["AgencyID"];
-                list.Add(AgencyID, new
+                list.Add(new
                 {
+                    AgencyID = (long)reader["AgencyID"],
+                    Title = (string)reader["Title"],
                     JobCount = (long)reader["JobCount"],
-                    Accepted = (long)reader["Accepted"],
                     Analyzed = (long)reader["Analyzed"],
+                    Accepted = (long)reader["Accepted"],
+                    Applied = (long)reader["Applied"],
                     AnalyzingRate = (long)reader["AnalyzingRate"],
                     AcceptingRate = (long)reader["AcceptingRate"],
                 });
-            }
 
             return list;
         }
@@ -40,9 +40,10 @@ namespace Photon.JobSeeker
             }
 
             settings = Regex.Replace(settings, @"(""running"":)\s*\d+,", @$"$1 {agency.RunningSearchingMethodIndex},");
+
             database.Update(
                 nameof(Agency),
-                new { Settings = settings },
+                new { Settings = settings, Active = (long)agency.Status },
                 agency.ID);
         }
 
@@ -82,25 +83,34 @@ namespace Photon.JobSeeker
         }
 
         private const string Q_JOB_RATE_REPORT = @$"
-SELECT job.*
-	, CAST(100 * CAST(Analyzed AS REAL) / JobCount AS INTEGER) AS AnalyzingRate
-	, CAST(100 * CAST(Accepted AS REAL) / Analyzed AS INTEGER) AS AcceptingRate
+SELECT rate.*
+	, CASE JobCount WHEN 0 THEN 0 ELSE CAST(100 * CAST(Analyzed AS REAL) / JobCount AS INTEGER) END AS AnalyzingRate
+	, CASE Analyzed WHEN 0 THEN 0 ELSE CAST(100 * CAST(Accepted AS REAL) / Analyzed AS INTEGER) END AS AcceptingRate
 FROM (
-	SELECT AgencyID
-		, COUNT(*) AS JobCount
-		, SUM(CASE State WHEN '{nameof(JobState.Saved)}' THEN 0 ELSE 1 END) AS Analyzed
-		, SUM(CASE State WHEN '{nameof(JobState.Attention)}' THEN 1
-                         WHEN '{nameof(JobState.Applied)}' THEN 1
-                         ELSE 0 END) AS Accepted
-	FROM Job
-	GROUP BY AgencyID
-) job";
+    SELECT agc.AgencyID, agc.Title
+        , IFNULL(job.JobCount, 0) AS JobCount
+        , IFNULL(job.Analyzed, 0) AS Analyzed
+        , IFNULL(job.Attention, 0) + IFNULL(job.Applied, 0) AS Accepted
+        , IFNULL(job.Applied, 0) AS Applied
+    FROM Agency agc
+    LEFT JOIN  (
+        SELECT AgencyID
+            , COUNT(*) AS JobCount
+            , SUM(CASE State WHEN '{nameof(JobState.Saved)}' THEN 0 ELSE 1 END) AS Analyzed
+            , SUM(CASE State WHEN '{nameof(JobState.Attention)}' THEN 1 ELSE 0 END) AS Attention
+            , SUM(CASE State WHEN '{nameof(JobState.Applied)}' THEN 1 ELSE 0 END) AS Applied
+        FROM Job
+        GROUP BY AgencyID
+    
+    ) job on agc.AgencyID = job.AgencyID
+
+) rate";
 
         private const string Q_LOAD_SETTING = @"
 SELECT Settings FROM Agency WHERE AgencyID = $agency";
 
         private const string Q_LOAD_BY_NAME = @"
-SELECT AgencyID, Domain, Link, Active, Settings FROM Agency WHERE Title = $title AND Active != 0";
+SELECT AgencyID, Domain, Link, Active, Settings FROM Agency WHERE Title = $title";
 
         private const string Q_GET_USER_PASS = @"
 SELECT UserName, Password FROM Agency WHERE Title = $title";

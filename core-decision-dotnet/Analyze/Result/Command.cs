@@ -19,7 +19,13 @@
 
         public override string ToString()
         {
-            return $"{{action: {Action}, object: {Object}, params: {Params?.DictStringJoin()}}}";
+            var result = new List<string>(3)
+            {
+                $"action: {Action}"
+            };
+            if (Object != null) result.Add($"object: {Object}");
+            if (Params != null) result.Add($"params: {Params.DictStringJoin()}");
+            return $"{{{string.Join(", ", result)}}}";
         }
 
         public static Command Go(string url) => new(PageAction.go, null, new Dictionary<string, object>

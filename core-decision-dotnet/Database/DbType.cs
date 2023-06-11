@@ -1,10 +1,8 @@
-using Microsoft.Data.Sqlite;
-
 namespace Photon.JobSeeker
 {
     static class DbType
     {
-        public static (SqliteType type, object value) GetSqliteType(object value)
+        public static (System.Data.DbType type, object value) GetSqliteType(object value)
         {
             if (value is DBNull)
                 throw new ArgumentNullException(nameof(value));
@@ -19,6 +17,10 @@ namespace Photon.JobSeeker
                 if (value is not DBNull)
                     value = value.ToString() ?? (object)DBNull.Value;
             }
+            // else if (value is DateTime datetime)
+            // {
+            //     value = datetime.ToString("yyyy-MM-dd HH:mm:ss");
+            // }
 
             if (!SYSTEM_TYPE_MAP.ContainsKey(type))
                 throw new ArgumentOutOfRangeException(nameof(value), type.FullName);
@@ -26,42 +28,42 @@ namespace Photon.JobSeeker
             return (SYSTEM_TYPE_MAP[type], value);
         }
 
-        private readonly static Dictionary<Type, SqliteType> SYSTEM_TYPE_MAP = new()
+        private readonly static Dictionary<Type, System.Data.DbType> SYSTEM_TYPE_MAP = new()
         {
-            [typeof(byte)] = SqliteType.Integer,
-            [typeof(sbyte)] = SqliteType.Integer,
-            [typeof(short)] = SqliteType.Integer,
-            [typeof(ushort)] = SqliteType.Integer,
-            [typeof(int)] = SqliteType.Integer,
-            [typeof(uint)] = SqliteType.Integer,
-            [typeof(long)] = SqliteType.Integer,
-            [typeof(ulong)] = SqliteType.Integer,
-            [typeof(float)] = SqliteType.Real,
-            [typeof(double)] = SqliteType.Real,
-            [typeof(decimal)] = SqliteType.Real,
-            [typeof(bool)] = SqliteType.Integer,
-            [typeof(string)] = SqliteType.Text,
-            [typeof(char)] = SqliteType.Text,
-            [typeof(Guid)] = SqliteType.Text,
-            [typeof(DateTime)] = SqliteType.Text,
-            [typeof(DateTimeOffset)] = SqliteType.Text,
-            [typeof(byte[])] = SqliteType.Blob,
-            [typeof(byte?)] = SqliteType.Blob,
-            [typeof(sbyte?)] = SqliteType.Integer,
-            [typeof(short?)] = SqliteType.Integer,
-            [typeof(ushort?)] = SqliteType.Integer,
-            [typeof(int?)] = SqliteType.Integer,
-            [typeof(uint?)] = SqliteType.Integer,
-            [typeof(long?)] = SqliteType.Integer,
-            [typeof(ulong?)] = SqliteType.Integer,
-            [typeof(float?)] = SqliteType.Real,
-            [typeof(double?)] = SqliteType.Real,
-            [typeof(decimal?)] = SqliteType.Real,
-            [typeof(bool?)] = SqliteType.Integer,
-            [typeof(char?)] = SqliteType.Text,
-            [typeof(Guid?)] = SqliteType.Text,
-            [typeof(DateTime?)] = SqliteType.Text,
-            [typeof(DateTimeOffset?)] = SqliteType.Text,
+            [typeof(byte)] = System.Data.DbType.Int64,
+            [typeof(sbyte)] = System.Data.DbType.Int64,
+            [typeof(short)] = System.Data.DbType.Int64,
+            [typeof(ushort)] = System.Data.DbType.Int64,
+            [typeof(int)] = System.Data.DbType.Int64,
+            [typeof(uint)] = System.Data.DbType.Int64,
+            [typeof(long)] = System.Data.DbType.Int64,
+            [typeof(ulong)] = System.Data.DbType.Int64,
+            [typeof(float)] = System.Data.DbType.Double,
+            [typeof(double)] = System.Data.DbType.Double,
+            [typeof(decimal)] = System.Data.DbType.Double,
+            [typeof(bool)] = System.Data.DbType.Boolean,
+            [typeof(string)] = System.Data.DbType.String,
+            [typeof(char)] = System.Data.DbType.String,
+            [typeof(Guid)] = System.Data.DbType.Guid,
+            [typeof(DateTime)] = System.Data.DbType.DateTime,
+            [typeof(DateTimeOffset)] = System.Data.DbType.DateTime,
+            [typeof(byte[])] = System.Data.DbType.Binary,
+            [typeof(byte?)] = System.Data.DbType.Int64,
+            [typeof(sbyte?)] = System.Data.DbType.Int64,
+            [typeof(short?)] = System.Data.DbType.Int64,
+            [typeof(ushort?)] = System.Data.DbType.Int64,
+            [typeof(int?)] = System.Data.DbType.Int64,
+            [typeof(uint?)] = System.Data.DbType.Int64,
+            [typeof(long?)] = System.Data.DbType.Int64,
+            [typeof(ulong?)] = System.Data.DbType.Int64,
+            [typeof(float?)] = System.Data.DbType.Double,
+            [typeof(double?)] = System.Data.DbType.Double,
+            [typeof(decimal?)] = System.Data.DbType.Double,
+            [typeof(bool?)] = System.Data.DbType.Boolean,
+            [typeof(char?)] = System.Data.DbType.String,
+            [typeof(Guid?)] = System.Data.DbType.Guid,
+            [typeof(DateTime?)] = System.Data.DbType.DateTime,
+            [typeof(DateTimeOffset?)] = System.Data.DbType.DateTime,
         };
     }
 }

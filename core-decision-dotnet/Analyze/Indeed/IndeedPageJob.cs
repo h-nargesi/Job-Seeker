@@ -8,9 +8,9 @@ namespace Photon.JobSeeker.Indeed
     {
         public override int Order => 10;
 
-        public override TrendState TrendState => TrendState.Analyzing;
-
         public IndeedPageJob(Indeed parent) : base(parent) { }
+
+        public override TrendState TrendState => TrendState.Analyzing;
 
         public override Command[]? IssueCommand(string url, string content)
         {
@@ -19,7 +19,7 @@ namespace Photon.JobSeeker.Indeed
             var job = LoadJob(url, content);
 
             using var evaluator = new JobEligibilityHelper();
-            var state = evaluator.EvaluateJobEligibility(job);
+            var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
 
             var commands = new List<Command>();
 
@@ -74,7 +74,7 @@ namespace Photon.JobSeeker.Indeed
             return job;
         }
 
-        private string GetHtmlContent(string html)
+        public static string GetHtmlContent(string html)
         {
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
@@ -82,7 +82,7 @@ namespace Photon.JobSeeker.Indeed
             var main_content = doc.DocumentNode.SelectNodes("//div[contains(@class,'jobsearch-ViewJobLayout-jobDisplay')]")?
                                                .FirstOrDefault();
 
-            return main_content?.OuterHtml ?? "";
+            return main_content?.OuterHtml ?? html;
         }
     }
 }

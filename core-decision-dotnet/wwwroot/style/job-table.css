@@ -1,11 +1,23 @@
-tr.applied {
-    background-color: rgba(0,255,128,0.1);
+tr.NotApproved {
+    background-color: rgba(255,0,0,0.1);
 }
 
-tr.rejected {
-    background-color: rgba(255,0,128,0.05);
+tr.Applied {
+    background-color: rgba(0,255,0,0.2);
 }
 
-tr.saved {
+tr.Rejected {
+    background-color: rgba(128,0,128,0.2);
+}
+
+tr.Saved {
     background-color: rgba(255,255,0,0.1);
+}
+
+tr.Selected {
+    border: 1px solid black !important;
+}
+
+tr.Selected-pr {
+    border: 0 !important;
 }

@@ -15,6 +15,9 @@ namespace Photon.JobSeeker
         private readonly Database database;
         private readonly JobOption[] options;
 
+        private static object revaluation_lock = new();
+        public static RevaluationProcess? CurrentRevaluationProcess { get; private set; }
+
         public JobEligibilityHelper()
         {
             dictionaries = Dictionaries.Open();
@@ -22,45 +25,113 @@ namespace Photon.JobSeeker
             options = database.JobOption.FetchAll();
         }
 
-        public void Revaluate()
+        public static Task RunRevaluateProcess(Analyzer analyzer)
         {
-            var start_time = DateTime.Now.AddSeconds(-1);
-
-            while (true)
-                try
+            lock (revaluation_lock)
+            {
+                if (CurrentRevaluationProcess == null)
                 {
-                    database.BeginTransaction();
+                    using var database = Database.Open();
+                    var start_time = DateTime.Now.AddSeconds(-1);
+                    var total_count = (int)database.Job.FetchFromCount(start_time);
+                    CurrentRevaluationProcess = new RevaluationProcess(start_time, total_count);
+                }
 
-                    var job = database.Job.FetchFrom(start_time);
+                CurrentRevaluationProcess.ProcessCount++;
+            }
+
+            return Task.Run(() =>
+            {
+                using var evaluator = new JobEligibilityHelper();
+                evaluator.Revaluate(analyzer);
+            });
+        }
+
+        public void Revaluate(Analyzer analyzer)
+        {
+            if (CurrentRevaluationProcess == null) return;
+
+            try
+            {
+                while (true)
+                {
+                    var job = database.Job.FetchFrom(CurrentRevaluationProcess.StartTime);
 
                     if (job == null) break;
 
-                    EvaluateJobEligibility(job);
+                    analyzer.AgenciesByID.TryGetValue(job.AgencyID, out var agency);
 
-                    database.Job.Save(job);
+                    if (agency != null && job.Html != null &&
+                        (job.Html.StartsWith("<html") || job.Html.StartsWith("<rerender/>")))
+                    {
+                        job.Html = agency.GetMainHtml(job.Html);
+                        database.Job.Save(job, JobFilter.Content | JobFilter.Html);
+                    }
 
-                    database.Commit();
+                    EvaluateJobEligibility(job, agency?.JobAcceptabilityChecker);
+
+                    lock (revaluation_lock)
+                        CurrentRevaluationProcess.Passed++;
                 }
-                finally
+            }
+            finally
+            {
+                lock (revaluation_lock)
                 {
-                    database.Rollback();
+                    if (CurrentRevaluationProcess != null)
+                    {
+                        CurrentRevaluationProcess.ProcessCount--;
+                        if (CurrentRevaluationProcess.ProcessCount < 1)
+                            CurrentRevaluationProcess = null;
+                    }
                 }
+            }
         }
 
-        public JobState EvaluateJobEligibility(Job job)
+        public JobState EvaluateJobEligibility(Job job, Regex? job_acceptability_check)
         {
-            job.Log = "";
+            // The state of the current job always should be set because it was converted to 'Revaluation'
+            var filter = JobFilter.State;
 
-            var correct_language = LanguageIsMatch(job);
+            if (job.Content != null)
+            {
+                job.Log = "";
+                job.Score = null;
 
-            var eligibility = correct_language && EvaluateEligibility(job);
+                filter |= JobFilter.Log | JobFilter.Score;
+                var user_changes = job.State > JobState.Attention;
 
-            if (!eligibility) job.State = JobState.Rejected;
-            else job.State = JobState.Attention;
+                var job_expired = job_acceptability_check?.IsMatch(job.Content);
+                var correct_language = job_expired != true ? LanguageIsMatch(job) : (bool?)null;
+                var rejected = correct_language != true;
+                var eligibility = !rejected ? EvaluateEligibility(job, out rejected) : false;
 
-            Log.Information("Job ({0}): state={1} score={2} lang={3}", job.State, job.Code, job.Score, correct_language);
-            Log.Debug("Job ({0}): log={1}", job.Code, job.Log);
-            database.Job.Save(job, JobFilter.Log | JobFilter.State | JobFilter.Score);
+                if (job_expired == true)
+                {
+                    job.Log = @"Expired!" + (string.IsNullOrEmpty(job.Log) ? "" : "\n") + job.Log;
+                }
+
+                if (!user_changes)
+                {
+                    if (!eligibility) job.State = JobState.NotApproved;
+                    else job.State = JobState.Attention;
+                }
+
+                if (rejected)
+                {
+                    filter |= JobFilter.Html | JobFilter.Content;
+                    job.Html = null;
+                    job.Content = null;
+                }
+
+                Log.Information("Job ({0}): state={1} score={2} acceptable={4} lang={3}",
+                    job.Code, job.State.ToString(), job.Score,
+                    correct_language?.ToString() ?? "?",
+                    job_expired?.ToString() ?? "?");
+                Log.Debug("Job ({0}): log={1}", job.Code, job.Log);
+            }
+
+            database.Job.Save(job, filter);
 
             return job.State;
         }
@@ -80,7 +151,7 @@ namespace Photon.JobSeeker
             var buffer = new StringBuilder();
             foreach (var node in root.DescendantsAndSelf())
             {
-                // if (node.HasChildNodes) continue;
+                if (node.HasChildNodes) continue;
 
                 string text = node.InnerText;
                 if (!string.IsNullOrEmpty(text))
@@ -111,58 +182,92 @@ namespace Photon.JobSeeker
             foreach (var set in splited)
                 langu_count += dictionaries.EnglishCount(set);
 
-            var point = (int)(100 * langu_count / (double)total_count);
-            job.Log += string.Format("English: ({0}%)\n\n", point);
+            var point = 100 * langu_count / (double)total_count;
+            job.Log += string.Format("English: ({0}%)\n\n", (int)point);
 
             return 50 <= point;
         }
 
-        private bool EvaluateEligibility(Job job)
+        private bool EvaluateEligibility(Job job, out bool rejected)
         {
-            var logs = new List<string>(options.Length);
-            var hasField = false;
             job.Score = 0L;
+
+            var option_scores = new Dictionary<string, List<(JobOption option, long score, string matched)>>();
+            var hasField = false;
+            rejected = false;
 
             foreach (var option in options)
             {
-                var option_score = CheckOptionIn(job, option, out var matched);
+                var score = CheckOptionIn(job, option, out var matched);
 
-                if (option_score > 0)
+                if (score > 0)
                 {
-                    logs.Add($"**{option.ToString('+', option_score)}**");
-                    logs.Add(matched ?? "?");
+                    switch (option.Category)
+                    {
+                        case "field":
+                            hasField |= true;
+                            break;
+                        case "reject":
+                            rejected |= true;
+                            continue;
+                    }
+
+                    if (!option_scores.TryGetValue(option.Category, out var list))
+                        option_scores.Add(option.Category, list = new List<(JobOption, long, string)>());
+
+                    list.Add((option, score, matched ?? "?"));
+                }
+            }
+
+            var categories = new HashSet<string>();
+            var logs = new List<string>(options.Length);
+
+            foreach (var category in option_scores)
+            {
+                logs.Add($"*{category.Key[0..1].ToUpper() + category.Key[1..]}:*");
+                logs.Add("");
+
+                category.Value.Sort((a, b) => b.score.CompareTo(a.score));
+
+                var factor = 1F;
+                foreach (var calc in category.Value)
+                {
+                    var score = (int)(calc.score * factor);
+
+                    job.Score += score;
+                    factor = 0.5F;
+
+                    logs.Add($"**{calc.option.ToString('+', score)}**");
+                    logs.Add(calc.matched);
                     logs.Add("");
                 }
-
-                if (!hasField && option_score > 0 && option.Category == "field")
-                {
-                    hasField = true;
-                }
-
-                job.Score += option_score;
             }
 
             job.Log += string.Join("\n", logs);
 
-            if (!hasField) return false;
+            if (!hasField || rejected) return false;
             else return job.Score >= MinEligibilityScore;
         }
 
         private static long CheckOptionIn(Job job, JobOption option, out string? matched)
         {
-            var matched_option = option.Pattern.Match(job.Content ?? "");
-            if (!matched_option.Success)
+            var score = 0L;
+            var matches = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Match matched_option in option.Pattern.Matches(job.Content ?? ""))
             {
-                matched = null;
-                return 0;
-            }
-            else matched = matched_option.Value;
+                if (matched_option.Success)
+                    matches.Add(matched_option.Value);
 
-            return option.Category switch
-            {
-                "salary" => EvaluateSalaryScore(matched_option, option),
-                _ => option.Score
-            };
+                if (score <= 1)
+                    score = option.Category switch
+                    {
+                        "salary" => EvaluateSalaryScore(matched_option, option),
+                        _ => option.Score
+                    };
+            }
+
+            matched = string.Join("\n", matches);
+            return score;
         }
 
         private static long EvaluateSalaryScore(Match matched, JobOption option)
@@ -176,9 +281,25 @@ namespace Photon.JobSeeker
             var money_index = (int)option.Settings.money;
             var period_index = (int)option.Settings.period;
 
-            var money = matched.Groups[money_index].Value;
-            if (!double.TryParse(money?.Replace(",", ""), out double salary)) return 0;
-            var period = matched.Groups[period_index].Value;
+            var money_matched = matched.Groups[money_index];
+
+            if (money_matched.Index - matched.Index > 24)
+                return 1; // have the min score
+
+            var salary_text = money_matched.Value;
+            if (salary_text.ToLower().EndsWith("k"))
+                salary_text = salary_text[0..^1] + "000";
+
+            if (!double.TryParse(salary_text.Replace(",", ""), out double salary))
+                return 1; // have the min score
+
+            string? period = null;
+
+            if (period_index < 0 &&
+                matched.Groups[period_index].Index - (matched.Index + matched.Length) <= 24)
+            {
+                period = matched.Groups[period_index].Value;
+            }
 
             switch (period)
             {
@@ -187,12 +308,47 @@ namespace Photon.JobSeeker
                     break;
                 case "month":
                     break;
-                default: return 0;
+                default:
+                    // check the salary range
+                    if (salary > 35000)
+                        salary /= 12;
+                    break;
             }
 
-            salary /= 1000;
+            return ((long)(salary / 1000) * option.Score);
+        }
 
-            return ((long)salary * option.Score);
+        public class RevaluationProcess
+        {
+            public RevaluationProcess(DateTime start_time, int total_count)
+            {
+                StartTime = start_time;
+                StartTimeTitle = start_time.ToString();
+                TotalCount = total_count;
+            }
+
+            public DateTime StartTime { get; }
+
+            public string StartTimeTitle { get; }
+
+            public long TotalCount { get; }
+
+            public int ProcessCount { get; internal set; }
+
+            public int Passed { get; internal set; }
+
+            public object GetReportObject()
+            {
+                return new
+                {
+                    TrendID = -1,
+                    Agency = $"Revaluation ({ProcessCount})",
+                    Link = "",
+                    Type = Passed.ToString(),
+                    State = TotalCount.ToString(),
+                    LastActivity = StartTimeTitle,
+                };
+            }
         }
     }
 }

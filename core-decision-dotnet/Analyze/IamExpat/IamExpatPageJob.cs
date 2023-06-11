@@ -7,9 +7,9 @@ namespace Photon.JobSeeker.IamExpat
     {
         public override int Order => 10;
 
-        public override TrendState TrendState => TrendState.Analyzing;
-
         public IamExpatPageJob(IamExpat parent) : base(parent) { }
+
+        public override TrendState TrendState => TrendState.Analyzing;
 
         public override Command[]? IssueCommand(string url, string content)
         {
@@ -18,7 +18,7 @@ namespace Photon.JobSeeker.IamExpat
             var job = LoadJob(url, content);
 
             using var evaluator = new JobEligibilityHelper();
-            var state = evaluator.EvaluateJobEligibility(job);
+            var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
 
             var commands = new List<Command>();
 
@@ -104,7 +104,7 @@ namespace Photon.JobSeeker.IamExpat
             return job;
         }
 
-        private string GetHtmlContent(string html)
+        public static string GetHtmlContent(string html)
         {
             var start_match = reg_job_content_start.Match(html);
             if (!start_match.Success) return html;
@@ -112,7 +112,15 @@ namespace Photon.JobSeeker.IamExpat
             var end_match = reg_job_content_end.Match(html);
             if (!end_match.Success) return html;
 
-            return html.Substring(start_match.Index, end_match.Index + end_match.Length - start_match.Index);
+            html = html.Substring(start_match.Index, end_match.Index + end_match.Length - start_match.Index);
+            
+            start_match = reg_job_content_apply_start.Match(html);
+            if (!start_match.Success) return html;
+
+            end_match = reg_job_content_apply_end.Match(html);
+            if (!end_match.Success) return html;
+
+            return html.Remove(start_match.Index, end_match.Index + end_match.Length - start_match.Index);
         }
     }
 }

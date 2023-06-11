@@ -12,7 +12,7 @@ class BackgroundMessaging {
         chrome.runtime.onMessage.addListener(
             function (response) {
                 if (chrome.runtime.lastError)
-                    console.error(chrome.runtime.lastError.message);
+                    console.log(chrome.runtime.lastError.message);
 
                 if (!response.id || !response.body) return;
 

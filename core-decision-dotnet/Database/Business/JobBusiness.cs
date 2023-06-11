@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using System.Data.SQLite;
 
 namespace Photon.JobSeeker
 {
@@ -6,9 +6,13 @@ namespace Photon.JobSeeker
     {
         public JobBusiness(Database database) : base(database) { }
 
-        public List<object> Fetch()
+        public List<object> Fetch(int[] agencyids)
         {
-            using var reader = database.Read(Q_INDEX);
+            string agencies;
+            if (agencyids.Length < 1) agencies = string.Empty;
+            else agencies = $"WHERE Agency.AgencyID IN ({string.Join(",", agencyids)})";
+
+            using var reader = database.Read(Q_INDEX.Replace("@where@", agencies));
             var list = new List<object>();
 
             while (reader.Read())
@@ -21,13 +25,35 @@ namespace Photon.JobSeeker
             return list;
         }
 
+        public long FetchFromCount(DateTime time)
+        {
+            database.Execute(Q_FETCH_UPDATE_REVAL);
+
+            using var reader = database.Read(Q_FETCH_FROM_COUNT, time);
+            if (!reader.Read()) return default;
+            return (long)reader[0];
+        }
+
         public Job? FetchFrom(DateTime time)
         {
-            using var reader = database.Read(Q_FETCH_FROM, time);
+            Job result;
+            database.BeginTransaction();
+            try
+            {
+                using (var reader = database.Read(Q_FETCH_FROM, time))
+                {
+                    if (!reader.Read()) return default;
+                    result = ReadJob(reader, true);
+                }
 
-            if (!reader.Read()) return default;
+                Save(new { result.JobID, State = JobState.Revaluation });
 
-            return ReadJob(reader, true);
+                return result;
+            }
+            finally
+            {
+                database.Commit();
+            }
         }
 
         public Job? Fetch(long agency_id, string code)
@@ -105,12 +131,12 @@ namespace Photon.JobSeeker
             nameof(JobFilter.AgencyID), nameof(JobFilter.Code)
         };
 
-        private static Job ReadJob(SqliteDataReader reader, bool full = false)
+        private static Job ReadJob(SQLiteDataReader reader, bool full = false)
         {
             return new Job
             {
                 JobID = (long)reader[nameof(Job.JobID)],
-                RegTime = DateTime.Parse((string)reader[nameof(Job.RegTime)]),
+                RegTime = (DateTime)reader[nameof(Job.RegTime)],
                 AgencyID = (long)reader[nameof(Job.AgencyID)],
                 Code = (string)reader[nameof(Job.Code)],
                 Title = reader[nameof(Job.Title)] as string,
@@ -124,32 +150,80 @@ namespace Photon.JobSeeker
             };
         }
 
-        private const string Q_INDEX = @$"
-SELECT *
-FROM (
+        /*
+        c=\frac{b\cdot6}{7}
+        X=x-b
+        Y=ae^{-\frac{X^{2}}{2c^{2}}}
+        U=-e^{\left(\frac{2\cdot X}{c}\right)}
+        Y+U
+        */
+        private const int DaysPriod = 14;
+
+        private readonly static string Q_INDEX = @$"
+WITH date_diff AS (
     SELECT job.*
-        , ROW_NUMBER() OVER(PARTITION BY State ORDER BY Score DESC, RegTime DESC) AS Ranking
+         , JulianDay(latest.LatestTime) - JulianDay(job.RegTime) - {DaysPriod} AS X
+         , latest.TopScore AS A
+         , {DaysPriod} * 6 / 7 AS C
     FROM (
-        SELECT Job.JobID, Job.RegTime, Job.AgencyID, Job.Code, Job.Title
-            , Job.State, Job.Score, Job.Url, Job.Link, Job.Log
-            , Agency.Title as AgencyName
-            , CASE State WHEN '{nameof(JobState.Attention)}' THEN 1
-                        WHEN '{nameof(JobState.Rejected)}' THEN 3
-                        WHEN '{nameof(JobState.Applied)}' THEN 3
-                        ELSE 100
-            END AS Ordering
+        SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
+             , Job.State, Job.Score, Job.Url, Job.Link, Job.Log
+             , Agency.Title as AgencyName
+             , CASE State 
+               WHEN '{nameof(JobState.Attention)}' THEN 1
+               WHEN '{nameof(JobState.NotApproved)}' THEN 2
+               WHEN '{nameof(JobState.Applied)}' THEN 4
+               WHEN '{nameof(JobState.Rejected)}' THEN 4
+               ELSE 12
+               END AS Category
+             , SUBSTR(Job.RegTime, 1, 10) AS RegDate
         FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
-        --WHERE State != '{nameof(JobState.Attention)}'
+    ) job
+    CROSS JOIN (
+        SELECT MAX(RegTime) AS LatestTime, MAX(Score) / 2 AS TopScore FROM Job
+    ) latest
+
+), ranking AS (
+    SELECT job.JobID, job.RegTime, job.ModifiedOn, job.AgencyID, job.Code, job.Title
+         , job.State, job.Score, job.Url, job.Link, job.Log
+         , job.AgencyName, job.Category, job.RegDate
+         --*, A * EXP(YF) AS Y, - EXP(UF) AS U, A * EXP(YF) - EXP(UF) AS TimeScore
+         , Score + A * EXP(YF) - EXP(UF) AS RankScore
+    FROM (
+        SELECT *
+             , POWER(X, 2) / (-2 * POWER(C, 2)) AS YF
+             , 2 * X / C AS UF
+        FROM date_diff
     ) job
 )
-WHERE Ranking <= 50
-ORDER BY Ordering, Score DESC, RegTime DESC";
+
+SELECT *
+     , CASE Category
+       WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, RankScore DESC, RegTime DESC)
+       ELSE ROW_NUMBER() OVER(PARTITION BY Category ORDER BY RankScore DESC, RegTime DESC)
+       END AS Ordering
+FROM (
+    SELECT *
+        , CASE Category
+          WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY ModifiedOn DESC, RankScore DESC, RegTime DESC)
+          ELSE ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY RankScore DESC, RegTime DESC)
+          END AS Ranking
+    FROM ranking
+) job
+WHERE Ranking <= (12 / Category)
+ORDER BY Category, Ordering";
 
         private const string Q_FETCH = @"
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
 
-        private const string Q_FETCH_FROM = @"
-SELECT * FROM Job WHERE ModifiedOn <= $date";
+        private const string Q_FETCH_FROM = @$"
+SELECT * FROM Job WHERE State != '{nameof(JobState.Revaluation)}' AND Content IS NOT NULL AND ModifiedOn <= $date";
+
+        private const string Q_FETCH_FROM_COUNT = @$"
+SELECT COUNT(*) FROM Job WHERE Content IS NOT NULL AND ModifiedOn <= $date";
+
+        private const string Q_FETCH_UPDATE_REVAL = @$"
+UPDATE Job SET State = '{nameof(JobState.Saved)}' WHERE State = '{nameof(JobState.Revaluation)}'";
 
         private const string Q_FETCH_FIRST = @$"
 SELECT JobID, Url, Tries FROM Job
