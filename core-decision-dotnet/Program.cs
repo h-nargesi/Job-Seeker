@@ -20,6 +20,7 @@ Dictionaries.SetConfiguration(path: builder.Configuration["Database:Dictionaries
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<TrendsCheckpoint>();
 builder.Services.AddSingleton<Analyzer>();
+builder.Services.AddScoped<IViewRenderService, ViewRenderService>();
 
 var app = builder.Build();
 
