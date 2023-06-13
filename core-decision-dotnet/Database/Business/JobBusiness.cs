@@ -58,7 +58,16 @@ namespace Photon.JobSeeker
 
         public Job? Fetch(long agency_id, string code)
         {
-            using var reader = database.Read(Q_FETCH, agency_id, code);
+            using var reader = database.Read(Q_FETCH_BY_CODE, agency_id, code);
+
+            if (!reader.Read()) return default;
+
+            return ReadJob(reader, true);
+        }
+
+        public Job? Fetch(long job_id)
+        {
+            using var reader = database.Read(Q_FETCH_ID, job_id);
 
             if (!reader.Read()) return default;
 
@@ -213,7 +222,10 @@ FROM (
 WHERE Ranking <= (12 / Category)
 ORDER BY Category, Ordering";
 
-        private const string Q_FETCH = @"
+        private const string Q_FETCH_ID = @"
+SELECT * FROM Job WHERE JobID = $job";
+
+        private const string Q_FETCH_BY_CODE = @"
 SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
 
         private const string Q_FETCH_FROM = @$"
