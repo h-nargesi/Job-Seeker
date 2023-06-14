@@ -67,7 +67,7 @@ namespace Photon.JobSeeker
                     throw new Exception("The 'IViewRenderService' is not initialized.");
 
                 var context = new Resume().GenerateContext(jobid);
-                var result = await resume_generator.RenderToStringAsync("resume.cshtml", context);
+                var result = await resume_generator.RenderToStringAsync("~/views/resume.cshtml", context);
                 var base64_content = Convert.ToBase64String(Encoding.UTF8.GetBytes(result));
 
                 return Ok(new
@@ -90,7 +90,7 @@ namespace Photon.JobSeeker
             {
                 var context = new Resume().GenerateContext(jobid);
 
-                return View("resume.cshtml", context);
+                return View("~/views/resume.cshtml", context);
             }
             catch (Exception ex)
             {

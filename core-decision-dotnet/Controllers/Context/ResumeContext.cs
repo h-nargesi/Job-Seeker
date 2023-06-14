@@ -56,7 +56,7 @@ public class ResumeContext
     }
 }
 
-internal static class ResumeContextExtentions
+public static class ResumeContextExtentions
 {
     public static string JS(this bool value)
     {

@@ -30,17 +30,17 @@ public class Resume
         return result;
     }
 
-    private static readonly Regex DOTNET = new(@"\*C#.NET\*");
-    private static readonly Regex JAVA = new(@"\*Java\*");
-    private static readonly Regex GOLANG = new(@"\*GO-Lang\*");
-    private static readonly Regex FRONT_END = new(@"\*(Frontend|Web-API)\*");
-    private static readonly Regex EXPERT_SQL = new(@"\*Expert-SQL\*");
-    private static readonly Regex LOW_LEVEL = new(@"\*Low-Level\*");
-    private static readonly Regex MACHINE_LEARNING  = new(@"\*(Machine-Learning|TensorFlow)\*");
-    private static readonly Regex PYTHON = new(@"\*Python\*");
+    private static readonly Regex DOTNET = new(@"\*\*(\(\+\d+\)\s+)?C#\.NET\*\*");
+    private static readonly Regex JAVA = new(@"\*\*(\(\+\d+\)\s+)?Java\*\*");
+    private static readonly Regex GOLANG = new(@"\*\*(\(\+\d+\)\s+)?GO-Lang\*\*");
+    private static readonly Regex FRONT_END = new(@"\*\*(\(\+\d+\)\s+)?(Frontend|Web-API)\*\*");
+    private static readonly Regex EXPERT_SQL = new(@"\*\*(\(\+\d+\)\s+)?Expert-SQL\*\*");
+    private static readonly Regex LOW_LEVEL = new(@"\*\*(\(\+\d+\)\s+)?Low-Level\*\*");
+    private static readonly Regex MACHINE_LEARNING  = new(@"\*\*(\(\+\d+\)\s+)?(Machine-Learning|TensorFlow)\*\*");
+    private static readonly Regex PYTHON = new(@"\*\*(\(\+\d+\)\s+)?Python\*\*");
 
-    private static readonly Regex WEB_API = new(@"\*Web-API\*");
-    private static readonly Regex TENSORFLOW = new(@"\*TensorFlow\*");
-    private static readonly Regex GIT = new(@"\*Git\*");
-    private static readonly Regex ERP = new(@"\*ERP\*");
+    private static readonly Regex WEB_API = new(@"\*\*(\(\+\d+\)\s+)?Web-API\*\*");
+    private static readonly Regex TENSORFLOW = new(@"\*\*(\(\+\d+\)\s+)?TensorFlow\*\*");
+    private static readonly Regex GIT = new(@"\*\*(\(\+\d+\)\s+)?Git\*\*");
+    private static readonly Regex ERP = new(@"\*\*(\(\+\d+\)\s+)?ERP\*\*");
 }

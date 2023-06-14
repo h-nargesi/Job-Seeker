@@ -1,4 +1,5 @@
-@model ResumeContext
+@using Photon.JobSeeker
+@model Photon.JobSeeker.ResumeContext
 
 <!DOCTYPE html>
 <html>
@@ -24,9 +25,9 @@
         @string.Join(",\n", Model.NotIncluded)
     ];
     const ELEMENTS = {
-        LOCATION: @Model.Keys.LOCATION.JS(),
-        LINKEDIN: @Model.Keys.LINKEDIN.JS(),
-        FOOTER: @Model.Keys.FOOTER.JS(),
+        LOCATION: @Model.Elements.LOCATION.JS(),
+        LINKEDIN: @Model.Elements.LINKEDIN.JS(),
+        FOOTER: @Model.Elements.FOOTER.JS(),
     }
 </script>
 <style>
