@@ -36,7 +36,7 @@ ActionHandler.OnPageLoad = function() {
             }
         }, false);
 
-    } else ActionHandler.SetCloseTimer();
+    } else if (window.location.hostname != 'localhost') ActionHandler.SetCloseTimer();
 }
 
 async function SendingPageInfo(scope) {

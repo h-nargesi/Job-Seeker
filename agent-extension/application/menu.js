@@ -16,7 +16,7 @@ ServerUrl.addEventListener("keyup", function(event) {
 });
 
 OpenServer.addEventListener("click", function() {
-    window.open(ServerUrl.value + "report/index");
+    window.open(ServerUrl.value);
 });
 
 async function LoadData() {
