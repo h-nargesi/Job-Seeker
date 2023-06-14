@@ -1,6 +1,6 @@
 async function download_resume(jobid) {
     try {
-        var response = await fetch("/job/resume?jobid=" + jobid, { method: 'POST' });
+        var response = await fetch("/job/resume64?jobid=" + jobid, { method: 'POST' });
         var result = JSON.parse(response.body);
         console.log('resume-body', response.body);
         call_api(result.name, result.content);

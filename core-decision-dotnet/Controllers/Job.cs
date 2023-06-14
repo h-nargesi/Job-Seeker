@@ -1,7 +1,6 @@
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Serilog;
+using System.Text;
 
 namespace Photon.JobSeeker
 {
@@ -60,22 +59,38 @@ namespace Photon.JobSeeker
         }
 
         [HttpPost]
-        public async Task<IActionResult> Resume([FromQuery] long jobid)
+        public async Task<IActionResult> Resume64([FromQuery] long jobid)
         {
             try
             {
-                var resume_generator = HttpContext.RequestServices.GetService<IViewRenderService>();
-                if (resume_generator == null) throw new Exception("The 'IViewRenderService' is not initialized.");
+                var resume_generator = HttpContext.RequestServices.GetService<IViewRenderService>() ?? 
+                    throw new Exception("The 'IViewRenderService' is not initialized.");
 
-                var context = new object();
-                var result = await resume_generator.RenderToStringAsync("resume", context);
+                var context = new Resume().GenerateContext(jobid);
+                var result = await resume_generator.RenderToStringAsync("resume.cshtml", context);
                 var base64_content = Convert.ToBase64String(Encoding.UTF8.GetBytes(result));
 
                 return Ok(new
                 {
-                    Name = "null",
+                    Name = context.FileName(),
                     Content = base64_content,
                 });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+                throw;
+            }
+        }
+
+        [HttpGet]
+        public IActionResult Resume([FromQuery] long jobid)
+        {
+            try
+            {
+                var context = new Resume().GenerateContext(jobid);
+
+                return View("resume.cshtml", context);
             }
             catch (Exception ex)
             {

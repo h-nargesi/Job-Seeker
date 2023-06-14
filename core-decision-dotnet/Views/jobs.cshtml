@@ -5,7 +5,7 @@
     <tr id="Job_@info.Job.JobID" onclick="select_job('#Job_@info.Job.JobID')" class="@info.Job.State">
         <td>@info.Job.JobID</td>
         <td><span>@info.AgencyName</span></td>
-        <td><a href="#" onclick="download_resume(@info.Job.JobID)">Resume</a></td>
+        <td><a href="#" onclick="download_resume(@info.Job.JobID)">Resume</a>-<a href="/job/resume?jobid=@info.Job.JobID" target="_blank">(R)</a></td>
         <td><a href="@info.Job.Link" target="_blank">@info.Job.Title</a></td>
         <td><strong>@info.Job.Score</strong></td>
         <td><a href="@info.Job.Url" target="_blank">Link</a></td>

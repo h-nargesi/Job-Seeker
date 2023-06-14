@@ -37,9 +37,26 @@ public class ResumeContext
         public bool LINKEDIN { get; set; } = true;
         public bool FOOTER { get; set; } = true;
     }
+
+    public string FileName()
+    {
+        var keys = new List<string>();
+
+        if (Keys.DOTNET) keys.Add("d");
+        if (Keys.JAVA) keys.Add("j");
+        if (Keys.PYTHON) keys.Add("p");
+        if (Keys.GOLANG) keys.Add("g");
+        if (Keys.SQL) keys.Add("s");
+        if (Keys.FRONT_END) keys.Add("f");
+        if (Keys.WEB) keys.Add("w");
+        if (Keys.MACHINE_LEARNING) keys.Add("m");
+        if (Keys.NETWORK) keys.Add("n");
+
+        return "hamed-nargesi-resume-" + string.Join("", keys) + ".pdf";
+    }
 }
 
-public static class ResumeContextExtentions
+internal static class ResumeContextExtentions
 {
     public static string JS(this bool value)
     {

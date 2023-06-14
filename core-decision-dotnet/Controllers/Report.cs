@@ -65,7 +65,7 @@ namespace Photon.JobSeeker
             }
         }
 
-        [HttpGet]
+        [HttpGet("/")]
         public IActionResult Index()
         {
             try
