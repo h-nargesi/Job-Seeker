@@ -12,8 +12,9 @@ namespace Photon.JobSeeker
         Content = 128,
         Link = 256,
         Log = 512,
-        Tries = 1024,
-        All = 2047,
-        ModifiedOn = 2048,
+        Options = 1024,
+        Tries = 2048,
+        All = 4095,
+        ModifiedOn = 4096,
     }
 }

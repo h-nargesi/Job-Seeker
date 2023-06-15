@@ -98,7 +98,7 @@ namespace Photon.JobSeeker
                 job.Log = "";
                 job.Score = null;
 
-                filter |= JobFilter.Log | JobFilter.Score;
+                filter |= JobFilter.Log | JobFilter.Options | JobFilter.Score;
                 var user_changes = job.State > JobState.Attention;
 
                 var job_expired = job_acceptability_check?.IsMatch(job.Content);
@@ -220,6 +220,7 @@ namespace Photon.JobSeeker
             }
 
             var categories = new HashSet<string>();
+            var keywords = new HashSet<string>();
             var logs = new List<string>(options.Length);
 
             foreach (var category in option_scores)
@@ -237,6 +238,8 @@ namespace Photon.JobSeeker
                     job.Score += score;
                     factor = 0.5F;
 
+                    calc.option.AddKeyword(keywords, calc.matched);
+
                     logs.Add($"**{calc.option.ToString('+', score)}**");
                     logs.Add(calc.matched);
                     logs.Add("");
@@ -244,6 +247,8 @@ namespace Photon.JobSeeker
             }
 
             job.Log += string.Join("\n", logs);
+            if (job.Options == null)
+                job.Options = keywords;
 
             if (!hasField || rejected) return false;
             else return job.Score >= MinEligibilityScore;

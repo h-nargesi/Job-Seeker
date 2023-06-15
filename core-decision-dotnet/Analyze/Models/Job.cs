@@ -26,6 +26,8 @@
 
         public string? Log { get; set; }
 
+        public HashSet<string>? Options { get; set; }
+
         public string? Tries { get; set; }
 
         public void SetHtml(string html)
