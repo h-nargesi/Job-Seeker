@@ -20,7 +20,7 @@ namespace Photon.JobSeeker
                 if (value is not DBNull)
                     value = value.ToString() ?? (object)DBNull.Value;
             }
-            else if (value is IEnumerable)
+            else if (!(value is string) && value is IEnumerable)
             {
                 type = typeof(string);
                 if (value is not DBNull)
