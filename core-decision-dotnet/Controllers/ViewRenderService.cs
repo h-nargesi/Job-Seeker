@@ -9,37 +9,33 @@ namespace Photon.JobSeeker;
 
 public interface IViewRenderService
 {
-    Task<string> RenderToStringAsync(string viewName, object model);
+    Task<string> RenderToStringAsync(HttpContext http_context, string viewName, object model);
 }
 
 public class ViewRenderService : IViewRenderService
 {
     private readonly IRazorViewEngine razor_view_engine;
     private readonly ITempDataProvider temp_data_provider;
-    private readonly IServiceProvider service_provider;
 
     public ViewRenderService(
         IRazorViewEngine razorViewEngine,
-        ITempDataProvider tempDataProvider,
-        IServiceProvider serviceProvider)
+        ITempDataProvider tempDataProvider)
     {
         this.razor_view_engine = razorViewEngine;
         this.temp_data_provider = tempDataProvider;
-        this.service_provider = serviceProvider;
     }
 
-    public async Task<string> RenderToStringAsync(string viewName, object model)
+    public async Task<string> RenderToStringAsync(HttpContext http_context, string view_name, object model)
     {
-        var httpContext = new DefaultHttpContext { RequestServices = service_provider };
-        var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
+        var actionContext = new ActionContext(http_context, http_context.GetRouteData(), new ActionDescriptor());
 
         using (var writer = new StringWriter())
         {
-            var viewResult = razor_view_engine.FindView(actionContext, viewName, false);
+            var viewResult = razor_view_engine.GetView("", view_name, true);
 
             if (viewResult.View == null)
             {
-                throw new ArgumentNullException($"{viewName} does not match any available view");
+                throw new ArgumentNullException($"{view_name} does not match any available view");
             }
 
             var viewDictionary = new ViewDataDictionary(new EmptyModelMetadataProvider(), new ModelStateDictionary())

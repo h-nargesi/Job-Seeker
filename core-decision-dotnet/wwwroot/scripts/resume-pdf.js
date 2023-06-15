@@ -1,19 +1,18 @@
-async function download_resume(jobid) {
+function download_resume(jobid) {
     try {
-        var response = await fetch("/job/resume64?jobid=" + jobid, { method: 'POST' });
-        var result = JSON.parse(response.body);
-        console.log('resume-body', response.body);
-        call_api(result.name, result.content);
-        
+        fetch("/job/resume64?jobid=" + jobid, { method: 'POST' })
+            .then(response => response.json())
+            .then(result => call_api(result.name, result.content));
+
     } catch (e) {
         console.error(e);
     }
 }
 
-async function call_api(name, content) {
+function call_api(name, content) {
     try {
         console.log(name, content);
-        var response = await fetch("https://api.cloudconvert.com/v2/jobs", {
+        fetch("https://api.cloudconvert.com/v2/jobs", {
             method: 'POST',
             headers: {
                 'Authorization': API_KEY,
@@ -31,28 +30,30 @@ async function call_api(name, content) {
                         "input_format": "html",
                         "output_format": "pdf",
                         "engine": "chrome",
-                        "input": [ "import-html" ],
+                        "engine_version": "112",
+                        "input": ["import-html"],
                         "zoom": 1,
                         "page_width": 21,
-                        "page_height": 29.7,
+                        "page_height": 30,
                         "print_background": true,
                         "display_header_footer": false,
                         "wait_until": "load",
                         "wait_time": 1000,
                         "filename": name
                     },
-                    "export-1": {
+                    "export-url": {
                         "operation": "export/url",
-                        "input": [ "task-convert" ],
+                        "input": ["task-convert"],
                         "inline": false,
                         "archive_multiple_files": false
                     }
                 },
                 "tag": "jobbuilder"
             })
-        });
-        console.log(response);
-        
+        })
+            .then(response => response.json())
+            .then(result => console.log(result))
+
     } catch (e) {
         console.error(e);
     }
