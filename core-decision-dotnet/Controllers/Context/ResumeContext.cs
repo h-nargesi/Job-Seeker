@@ -38,7 +38,7 @@ public class ResumeContext
         public bool FOOTER { get; set; } = true;
     }
 
-    public string FileName()
+    public string FileName(string extnesion)
     {
         var keys = new List<string>();
 
@@ -57,7 +57,7 @@ public class ResumeContext
         keys.Add(temp);
         keys.AddRange(Keys?.More?.Keys.Select(x => x.ToLower()) ?? new string[0]);
 
-        return "hamed-nargesi-resume-" + string.Join("-", keys) + ".pdf";
+        return "hamed-nargesi-resume-" + string.Join("-", keys) + "." + extnesion;
     }
 }
 

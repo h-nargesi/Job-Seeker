@@ -7,9 +7,9 @@
         <td><span>@info.AgencyName</span></td>
         @* <td><a href="#" onclick="download_resume(@info.Job.JobID)">Resume</a></td> *@
         @* <td><a href="/job/resume?jobid=@info.Job.JobID" target="_blank">Resume</a></td> *@
-        <td><a href="@info.Job.Link" target="_blank">@info.Job.Title</a></td>
+        <td><a href="/job/get/@info.Job.JobID" target="_blank">@info.Job.Title</a></td>
         <td><strong>@info.Job.Score</strong></td>
-        <td><a href="@info.Job.Url" target="_blank">Link</a></td>
+        <td><a href="@info.Job.Url" target="_blank">URL</a></td>
         <td><span>@info.Job.RegTime</span></td>
         @* <td>
             <button type="button" class="btn btn-link" onclick="logs(@info.Job.JobID)">

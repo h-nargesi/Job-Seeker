@@ -11,6 +11,24 @@ namespace Photon.JobSeeker
 
         public JobController(Analyzer analyzer) => this.analyzer = analyzer;
 
+        [HttpGet("{jobid:int}")]
+        public IActionResult Get([FromRoute] long jobid)
+        {
+            try
+            {
+                using var database = Database.Open();
+                var job = database.Job.Fetch(jobid);
+                if (job == null) return NotFound();
+                analyzer.AgenciesByID.TryGetValue(job.JobID, out var agency);
+                return View("~/views/job-detail.cshtml", (job, agency, string.Empty));
+            }
+            catch (Exception ex)
+            {
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+                throw;
+            }
+        }
+
         [HttpPost]
         public IActionResult Revaluate()
         {
@@ -58,23 +76,19 @@ namespace Photon.JobSeeker
             }
         }
 
-        [HttpPost]
+        [HttpGet]
         public async Task<IActionResult> Resume64([FromQuery] long jobid)
         {
             try
             {
-                var resume_generator = HttpContext.RequestServices.GetService<IViewRenderService>() ?? 
+                var resume_generator = HttpContext.RequestServices.GetService<IViewRenderService>() ??
                     throw new Exception("The 'IViewRenderService' is not initialized.");
 
                 var context = new Resume().GenerateContext(jobid);
                 var result = await resume_generator.RenderToStringAsync(HttpContext, "~/views/resume.cshtml", context);
-                var base64_content = Convert.ToBase64String(Encoding.UTF8.GetBytes(result));
+                var content = Encoding.UTF8.GetBytes(result);
 
-                return Ok(new
-                {
-                    Name = context.FileName(),
-                    Content = base64_content,
-                });
+                return File(content, "text/html", context.FileName("html"));
             }
             catch (Exception ex)
             {
