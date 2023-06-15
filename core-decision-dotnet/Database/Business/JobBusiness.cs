@@ -1,4 +1,5 @@
 ﻿using System.Data.SQLite;
+using Newtonsoft.Json;
 
 namespace Photon.JobSeeker
 {
@@ -142,6 +143,8 @@ namespace Photon.JobSeeker
 
         private static Job ReadJob(SQLiteDataReader reader, bool full = false)
         {
+            var options = full ? reader[nameof(Job.Options)] as string : null;
+
             return new Job
             {
                 JobID = (long)reader[nameof(Job.JobID)],
@@ -155,7 +158,8 @@ namespace Photon.JobSeeker
                 Html = full ? reader[nameof(Job.Html)] as string : null,
                 Content = full ? reader[nameof(Job.Content)] as string : null,
                 Link = reader[nameof(Job.Link)] as string,
-                Log = reader[nameof(Job.Log)] as string,
+                Log = full ? reader[nameof(Job.Log)] as string : null,
+                Options = full && options != null ? JsonConvert.DeserializeObject<HashSet<string>>(options) : null,
             };
         }
 
@@ -176,7 +180,7 @@ WITH date_diff AS (
          , {DaysPriod} * 6 / 7 AS C
     FROM (
         SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
-             , Job.State, Job.Score, Job.Url, Job.Link, Job.Log
+             , Job.State, Job.Score, Job.Url, Job.Link
              , Agency.Title as AgencyName
              , CASE State 
                WHEN '{nameof(JobState.Attention)}' THEN 1
@@ -194,7 +198,7 @@ WITH date_diff AS (
 
 ), ranking AS (
     SELECT job.JobID, job.RegTime, job.ModifiedOn, job.AgencyID, job.Code, job.Title
-         , job.State, job.Score, job.Url, job.Link, job.Log
+         , job.State, job.Score, job.Url, job.Link
          , job.AgencyName, job.Category, job.RegDate
          --*, A * EXP(YF) AS Y, - EXP(UF) AS U, A * EXP(YF) - EXP(UF) AS TimeScore
          , Score + A * EXP(YF) - EXP(UF) AS RankScore
