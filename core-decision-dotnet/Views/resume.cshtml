@@ -21,8 +21,11 @@
         MACHINE_LEARNING: @Model.Keys.MACHINE_LEARNING.JS(),
         NETWORK: @Model.Keys.NETWORK.JS(),
     }
+    const MORE = {
+        @Html.Raw(string.Join(",\n\t\t", Model.Keys.More?.Select(x => x.Key + ": ["+ string.Join(", ", x.Value.Select(v => "'" + v + "'")) +"]") ?? new string[0]))
+    };
     const NOT_INCLUDED = [
-        @string.Join(",\n", Model.NotIncluded)
+        @string.Join(",\n\t\t", Model.NotIncluded.Select(x => "'#" + x + "'"))
     ];
     const ELEMENTS = {
         LOCATION: @Model.Elements.LOCATION.JS(),
@@ -226,9 +229,11 @@
             <!--
             <span class="skill highligh key-sql key-sql-postgre">PostgreSQL</span>
             -->
-            <span class="skill highligh key-front-end">REST API</span>
             <span class="skill highligh key-front-end">Angular</span>
+            <!--
+            <span class="skill highligh key-front-end">REST API</span>
             <span class="skill highligh key-front-end">TypeScript, Javascript</span>
+            -->
             <span class="skill highligh key-machine-learning">Machine Learning</span>
             <span class="skill highligh">Unit Testing</span>
         </p>
@@ -430,6 +435,19 @@
 
             document.querySelectorAll(selector + class_name)
                     .forEach((element) => element.style.display = 'none');
+        }
+
+        for (const k in MORE) {
+            const class_name = k.replace('_', '-').toLowerCase();
+            const selector = '.skill.key-';
+
+            let element = document.querySelectorAll(selector + class_name);
+            if (!element.length) continue;
+            element = element[element.length - 1];
+
+            for (const title of MORE[k]) {
+                element.insertAdjacentHTML('afterend', `\n<span class="skill highligh key-${class_name}">${title}</span>`);
+            }
         }
 
         const data = [VERSION, Array.from(letters).join('')];

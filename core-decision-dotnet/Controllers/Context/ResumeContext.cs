@@ -21,13 +21,13 @@ public class ResumeContext
         public bool MACHINE_LEARNING { get; set; }
         public bool NETWORK { get; set; }
 
-        public Dictionary<string, string> More { get; } = new();
+        public Dictionary<string, string[]>? More { get; set; }
     }
 
     [Serializable]
     public class NotIncludedContext : HashSet<string>
     {
-        public const string ClearanceMonitoring = "#clearance-monitoring";
+        public const string ClearanceMonitoring = "clearance-monitoring";
     }
 
     [Serializable]
@@ -52,7 +52,12 @@ public class ResumeContext
         if (Keys.MACHINE_LEARNING) keys.Add("m");
         if (Keys.NETWORK) keys.Add("n");
 
-        return "hamed-nargesi-resume-" + string.Join("", keys) + ".pdf";
+        var temp = string.Join("", keys);
+        keys.Clear();
+        keys.Add(temp);
+        keys.AddRange(Keys?.More?.Keys.Select(x => x.ToLower()) ?? new string[0]);
+
+        return "hamed-nargesi-resume-" + string.Join("-", keys) + ".pdf";
     }
 }
 

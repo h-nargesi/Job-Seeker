@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace Photon.JobSeeker;
 
 public class Resume
@@ -11,36 +9,43 @@ public class Resume
         using var database = Database.Open();
         var job = database.Job.Fetch(jobid);
 
-        if (job == default || job.Log == null) return result;
+        if (job == default || job.Options == null) return result;
 
-        result.Keys.DOTNET = DOTNET.IsMatch(job.Log);
-        result.Keys.JAVA = JAVA.IsMatch(job.Log);
-        result.Keys.PYTHON = PYTHON.IsMatch(job.Log);
-        result.Keys.GOLANG = GOLANG.IsMatch(job.Log);
-        result.Keys.SQL = EXPERT_SQL.IsMatch(job.Log);
-        result.Keys.FRONT_END = FRONT_END.IsMatch(job.Log);
-        result.Keys.WEB = LOW_LEVEL.IsMatch(job.Log);
-        result.Keys.MACHINE_LEARNING = MACHINE_LEARNING.IsMatch(job.Log);
+        result.Keys.DOTNET = job.Options.Contains(nameof(ResumeContext.KeysContext.DOTNET));
+        result.Keys.JAVA = job.Options.Contains(nameof(ResumeContext.KeysContext.JAVA));
+        result.Keys.PYTHON = job.Options.Contains(nameof(ResumeContext.KeysContext.PYTHON));
+        result.Keys.GOLANG = job.Options.Contains(nameof(ResumeContext.KeysContext.GOLANG));
+        result.Keys.SQL = job.Options.Contains(nameof(ResumeContext.KeysContext.SQL));
+        result.Keys.FRONT_END = job.Options.Contains(nameof(ResumeContext.KeysContext.FRONT_END));
+        result.Keys.WEB = job.Options.Contains(nameof(ResumeContext.KeysContext.WEB));
+        result.Keys.MACHINE_LEARNING = job.Options.Contains(nameof(ResumeContext.KeysContext.MACHINE_LEARNING));
 
-        if (WEB_API.IsMatch(job.Log)) result.Keys.More.Add("Web-API", nameof(FRONT_END).ToLower());
-        if (TENSORFLOW.IsMatch(job.Log)) result.Keys.More.Add("TensorFlow", nameof(MACHINE_LEARNING).ToLower());
-        if (GIT.IsMatch(job.Log)) result.Keys.More.Add("GIT", null!);
-        if (ERP.IsMatch(job.Log)) result.Keys.More.Add("ERP", null!);
+        var more = job.Options.Where(x => x != null && !MainKeys.Contains(x))
+                              .Select(x => x.Split(':'))
+                              .Select(x => new { key = x.Last(), parent = x.Length > 1 ? x.First() : string.Empty })
+                              .Where(x => !NotInclude.Contains(x.key.ToLower()))
+                              .GroupBy(k => k.parent)
+                              .ToDictionary(k => k.Key, v => v.Select(x => x.key).ToArray());
+
+        result.Keys.More = more;
 
         return result;
     }
 
-    private static readonly Regex DOTNET = new(@"\*\*(\(\+\d+\)\s+)?C#\.NET\*\*");
-    private static readonly Regex JAVA = new(@"\*\*(\(\+\d+\)\s+)?Java\*\*");
-    private static readonly Regex GOLANG = new(@"\*\*(\(\+\d+\)\s+)?GO-Lang\*\*");
-    private static readonly Regex FRONT_END = new(@"\*\*(\(\+\d+\)\s+)?(Frontend|Web-API)\*\*");
-    private static readonly Regex EXPERT_SQL = new(@"\*\*(\(\+\d+\)\s+)?Expert-SQL\*\*");
-    private static readonly Regex LOW_LEVEL = new(@"\*\*(\(\+\d+\)\s+)?Low-Level\*\*");
-    private static readonly Regex MACHINE_LEARNING  = new(@"\*\*(\(\+\d+\)\s+)?(Machine-Learning|TensorFlow)\*\*");
-    private static readonly Regex PYTHON = new(@"\*\*(\(\+\d+\)\s+)?Python\*\*");
+    private static readonly HashSet<string> NotInclude = new()
+    {
+        "angular", "database"
+    };
 
-    private static readonly Regex WEB_API = new(@"\*\*(\(\+\d+\)\s+)?Web-API\*\*");
-    private static readonly Regex TENSORFLOW = new(@"\*\*(\(\+\d+\)\s+)?TensorFlow\*\*");
-    private static readonly Regex GIT = new(@"\*\*(\(\+\d+\)\s+)?Git\*\*");
-    private static readonly Regex ERP = new(@"\*\*(\(\+\d+\)\s+)?ERP\*\*");
+    private static readonly HashSet<string> MainKeys = new()
+    {
+        nameof(ResumeContext.KeysContext.DOTNET),
+        nameof(ResumeContext.KeysContext.JAVA),
+        nameof(ResumeContext.KeysContext.PYTHON),
+        nameof(ResumeContext.KeysContext.GOLANG),
+        nameof(ResumeContext.KeysContext.SQL),
+        nameof(ResumeContext.KeysContext.FRONT_END),
+        nameof(ResumeContext.KeysContext.WEB),
+        nameof(ResumeContext.KeysContext.MACHINE_LEARNING),
+    };
 }
