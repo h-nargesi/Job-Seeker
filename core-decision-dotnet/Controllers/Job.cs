@@ -19,7 +19,7 @@ namespace Photon.JobSeeker
                 using var database = Database.Open();
                 var job = database.Job.Fetch(jobid);
                 if (job == null) return NotFound();
-                analyzer.AgenciesByID.TryGetValue(job.JobID, out var agency);
+                analyzer.AgenciesByID.TryGetValue(job.AgencyID, out var agency);
                 return View("~/views/job-detail.cshtml", (job, agency, string.Empty));
             }
             catch (Exception ex)
