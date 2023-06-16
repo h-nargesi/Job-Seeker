@@ -3,6 +3,7 @@
 *.csv
 *.pyc
 *.log
+*.zip
 
 /documents/
 /selenium/driver/
