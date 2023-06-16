@@ -49,7 +49,7 @@ values
 	--	Keywords
 	,	(02,	'keywords',	'Full-stack',		'\bfull[- ]?stack\b',
 				'{ "resume": null }')
-	,	(01,	'keywords',	'Developer',		'\bdeveloper\b',
+	,	(01,	'keywords',	'Developer',		'\b(web[- ])?developer\b',
 				'{ "resume": null }')
 	,	(02,	'keywords',	'Mid-Level',		'\b(mid|medium)[- ]level\b',
 				'{ "resume": null }')

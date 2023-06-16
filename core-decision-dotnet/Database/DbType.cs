@@ -20,10 +20,10 @@ namespace Photon.JobSeeker
                 if (value is not DBNull)
                     value = value.ToString() ?? (object)DBNull.Value;
             }
-            else if (!(value is string) && value is IEnumerable)
+            else if (typeof(IEnumerable).IsAssignableFrom(type))
             {
                 type = typeof(string);
-                if (value is not DBNull)
+                if (value is not DBNull && value is not string)
                     value = JsonConvert.SerializeObject(value);
             }
 

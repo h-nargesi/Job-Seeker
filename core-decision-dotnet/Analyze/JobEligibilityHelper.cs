@@ -15,7 +15,7 @@ namespace Photon.JobSeeker
         private readonly Database database;
         private readonly JobOption[] options;
 
-        private static object revaluation_lock = new();
+        private static readonly object revaluation_lock = new();
         public static RevaluationProcess? CurrentRevaluationProcess { get; private set; }
 
         public JobEligibilityHelper()
@@ -104,7 +104,7 @@ namespace Photon.JobSeeker
                 var job_expired = job_acceptability_check?.IsMatch(job.Content);
                 var correct_language = job_expired != true ? LanguageIsMatch(job) : (bool?)null;
                 var rejected = correct_language != true;
-                var eligibility = !rejected ? EvaluateEligibility(job, out rejected) : false;
+                var eligibility = !rejected && EvaluateEligibility(job, out rejected);
 
                 if (job_expired == true)
                 {
@@ -247,8 +247,7 @@ namespace Photon.JobSeeker
             }
 
             job.Log += string.Join("\n", logs);
-            if (job.Options == null)
-                job.Options = keywords;
+            job.Options = keywords;
 
             if (!hasField || rejected) return false;
             else return job.Score >= MinEligibilityScore;
@@ -258,7 +257,7 @@ namespace Photon.JobSeeker
         {
             var score = 0L;
             var matches = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (Match matched_option in option.Pattern.Matches(job.Content ?? ""))
+            foreach (Match matched_option in option.Pattern.Matches(job.Content ?? "").Cast<Match>())
             {
                 if (matched_option.Success)
                     matches.Add(matched_option.Value);
