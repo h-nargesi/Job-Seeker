@@ -31,7 +31,7 @@ values
 
 	--	Technologies
 	,	(05,	'tech',		'Machine-Learning',	'\b((machine|deep)[- ]learning|natural[- ]network|(?-i)ML|(?-i)AI)\b', null)
-	,	(10,	'tech',		'Rest-API',			'\b((web|rest)[- ]?api|web services)\b',
+	,	(10,	'tech',		'Rest-API',			'\b(rest[- ]?(api|ful)|web[- ](services|api))\b',
 				'{ "resume": { "parent": "Front-End" } }')
 	,	(05,	'tech',		'TensorFlow',		'\btensor[- ]?flow\b',
 				'{ "resume": { "parent": "Machine-Learning" } }')
