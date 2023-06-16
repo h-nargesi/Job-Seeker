@@ -63,7 +63,7 @@ async function change_running(agency, running) {
         const current_element = document.getElementById(`RM-${agency}-${running}`);
         if (!current_element) return;
 
-        let enabled = current_element.classList.contains('btn-primary');
+        let enabled = current_element.classList.contains('btn-success');
 
         const data = {
             method: 'POST',
@@ -79,10 +79,19 @@ async function change_running(agency, running) {
         await fetch("/decision/running", data);
 
         document.querySelectorAll(`button[id^="RM-${agency}"]`).forEach((button) => {
-            button.className = 'btn btn-outline-primary mt-1';
+            button.className = 'btn btn-outline-info mt-1';
         });
-        if (!enabled) current_element.className = 'btn btn-primary mt-1';
+        if (!enabled) current_element.className = 'btn btn-success mt-1';
 
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function clean() {
+    try {
+        await fetch("/job/clean", { method: 'POST' });
+        LoadJobs();
     } catch (e) {
         console.error(e);
     }

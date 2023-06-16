@@ -138,6 +138,12 @@ namespace Photon.JobSeeker
             Save(new { JobID = id, State = state });
         }
 
+        public void Clean(int mounths)
+        {
+            database.Execute(Q_CLEAN, DateTime.Now.AddMonths(-mounths));
+            database.Execute(Q_VACUUM);
+        }
+
         protected override string[]? GetUniqueColumns { get; } = new string[] {
             nameof(JobFilter.AgencyID), nameof(JobFilter.Code)
         };
@@ -247,6 +253,11 @@ UPDATE Job SET State = '{nameof(JobState.Saved)}' WHERE State = '{nameof(JobStat
 SELECT JobID, Url, Tries FROM Job
 WHERE AgencyID = $agency AND State = '{nameof(JobState.Saved)}' AND (Tries IS NULL OR Tries NOT LIKE '%4: %')
 ORDER BY Tries IS NULL DESC, Tries DESC, JobID LIMIT 1";
+
+        private const string Q_CLEAN = @$"
+DELETE FROM Job WHERE RegTime < $date";
+
+        private const string Q_VACUUM = "vacuum;";
 
     }
 }
