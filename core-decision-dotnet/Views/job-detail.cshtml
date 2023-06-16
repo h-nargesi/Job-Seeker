@@ -1,9 +1,20 @@
-@model (Photon.JobSeeker.Job Job, Photon.JobSeeker.Agency Agency, string Resume)
+@using Photon.JobSeeker
+@model (Job Job, Agency Agency, string Resume)
 
 @{
   Layout = "~/views/layout.cshtml";
   var SafeToString = (object? value) => value?.ToString() ?? string.Empty;
   var HasValue = (object? value) => SafeToString(value).Length > 0 ? "primary" : "secondary";
+  var GetColor = (JobState state) => state switch
+  {
+    JobState.Saved => "text-secondary",
+    JobState.Revaluation => "text-secondary",
+    JobState.NotApproved => "text-warning",
+    JobState.Attention => "text-info",
+    JobState.Rejected => "text-danger",
+    JobState.Applied => "text-success",
+    _=> "text-secondary"
+  };
 }
 
 <div class="container py-4">
@@ -15,7 +26,7 @@
 
   <div class="p-5 mb-2 bg-body-tertiary rounded-3">
     <div class="container-fluid py-5">
-      <h2 class="text-danger display-1">@Model.Job.Score</h2>
+      <h2 class="display-1"><span class="text-secondary">@Model.Job.Score</span>|<span class="@GetColor(Model.Job.State)">@Model.Job.State</span></h2>
       <h1 class="display-3 fw-bold d-inline-block">@Model.Job.Title</h1>
       <h4>Register Time: @Model.Job.RegTime</h4>
       <h6>ID: #@Model.Job.JobID</h6>
