@@ -32,14 +32,8 @@ namespace Photon.JobSeeker
         {
             try
             {
-                var agencyids = agencies?.Split(',')
-                                         .Where(id => !string.IsNullOrEmpty(id))
-                                         .Select(id => { int.TryParse(id, out var value); return value; })
-                                         .Where(id => id > 0)
-                                         .ToArray() ?? new int[0];
-
                 using var database = Database.Open();
-                var list = database.Job.Fetch(agencyids);
+                var list = GetJobs(database, agencies);
 
                 return View("~/views/jobs.cshtml", list);
             }

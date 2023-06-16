@@ -20,6 +20,7 @@ namespace Photon.JobSeeker
                 list.Add(new
                 {
                     Job = ReadJob(reader),
+                    Relocation = (long)reader["Relocation"] != 0,
                     AgencyName = (string)reader["AgencyName"],
                 });
 
@@ -181,7 +182,7 @@ WITH date_diff AS (
     FROM (
         SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
              , Job.State, Job.Score, Job.Url, Job.Link
-             , Agency.Title as AgencyName
+             , Agency.Title AS AgencyName
              , CASE State 
                WHEN '{nameof(JobState.Attention)}' THEN 1
                WHEN '{nameof(JobState.NotApproved)}' THEN 2
@@ -190,6 +191,7 @@ WITH date_diff AS (
                ELSE 12
                END AS Category
              , SUBSTR(Job.RegTime, 1, 10) AS RegDate
+             , CASE WHEN Job.Log LIKE '%) Relocation**%' THEN 1 ELSE 0 END AS Relocation
         FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
     ) job
     CROSS JOIN (
@@ -198,7 +200,7 @@ WITH date_diff AS (
 
 ), ranking AS (
     SELECT job.JobID, job.RegTime, job.ModifiedOn, job.AgencyID, job.Code, job.Title
-         , job.State, job.Score, job.Url, job.Link
+         , job.State, job.Score, job.Url, job.Link, job.Relocation
          , job.AgencyName, job.Category, job.RegDate
          --*, A * EXP(YF) AS Y, - EXP(UF) AS U, A * EXP(YF) - EXP(UF) AS TimeScore
          , Score + A * EXP(YF) - EXP(UF) AS RankScore

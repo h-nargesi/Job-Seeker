@@ -1,5 +1,9 @@
 @model List<dynamic>
 
+@{
+    var getClassName = (bool value) => value ? "text-success" : "";
+}
+
 @foreach (var info in Model)
 {
     <tr id="Job_@info.Job.JobID" onclick="select_job('#Job_@info.Job.JobID')" class="@info.Job.State">
@@ -17,6 +21,7 @@
             </button>
             <div id="logs-body-@info.Job.JobID" class="d-none">@info.Job.Log</div>
         </td> *@
+        <td><span class="@getClassName(info.Relocation)">@info.Relocation.ToString().ToLower()</span></td>
         <td class="flex-column">
             <a href="#" onclick="apply(@info.Job.JobID)" class="text-success">Applied</a>
             <a href="#" onclick="reject(@info.Job.JobID)" class="text-danger">Rejected</a>
