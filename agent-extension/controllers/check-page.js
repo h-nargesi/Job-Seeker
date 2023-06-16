@@ -16,11 +16,10 @@ ActionHandler.OnPageLoad = function() {
     }, 1000);
 
     if (document.getElementById('job-seeker-trend-list') != null) {
-
         document.getElementById('reset-trends').addEventListener("click", BackgroundMessaging.Scopes(true), false);
 
         const millisecnod = 1000;
-        var ordering_interval = null;
+        let ordering_interval = null;
 
         document.getElementById('stop-start-ordering').addEventListener("click", function () {
             if (ordering_interval == null) {
