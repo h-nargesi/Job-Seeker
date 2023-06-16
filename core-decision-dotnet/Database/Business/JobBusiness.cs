@@ -49,12 +49,14 @@ namespace Photon.JobSeeker
                 }
 
                 Save(new { result.JobID, State = JobState.Revaluation });
+                database.Commit();
 
                 return result;
             }
-            finally
+            catch
             {
-                database.Commit();
+                database.Rollback();
+                throw;
             }
         }
 
@@ -105,7 +107,11 @@ namespace Photon.JobSeeker
 
                 return data.Url;
             }
-            finally { database.Rollback(); }
+            catch
+            {
+                database.Rollback();
+                throw;
+            }
         }
 
         public void Save(object model, JobFilter filter = JobFilter.All)

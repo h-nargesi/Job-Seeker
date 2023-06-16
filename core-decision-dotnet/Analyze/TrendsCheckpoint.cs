@@ -288,7 +288,7 @@ namespace Photon.JobSeeker
             return trend;
         }
 
-        private void LogCheckingSleptTrends(Agency agency, TrendType type, Trend? trend,
+        private static void LogCheckingSleptTrends(Agency agency, TrendType type, Trend? trend,
             bool matched_analyzed_result, bool had_not_trend, TrendType? new_trend)
         {
             var active = type == TrendType.Search ? agency.IsActiveSeeking : agency.IsActiveAnalyzing;
@@ -307,7 +307,7 @@ namespace Photon.JobSeeker
         private static int AgencyNameLength = 6;
         private static int TrednTypeLength = 6;
 
-        private string FillSpace(string text, int max = 6)
+        private static string FillSpace(string text, int max = 6)
         {
             return string.Join("", text, new string(' ', max - text.Length));
         }
