@@ -25,13 +25,13 @@ ActionHandler.OnPageLoad = function() {
             if (ordering_interval == null) {
                 CheckNewOrders();
                 ordering_interval = setInterval(CheckNewOrders, millisecnod * 20);
-                document.getElementById('stop-start-ordering').className = "btn btn-danger";
+                document.getElementById('stop-start-ordering').className = "btn btn-danger m-1";
                 document.getElementById('stop-start-ordering').innerText = "To Stop Ordering";
 
             } else {
                 clearInterval(ordering_interval);
                 ordering_interval = null;
-                document.getElementById('stop-start-ordering').className = "btn btn-primary";
+                document.getElementById('stop-start-ordering').className = "btn btn-primary m-1";
                 document.getElementById('stop-start-ordering').innerText = "To Start Ordering";
             }
         }, false);
