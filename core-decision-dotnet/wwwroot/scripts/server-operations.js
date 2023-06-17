@@ -104,14 +104,14 @@ function ordering() {
         intervals.push(setInterval(LoadTrands, millisecnod * 3));
         intervals.push(setInterval(LoadJobs, millisecnod * 30));
         intervals.push(setInterval(LoadAgencies, millisecnod * 10));
-        document.getElementById('stop-start-ordering').className = "btn btn-danger";
+        document.getElementById('stop-start-ordering').className = "btn btn-danger m-1";
         document.getElementById('stop-start-ordering').innerText = "To Stop Ordering";
 
     } else {
         for (let i in intervals)
             clearInterval(intervals[i]);
         intervals = null;
-        document.getElementById('stop-start-ordering').className = "btn btn-primary";
+        document.getElementById('stop-start-ordering').className = "btn btn-primary m-1";
         document.getElementById('stop-start-ordering').innerText = "To Start Ordering";
     }
 }

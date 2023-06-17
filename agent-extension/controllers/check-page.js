@@ -1,6 +1,6 @@
 console.log("check-page");
 
-ActionHandler.OnPageLoad = function() {
+ActionHandler.OnPageLoad = function () {
     console.log('Page', 'loaded');
     setTimeout(async function () {
         const scopes = await BackgroundMessaging.Scopes();
@@ -16,24 +16,32 @@ ActionHandler.OnPageLoad = function() {
     }, 1000);
 
     if (document.getElementById('job-seeker-trend-list') != null) {
+
         document.getElementById('reset-trends').addEventListener("click", BackgroundMessaging.Scopes(true), false);
 
         const millisecnod = 1000;
         let ordering_interval = null;
+        const ordering_button = document.getElementById('stop-start-ordering');
 
-        document.getElementById('stop-start-ordering').addEventListener("click", function () {
-            if (ordering_interval == null) {
-                CheckNewOrders();
-                ordering_interval = setInterval(CheckNewOrders, millisecnod * 20);
-                document.getElementById('stop-start-ordering').className = "btn btn-danger m-1";
-                document.getElementById('stop-start-ordering').innerText = "To Stop Ordering";
+        ordering_button.addEventListener("click", function () {
 
-            } else {
+            if (ordering_interval != null) {
                 clearInterval(ordering_interval);
                 ordering_interval = null;
-                document.getElementById('stop-start-ordering').className = "btn btn-primary m-1";
-                document.getElementById('stop-start-ordering').innerText = "To Start Ordering";
             }
+
+            let current = ordering_button.getAttribute('ordering');
+            
+            if (current !== 'true') {
+                CheckNewOrders();
+                ordering_interval = setInterval(CheckNewOrders, millisecnod * 20);
+                current = 'false';
+
+            } else {
+                current = 'true';
+            }
+
+            ordering_button.setAttribute('ordering', current);
         }, false);
 
     } else if (window.location.hostname != 'localhost') ActionHandler.SetCloseTimer();
