@@ -40,11 +40,11 @@
         <a href="@Model.Job.Url" class="btn btn-outline-@HasValue(Model.Job.Url)" target="_blank">URL</a>
         <a href="@Model.Job.Link" class="btn btn-outline-@HasValue(Model.Job.Link)" target="_blank">Link</a>
         <h2>Resume</h2>
+        <textarea rows="7">@Html.Raw(string.Join(", ", Model.Job.Options ?? new HashSet<string>()))</textarea>
         <div class="d-flex flex-column">
           <a href="@Model.Resume">Resume</a>
           <a href="/job/resume?jobid=@Model.Job.JobID" target="_blank">Resume as html</a>
           <a href="/job/resume64?jobid=@Model.Job.JobID">Download Resume as html file</a>
-          
         </div>
         <h2>Actions</h2>
         <button onclick="apply(@Model.Job.JobID)" class="btn btn-outline-success" type="button">Applied</button>

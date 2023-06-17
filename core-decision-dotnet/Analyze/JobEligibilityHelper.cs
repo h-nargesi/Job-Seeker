@@ -200,7 +200,7 @@ namespace Photon.JobSeeker
             {
                 var score = CheckOptionIn(job, option, out var matched);
 
-                if (score > 0)
+                if (score > 0 && matched.Length > 0)
                 {
                     switch (option.Category)
                     {
@@ -215,7 +215,7 @@ namespace Photon.JobSeeker
                     if (!option_scores.TryGetValue(option.Category, out var list))
                         option_scores.Add(option.Category, list = new List<(JobOption, long, string)>());
 
-                    list.Add((option, score, matched ?? "?"));
+                    list.Add((option, score, matched));
                 }
             }
 
@@ -253,12 +253,15 @@ namespace Photon.JobSeeker
             else return job.Score >= MinEligibilityScore;
         }
 
-        private static long CheckOptionIn(Job job, JobOption option, out string? matched)
+        private static long CheckOptionIn(Job job, JobOption option, out string matched)
         {
             var score = 0L;
             var matches = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Match matched_option in option.Pattern.Matches(job.Content ?? "").Cast<Match>())
             {
+                if (string.IsNullOrWhiteSpace(matched_option.Value))
+                    continue;
+
                 if (matched_option.Success)
                     matches.Add(matched_option.Value);
 

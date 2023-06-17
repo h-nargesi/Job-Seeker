@@ -34,7 +34,7 @@ public class ResumeContext
     public class ElementsContext
     {
         public bool LOCATION { get; set; }
-        public bool LINKEDIN { get; set; } = true;
+        public bool LINKEDIN { get; set; } = false;
         public bool FOOTER { get; set; } = true;
     }
 

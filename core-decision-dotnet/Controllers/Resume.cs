@@ -20,7 +20,7 @@ public class Resume
         result.Keys.WEB = job.Options.Contains(nameof(ResumeContext.KeysContext.WEB));
         result.Keys.MACHINE_LEARNING = job.Options.Contains(nameof(ResumeContext.KeysContext.MACHINE_LEARNING));
 
-        var more = job.Options.Where(x => x != null && !MainKeys.Contains(x))
+        var more = job.Options.Where(x => !x.StartsWith('-') && !MainKeys.Contains(x))
                               .Select(x => x.Split(':'))
                               .Select(x => new { key = x.Last(), parent = x.Length > 1 ? x.First() : string.Empty })
                               .Where(x => !NotInclude.Contains(x.key.ToLower()))
@@ -28,6 +28,11 @@ public class Resume
                               .ToDictionary(k => k.Key, v => v.Select(x => x.key).ToArray());
 
         result.Keys.More = more;
+
+        var not_include = job.Options.Where(x => x.StartsWith('-') && x.Length > 1)
+                                     .Select(x => x[1..]);
+
+        result.NotIncluded.UnionWith(not_include);
 
         return result;
     }
