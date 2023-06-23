@@ -18,7 +18,7 @@
 }
 
 <div class="container py-4">
-  <header class="pb-3 mb-4 border-bottom">
+  <header class="pb-3 mb-3 border-bottom">
     <a href="/" class="d-flex align-items-center text-body-emphasis text-decoration-none">
       <span class="fs-4">@Model.Agency?.Name</span>
     </a>
@@ -34,24 +34,24 @@
   </div>
 
   <div class="row align-items-md-stretch">
-    <div class="col-md-6">
+    <div class="col-lg-6 mb-3">
       <div class="h-100 p-5 bg-body-tertiary border rounded-3">
         <h2>Links</h2>
         <a href="@Model.Job.Url" class="btn btn-outline-@HasValue(Model.Job.Url)" target="_blank">URL</a>
         <a href="@Model.Job.Link" class="btn btn-outline-@HasValue(Model.Job.Link)" target="_blank">Link</a>
         <h2>Resume</h2>
-        <textarea rows="7">@Html.Raw(string.Join(", ", Model.Job.Options ?? new HashSet<string>()))</textarea>
-        <div class="d-flex flex-column">
-          <a href="@Model.Resume">Resume</a>
-          <a href="/job/resume?jobid=@Model.Job.JobID" target="_blank">Resume as html</a>
-          <a href="/job/resume64?jobid=@Model.Job.JobID">Download Resume as html file</a>
+        <textarea class="codes">@Html.Raw(string.Join(",\n", Model.Job.Options ?? new HashSet<string>()))</textarea>
+        <div>
+          <button onclick="" type="button" class="btn btn-outline-primary">Subnit</button>
+          <a href="/job/resume?jobid=@Model.Job.JobID" target="_blank" class="btn btn-outline-primary">Resume as html</a>
+          <a href="/job/resume64?jobid=@Model.Job.JobID" class="btn btn-outline-secondary">Download Resume as html file</a>
         </div>
         <h2>Actions</h2>
         <button onclick="apply(@Model.Job.JobID)" class="btn btn-outline-success" type="button">Applied</button>
         <button onclick="reject(@Model.Job.JobID)" class="btn btn-outline-danger" type="button">Rejected</button>
       </div>
     </div>
-    <div class="col-md-6">
+    <div class="col-lg-6 mb-3">
       <div class="h-100 p-5 text-bg-dark rounded-3">
         <h3>Logs</h3>
         <p id="logs-body-@Model.Job.JobID" style="white-space: pre;">@Model.Job.Log</p>

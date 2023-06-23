@@ -25,7 +25,7 @@
         @Html.Raw(string.Join(",\n\t\t", Model.Keys.More?.Select(x => x.Key + ": ["+ string.Join(", ", x.Value.Select(v => "'" + v + "'")) +"]") ?? new string[0]))
     };
     const NOT_INCLUDED = [
-        @string.Join(",\n\t\t", Model.NotIncluded.Select(x => "'#" + x + "'"))
+        @string.Join(",\n\t\t", Model.NotIncluded.Select(x => "'" + x + "'"))
     ];
     const ELEMENTS = {
         LOCATION: @Model.Elements.LOCATION.JS(),
@@ -235,7 +235,7 @@
             <span class="skill highligh key-front-end">TypeScript, Javascript</span>
             -->
             <span class="skill highligh key-machine-learning">Machine Learning</span>
-            <span class="skill highligh">Unit Testing</span>
+            <span class="skill highligh" last-item>Unit Testing</span>
         </p>
     </section>
     <section class="experience">
@@ -442,7 +442,7 @@
             const selector = '.skill.key-';
 
             let element = document.querySelectorAll(selector + class_name);
-            if (!element.length) continue;
+            if (!element.length) element = document.querySelectorAll('[last-item]');
             element = element[element.length - 1];
 
             for (const title of MORE[k]) {
