@@ -20,15 +20,12 @@ namespace Photon.JobSeeker
                 if (value is not DBNull)
                     value = value.ToString() ?? (object)DBNull.Value;
             }
-            else if (typeof(IEnumerable).IsAssignableFrom(type))
+            else if (!SYSTEM_TYPE_MAP.ContainsKey(type))
             {
                 type = typeof(string);
-                if (value is not DBNull && value is not string)
+                if (value is not DBNull)
                     value = JsonConvert.SerializeObject(value);
             }
-
-            if (!SYSTEM_TYPE_MAP.ContainsKey(type))
-                throw new ArgumentOutOfRangeException(nameof(value), type.FullName);
 
             return (SYSTEM_TYPE_MAP[type], value);
         }
