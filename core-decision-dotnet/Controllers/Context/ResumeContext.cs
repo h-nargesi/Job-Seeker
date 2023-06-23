@@ -36,6 +36,13 @@ public class ResumeContext
         public bool MACHINE_LEARNING => this.ContainsKey(nameof(MACHINE_LEARNING)) && this[nameof(MACHINE_LEARNING)] != null;
         public bool NETWORK => this.ContainsKey(nameof(NETWORK)) && this[nameof(NETWORK)] != null;
 
+        public int SubLength()
+        {
+            var count = 0;
+            foreach(var l in this) count += l.Value?.Count ?? 0;
+            return count;
+        }
+
         public static readonly IReadOnlySet<string> MainKeys = new HashSet<string>()
         {
             nameof(ResumeContext.KeysContext.DOTNET),
@@ -77,11 +84,28 @@ public class ResumeContext
     public class ElementsContext
     {
         public bool LOCATION { get; set; }
-        public bool LINKEDIN { get; set; } = false;
+        public bool PHONE { get; set; } = true;
+        public bool LINKEDIN { get; set; } = true;
         public bool FOOTER { get; set; } = true;
     }
 
     public string FileName(string extnesion)
+    {
+        return $"hamed-nargesi-resume-{Version}-{GetKeywords()}.{extnesion}";
+    }
+
+    public void CheckSize()
+    {
+        var keywords = GetKeywords();
+
+        if (keywords == "js" && Keys.SubLength() <= 2)
+        {
+            Length = 2;
+            Elements.FOOTER = false;
+        }
+    }
+
+    private string GetKeywords()
     {
         var keys = new List<string>();
 
@@ -95,7 +119,7 @@ public class ResumeContext
         if (Keys.MACHINE_LEARNING) keys.Add("m");
         if (Keys.NETWORK) keys.Add("n");
 
-        return $"hamed-nargesi-resume-{Version}-{string.Join("", keys)}.{extnesion}";
+        return string.Join("", keys);
     }
 
     public string SimlpeSerialize()

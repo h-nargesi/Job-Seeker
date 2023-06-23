@@ -248,6 +248,7 @@ namespace Photon.JobSeeker
 
             job.Log += string.Join("\n", logs);
             job.Options = resume;
+            job.Options.CheckSize();
 
             if (!hasField || rejected) return false;
             else return job.Score >= MinEligibilityScore;
