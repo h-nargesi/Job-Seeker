@@ -220,7 +220,7 @@ namespace Photon.JobSeeker
             }
 
             var categories = new HashSet<string>();
-            var keywords = new HashSet<string>();
+            var resume = new ResumeContext();
             var logs = new List<string>(options.Length);
 
             foreach (var category in option_scores)
@@ -238,7 +238,7 @@ namespace Photon.JobSeeker
                     job.Score += score;
                     factor = 0.5F;
 
-                    calc.option.AddKeyword(keywords, calc.matched);
+                    calc.option.AddKeyword(resume, calc.matched);
 
                     logs.Add($"**{calc.option.ToString('+', score)}**");
                     logs.Add(calc.matched);
@@ -247,7 +247,7 @@ namespace Photon.JobSeeker
             }
 
             job.Log += string.Join("\n", logs);
-            job.Options = keywords;
+            job.Options = resume;
 
             if (!hasField || rejected) return false;
             else return job.Score >= MinEligibilityScore;

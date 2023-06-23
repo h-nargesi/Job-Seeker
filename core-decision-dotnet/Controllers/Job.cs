@@ -92,6 +92,23 @@ namespace Photon.JobSeeker
             }
         }
 
+        [HttpPost]
+        public IActionResult Options([FromQuery] long jobid, [FromBody] string options)
+        {
+            try
+            {
+                var resume = ResumeContext.SimlpeDeserialize(options);
+                using var database = Database.Open();
+                database.Job.ChangeOptions(jobid, resume);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+                throw;
+            }
+        }
+
         [HttpGet]
         public async Task<IActionResult> Resume64([FromQuery] long jobid)
         {
@@ -100,7 +117,9 @@ namespace Photon.JobSeeker
                 var resume_generator = HttpContext.RequestServices.GetService<IViewRenderService>() ??
                     throw new Exception("The 'IViewRenderService' is not initialized.");
 
-                var context = new Resume().GenerateContext(jobid);
+                using var database = Database.Open();
+                var context = database.Job.FetchOptions(jobid) ?? new ResumeContext();
+
                 var result = await resume_generator.RenderToStringAsync(HttpContext, "~/views/resume.cshtml", context);
                 var content = Encoding.UTF8.GetBytes(result);
 
@@ -118,7 +137,8 @@ namespace Photon.JobSeeker
         {
             try
             {
-                var context = new Resume().GenerateContext(jobid);
+                using var database = Database.Open();
+                var context = database.Job.FetchOptions(jobid) ?? new ResumeContext();
 
                 return View("~/views/resume.cshtml", context);
             }

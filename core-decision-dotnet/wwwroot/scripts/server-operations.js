@@ -88,6 +88,26 @@ async function change_running(agency, running) {
     }
 }
 
+async function submit_options(job_id, json_id) {
+    try {
+        const resume_element = document.getElementById(json_id);
+        if (!resume_element) return;
+
+        const data = {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(resume_element.value)
+        }
+        await fetch(`/job/options?jobid=${job_id}`, data);
+
+    } catch (e) {
+        console.error(e);
+    }
+}
+
 async function clean() {
     try {
         await fetch("/job/clean", { method: 'POST' });

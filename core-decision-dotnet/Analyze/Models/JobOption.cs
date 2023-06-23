@@ -25,60 +25,81 @@ namespace Photon.JobSeeker
             return $"({state}{score ?? Score}) {Title}";
         }
 
-        public void AddKeyword(HashSet<string> keywords, string matched)
+        public void AddKeyword(ResumeContext resume, string matched)
         {
-            var keyword = ResumeKeyword(out var parrent, out var include_sub);
-            if (keyword != null)
+            if (ResumeKeyword(out var main, out var keyword, out var include_matched))
             {
-                if (parrent != null) parrent += ":";
-                keywords.Add(parrent + keyword);
+                HashSet<string> list;
 
-                if (include_sub)
+                if (!resume.Keys.ContainsKey(main))
+                    resume.Keys.Add(main, list = new(StringComparer.OrdinalIgnoreCase));
+                else
                 {
-                    if (parrent == null) parrent = keyword;
-                    var sub = matched.Split('\n')
-                                     .Where(x => x.Length > 0 && keyword != x.MainOption())
-                                     .Select(x => parrent + ":" + x.SubOption()).ToArray();
-                    keywords.UnionWith(sub);
+                    list = resume.Keys[main] ?? new(StringComparer.OrdinalIgnoreCase);
+                    resume.Keys[main] = list;
+                }
+
+                if (keyword != null) list.Add(keyword);
+
+                if (include_matched)
+                {
+                    var m = matched.Split('\n')
+                                   .Where(x => x.Length > 0)
+                                   .Where(x => !ResumeContext.KeysContext.NotInclude.Contains(x))
+                                   .Where(x => main != x.MainOption())
+                                   .Select(x => x.SubOption()).ToArray();
+
+                    list.UnionWith(m);
                 }
             }
         }
 
-        private string? ResumeKeyword(out string? parrent, out bool include_sub)
+        private bool ResumeKeyword(out string main, out string? keyword, out bool include_matched)
         {
-            string? keyword = null;
-            include_sub = true;
-            parrent = null;
+            main = string.Empty;
+            keyword = null;
+            include_matched = true;
 
-            if (Settings == null) keyword = Title;
+            if (Settings == null) main = Title;
             else try
                 {
                     dynamic resume = Settings.resume;
 
-                    if (resume == null) return null;
+                    if (resume == null) return false;
 
                     try
                     {
-                        keyword = (string)resume.key;
-                        if (keyword == null) keyword = Title;
+                        main = (string)resume.key;
+                        if (main == null) main = Title;
                     }
-                    catch (RuntimeBinderException) { keyword = Title; }
+                    catch (RuntimeBinderException) { main = Title; }
 
-                    try { include_sub = (bool)resume.sub; }
+                    try { include_matched = (bool)resume.include_matched; }
                     catch (RuntimeBinderException) { }
 
                     try
                     {
-                        parrent = (string)resume.parent;
-                        parrent = parrent?.MainOption();
+                        var temp = (string)resume.parent;
+                        if (temp != null)
+                        {
+                            keyword = main;
+                            main = temp;
+                        }
                     }
                     catch (RuntimeBinderException) { }
                 }
-                catch (RuntimeBinderException) { keyword = Title; }
+                catch (RuntimeBinderException) { main = Title; }
 
-            if (parrent == null) keyword = keyword.MainOption();
+            var MAIN = main.MainOption();
 
-            return keyword;
+            if (!ResumeContext.KeysContext.MainKeys.Contains(MAIN) && keyword == null)
+            {
+                keyword = main;
+                main = "MORE";
+            }
+            else main = MAIN;
+
+            return true;
         }
 
     }

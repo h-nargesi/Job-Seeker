@@ -22,10 +22,10 @@
         NETWORK: @Model.Keys.NETWORK.JS(),
     }
     const MORE = {
-        @Html.Raw(string.Join(",\n\t\t", Model.Keys.More?.Select(x => x.Key + ": ["+ string.Join(", ", x.Value.Select(v => "'" + v + "'")) +"]") ?? new string[0]))
+        @Html.Raw(Model.Keys.ToSimpleJson())
     };
     const NOT_INCLUDED = [
-        @string.Join(",\n\t\t", Model.NotIncluded.Select(x => "'" + x + "'"))
+        @Html.Raw(Model.NotIncluded.ToSimpleJson())
     ];
     const ELEMENTS = {
         LOCATION: @Model.Elements.LOCATION.JS(),

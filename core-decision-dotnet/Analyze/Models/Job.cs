@@ -26,7 +26,7 @@
 
         public string? Log { get; set; }
 
-        public HashSet<string>? Options { get; set; }
+        public ResumeContext? Options { get; set; }
 
         public string? Tries { get; set; }
 

@@ -40,9 +40,9 @@
         <a href="@Model.Job.Url" class="btn btn-outline-@HasValue(Model.Job.Url)" target="_blank">URL</a>
         <a href="@Model.Job.Link" class="btn btn-outline-@HasValue(Model.Job.Link)" target="_blank">Link</a>
         <h2>Resume</h2>
-        <textarea class="codes">@Html.Raw(string.Join(",\n", Model.Job.Options ?? new HashSet<string>()))</textarea>
+        <textarea id="job-options" class="codes">@Html.Raw(Model.Job.Options?.SimlpeSerialize())</textarea>
         <div>
-          <button onclick="" type="button" class="btn btn-outline-primary">Subnit</button>
+          <button onclick="submit_options(@Model.Job.JobID, 'job-options')" type="button" class="btn btn-outline-primary">Submit</button>
           <a href="/job/resume?jobid=@Model.Job.JobID" target="_blank" class="btn btn-outline-primary">Resume as html</a>
           <a href="/job/resume64?jobid=@Model.Job.JobID" class="btn btn-outline-secondary">Download Resume as html file</a>
         </div>
@@ -54,8 +54,8 @@
     <div class="col-lg-6 mb-3">
       <div class="h-100 p-5 text-bg-dark rounded-3">
         <h3>Logs</h3>
-        <p id="logs-body-@Model.Job.JobID" style="white-space: pre;">@Model.Job.Log</p>
-        <script>document.addEventListener("DOMContentLoaded", () => display('logs-body-' + @Model.Job.JobID));</script>
+        <p id="logs-body" style="white-space: pre;">@Model.Job.Log</p>
+        <script>document.addEventListener("DOMContentLoaded", () => display('logs-body'));</script>
       </div>
     </div>
   </div>

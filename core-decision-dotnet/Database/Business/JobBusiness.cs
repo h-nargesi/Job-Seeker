@@ -78,6 +78,19 @@ namespace Photon.JobSeeker
             return ReadJob(reader, true);
         }
 
+        public ResumeContext? FetchOptions(long job_id)
+        {
+            using var reader = database.Read(Q_FETCH_OPTIONS, job_id);
+
+            if (!reader.Read()) return default;
+
+            var options = reader[nameof(Job.Options)] as string;
+
+            if (options == null) return default;
+
+            return JsonConvert.DeserializeObject<ResumeContext>(options);
+        }
+
         public string? GetFirstJob(long agency_id)
         {
             try
@@ -144,6 +157,11 @@ namespace Photon.JobSeeker
             Save(new { JobID = id, State = state });
         }
 
+        public void ChangeOptions(long id, ResumeContext? options)
+        {
+            Save(new { JobID = id, Options = options });
+        }
+
         public void Clean(int mounths)
         {
             database.Execute(Q_CLEAN, DateTime.Now.AddMonths(-mounths));
@@ -156,9 +174,7 @@ namespace Photon.JobSeeker
 
         private static Job ReadJob(SQLiteDataReader reader, bool full = false)
         {
-            var options = full ? reader[nameof(Job.Options)] as string : null;
-
-            return new Job
+            var job = new Job
             {
                 JobID = (long)reader[nameof(Job.JobID)],
                 RegTime = (DateTime)reader[nameof(Job.RegTime)],
@@ -172,8 +188,19 @@ namespace Photon.JobSeeker
                 Content = full ? reader[nameof(Job.Content)] as string : null,
                 Link = reader[nameof(Job.Link)] as string,
                 Log = full ? reader[nameof(Job.Log)] as string : null,
-                Options = full && options != null ? JsonConvert.DeserializeObject<HashSet<string>>(options) : null,
             };
+
+            if (full)
+            {
+                var json = reader[nameof(Job.Options)] as string;
+                if (json != null)
+                {
+                    try { job.Options = JsonConvert.DeserializeObject<ResumeContext>(json); }
+                    catch { }
+                }
+            }
+
+            return job;
         }
 
         /*
@@ -254,6 +281,9 @@ SELECT COUNT(*) FROM Job WHERE Content IS NOT NULL AND ModifiedOn <= $date";
 
         private const string Q_FETCH_UPDATE_REVAL = @$"
 UPDATE Job SET State = '{nameof(JobState.Saved)}' WHERE State = '{nameof(JobState.Revaluation)}'";
+
+        private const string Q_FETCH_OPTIONS = @"
+SELECT Options FROM Job WHERE JobID = $job";
 
         private const string Q_FETCH_FIRST = @$"
 SELECT JobID, Url, Tries FROM Job

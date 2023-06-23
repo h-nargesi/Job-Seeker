@@ -18,12 +18,14 @@ insert into JobOption (Score, Category, Title, Pattern, Settings)
 values
 	--	Programming languages
 	 	(90,	'field',	'C#.NET',			'\basp\.net\b|\bc# ?\.net\b|\bc#|(\bdot ?|\.)net\b',
-				'{ "resume": { "key": "DOTNET", "sub": false } }')
+				'{ "resume": { "key": "DOTNET", "include_matched": false } }')
 	,	(80,	'field',	'Java',				'\b(java|spring boot|kotlin)\b', null)
 	,	(30,	'field',	'GO-Lang',			'\b(go[- ]?lang|(?-i)G[Oo])\b', 
 				'{ "resume": { "key": "GOLANG" } }')
 	,	(60,	'field',	'Front-End',		'\b(angular|javascript|typescript|jquery|client[- ]side script(ing)?)\b', null)
-	,	(90,	'field',	'Expert-SQL',		'\b(oracle|sql server|pl[- /]?sql|t[/-]?sql|ms[- ]?sql|sql|database|postgreSQL)\b',
+	,	(90,	'field',	'Expert-SQL',		'\b(oracle|pl[- /]?sql|t[/-]?sql)\b',
+				'{ "resume": { "key": "SQL", "include_matched": false } }')
+	,	(90,	'field',	'Expert-SQL-Key',	'\b(sql server|ms[- ]?sql|sql|database|postgre[- ]?sql)\b',
 				'{ "resume": { "key": "SQL" } }')
 	,	(10,	'field',	'Low-Level',		'\b(html|css|json)\b',
 				'{ "resume": { "key": "Web", "parent": "Front-End" } }')
@@ -60,6 +62,9 @@ values
 
 	--	Rejection
 	--,	(01,	'reject',	'react',			'\b(react)\b', null)
+
+	--	Resume
+	,	(00,	'reumse',	'AWS',				'\b(aws)\b', null)
 	;
 
 /*
