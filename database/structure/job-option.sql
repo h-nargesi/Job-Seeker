@@ -25,7 +25,7 @@ values
 	,	(60,	'field',	'Front-End',		'\b(angular|javascript|typescript|jquery|client[- ]side script(ing)?)\b', null)
 	,	(90,	'field',	'Expert-SQL',		'\b(oracle|pl[- /]?sql|t[/-]?sql)\b',
 				'{ "resume": { "key": "SQL", "include_matched": false } }')
-	,	(90,	'field',	'Expert-SQL-Key',	'\b(sql server|ms[- ]?sql|sql|database|postgre[- ]?sql)\b',
+	,	(90,	'field',	'Expert-SQL-Key',	'\b(sql server|m[sy][- ]?sql|sql|database|postgre[- ]?sql)\b',
 				'{ "resume": { "key": "SQL" } }')
 	,	(10,	'field',	'Low-Level',		'\b(html|css|json)\b',
 				'{ "resume": { "key": "Web", "parent": "Front-End" } }')
