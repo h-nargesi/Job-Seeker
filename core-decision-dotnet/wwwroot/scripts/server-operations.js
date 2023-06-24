@@ -63,7 +63,7 @@ async function change_running(agency, running) {
         const current_element = document.getElementById(`RM-${agency}-${running}`);
         if (!current_element) return;
 
-        let enabled = current_element.classList.contains('btn-primary');
+        let enabled = current_element.classList.contains('btn-success');
 
         const data = {
             method: 'POST',
@@ -79,10 +79,39 @@ async function change_running(agency, running) {
         await fetch("/decision/running", data);
 
         document.querySelectorAll(`button[id^="RM-${agency}"]`).forEach((button) => {
-            button.className = 'btn btn-outline-primary mt-1';
+            button.className = 'btn btn-outline-info mt-1';
         });
-        if (!enabled) current_element.className = 'btn btn-primary mt-1';
+        if (!enabled) current_element.className = 'btn btn-success mt-1';
 
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function submit_options(job_id, json_id) {
+    try {
+        const resume_element = document.getElementById(json_id);
+        if (!resume_element) return;
+
+        const data = {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(resume_element.value)
+        }
+        await fetch(`/job/options?jobid=${job_id}`, data);
+
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function clean() {
+    try {
+        await fetch("/job/clean", { method: 'POST' });
+        LoadJobs();
     } catch (e) {
         console.error(e);
     }
@@ -95,14 +124,14 @@ function ordering() {
         intervals.push(setInterval(LoadTrands, millisecnod * 3));
         intervals.push(setInterval(LoadJobs, millisecnod * 30));
         intervals.push(setInterval(LoadAgencies, millisecnod * 10));
-        document.getElementById('stop-start-ordering').className = "btn btn-danger";
+        document.getElementById('stop-start-ordering').className = "btn btn-danger m-1";
         document.getElementById('stop-start-ordering').innerText = "To Stop Ordering";
 
     } else {
         for (let i in intervals)
             clearInterval(intervals[i]);
         intervals = null;
-        document.getElementById('stop-start-ordering').className = "btn btn-primary";
+        document.getElementById('stop-start-ordering').className = "btn btn-primary m-1";
         document.getElementById('stop-start-ordering').innerText = "To Start Ordering";
     }
 }

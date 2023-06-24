@@ -5,14 +5,14 @@
  * @param {Object} modifiers (optional) An object which contains modifiers keys { ctrlKey: true, altKey: false, ...}
  */
 function simulateKey(element, keyCode, type, modifiers) {
-    var evtName = (typeof (type) === "string") ? "key" + type : "keydown";
-    var modifier = (typeof (modifiers) === "object") ? modifier : {};
+    const evtName = (typeof (type) === "string") ? "key" + type : "keydown";
+    const modifier = (typeof (modifiers) === "object") ? modifier : {};
 
-    var event = document.createEvent("HTMLEvents");
+    let event = document.createEvent("HTMLEvents");
     event.initEvent(evtName, true, false);
     event.keyCode = keyCode;
 
-    for (var i in modifiers) {
+    for (const i in modifiers) {
         event[i] = modifiers[i];
     }
 
@@ -20,5 +20,5 @@ function simulateKey(element, keyCode, type, modifiers) {
 }
 
 // Using the function
-simulateKey(72, "H");
-simulateKey(65, "A");
+// simulateKey(72, "H");
+// simulateKey(65, "A");

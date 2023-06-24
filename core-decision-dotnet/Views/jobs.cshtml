@@ -1,20 +1,27 @@
 @model List<dynamic>
 
+@{
+    var getClassName = (bool value) => value ? "text-success" : "";
+}
+
 @foreach (var info in Model)
 {
     <tr id="Job_@info.Job.JobID" onclick="select_job('#Job_@info.Job.JobID')" class="@info.Job.State">
         <td>@info.Job.JobID</td>
         <td><span>@info.AgencyName</span></td>
-        <td><a href="@info.Job.Link" target="_blank">@info.Job.Title</a></td>
+        @* <td><a href="#" onclick="download_resume(@info.Job.JobID)">Resume</a></td> *@
+        @* <td><a href="/job/resume?jobid=@info.Job.JobID" target="_blank">Resume</a></td> *@
+        <td><a href="/job/get/@info.Job.JobID" target="_blank">@info.Job.Title</a></td>
         <td><strong>@info.Job.Score</strong></td>
-        <td><a href="@info.Job.Url" target="_blank">Link</a></td>
+        <td><a href="@info.Job.Url" target="_blank">URL</a></td>
         <td><span>@info.Job.RegTime</span></td>
-        <td>
+        @* <td>
             <button type="button" class="btn btn-link" onclick="logs(@info.Job.JobID)">
                 Logs
             </button>
             <div id="logs-body-@info.Job.JobID" class="d-none">@info.Job.Log</div>
-        </td>
+        </td> *@
+        <td><span class="@getClassName(info.Relocation)">@info.Relocation.ToString().ToLower()</span></td>
         <td class="flex-column">
             <a href="#" onclick="apply(@info.Job.JobID)" class="text-success">Applied</a>
             <a href="#" onclick="reject(@info.Job.JobID)" class="text-danger">Rejected</a>

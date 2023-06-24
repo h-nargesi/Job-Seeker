@@ -1,99 +1,71 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-    <title>Job Seeker</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css"
-        integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
-        integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
-    <link rel="stylesheet" href="/style/color.css" />
-    <link rel="stylesheet" href="/style/general.css" />
-    <link rel="stylesheet" href="/style/job-table.css" />
-</head>
-
-<body>
-
-    <header class="header highligh">
-    </header>
-    <main class="contaner">
-        <div class="row">
-            <section class="col-md-8 jobs-list">
-                <h6>Job List</h6>
-                <table class="table table-hover table-sm">
-                    <thead class="thead-dark">
-                        <tr>
-                            <td scope="col">#</td>
-                            <td scope="col">Agency</td>
-                            <td scope="col">Job</td>
-                            <td scope="col">Score</td>
-                            <td scope="col">Source</td>
-                            <td scope="col">Register Time</td>
-                            <td scope="col">Log</td>
-                            <td scope="col">Action</td>
-                        </tr>
-                    </thead>
-                    <tbody id="job-list">
-                        @await Html.PartialAsync("~/views/jobs.cshtml", (List<dynamic>)Model.Jobs)
-                    </tbody>
-                </table>
-                <button id="show-logs" type="button" class="btn btn-link" style="visibility: hidden;"
-                    data-bs-toggle="modal" data-bs-target="#logs-modal">
-                    Logs
-                </button>
-                <div class="modal fade" id="logs-modal" tabindex="-1" aria-labelledby="exampleModalLabel"
-                    aria-hidden="true">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="exampleModalLabel">Logs</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
-                            </div>
-                            <div id="logs-body" class="modal-body"></div>
-                            <div class="modal-footer"></div>
-                        </div>
+@{
+    Layout = "~/views/layout.cshtml";
+}
+<div class="row">
+    <section class="col-md-8 jobs-list">
+        <h6>Job List</h6>
+        <table class="table table-hover table-sm">
+            <thead class="thead-dark">
+                <tr>
+                    <td scope="col">#</td>
+                    <td scope="col">Agency</td>
+                    @* <td scope="col">Resume</td> *@
+                    <td scope="col">Job</td>
+                    <td scope="col">Score</td>
+                    <td scope="col">Source</td>
+                    <td scope="col">Register Time</td>
+                    @* <td scope="col">Log</td> *@
+                    <td scope="col">Relocation</td>
+                    <td scope="col">Action</td>
+                </tr>
+            </thead>
+            <tbody id="job-list">
+                @await Html.PartialAsync("~/views/jobs.cshtml", (List<dynamic>)Model.Jobs)
+            </tbody>
+        </table>
+        <button id="show-logs" type="button" class="btn btn-link" style="visibility: hidden;"
+            data-bs-toggle="modal" data-bs-target="#logs-modal">
+            Logs
+        </button>
+        <div class="modal fade" id="logs-modal" tabindex="-1" aria-labelledby="exampleModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">Logs</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
                     </div>
+                    <div id="logs-body" class="modal-body"></div>
+                    <div class="modal-footer"></div>
                 </div>
-            </section>
-            <article class="col-md-4">
-                <h6>Trend List</h6>
-                <table class="table table-hover table-sm">
-                    <thead class="thead-dark">
-                        <tr>
-                            <td scope="col">#</td>
-                            <td scope="col">Agency</td>
-                            <td scope="col">Type</td>
-                            <td scope="col">State</td>
-                            <td scope="col">Latest Activity</td>
-                        </tr>
-                    </thead>
-                    <tbody id="job-seeker-trend-list">
-                        @await Html.PartialAsync("~/views/trends.cshtml", (List<dynamic>)Model.Trends)
-                    </tbody>
-                </table>
-                <div>
-                    <button id="stop-start-ordering" onclick="ordering()" type="button" class="btn btn-primary">To Start
-                        Ordering</button>
-                    <button id="reset-trends" onclick="reset()" type="button" class="btn btn-outline-primary">Reset
-                        Trends</button>
-                    <button onclick="revaluate()" type="button" class="btn btn-outline-primary">Revaluate</button>
-                </div>
-                <div id="job-seeker-agency-list" class="agency-list mt-3 d-flex flex-column">
-                    @await Html.PartialAsync("~/views/agencies.cshtml", (dynamic[])Model.Agencies)
-                </div>
-            </article>
+            </div>
         </div>
-    </main>
-    <footer></footer>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.min.js"
-        integrity="sha384-cuYeSxntonz0PPNlHhBs68uyIAVpIIOZZ5JqeqvYYIcEL727kskC66kF92t6Xl2V"
-        crossorigin="anonymous"></script>
-    <script src="/scripts/stmd.js"></script>
-    <script src="/scripts/render.js"></script>
-    <script src="/scripts/client-operations.js"></script>
-    <script src="/scripts/server-operations.js"></script>
-</body>
-
-</html>
+    </section>
+    <article class="col-md-4">
+        <h6>Trend List</h6>
+        <table class="table table-hover table-sm">
+            <thead class="thead-dark">
+                <tr>
+                    <td scope="col">#</td>
+                    <td scope="col">Agency</td>
+                    <td scope="col">Type</td>
+                    <td scope="col">State</td>
+                    <td scope="col">Latest Activity</td>
+                </tr>
+            </thead>
+            <tbody id="job-seeker-trend-list">
+                @await Html.PartialAsync("~/views/trends.cshtml", (List<dynamic>)Model.Trends)
+            </tbody>
+        </table>
+        <div class="d-flex flex-row">
+            <button id="stop-start-ordering" onclick="ordering()" type="button" class="btn btn-primary m-1">To Start Ordering</button>
+            <button id="reset-trends" onclick="reset()" type="button" class="btn btn-outline-warning m-1">Reset Trends</button>
+            <button onclick="revaluate()" type="button" class="btn btn-outline-warning m-1">Revaluate</button>
+            <button id="clean-jobs" onclick="clean()" type="button" class="btn btn-outline-danger m-1">Clean Database</button>
+        </div>
+        <div id="job-seeker-agency-list" class="agency-list mt-3 d-flex flex-column">
+            @await Html.PartialAsync("~/views/agencies.cshtml", (dynamic[])Model.Agencies)
+        </div>
+    </article>
+</div>

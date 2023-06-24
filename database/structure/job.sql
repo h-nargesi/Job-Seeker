@@ -12,6 +12,7 @@ create table if not exists Job (
 	Content			text			null,
 	Link			text			null,
 	Log				text			null,
+	Options			text			null,
 	Tries			text			null,
 
 	unique			(AgencyID, Code),

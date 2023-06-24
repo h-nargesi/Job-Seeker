@@ -1,0 +1,519 @@
+@using Photon.JobSeeker
+@model Photon.JobSeeker.ResumeContext
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>hamed-nargesi-resume</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="render" href="https://cloudconvert.com/html-to-pdf" />
+<script>
+    const VERSION = @ResumeContext.Version;
+    const LENGTH = @Model.Length;
+    const KEYS = {
+        DOTNET: @Model.Keys.DOTNET.JS(),
+        JAVA: @Model.Keys.JAVA.JS(),
+        PYTHON: @Model.Keys.PYTHON.JS(),
+        GOLANG: @Model.Keys.GOLANG.JS(),
+        SQL: @Model.Keys.SQL.JS(),
+        FRONT_END: @Model.Keys.FRONT_END.JS(),
+        WEB: @Model.Keys.WEB.JS(),
+        MACHINE_LEARNING: @Model.Keys.MACHINE_LEARNING.JS(),
+        NETWORK: @Model.Keys.NETWORK.JS(),
+    }
+    const MORE = {
+        @Html.Raw(Model.Keys.ToSimpleJson())
+    };
+    const NOT_INCLUDED = [
+        @Html.Raw(Model.NotIncluded.ToSimpleJson())
+    ];
+    const ELEMENTS = {
+        LOCATION: @Model.Elements.LOCATION.JS(),
+        PHONE: @Model.Elements.PHONE.JS(),
+        LINKEDIN: @Model.Elements.LINKEDIN.JS(),
+        FOOTER: @Model.Elements.FOOTER.JS(),
+    }
+</script>
+<style>
+    :root {
+        --high-color: #d4dae5;
+        --high-ground: rgb(102, 86, 102);
+        --title-color: rgb(66, 66, 82);
+        --main-color: rgb(10, 10, 10);
+        --back-color: rgb(150, 150, 150);
+    }
+</style>
+<style>
+    @@import url(http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,700italic,300,400,700);
+    @@media print {
+        .highligh {
+            color: var(--high-color) !important;
+            background-color: var(--high-ground) !important;
+            print-color-adjust: exact; 
+        }
+    }
+    html, body {
+        padding: 0;
+        margin: 0;
+        font-family: 'Open Sans', sans-serif;
+        color: var(--main-color);
+        font-size: 10pt;
+    }
+    b {
+        opacity: 0.8;
+    }
+    a, a:visited {
+        color: var(--main-color);
+        text-decoration: none;
+    }
+    .highligh {
+        color: var(--high-color);
+        background-color: var(--high-ground);
+    }
+    main, header, footer {
+        padding: 15pt 30pt;
+    }
+    .header {
+        display: flex;
+        flex-direction: row-reverse;
+    }
+        .header, .header a, .header a:visited {
+            color: var(--high-color);
+            text-decoration: none;
+        }
+        .header ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        .header ul li {
+            margin-top: 10pt;
+        }
+            .header ul li:first {
+                margin-top: 0;
+            }
+        .header i {
+            margin-right: 8pt;
+        }
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 100;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+        .header h2 {
+            font-weight: 100;
+        }
+        .header-column {
+            width: 50%;
+        }
+        .header-right {
+            text-align: right;
+        }
+    main {
+        padding-top: 5pt;
+        padding-bottom: 0;
+    }
+    section {
+        margin-bottom: 5pt;
+    }
+        section h2 {
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 1.25rem;
+            color: var(--title-color);
+            display: block;
+            border-bottom: solid 1px var(--title-color);
+        }
+        section ul {
+            margin-top: 0;
+        }
+    .skill {
+        border-radius: 3pt;
+        display: inline-block;
+        padding: 3pt 8pt 5pt;
+        margin-bottom: 3pt;
+    }
+    @@media print {
+        article {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+    }
+    .experience h2 {
+        margin-bottom: 0;
+    }
+    article {
+        padding-top: 15pt;
+        padding-bottom: 5pt;
+    }
+        article h3 {
+            margin: 0;
+            margin-bottom: 5pt;
+        }
+        article h4 {
+            margin: 0;
+            margin-bottom: 5pt;
+        }
+        article .exp-date {
+            float: right;
+            text-align: right;
+        }
+        article ul {
+            margin: 0;
+        }
+    .version {
+        opacity: 0.125;
+    }
+    .none {
+        display: none !important;
+    }
+    footer {
+        padding-top: 0;
+        color: var(--back-color);
+    }
+</style>
+</head>
+<body>
+
+<header class="header highligh">
+    <div class="header-column header-right">
+        <h1 class="header-fullname">Hamed Nargesi</h1>
+        <h2 class="header-job-title">Software Developer</h2>
+    </div>
+    <div class="header-column">
+        <ul>
+            <li class="header-item elm-phone"><i class="fa fa-phone"></i><a href="callto://+989125157305">+98 912 5157 305</a></li>
+            <li class="header-item"><i class="fa fa-envelope"></i><a href="mailto:hamed.nargesi.jar@@gmail.com">hamed.nargesi.jar@@gmail.com</a></li>
+            <li class="header-item elm-linkedin"><i class="fab fa-linkedin"></i><a href="https://www.linkedin.com/in/hamed-nargesi/">linkedin.com/in/hamed-nargesi</a></li>
+            <li class="header-item"><i class="fab fa-github"></i><a href="https://github.com/h-nargesi/">github.com/h-nargesi</a></li>
+            <li class="header-item"><i class="fab fa-skype"></i><a href="skype:hamed.nargesi?call">hamed.nargesi</a></li>
+            <li class="header-item elm-location"><i class="fa fa-map-marker"></i><span>Tehran, Iran</span></li>
+        </ul>
+    </div>
+</header>
+<main>
+    <section>
+        <h2>Summary</h2>
+        <p>
+            As a person who works fondly and professionally in the field of software engineering, I would like to share my skills and motivation with other teams. With more than 13 years experience in back-end development and 2 years experience in front-end, I am eager to play an active role in creating complex and quality products.
+        </p>
+        <p class="key-extra-3">
+            Some of my distinguished characteristics are <b>responsibility</b>, <b>from teamwork spirit</b>, <b>purposefulness</b>, <b>flexibility</b>, <b>compatibility</b> and a <b>curious mind</b>.
+        </p>
+        <p class="key-extra-2">
+            As a freelancer, I have done more than 15 small and medium scale projects to improve efficiency for clients.
+            <br/>
+            In the companies I have worked for, I used low-cost algorithms to develop complex business solutions and satisfied customer needs with more than 5000 employees in different branches.
+        </p>
+    </section>
+    <section>
+        <h2>Skills</h2>
+        <p>
+            <span class="skill highligh">Software Development</span>
+            <span class="skill highligh">Web Applications</span>
+            <span class="skill highligh">Design Patterns</span>
+            <span class="skill highligh">Clean Code</span>
+            <span class="skill highligh">Object-Oriented<small class="key-extra-2"> (OOP)</small></span>
+            <span class="skill highligh">Algorithms</span>
+            <span class="skill highligh">Data Structures</span>
+            <span class="skill highligh key-dotnet">C#, ASP.NET Core</span>
+            <span class="skill highligh key-java">Core Java</span>
+            <!--
+            <span class="skill highligh key-java key-java-spring">Spring Boot</span>
+            <span class="skill highligh key-java key-java-kotlin">Kotlin</span>
+            -->
+            <span class="skill highligh key-python">Python</span>
+            <span class="skill highligh key-golang">Go-lang</span>
+            <span class="skill highligh key-sql key-dotnet">Transact-SQL (T-SQL)</span>
+            <span class="skill highligh key-sql key-java">PL/SQL (Oracle)</span>
+            <!--
+            <span class="skill highligh key-sql key-sql-postgre">PostgreSQL</span>
+            -->
+            <span class="skill highligh key-front-end">Angular</span>
+            <!--
+            <span class="skill highligh key-front-end">REST API</span>
+            <span class="skill highligh key-front-end">TypeScript, Javascript</span>
+            -->
+            <span class="skill highligh key-machine-learning">Machine Learning</span>
+            <span class="skill highligh" last-item>Unit Testing</span>
+        </p>
+    </section>
+    <section class="experience">
+        <h2>Experience</h2>
+        <article class="key-dotnet key-not-extra-3" id="system-group-total">
+            <span class="exp-date">Mar 2022 - Present<br/>(11 months +)</span>
+            <h3>Full-stack Developer on The Rahkaran ERP Web Application</h3>
+            <h4><a href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
+            <ul>
+                <li>Providing solutions for customers to reduce data volume up to 5% and avoid system problems.</li>
+                <li>Developed the traffic log project that sustainably and reliably works on different types of devices. Increased the efficiency of the software by 25% compared to the previous version.</li>
+                <li>Improved more than 10 different procedures via fixing algorithms' mistakes.</li>
+                <li>Fixed about 30 bugs in the application I am working on.</li>
+                <li>Powered by C#.Net, ASP.NET Core, T-SQL, Angular, TypeScript and Html.</li>
+            </ul>
+        </article>
+        <article class="key-dotnet key-extra-3" id="system-group-2">
+            <span class="exp-date">Sep 2022 - Present<br/>(5 months +)</span>
+            <h3>Full-stack Developer on The Rahkaran ERP Web Application</h3>
+            <h4><a href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
+            <ul>
+                <li>Providing solutions for customers to reduce data volume up to 5% and avoid system problems.</li>
+                <li>Accelerated by Angular on the Rahkaran app with more than 1.3 million lines of Typescript code.</li>
+                <li>Developed the traffic log project that sustainably and reliably works on different types of devices. Increased the efficiency of the software by 25% compared to the previous version.</li>
+                <li>Powered by C#.Net, ASP.NET Core, T-SQL, Angular, TypeScript and Html.</li>
+            </ul>
+        </article>
+        <article class="key-dotnet key-extra-3" id="system-group-1">
+            <span class="exp-date">Mar 2022 - Aug 2022<br/>(6 months)</span>
+            <h3>.NET Developer on The Rahkaran ERP Web Application</h3>
+            <h4><a href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
+            <ul>
+                <li>Improved more than 10 different procedures via fixing algorithms' mistakes.</li>
+                <li>Fixed about 30 bugs in the application I am working on.</li>
+                <li>This software deals with +100 large and medium scale customers all over Iran.</li>
+                <li>Powered by C#.Net, ASP.NET Core and T-SQL.</li>
+            </ul>
+        </article>
+        <article class="key-java" id="douran">
+            <span class="exp-date">Apr 2019 - Feb 2022<br/>(2 years 11 months)</span>
+            <h3>Java Developer on The Douran ERP Web Application</h3>
+            <h4><a href="https://douran.com/en-US/Dourtal/1/page/Home">DOURAN GROUP | گروه دوران</a></h4>
+            <ul>
+                <li>Boosted +15 business procedures in 5 HR modules via low-cost algorithms.</li>
+                <li>Optimized about 10 complicated queries by using indices, caching techniques and reforming queries by 5%.</li>
+                <li>Built about 7 new business procedures to fulfill new customer needs.</li>
+                <li>Reined queries in the software to deal with +5 large scale customers with more than 5000 employees in different
+                    branches.</li>
+                    <li>Powered by Java and PL/SQL.</li>
+            </ul>
+        </article>
+        <article class="key-dotnet key-extra-2" id="exportchance">
+            <span class="exp-date">Oct 2018 - Apr 2019<br/>(7 months)</span>
+            <h3>Full-stack Developer on The B2B E-Commerce Web Application</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>Formed the modeling of this web application with almost 30 main entities.</li>
+                <li>Engineered monolithic architecture in 3 layers.</li>
+                <li>Implemented object-oriented codes based on design patterns principles.</li>
+                <li>Introduced and connected the companies from +10 counties on the new silk road to each other.</li>
+                <li>Powered by ASP.NET Core, T-SQL, Angular, TypeScript and Html.</li>
+            </ul>
+        </article>
+        <article class="key-web" id="web-sites">
+            <span class="exp-date">Apr 2018 - Sep 2018<br/>(6 months)</span>
+            <h3>Web Developer</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>Launched +10 web sites, like Behin Energy Co., Eehaam magazine, etc.</li>
+                <li>Created responsive and functional user interfaces.</li>
+                <li>Powered by Bootstrap, JQuery and Html.</li>
+            </ul>
+        </article>
+        <article class="key-dotnet" id="clearance-monitoring">
+            <span class="exp-date">Sep 2017 - Mar 2018<br/>(7 months)</span>
+            <h3>Web Application Developer on The Clearance Monitoring Application</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>Optimized the efficiency of monitoring products cleared from each customs up to 70%.</li>
+                <li>Delivered comprehensive report set like the graph of discharge delays. A significant difference compared to previous methods.</li>
+                <li>Cut down on paperwork by 90% and phone contacts by 60%.</li>
+                <li>Powered by ASP.NET, T-SQL and Html.</li>
+            </ul>
+        </article>
+        <article class="key-network" id="behin">
+            <span class="exp-date">Oct 2012 - Sep 2016<br/>(4 years)</span>
+            <h3>Network Technician</h3>
+            <h4>Behin Energy Co. (BEC)</h4>
+            <ul>
+                <li>Installed and managed about 30 end-points and routers for Behin Energy Co.</li>
+            </ul>
+        </article>
+        <article class="key-dotnet key-extra-2" id="image-tagging">
+            <span class="exp-date">Mar 2012 - Jul 2012<br/>(5 months)</span>
+            <h3>.NET Developer on The Image Tagging Tool</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>Designed to manage the images' tags in files' meta-data.</li>
+                <li>Saved the time of searching for image files by 40%.</li>
+                <li>Powered by C#.Net.</li>
+            </ul>
+        </article>
+        <article class="key-java key-extra-2" id="android">
+            <span class="exp-date">Mar 2010 - Aug 2010<br/>(7 months)</span>
+            <h3>Android Application Developer</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>Built a password management application that uses NoSQL to store passwords.</li>
+                <li>Engineered in 3-layered architecture.</li>
+                <li>Implemented object-oriented codes based on design patterns principles.</li>
+                <li>Powered by Java and SQLite.</li>
+            </ul>
+        </article>
+        <article class="key-sql" id="databas">
+            <span class="exp-date">Aug 2009 - Feb 2010<br/>(7 months)</span>
+            <h3>Database Developer</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>Designed the models for databases of hospital resource planning and project control.</li>
+                <li>Powered by T-SQL.</li>
+            </ul>
+        </article>
+        <article class="key-dotnet key-extra-3" id="epilepsy">
+            <span class="exp-date">Nov 2008 - Jul 2009<br/>(9 months)</span>
+            <h3>.NET Developer on Project Control Software</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>Formalized a project control software system that specialized for the turbines and generators of Siah Bishe Dam.</li>
+                <li>This software helps the user to monitor the progress of building more than 100 pieces of the dam.</li>
+                <li>Powered by C#.Net.</li>
+            </ul>
+        </article>
+        <article class="key-web key-extra-3" id="epilepsy">
+            <span class="exp-date">Apr 2008 - Oct 2008<br/>(7 months)</span>
+            <h3>Web Developer</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>Founded the Iranian Associations of Epilepsy website.</li>
+            </ul>
+        </article>
+        <article class="key-dotnet key-extra-3" id="phone-book">
+            <span class="exp-date">Apr 2008<br/>(1 month)</span>
+            <h3>.NET Developer</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>Developed a phone-book application for desktop users.</li>
+                <li>Powered by C#.Net.</li>
+            </ul>
+        </article>
+    </section>
+    <section>
+        <h2>Education</h2>
+        <p>
+            <h3>Bachelor of Science - BS, Information Technology (IT)</h3>
+            <h4>Payame Noor University</h4>
+        </p>
+    </section>
+</main>
+<footer class="elm-footer">Generated on <span id="date"></span><span class="version"> | Ver <span id="version"></span></span></footer>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        for (const i in NOT_INCLUDED)
+            document.querySelectorAll(NOT_INCLUDED[i])
+                    .forEach((element) => element.style.display = 'none');
+
+        const reg_legth = new RegExp('key-(not-)?extra-(\\d+)');
+        document.querySelectorAll('[class*="key-extra-"]').forEach((element) => {
+            let length = Number(reg_legth.exec(element.className)[2]);
+            if (length > LENGTH) {
+                element.style.display = 'none';
+            }
+        });
+        document.querySelectorAll('[class*="key-not-extra-"]').forEach((element) => {
+            let length = Number(reg_legth.exec(element.className)[2]);
+            if (length <= LENGTH) {
+                element.style.display = 'none';
+            }
+        });
+
+        const letters = new Set();
+        const words = new Set();
+
+        for (const k in KEYS) {
+            const class_name = k.replace('_', '-').toLowerCase();
+            let selector = '.key-';
+
+            if (KEYS[k]) {
+                selector += 'not-';
+                const parts = class_name.split('-');
+                if (!letters.has(parts[0][0])) letters.add(parts[0][0]);
+                else {
+                    const p = parts.slice(1).join('-');
+                    if (!words.has(p)) words.add(p);
+                }
+            }
+
+            document.querySelectorAll(selector + class_name)
+                    .forEach((element) => element.style.display = 'none');
+        }
+
+        for (const k in MORE) {
+            const class_name = k.replace('_', '-').toLowerCase();
+            const selector = '.skill.key-';
+
+            let element = document.querySelectorAll(selector + class_name);
+            if (!element.length) element = document.querySelectorAll('[last-item]');
+            element = element[element.length - 1];
+
+            for (const title of MORE[k]) {
+                element.insertAdjacentHTML('afterend', `\n<span class="skill highligh key-${class_name}">${title}</span>`);
+            }
+        }
+
+        const data = [VERSION, Array.from(letters).join('')];
+        if (words.size > 0)
+            data.push(Array.from(words).join('-'));
+
+        document.getElementById('version').innerText = data.join(' | ');
+        document.getElementById('date').innerText = new Date().toISOString().substring(0, 10);
+
+        data.push(["p", LENGTH].join(''));
+        data.unshift(document.title);
+
+        document.title = data.join('-');
+        console.log(document.title);
+
+        for (const e in ELEMENTS)
+            if (!ELEMENTS[e]) {
+                document.querySelectorAll('.elm-' + e.replace('_', '-').toLowerCase())
+                        .forEach((element) => element.style.display = 'none');
+            }
+
+        document.querySelectorAll('.exp-date')
+                .forEach((element) => {
+                    element.innerHTML = DateDiff(element.innerHTML);
+                })
+    });
+
+    function DateDiff(period) {
+        let parts = period.split('<br>');
+        const dates = SplitDates(parts[0]);
+        return [parts[0], MonthDiff(dates)].join('<br>')
+    }
+
+    function SplitDates(period) {
+        let str_dates = period.split('-');
+        const end_date = GetDate(str_dates.pop());
+        const start_date = GetDate(str_dates.pop());
+        return [start_date, end_date];
+    }
+
+    function GetDate(text) {
+        if (!text) return null;
+        else if (text.trim().toLowerCase() == "present") return new Date();
+        else return new Date(Date.parse(text));
+    }
+
+    function MonthDiff(dates) {
+        const end = new Date(Math.max.apply(null, dates));
+        const start = new Date(Math.min.apply(null, dates));
+
+        let months = (end.getFullYear() - start.getFullYear()) * 12;
+        months -= start.getMonth();
+        months += end.getMonth();
+        if (months < 0) return 'none';
+        months += 1;
+
+        years = Math.floor(months / 12);
+        months %= 12;
+
+        let result = [];
+        if (years > 0) result.push(`${years} year${years > 1 ? 's' : ''}`);
+        if (months > 0) result.push(`${months} month${months > 1 ? 's' : ''}`);
+
+        return `(${result.join(', ')})`;
+    }
+</script>
+</body>
+</html>
