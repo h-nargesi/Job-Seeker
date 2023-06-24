@@ -39,7 +39,7 @@ namespace Photon.JobSeeker.IamExpat
         protected static string GetJobCode(Match match)
         {
             var i = match.Groups.Count;
-            var code = "";
+            var code = string.Empty;
             while (string.IsNullOrEmpty(code) && --i >= 0)
                 code = match.Groups[i].Value;
             return code;

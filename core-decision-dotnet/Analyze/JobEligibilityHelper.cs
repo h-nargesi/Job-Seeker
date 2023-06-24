@@ -95,7 +95,7 @@ namespace Photon.JobSeeker
 
             if (job.Content != null)
             {
-                job.Log = "";
+                job.Log = string.Empty;
                 job.Score = null;
 
                 filter |= JobFilter.Log | JobFilter.Options | JobFilter.Score;
@@ -351,7 +351,7 @@ namespace Photon.JobSeeker
                 {
                     TrendID = -1,
                     Agency = $"Revaluation ({ProcessCount})",
-                    Link = "",
+                    Link = string.Empty,
                     Type = Passed.ToString(),
                     State = TotalCount.ToString(),
                     LastActivity = StartTimeTitle,

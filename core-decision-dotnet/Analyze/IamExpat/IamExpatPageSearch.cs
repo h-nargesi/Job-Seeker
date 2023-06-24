@@ -29,7 +29,8 @@ namespace Photon.JobSeeker.IamExpat
 
             var codes = new HashSet<string>();
             using var database = Database.Open();
-            var base_link = parent.Link.Trim().EndsWith("/") ? parent.Link[..^1] : parent.Link;
+            var base_link = parent.BaseUrl;
+            base_link = base_link.Trim().EndsWith("/") ? base_link[..^1] : base_link;
 
             var job_matches = reg_job_url.Matches(content).Cast<Match>();
             foreach (Match job_match in job_matches)

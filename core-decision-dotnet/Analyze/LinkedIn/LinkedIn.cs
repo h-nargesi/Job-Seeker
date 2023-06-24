@@ -15,6 +15,8 @@ namespace Photon.JobSeeker.LinkedIn
 
         internal string Location => Locations[RunningSearchingMethodIndex];
 
+        public override string BaseUrl => Domain;
+
         public override string SearchLink => "https://www.linkedin.com/jobs/search/";
 
         public override Regex? JobAcceptabilityChecker => LinkedInPage.reg_job_no_longer_accepting;

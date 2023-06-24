@@ -14,6 +14,8 @@ namespace Photon.JobSeeker.Indeed
         public override string[] SearchingMethodTitles => LocationDomains;
 
 
+        public override string BaseUrl => LocationDomains[RunningSearchingMethodIndex];
+
         public override string SearchLink => LocationDomains[RunningSearchingMethodIndex] + "jobs?q=" + Agency.SearchTitle;
 
         public override Regex? JobAcceptabilityChecker => IndeedPage.reg_job_acceptability_checker;

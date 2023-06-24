@@ -16,9 +16,9 @@ namespace Photon.JobSeeker
 
         public abstract string Name { get; }
 
-        public string Domain { get; private set; } = "";
+        public string Domain { get; private set; } = string.Empty;
 
-        public string Link { get; private set; } = "";
+        public string Link { get; private set; } = string.Empty;
 
         public AgencyStatus Status { get; set; }
 
@@ -44,6 +44,8 @@ namespace Photon.JobSeeker
         }
 
         public abstract string[] SearchingMethodTitles { get; }
+
+        public abstract string BaseUrl { get; }
 
         public abstract string SearchLink { get; }
 
