@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <link rel="render" href="https://cloudconvert.com/html-to-pdf" />
 <script>
-    const VERSION = 39;
+    const VERSION = @ResumeContext.Version;
     const LENGTH = @Model.Length;
     const KEYS = {
         DOTNET: @Model.Keys.DOTNET.JS(),
@@ -44,8 +44,8 @@
     }
 </style>
 <style>
-        @@import url(http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,700italic,300,400,700);
-        @@media print {
+    @@import url(http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,700italic,300,400,700);
+    @@media print {
         .highligh {
             color: var(--high-color) !important;
             background-color: var(--high-ground) !important;
@@ -134,7 +134,7 @@
         padding: 3pt 8pt 5pt;
         margin-bottom: 3pt;
     }
-        @@media print {
+    @@media print {
         article {
             break-inside: avoid;
             page-break-inside: avoid;
