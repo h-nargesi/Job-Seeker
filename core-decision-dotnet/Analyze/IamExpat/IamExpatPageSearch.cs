@@ -29,8 +29,6 @@ namespace Photon.JobSeeker.IamExpat
 
             var codes = new HashSet<string>();
             using var database = Database.Open();
-            var base_link = parent.BaseUrl;
-            base_link = base_link.Trim().EndsWith("/") ? base_link[..^1] : base_link;
 
             var job_matches = reg_job_url.Matches(content).Cast<Match>();
             foreach (Match job_match in job_matches)
@@ -43,7 +41,7 @@ namespace Photon.JobSeeker.IamExpat
                 database.Job.Save(new
                 {
                     AgencyID = parent.ID,
-                    Url = string.Join("", base_link, job_match.Value),
+                    Url = string.Join("", parent.BaseUrl, job_match.Value),
                     Code = code,
                     State = JobState.Saved
                 });

@@ -74,15 +74,12 @@ namespace Photon.JobSeeker.IamExpat
 
                 if (job == null)
                 {
-                    var base_link = parent.BaseUrl;
-                    base_link = base_link.Trim().EndsWith("/") ? base_link[..^1] : base_link;
-
                     job = new Job
                     {
                         AgencyID = parent.ID,
                         Code = code,
                         State = JobState.Saved,
-                        Url = string.Join("", base_link, url_matched.Value),
+                        Url = string.Join("", parent.BaseUrl, url_matched.Value),
                     };
 
                     filter = JobFilter.All;

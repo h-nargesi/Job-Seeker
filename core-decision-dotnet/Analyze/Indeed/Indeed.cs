@@ -14,7 +14,14 @@ namespace Photon.JobSeeker.Indeed
         public override string[] SearchingMethodTitles => LocationDomains;
 
 
-        public override string BaseUrl => LocationDomains[RunningSearchingMethodIndex];
+        public override string BaseUrl
+        {
+            get
+            {
+                var base_link = LocationDomains[RunningSearchingMethodIndex].Trim();
+                return base_link.EndsWith('/') ? base_link[..^1] : base_link;
+            }
+        }
 
         public override string SearchLink => LocationDomains[RunningSearchingMethodIndex] + "jobs?q=" + Agency.SearchTitle;
 
