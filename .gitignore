@@ -14,6 +14,7 @@
 *.sln
 *.csproj.user
 .vs/
+[Pp]roperties/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
