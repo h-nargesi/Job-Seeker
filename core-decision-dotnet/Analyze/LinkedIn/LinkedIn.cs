@@ -20,7 +20,7 @@ namespace Photon.JobSeeker.LinkedIn
         {
             get
             {
-                var base_link = Domain.Trim();
+                var base_link = Link.Trim();
                 return base_link.EndsWith('/') ? base_link[..^1] : base_link;
             }
         }
