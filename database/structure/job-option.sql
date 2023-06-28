@@ -43,7 +43,7 @@ values
 	,	(30,	'production',	'ERP',			'\berp\b', null)
 
 	--	Company Benefits
-	,	(170,	'benefit',	'Relocation',		'\brelocation(\s+(support|package))?\b|\bvisa(\s+(support|sponsorship))\b', 
+	,	(170,	'benefit',	'Relocation',		'(?<!no )\brelocation(\s+(support|package))?\b|\bvisa(\s+(support|sponsorship))\b', 
 				'{ "resume": null }')
 	,	(02,	'salary',	'Salary',			'\bsalary\b.*?(\d[\d,]*(000|k))(.+?\b(month|year)\b)?',
 				'{ "resume": null , "money": 1, "period": 4}')
