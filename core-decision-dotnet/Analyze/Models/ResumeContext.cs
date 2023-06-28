@@ -131,7 +131,7 @@ public class ResumeContext
     {
         if (text == null) return null;
 
-        text = new Regex(@"\b(?!true|false|null)\w+").Replace(text, "\"$0\"");
+        text = new Regex(@"\b(?!true|false|null)[\w \-\/\.]+").Replace(text, "\"$0\"");
 
         return JsonConvert.DeserializeObject<ResumeContext>(text);
     }
