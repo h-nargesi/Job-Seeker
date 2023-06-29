@@ -241,7 +241,6 @@ WITH date_diff AS (
     SELECT job.JobID, job.RegTime, job.ModifiedOn, job.AgencyID, job.Code, job.Title
          , job.State, job.Score, job.Url, job.Link, job.Relocation
          , job.AgencyName, job.Category, job.RegDate
-         --*, A * EXP(YF) AS Y, - EXP(UF) AS U, A * EXP(YF) - EXP(UF) AS TimeScore
          , Score + A * EXP(YF) - EXP(UF) AS RankScore
     FROM (
         SELECT *

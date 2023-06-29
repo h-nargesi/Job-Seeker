@@ -88,7 +88,7 @@ namespace Photon.JobSeeker
             TrendType? new_trend;
             var new_trends = new List<(Agency agency, TrendType type)>();
 
-            foreach (var agency in analyzer.Agencies.Values)
+            foreach (var agency in analyzer.Agencies.Values.ToArray())
             {
                 new_trend = CheckingSleptLoginTrends(agency, out var go);
                 if (new_trend != null)

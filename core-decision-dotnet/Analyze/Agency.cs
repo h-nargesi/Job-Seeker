@@ -36,7 +36,7 @@ namespace Photon.JobSeeker
             get => running_searching_method_index;
             set
             {
-                if (value < 0 || value >= SearchingMethodTitles.Length)
+                if (value < 0 || value >= (SearchingMethodTitles?.Length ?? 0))
                     throw new ArgumentOutOfRangeException(nameof(RunningSearchingMethodIndex));
 
                 running_searching_method_index = value;
