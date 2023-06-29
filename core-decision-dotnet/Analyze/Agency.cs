@@ -36,10 +36,12 @@ namespace Photon.JobSeeker
             get => running_searching_method_index;
             set
             {
-                if (value < 0 || value >= (SearchingMethodTitles?.Length ?? 0))
+                if (value < 0 || value >= SearchingMethodTitles.Length)
                     throw new ArgumentOutOfRangeException(nameof(RunningSearchingMethodIndex));
 
                 running_searching_method_index = value;
+
+                RunningSearchingMethodChanged(value);
             }
         }
 
@@ -54,10 +56,6 @@ namespace Photon.JobSeeker
 
         public Result AnalyzeContent(string url, string content)
         {
-            using var database = Database.Open();
-            dynamic? settings = database.Agency.LoadSetting(ID);
-            ChangeSettings(settings);
-
             Log.Information("Agency ({0}): AnalyzeContent -running={1}", Name, RunningSearchingMethodIndex);
 
             foreach (var page in Pages)
@@ -70,29 +68,20 @@ namespace Photon.JobSeeker
 
                     if (page.TrendState == TrendState.Seeking && commands.Length == 0)
                     {
-                        if (settings != null)
+                        if (RunningSearchingMethodIndex + 1 < SearchingMethodTitles.Length)
                         {
-                            if (RunningSearchingMethodIndex + 1 < SearchingMethodTitles.Length)
-                            {
-                                settings.running += 1;
-                                commands = new Command[] { Command.Go(SearchLink) };
-                            }
-                            else
-                            {
-                                settings.running = 0;
-                                trend_state = TrendState.Finished;
-                                Status &= ~AgencyStatus.ActiveSeeking;
-                            }
-
-                            ChangeSettings(settings);
+                            RunningSearchingMethodIndex += 1;
+                            commands = new Command[] { Command.Go(SearchLink) };
                         }
                         else
                         {
+                            RunningSearchingMethodIndex = 0;
                             trend_state = TrendState.Finished;
                             Status &= ~AgencyStatus.ActiveSeeking;
                         }
 
-                        database.Agency.ChangeRunningMethod(this);
+                        using var database = Database.Open();
+                        database.Agency.SaveState(this);
                     }
 
                     Log.Information("Page checked: {0}, {1}", page.GetType().Name, trend_state);
@@ -118,12 +107,14 @@ namespace Photon.JobSeeker
             Domain = agency_info.Domain;
             Link = agency_info.Link;
 
-            ChangeSettings(agency_info.Settings);
+            LoadSettings(agency_info.Settings);
 
             LoadPages();
         }
 
-        protected abstract void ChangeSettings(dynamic? settings);
+        protected abstract void LoadSettings(dynamic? settings);
+
+        protected abstract void RunningSearchingMethodChanged(int value);
 
         protected abstract IEnumerable<Type> GetSubPages();
 

@@ -23,7 +23,7 @@ namespace Photon.JobSeeker.IamExpat
 
         public override string GetMainHtml(string html) => IamExpatPageJob.GetHtmlContent(html);
 
-        protected override void ChangeSettings(dynamic? settings)
+        protected override void LoadSettings(dynamic? settings)
         {
             lock (@lock)
             {
@@ -38,15 +38,17 @@ namespace Photon.JobSeeker.IamExpat
 
                     LocationUrls = settings.urls.ToObject<string[]>();
                     RunningSearchingMethodIndex = (int)settings.running;
-
-                    var location = LocationUrls[RunningSearchingMethodIndex];
-                    location = location.Replace(@"\", @"\\")
-                                       .Replace(@".", @"\.");
-
-                    IamExpatPage.reg_search_url = new Regex(
-                        @$"://[^/]*iamexpat\.{location}", RegexOptions.IgnoreCase);
                 }
             }
+        }
+
+        protected override void RunningSearchingMethodChanged(int value)
+        {
+            var location = LocationUrls[value].Replace(@"\", @"\\")
+                                              .Replace(@".", @"\.");
+
+            IamExpatPage.reg_search_url = new Regex(
+                @$"://[^/]*iamexpat\.{location}", RegexOptions.IgnoreCase);
         }
 
         protected override IEnumerable<Type> GetSubPages()

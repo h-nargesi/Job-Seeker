@@ -30,7 +30,7 @@ namespace Photon.JobSeeker.Indeed
 
         public override string GetMainHtml(string html) => IndeedPageJob.GetHtmlContent(html);
 
-        protected override void ChangeSettings(dynamic? settings)
+        protected override void LoadSettings(dynamic? settings)
         {
             lock (@lock)
             {
@@ -47,6 +47,10 @@ namespace Photon.JobSeeker.Indeed
                     RunningSearchingMethodIndex = (int)settings.running;
                 }
             }
+        }
+
+        protected override void RunningSearchingMethodChanged(int value)
+        {
         }
 
         protected override IEnumerable<Type> GetSubPages()

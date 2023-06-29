@@ -31,7 +31,7 @@ namespace Photon.JobSeeker.LinkedIn
 
         public override string GetMainHtml(string html) => LinkedInPageJob.GetHtmlContent(html);
 
-        protected override void ChangeSettings(dynamic? settings)
+        protected override void LoadSettings(dynamic? settings)
         {
             lock (@lock)
             {
@@ -47,13 +47,16 @@ namespace Photon.JobSeeker.LinkedIn
 
                     Locations = settings.locations.ToObject<string[]>();
                     RunningSearchingMethodIndex = running;
-
-                    var location = Uri.EscapeDataString(Location);
-                    
-                    LinkedInPage.reg_search_location_url = new Regex(
-                        @$"(^|&)location={location}(&|$)", RegexOptions.IgnoreCase);
                 }
             }
+        }
+
+        protected override void RunningSearchingMethodChanged(int value)
+        {
+            var location = Uri.EscapeDataString(Locations[value]);
+
+            LinkedInPage.reg_search_location_url = new Regex(
+                @$"(^|&)location={location}(&|$)", RegexOptions.IgnoreCase);
         }
 
         protected override IEnumerable<Type> GetSubPages()
