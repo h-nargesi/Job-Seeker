@@ -42,14 +42,16 @@ namespace Photon.JobSeeker.LinkedIn
                 }
                 else
                 {
-                    if (RunningSearchingMethodIndex == (int)settings.running) return;
+                    var running = (int)settings!.running;
+                    if (RunningSearchingMethodIndex == running) return;
 
                     Locations = settings.locations.ToObject<string[]>();
-                    RunningSearchingMethodIndex = (int)settings.running;
+                    RunningSearchingMethodIndex = running;
 
+                    var location = Uri.EscapeDataString(Location);
+                    
                     LinkedInPage.reg_search_location_url = new Regex(
-                        @$"(^|&)location={Location}(&|$)",
-                        RegexOptions.IgnoreCase);
+                        @$"(^|&)location={location}(&|$)", RegexOptions.IgnoreCase);
                 }
             }
         }

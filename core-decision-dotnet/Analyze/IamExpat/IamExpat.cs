@@ -39,9 +39,12 @@ namespace Photon.JobSeeker.IamExpat
                     LocationUrls = settings.urls.ToObject<string[]>();
                     RunningSearchingMethodIndex = (int)settings.running;
 
+                    var location = LocationUrls[RunningSearchingMethodIndex];
+                    location = location.Replace(@"\", @"\\")
+                                       .Replace(@".", @"\.");
+
                     IamExpatPage.reg_search_url = new Regex(
-                        @$"://[^/]*iamexpat\.{LocationUrls[RunningSearchingMethodIndex]}",
-                        RegexOptions.IgnoreCase);
+                        @$"://[^/]*iamexpat\.{location}", RegexOptions.IgnoreCase);
                 }
             }
         }

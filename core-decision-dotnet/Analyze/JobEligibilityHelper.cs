@@ -9,6 +9,10 @@ namespace Photon.JobSeeker
     {
         private readonly static Regex remove_new_lines = new(@"(?<=\n)[\n\s]+");
         private readonly static Regex words = new(@"[a-zA-Z]{3,}");
+        private readonly static HashSet<string> invalid_tag = new()
+        {
+            "script", "head", "style"
+        };
         public const long MinEligibilityScore = 100;
 
         private readonly Dictionaries dictionaries;
@@ -124,7 +128,7 @@ namespace Photon.JobSeeker
                     job.Content = null;
                 }
 
-                Log.Information("Job ({0}): state={1} score={2} acceptable={4} lang={3}",
+                Log.Information("Job ({0}): state={1} score={2} expired={4} lang={3}",
                     job.Code, job.State.ToString(), job.Score,
                     correct_language?.ToString() ?? "?",
                     job_expired?.ToString() ?? "?");
@@ -152,6 +156,7 @@ namespace Photon.JobSeeker
             foreach (var node in root.DescendantsAndSelf())
             {
                 if (node.HasChildNodes) continue;
+                if (invalid_tag.Contains(node.ParentNode.Name)) continue;
 
                 string text = node.InnerText;
                 if (!string.IsNullOrEmpty(text))
