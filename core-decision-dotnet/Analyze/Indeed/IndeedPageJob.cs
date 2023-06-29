@@ -71,6 +71,9 @@ namespace Photon.JobSeeker.Indeed
             Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
             database.Job.Save(job, filter);
 
+            if (job.Content?.Contains("Indeed does not provide services in your region") == true)
+                throw new Exception("Indeed does not provide services in your region.");
+
             return job;
         }
 
