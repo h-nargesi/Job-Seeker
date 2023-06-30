@@ -72,7 +72,7 @@ public class ResumeContext
     [Serializable]
     public class NotIncludedContext : HashSet<string>
     {
-        public const string ClearanceMonitoring = "clearance-monitoring";
+        public const string ClearanceMonitoring = "#clearance-monitoring";
 
         public string ToSimpleJson()
         {
@@ -122,16 +122,21 @@ public class ResumeContext
         return string.Join("", keys);
     }
 
+    private readonly static Regex 
+        Deserializer = new(@"\w+(?=\s*:)"),
+        Serializer = new(@"""(\w+)""(?=\s*:)");
+
     public string SimlpeSerialize()
     {
-        return JsonConvert.SerializeObject(this, Formatting.Indented).Replace("\"", "");
+        var json =  JsonConvert.SerializeObject(this, Formatting.Indented);
+        return Serializer.Replace(json, "$1");
     }
 
     public static ResumeContext? SimlpeDeserialize(string text)
     {
         if (text == null) return null;
 
-        text = new Regex(@"\b(?!true|false|null)[\w \-\/\.\#]+").Replace(text, "\"$0\"");
+        text = Deserializer.Replace(text, "\"$0\"");
 
         return JsonConvert.DeserializeObject<ResumeContext>(text);
     }
