@@ -65,7 +65,7 @@ values
 
 	--	Resume
 	,	(00,	'reumse',	'AWS',				'\b(aws)\b', null)
-	,	(00,	'reumse',	'CI/CD',			'\b(?-i)(CI[/-]CD)\b', null)
+	,	(00,	'reumse',	'CI/CD',			'\b(?-i)(CI[/-]?CD)\b', null)
 	;
 
 /*
