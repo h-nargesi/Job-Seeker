@@ -7,21 +7,21 @@ const ManifestTitle = document.getElementById('ManifestTitle');
 const ManifestDescr = document.getElementById('ManifestDescr');
 
 ServerUrl.addEventListener("keyup", function (event) {
-    console.log("ServerUrl", "keyup", event.keyCode);
     event.preventDefault();
     if (event.keyCode === 13) {
-        const url = ServerUrl.value;
+        let url = ServerUrl.value;
         if (url) {
-            url = url.trim();
-            if (url.endsWith('/')) url = url.substr(0, url.length - 1);
+            url = url.toString().trim();
+            while (url.endsWith('/')) url = url.substr(0, url.length - 1);
+            ServerUrl.value = url;
         }
-        console.log("Menu", "ServerUrl", ServerUrl.value);
-        StorageHandler.ServerUrl = ServerUrl.value;
+        console.log("Menu", "ServerUrl", url);
+        StorageHandler.ServerUrl = url;
     }
 });
 
-OpenServer.addEventListener("click", function () {
-    window.open(ServerUrl.value);
+OpenServer.addEventListener("click", async function () {
+    window.open(await StorageHandler.ServerUrlAsync());
 });
 
 async function LoadData() {
