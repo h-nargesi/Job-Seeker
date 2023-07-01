@@ -85,6 +85,7 @@ public class ResumeContext
     {
         public bool LOCATION { get; set; }
         public bool PHONE { get; set; } = true;
+        public bool SKYPE { get; set; } = true;
         public bool LINKEDIN { get; set; } = true;
         public bool FOOTER { get; set; } = true;
     }
