@@ -204,11 +204,13 @@ namespace Photon.JobSeeker
         }
 
         /*
-        c=\frac{b\cdot6}{7}
-        X=x-b
-        Y=ae^{-\frac{X^{2}}{2c^{2}}}
-        U=-e^{\left(\frac{2\cdot X}{c}\right)}
-        Y+U
+         * Sorting Algorithm:
+
+            c=\frac{b\cdot6}{7}
+            X=x-b
+            Y=ae^{-\frac{X^{2}}{2c^{2}}}
+            U=-e^{\left(\frac{2\cdot X}{c}\right)}
+            Y+U
         */
         private const int DaysPriod = 14;
 
