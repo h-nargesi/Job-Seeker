@@ -64,7 +64,7 @@ namespace Photon.JobSeeker.Indeed
             var title_match = reg_job_title.Match(html);
             if (!title_match.Success)
                 Log.Warning("Title not found ({0}, {1})", parent.Name, code);
-            else job.Title = HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim();
+            else job.Title = HttpUtility.HtmlDecode(title_match.Groups[2].Value).Trim();
 
             job.SetHtml(GetHtmlContent(html));
 
