@@ -6,9 +6,13 @@ class ActionHandler {
     static OnPageLoad = null;
 
     static async Handle(commands, dontclose) {
+        let command_count = 0;
         for (let c in commands)
-            if (commands[c])
+            if (commands[c]) {
                 await ActionHandler.Execute(commands[c], dontclose);
+                command_count++;
+            }
+        console.log('Action Count', command_count);
     }
 
     static async Execute(command, dontclose) {
@@ -30,7 +34,7 @@ class ActionHandler {
                 break;
             case "recheck":
                 if (!ActionHandler.OnPageLoad)
-                    console.warn("The OnRecheck event is not set!");
+                    console.warn("The OnPageLoad event is not set!");
                 ActionHandler.OnPageLoad();
                 break;
             case "close":

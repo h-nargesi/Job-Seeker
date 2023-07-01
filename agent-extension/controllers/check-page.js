@@ -35,10 +35,10 @@ ActionHandler.OnPageLoad = function () {
             if (current !== 'true') {
                 CheckNewOrders();
                 ordering_interval = setInterval(CheckNewOrders, millisecnod * 20);
-                current = 'false';
+                current = 'true';
 
             } else {
-                current = 'true';
+                current = 'false';
             }
 
             ordering_button.setAttribute('ordering', current);
@@ -61,6 +61,7 @@ async function SendingPageInfo(scope) {
 }
 
 async function CheckNewOrders() {
+    console.log('Page', 'Taking Orders ...');
     const result = await BackgroundMessaging.Orders();
     ActionHandler.Handle(result.commands, true);
 }
