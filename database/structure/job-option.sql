@@ -30,6 +30,7 @@ values
 	,	(10,	'field',	'Low-Level',		'\b(html|css|json)\b',
 				'{ "resume": { "key": "Web", "parent": "Front-End" } }')
 	,	(30,	'field',	'Python',			'\bpython\b', null)
+	,	(10,	'field',	'C++',				'\b(c\+\+)\b', null)
 
 	--	Technologies
 	,	(05,	'tech',		'Machine-Learning',	'\b((machine|deep)[- ]learning|natural[- ]network|(?-i)ML|(?-i)AI)\b', null)
