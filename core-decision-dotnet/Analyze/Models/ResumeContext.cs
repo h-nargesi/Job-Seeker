@@ -103,6 +103,11 @@ public class ResumeContext
             Length = 2;
             Elements.FOOTER = false;
         }
+
+        if (keywords.Contains("d") && keywords.Contains("j"))
+        {
+            NotIncluded.Add(NotIncludedContext.ClearanceMonitoring);
+        }
     }
 
     private string GetKeywords()
