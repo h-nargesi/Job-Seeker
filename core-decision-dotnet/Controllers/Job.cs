@@ -149,5 +149,21 @@ namespace Photon.JobSeeker
             }
         }
 
+        [HttpPost]
+        public IActionResult Setting([FromBody] string options)
+        {
+            try
+            {
+                using var database = Database.Open();
+                database.Execute(options);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+                throw;
+            }
+        }
+
     }
 }
