@@ -149,6 +149,20 @@ namespace Photon.JobSeeker
             }
         }
 
+        [HttpGet]
+        public IActionResult Options()
+        {
+            try
+            {
+                return View("~/views/job-options.cshtml");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+                throw;
+            }
+        }
+
         [HttpPost]
         public IActionResult Setting([FromBody] string options)
         {
@@ -156,7 +170,7 @@ namespace Photon.JobSeeker
             {
                 using var database = Database.Open();
                 database.Execute(options);
-                return Ok();
+                return Ok("Done");
             }
             catch (Exception ex)
             {

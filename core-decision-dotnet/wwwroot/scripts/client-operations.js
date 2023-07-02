@@ -22,7 +22,7 @@ async function update_setting(query_id, result_id) {
         const data = {
             method: 'POST',
             headers: {
-                'Accept': 'application/json',
+                'Accept': 'plain/text',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(query_element.value)
