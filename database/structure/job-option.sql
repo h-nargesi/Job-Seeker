@@ -22,7 +22,10 @@ values
 	,	(80,	'field',	'Java',				'\b(java|spring boot|kotlin)\b', null)
 	,	(30,	'field',	'GO-Lang',			'\b(go[- ]?lang|(?-i)G[Oo])\b', 
 				'{ "resume": { "key": "GOLANG" } }')
-	,	(60,	'field',	'Front-End',		'\b(angular|javascript|typescript|jquery|client[- ]side script(ing)?)\b', null)
+	,	(60,	'field',	'Front-End',		'\b(angular)\b',
+				'{ "resume": { "include_matched": false } }')
+	,	(60,	'field',	'Front-End-Key',	'\b(javascript|typescript|jquery|client[- ]side script(ing)?)\b',
+				'{ "resume": { "key": "Front-End" } }')
 	,	(90,	'field',	'Expert-SQL',		'\b(oracle|pl[- /]?sql|t[/-]?sql)\b',
 				'{ "resume": { "key": "SQL", "include_matched": false } }')
 	,	(90,	'field',	'Expert-SQL-Key',	'\b(sql server|m[sy][- ]?sql|sql|database|postgre[- ]?sql)\b',
