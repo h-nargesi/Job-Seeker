@@ -21,7 +21,7 @@ values
 				'{ "resume": { "key": "DOTNET", "include_matched": false } }')
 	,	(80,	'field',	'Java',				'\b(java|spring boot|kotlin)\b', null)
 	,	(30,	'field',	'GO-Lang',			'\b(go[- ]?lang|(?-i)G[Oo])\b', 
-				'{ "resume": { "key": "GOLANG" } }')
+				'{ "resume": { "key": "GOLANG", "include_matched": false } }')
 	,	(60,	'field',	'Front-End',		'\b(angular)\b',
 				'{ "resume": { "include_matched": false } }')
 	,	(60,	'field',	'Front-End-Key',	'\b(javascript|typescript|jquery|client[- ]side script(ing)?)\b',
