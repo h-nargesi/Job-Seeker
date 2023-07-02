@@ -4,6 +4,7 @@
 *.pyc
 *.log
 *.zip
+*.pdf
 
 /documents/
 /selenium/driver/
