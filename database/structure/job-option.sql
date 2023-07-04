@@ -37,8 +37,10 @@ values
 
 	--	Technologies
 	,	(05,	'tech',		'Machine-Learning',	'\b((machine|deep)[- ]learning|natural[- ]network|(?-i)ML|(?-i)AI)\b', null)
-	,	(10,	'tech',		'Rest-API',			'\b(rest[- ]?(api|ful)|web[- ](services|api))\b',
+	,	(10,	'tech',		'Rest-API',			'\b(web[- ]services)\b',
 				'{ "resume": { "parent": "Front-End" } }')
+	,	(10,	'tech',		'Rest-API-Key',			'\b(rest[- ]?(api|ful)|web[- ]api)\b',
+				'{ "resume": { "parent": "Front-End", "include_matched": false } }')
 	,	(05,	'tech',		'TensorFlow',		'\btensor[- ]?flow\b',
 				'{ "resume": { "parent": "Machine-Learning" } }')
 	,	(05,	'tech',		'Git',				'\bgit\b', null)
@@ -47,7 +49,7 @@ values
 	,	(30,	'production',	'ERP',			'\berp\b', null)
 
 	--	Company Benefits
-	,	(170,	'benefit',	'Relocation',		'(?<!no )\brelocation(\s+(support|package))?\b|\bvisa(\s+(support|sponsorship))\b', 
+	,	(170,	'benefit',	'Relocation',		'(?<!no )\brelocation(\s+(support|package|assistance))?\b|\bvisa(\s+(support|sponsorship))\b', 
 				'{ "resume": null }')
 	,	(02,	'salary',	'Salary',			'\bsalary\b.*?(\d[\d,]*(000|k))(.+?\b(month|year)\b)?',
 				'{ "resume": null , "money": 1, "period": 4}')
