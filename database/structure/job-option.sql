@@ -30,7 +30,7 @@ values
 				'{ "resume": { "key": "SQL", "include_matched": false } }')
 	,	(90,	'field',	'Expert-SQL-Key',	'\b(sql server|m[sy][- ]?sql|sql|database|postgre[- ]?sql)\b',
 				'{ "resume": { "key": "SQL" } }')
-	,	(10,	'field',	'Low-Level',		'\b(html|css|json)\b',
+	,	(10,	'field',	'Low-Level',		'\b(html(\s?5)?|css(\s?3)?|json)\b',
 				'{ "resume": { "key": "Web", "parent": "Front-End" } }')
 	,	(30,	'field',	'Python',			'\bpython\b', null)
 	,	(10,	'field',	'C++',				'\b(c\+\+)\b', null)
