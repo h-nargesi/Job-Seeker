@@ -14,9 +14,10 @@ function select_job(query) {
 }
 
 async function update_setting(query_id, result_id) {
+    const result_element = document.getElementById(result_id);
+    
     try {
         const query_element = document.getElementById(query_id);
-        const result_element = document.getElementById(result_id);
         if (!query_element) return;
 
         const data = {

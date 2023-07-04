@@ -69,7 +69,7 @@ namespace Photon.JobSeeker
                 var resume = ResumeContext.SimlpeDeserialize(options);
                 using var database = Database.Open();
                 database.Job.ChangeOptions(jobid, resume);
-                return Ok();
+                return Ok(resume?.SimlpeSerialize());
             }
             catch (Exception ex)
             {
