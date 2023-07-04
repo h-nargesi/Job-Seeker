@@ -51,6 +51,7 @@ namespace Photon.JobSeeker
             try
             {
                 using var database = Database.Open();
+                database.Job.RemoveHtmlContent(jobid);
                 database.Job.ChangeState(jobid, JobState.Rejected);
                 return Ok();
             }

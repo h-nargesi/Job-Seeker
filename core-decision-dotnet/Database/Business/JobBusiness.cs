@@ -157,6 +157,11 @@ namespace Photon.JobSeeker
             Save(new { JobID = id, State = state });
         }
 
+        public void RemoveHtmlContent(long id)
+        {
+            Save(new { JobID = id, Html = DBNull.Value, Content = DBNull.Value });
+        }
+
         public void ChangeOptions(long id, ResumeContext? options)
         {
             Save(new { JobID = id, Options = options });

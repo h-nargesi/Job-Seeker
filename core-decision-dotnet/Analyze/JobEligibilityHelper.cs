@@ -121,7 +121,7 @@ namespace Photon.JobSeeker
                     else job.State = JobState.Attention;
                 }
 
-                if (rejected)
+                if (rejected || job.Score < MinEligibilityScore)
                 {
                     filter |= JobFilter.Html | JobFilter.Content;
                     job.Html = null;
