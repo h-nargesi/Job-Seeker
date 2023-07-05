@@ -39,6 +39,7 @@ values
 	,	(05,	'tech',		'Machine-Learning',	'\b((machine|deep)[- ]learning|natural[- ]network|(?-i)ML|(?-i)AI)\b', null)
 	,	(10,	'tech',		'Rest-API',			'\b(web[- ]services)\b',
 				'{ "resume": { "parent": "Front-End" } }')
+	,	(10,	'tech',		'Entity-Framework',		'\b(entity[- ]framework|ef)\b', null)
 	,	(10,	'tech',		'Rest-API-Key',			'\b(rest[- ]?(api|ful)|web[- ]api)\b',
 				'{ "resume": { "parent": "Front-End", "include_matched": false } }')
 	,	(05,	'tech',		'TensorFlow',		'\btensor[- ]?flow\b',
