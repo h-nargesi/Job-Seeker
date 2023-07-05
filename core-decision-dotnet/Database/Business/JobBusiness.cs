@@ -297,7 +297,7 @@ WHERE AgencyID = $agency AND State = '{nameof(JobState.Saved)}' AND (Tries IS NU
 ORDER BY Tries IS NULL DESC, Tries DESC, JobID LIMIT 1";
 
         private const string Q_CLEAN = @$"
-DELETE FROM Job WHERE RegTime < $date AND State NOT IN ('{nameof(JobState.Applied)}', '{nameof(JobState.Revaluation)}')";
+DELETE FROM Job WHERE RegTime < $date AND (State != '{nameof(JobState.Applied)}' OR Tries LIKE '%4: %')";
 
         private const string Q_VACUUM = "vacuum;";
 
