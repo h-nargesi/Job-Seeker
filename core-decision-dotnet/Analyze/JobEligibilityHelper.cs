@@ -205,7 +205,7 @@ namespace Photon.JobSeeker
             {
                 var score = CheckOptionIn(job, option, out var matched);
 
-                if (score > 0 && matched.Length > 0)
+                if (matched.Length > 0)
                 {
                     switch (option.Category)
                     {
