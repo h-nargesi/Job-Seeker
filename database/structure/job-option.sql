@@ -24,9 +24,9 @@ values
 												null)
 	,	(30,	'field',	'GO-Lang',			'\b(go[- ]?lang|(?-i)G[Oo])\b', 
 												'{ "resume": { "key": "GOLANG", "include_matched": false } }')
-	,	(60,	'field',	'Front-End',		'\b(angular|front[- ]?end)\b',
+	,	(60,	'field',	'Front-End',		'\b(angular)\b',
 												'{ "resume": { "include_matched": false } }')
-	,	(60,	'field',	'Front-End-Key',	'\b(javascript|typescript|jquery|client[- ]side script(ing)?)\b',
+	,	(60,	'field',	'Front-End-Key',	'\b(javascript|typescript|jquery|client[- ]side script(ing)?|front[- ]?end)\b',
 												'{ "resume": { "key": "Front-End" } }')
 	,	(90,	'field',	'Expert-SQL',		'\b(oracle|pl[- /]?sql|t[/-]?sql)\b',
 												'{ "resume": { "key": "SQL", "include_matched": false } }')
