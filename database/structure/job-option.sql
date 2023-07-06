@@ -36,7 +36,7 @@ values
 												'{ "resume": { "key": "Web", "parent": "Front-End" } }')
 	,	(30,	'field',	'Python',			'\bpython\b',
 												null)
-	,	(10,	'field',	'C++',				'\b(c\+\+)\b',
+	,	(10,	'field',	'C++',				'\bc\+\+',
 												null)
 
 	--	Technologies
