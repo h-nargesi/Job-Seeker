@@ -53,7 +53,7 @@ values
 												'{ "resume": { "parent": "Machine-Learning" } }')
 	,	(05,	'tech',		'Git',				'\bgit\b', 
 												null)
-	,	(00,	'tech',		'Microservice',		'\b(microservices?)\b',
+	,	(00,	'tech',		'Microservices',	'\b(microservices?)\b',
 												'{ "resume": { "parent": "GOLANG" } }')
 
 	--	Company Production
@@ -63,7 +63,7 @@ values
 
 	--	Company Benefits
 
-	,	(170,	'benefit',	'Relocation',		'(?<!no )\brelocation(\s+(support|package|assistance))?\b|\bvisa(\s+(support|sponsorship))\b', 
+	,	(170,	'benefit',	'Relocation',		'(?<!no )\brelocation(\s+(support|package|assistance))?\b|\bvisa(\s+(support|sponsorship))?\b', 
 												'{ "resume": null }')
 	,	(02,	'salary',	'Salary',			'\bsalary\b.*?(\d[\d,]*(000|k))(.+?\b(month|year)\b)?',
 												'{ "resume": null , "money": 1, "period": 4}')
