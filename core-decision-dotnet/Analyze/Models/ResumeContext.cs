@@ -21,6 +21,7 @@ public class ResumeContext
         { nameof(ResumeContext.KeysContext.NETWORK), null },
     };
     public NotIncludedContext NotIncluded { get; } = new();
+    public NotIncludedContext Included { get; } = new();
     public ElementsContext Elements { get; } = new();
 
     [Serializable]

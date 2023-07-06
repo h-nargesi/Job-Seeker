@@ -27,6 +27,9 @@
     const NOT_INCLUDED = [
         @Html.Raw(Model.NotIncluded.ToSimpleJson())
     ];
+    const INCLUDED = [
+        @Html.Raw(Model.Included.ToSimpleJson())
+    ];
     const ELEMENTS = {
         LOCATION: @Model.Elements.LOCATION.JS(),
         PHONE: @Model.Elements.PHONE.JS(),
@@ -400,8 +403,8 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        for (const i in NOT_INCLUDED)
-            document.querySelectorAll(NOT_INCLUDED[i])
+        for (const not_included of NOT_INCLUDED)
+            document.querySelectorAll(not_included)
                     .forEach((element) => element.style.display = 'none');
 
         const reg_legth = new RegExp('key-(not-)?extra-(\\d+)');
@@ -451,6 +454,10 @@
                 element.insertAdjacentHTML('afterend', `\n<span class="skill highligh key-${class_name}">${title}</span>`);
             }
         }
+
+        for (const included of INCLUDED)
+            document.querySelectorAll(included)
+                    .forEach((element) => element.style.display = null);
 
         const data = [VERSION, Array.from(letters).join('')];
         if (words.size > 0)
