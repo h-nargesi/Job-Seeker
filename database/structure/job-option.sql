@@ -24,7 +24,7 @@ values
 												null)
 	,	(30,	'field',	'GO-Lang',			'\b(go[- ]?lang|(?-i)G[Oo])\b', 
 												'{ "resume": { "key": "GOLANG", "include_matched": false } }')
-	,	(60,	'field',	'Front-End',		'\b(angular)\b',
+	,	(60,	'field',	'Front-End',		'\b(angular|front[- ]?end)\b',
 												'{ "resume": { "include_matched": false } }')
 	,	(60,	'field',	'Front-End-Key',	'\b(javascript|typescript|jquery|client[- ]side script(ing)?)\b',
 												'{ "resume": { "key": "Front-End" } }')
@@ -75,8 +75,6 @@ values
 	,	(01,	'keywords',	'Developer',		'\b(web[- ])?developer\b',
 												'{ "resume": null }')
 	,	(02,	'keywords',	'Mid-Level',		'\b(mid|medium)[- ]level\b',
-												'{ "resume": null }')
-	,	(02,	'keywords',	'Frontend',			'\bfront[- ]?end\b',
 												'{ "resume": null }')
 	,	(02,	'keywords',	'Backend',			'\bback[- ]?end\b',
 												'{ "resume": null }')
