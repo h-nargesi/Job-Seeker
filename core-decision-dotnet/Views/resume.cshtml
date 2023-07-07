@@ -450,7 +450,7 @@
             if (!element.length) element = document.querySelectorAll('[last-item]');
             element = element[element.length - 1];
 
-            for (const title of MORE[k]) {
+            for (const title of MORE[k].slice().reverse()) {
                 element.insertAdjacentHTML('afterend', `\n<span class="skill highligh key-${class_name}">${title}</span>`);
             }
         }
