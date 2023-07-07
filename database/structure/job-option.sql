@@ -48,7 +48,7 @@ values
 	,	(10,	'tech',		'Entity-Framework',	'\b(entity[- ]framework|ef)\b', 
 												null)
 	,	(10,	'tech',		'Rest-API-Key',		'\b(rest[- ]?(api|ful)|web[- ]api)\b',
-												'{ "resume": { "parent": "Front-End", "include_matched": false } }')
+												'{ "resume": { "key": "Rest-API", "parent": "Front-End", "include_matched": false } }')
 	,	(05,	'tech',		'TensorFlow',		'\btensor[- ]?flow\b',
 												'{ "resume": { "parent": "Machine-Learning" } }')
 	,	(05,	'tech',		'Git',				'\bgit\b', 
