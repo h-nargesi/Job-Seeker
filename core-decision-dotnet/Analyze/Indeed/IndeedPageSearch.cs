@@ -35,7 +35,7 @@ namespace Photon.JobSeeker.Indeed
                 database.Job.Save(new
                 {
                     AgencyID = parent.ID,
-                    Url = string.Join("", parent.BaseUrl, "/viewjob?jk=", code),
+                    Url = string.Join("", parent.Link, "/viewjob?jk=", code),
                     Code = code,
                     State = JobState.Saved
                 });
