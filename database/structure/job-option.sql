@@ -43,7 +43,7 @@ values
 
 	,	(05,	'tech',		'Machine-Learning',	'\b((machine|deep)[- ]learning|natural[- ]network|(?-i)ML|(?-i)AI)\b',
 												null)
-	,	(10,	'tech',		'Rest-API',			'\b(web[- ]services)\b',
+	,	(10,	'tech',		'Rest-API',			'\b(web[- ]services|saas)\b',
 												'{ "resume": { "parent": "Front-End" } }')
 	,	(10,	'tech',		'Entity-Framework',	'\b(entity[- ]framework|ef)\b', 
 												null)
@@ -54,7 +54,7 @@ values
 	,	(05,	'tech',		'Git',				'\bgit\b', 
 												null)
 	,	(00,	'tech',		'Microservices',	'\b(microservices?)\b',
-												'{ "resume": { "parent": "GOLANG" } }')
+												'{ "resume": { "parent": "GOLANG", "include_matched": false } }')
 
 	--	Company Production
 
