@@ -223,7 +223,7 @@ namespace Photon.JobSeeker
 WITH date_diff AS (
     SELECT job.*
          , JulianDay(latest.LatestTime) - JulianDay(job.RegTime) - {DaysPriod} AS X
-         , latest.TopScore AS A
+         , latest.TopScore / 4 AS A
          , {DaysPriod} * 6 / 7 AS C
     FROM (
         SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
