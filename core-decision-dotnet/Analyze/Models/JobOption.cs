@@ -25,9 +25,9 @@ namespace Photon.JobSeeker
             return $"({state}{score ?? Score}) {Title}";
         }
 
-        public void AddKeyword(ResumeContext resume, string matched)
+        public void AddKeyword(ResumeContext resume, string matched, out string main)
         {
-            if (ResumeKeyword(out var main, out var keyword, out var include_matched))
+            if (ResumeKeyword(out main, out var keyword, out var include_matched))
             {
                 HashSet<string> list;
 
@@ -43,10 +43,12 @@ namespace Photon.JobSeeker
 
                 if (include_matched)
                 {
+                    var main_string = main;
+
                     var m = matched.Split('\n')
                                    .Where(x => x.Length > 0)
                                    .Where(x => !ResumeContext.KeysContext.NotInclude.Contains(x))
-                                   .Where(x => main != x.MainOption())
+                                   .Where(x => main_string != x.MainOption())
                                    .Select(x => x.SubOption()).ToArray();
 
                     list.UnionWith(m);

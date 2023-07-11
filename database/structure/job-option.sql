@@ -30,7 +30,9 @@ values
 												'{ "resume": { "key": "Front-End" } }')
 	,	(90,	'field',	'Expert-SQL',		'\b(oracle|pl[- /]?sql|t[/-]?sql)\b',
 												'{ "resume": { "key": "SQL", "include_matched": false } }')
-	,	(90,	'field',	'Expert-SQL-Key',	'\b(sql server|m[sy][- ]?sql|sql|database|postgre[- ]?sql)\b',
+	,	(90,	'field',	'Expert-SQL-Key',	'\b(sql server|m[sy][- ]?sql)\b',
+												'{ "resume": { "key": "SQL" } }')
+	,	(40,	'field',	'Simple-SQL-Key',	'\b(sql|database|postgre[- ]?sql)\b',
 												'{ "resume": { "key": "SQL" } }')
 	,	(10,	'field',	'Low-Level',		'\b(html(\s?5)?|css(\s?3)?|json)\b',
 												'{ "resume": { "key": "Web", "parent": "Front-End" } }')
@@ -41,19 +43,17 @@ values
 
 	--	Technologies
 
-	,	(05,	'tech',		'Machine-Learning',	'\b((machine|deep)[- ]learning|natural[- ]network|(?-i)ML|(?-i)AI)\b',
+	,	(10,	'tech',		'Machine-Learning',	'\b((machine|deep)[- ]learning|natural[- ]network|(?-i)ML|(?-i)AI|tensor[- ]?flow)\b',
+												null)
+	,	(20,	'tech',		'Entity-Framework',	'\b(entity[- ]framework|ef)\b', 
 												null)
 	,	(10,	'tech',		'Rest-API',			'\b(web[- ]services|saas)\b',
 												'{ "resume": { "parent": "Front-End" } }')
-	,	(10,	'tech',		'Entity-Framework',	'\b(entity[- ]framework|ef)\b', 
-												null)
 	,	(10,	'tech',		'Rest-API-Key',		'\b(rest[- ]?(api|ful)|web[- ]api)\b',
 												'{ "resume": { "key": "Rest-API", "parent": "Front-End", "include_matched": false } }')
-	,	(05,	'tech',		'TensorFlow',		'\btensor[- ]?flow\b',
-												'{ "resume": { "parent": "Machine-Learning" } }')
 	,	(05,	'tech',		'Git',				'\bgit\b', 
 												null)
-	,	(00,	'tech',		'Microservices',	'\b(microservices?)\b',
+	,	(05,	'tech',		'Microservices',	'\b(microservices?)\b',
 												'{ "resume": { "parent": "GOLANG", "include_matched": false } }')
 
 	--	Company Production

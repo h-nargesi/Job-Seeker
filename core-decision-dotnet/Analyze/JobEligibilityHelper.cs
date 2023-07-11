@@ -197,13 +197,13 @@ namespace Photon.JobSeeker
         {
             job.Score = 0L;
 
-            var option_scores = new Dictionary<string, List<(JobOption option, long score, string matched)>>();
+            var option_scores = new Dictionary<string, List<(JobOption option, int score, string matched)>>();
             var hasField = false;
             rejected = false;
 
             foreach (var option in options)
             {
-                var score = CheckOptionIn(job, option, out var matched);
+                var score = (int)CheckOptionIn(job, option, out var matched);
 
                 if (matched.Length > 0)
                 {
@@ -218,7 +218,7 @@ namespace Photon.JobSeeker
                     }
 
                     if (!option_scores.TryGetValue(option.Category, out var list))
-                        option_scores.Add(option.Category, list = new List<(JobOption, long, string)>());
+                        option_scores.Add(option.Category, list = new List<(JobOption, int, string)>());
 
                     list.Add((option, score, matched));
                 }
@@ -226,7 +226,7 @@ namespace Photon.JobSeeker
 
             var categories = new HashSet<string>();
             var resume = new ResumeContext();
-            var logs = new List<string>(options.Length);
+            var logs = new List<string>();
 
             foreach (var category in option_scores)
             {
@@ -235,18 +235,41 @@ namespace Photon.JobSeeker
 
                 category.Value.Sort((a, b) => b.score.CompareTo(a.score));
 
+                var keys = new Dictionary<string, int>();
+                var list = new List<(int optionScore, int index, JobOption option, int score, string matched)>();
+
+                var index = 0;
                 var factor = 1F;
                 foreach (var calc in category.Value)
                 {
-                    var score = (int)(calc.score * factor);
+                    calc.option.AddKeyword(resume, calc.matched, out var key);
 
-                    job.Score += score;
-                    factor = 0.5F;
+                    int score;
+                    if (keys.TryGetValue(key, out var calc_score)) score = 0;
+                    else
+                    {
+                        keys.Add(key, calc.score);
+                        calc_score = calc.score;
+                        score = (int)(calc.score * factor);
 
-                    calc.option.AddKeyword(resume, calc.matched);
+                        job.Score += score;
+                        factor = 0.5F;
+                    }
 
-                    logs.Add($"**{calc.option.ToString('+', score)}**");
-                    logs.Add(calc.matched);
+                    list.Add((calc_score, ++index, calc.option, score, calc.matched));
+                }
+
+                list.Sort((a, b) =>
+                {
+                    var result = b.optionScore.CompareTo(a.optionScore);
+                    if (result != 0) return result;
+                    else return b.index.CompareTo(a.index) * -1;
+                });
+
+                foreach (var log in list)
+                {
+                    logs.Add($"**{log.option.ToString('+', log.score)}**");
+                    logs.Add(log.matched);
                     logs.Add("");
                 }
             }
@@ -271,7 +294,7 @@ namespace Photon.JobSeeker
                 if (matched_option.Success)
                     matches.Add(matched_option.Value);
 
-                if (score <= 1)
+                if (score <= 0)
                     score = option.Category switch
                     {
                         "salary" => EvaluateSalaryScore(matched_option, option),
