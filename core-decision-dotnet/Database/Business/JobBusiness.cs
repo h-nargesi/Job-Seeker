@@ -170,6 +170,8 @@ namespace Photon.JobSeeker
         public void Clean(int mounths)
         {
             database.Execute(Q_CLEAN, DateTime.Now.AddMonths(-mounths));
+            database.Execute(Q_CLEAN_ATTENTION, DateTime.Now.AddDays(-mounths * 7));
+            database.Execute(Q_CLEAN_NOT_APPROVED, DateTime.Now.AddDays(-7));
             database.Execute(Q_VACUUM);
         }
 
@@ -298,6 +300,15 @@ ORDER BY Tries IS NULL DESC, Tries DESC, JobID LIMIT 1";
 
         private const string Q_CLEAN = @$"
 DELETE FROM Job WHERE RegTime < $date AND (State != '{nameof(JobState.Applied)}' OR Tries LIKE '%4: %')";
+
+        private const string Q_CLEAN_ATTENTION = @$"
+UPDATE Job SET Html = null
+WHERE RegTime < $date AND State IN ('{nameof(JobState.Attention)}') AND JobID NOT IN (
+    SELECT JobID FROM Job WHERE State IN ('{nameof(JobState.Attention)}')
+    ORDER BY Score DESC LIMIT 0, 100)";
+
+        private const string Q_CLEAN_NOT_APPROVED = @$"
+UPDATE Job SET Html = null, Content = null WHERE RegTime < $date AND State IN ('{nameof(JobState.NotApproved)}')";
 
         private const string Q_VACUUM = "vacuum;";
 
