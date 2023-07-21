@@ -219,13 +219,14 @@ namespace Photon.JobSeeker
             U=-e^{\left(\frac{2\cdot X}{c}\right)}
             Y+U
         */
-        private const int DaysPriod = 14;
+        private const int MaxScore = 30;
+        private const int DaysPriod = 10;
 
         private readonly static string Q_INDEX = @$"
 WITH date_diff AS (
     SELECT job.*
          , JulianDay(latest.LatestTime) - JulianDay(job.RegTime) - {DaysPriod} AS X
-         , latest.TopScore / 4 AS A
+         , MIN({MaxScore}, latest.TopScore) AS A
          , {DaysPriod} * 6 / 7 AS C
     FROM (
         SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
@@ -243,7 +244,7 @@ WITH date_diff AS (
         FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
     ) job
     CROSS JOIN (
-        SELECT MAX(RegTime) AS LatestTime, MAX(Score) / 2 AS TopScore FROM Job
+        SELECT MAX(RegTime) AS LatestTime, MAX(Score) / 13 AS TopScore FROM Job
     ) latest
 
 ), ranking AS (
