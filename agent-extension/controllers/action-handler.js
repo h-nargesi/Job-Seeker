@@ -41,7 +41,10 @@ class ActionHandler {
                 if (!dontclose)
                     ActionHandler.OnClose();
                 break;
-                        case "wait":
+            case "reload":
+                ActionHandler.OnReload();
+                break;
+            case "wait":
                 await ActionHandler.OnWait(command.params);
                 break;
             default:
@@ -73,6 +76,10 @@ class ActionHandler {
         elements.forEach(element => {
             if (element) element.click()
         });
+    }
+
+    static OnReload() {
+        location.reload();
     }
 
     static OnClose() {
