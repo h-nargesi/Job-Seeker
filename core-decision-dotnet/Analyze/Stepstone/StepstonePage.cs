@@ -32,7 +32,7 @@ namespace Photon.JobSeeker.Stepstone
 
         protected static readonly Regex reg_search_end = new(@"<button[^>]+aria-label=[""']Next[""']", RegexOptions.IgnoreCase);
 
-        protected static readonly Regex reg_job_url = new(@"/jobs[^""']+(\d+)-inline\.html[^""']*", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_job_url = new(@"/jobs[^""']+-(\d+)-inline\.html[^""']*", RegexOptions.IgnoreCase);
 
         protected static readonly Regex reg_job_title = new(@"<span[^>]+data-at=[""']header-job-title[""'][^>]*>([^<]*)</span>", RegexOptions.IgnoreCase);
 
