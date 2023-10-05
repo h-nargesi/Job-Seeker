@@ -1,4 +1,4 @@
-console.log("core-messaging");
+console.log("AGENT", "core-messaging");
 
 class CoreMessaging {
 
@@ -29,7 +29,7 @@ class CoreMessaging {
 
         let response = await fetch(server_url, data);
         response = await response.json();
-        console.log("CoreMessaging", "Send", response);
+        console.log("AGENT", "CoreMessaging", "Send", response);
         return response;
     }
 
@@ -50,13 +50,13 @@ class CoreMessaging {
 
                 const response = await fetch(server_url, data);
                 CoreMessaging.SCOPES = await response.json();
-                console.log("CoreMessaging", "Scopes", CoreMessaging.SCOPES);
+                console.log("AGENT", "CoreMessaging", "Scopes", CoreMessaging.SCOPES);
             }
 
             return CoreMessaging.SCOPES;
 
         } catch (e) {
-            console.log(e);
+            console.log("AGENT", e);
             return {};
         }
     }
@@ -72,11 +72,11 @@ class CoreMessaging {
 
             let response = await fetch(server_url, data);
             response = await response.json();
-            console.log("CoreMessaging", "Orders", response);
+            console.log("AGENT", "CoreMessaging", "Orders", response);
             return response;
 
         } catch (e) {
-            console.log(e);
+            console.log("AGENT", e);
             return {};
         }
     }

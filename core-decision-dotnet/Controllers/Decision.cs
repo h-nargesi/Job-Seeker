@@ -66,6 +66,7 @@ namespace Photon.JobSeeker
                 {
                     a.Name,
                     a.Domain,
+                    a.Waiting,
                 });
 
                 return Ok(agencies);

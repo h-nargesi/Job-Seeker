@@ -47,6 +47,8 @@
 
         public static Command Recheck() => new(PageAction.recheck, null, null);
 
+        public static Command Reload() => new(PageAction.reload, null, null);
+
         public static Command Close() => new(PageAction.close, null, null);
 
         public static Command Wait(int miliseconds) => new(PageAction.wait, null, new Dictionary<string, object>

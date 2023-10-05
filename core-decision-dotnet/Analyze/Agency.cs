@@ -20,6 +20,8 @@ namespace Photon.JobSeeker
 
         public string Link { get; private set; } = string.Empty;
 
+        public virtual int Waiting => 0;
+
         public AgencyStatus Status { get; set; }
 
         public bool IsActiveSeeking => Status.HasFlag(AgencyStatus.ActiveSeeking);
