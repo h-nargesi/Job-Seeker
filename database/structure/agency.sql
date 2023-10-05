@@ -20,7 +20,9 @@ values
 					'{ "running": 0, "urls": ["nl/career/jobs-netherlands", "de/career/jobs-germany", "ch/career/jobs-switzerland"]}'),
 
 	('LinkedIn',	'(.+\.)?linkedin\.com$',		'http://linkedin.com',		'username', 'password',
-					'{ "running": 0, "locations": ["Netherlands", "Australia", "Germany", "Sweden", "United Kingdom"]}')
+					'{ "running": 0, "locations": ["Netherlands", "Australia", "Germany", "Sweden", "United Kingdom"]}'),
+
+	('Stepstone',	'(.+\.)?stepstone\.de$',		'http://stepstone.de',		'username', 'password',	null)
 on conflict (Title) do update set 
 	Domain = excluded.Domain, Link = excluded.Link,
 	Settings = excluded.Settings;
