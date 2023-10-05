@@ -48,6 +48,8 @@ ActionHandler.OnPageLoad = function () {
 }
 
 async function SendingPageInfo(scope) {
+    if (scope.waiting) await ActionHandler.OnWait({ miliseconds: scope.waiting });
+
     console.log("AGENT", 'Page', "sending", window.location.hostname, scope);
 
     const commands = await BackgroundMessaging.Send({
