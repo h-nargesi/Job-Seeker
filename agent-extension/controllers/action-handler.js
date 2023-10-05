@@ -1,4 +1,4 @@
-console.log("action-handler");
+console.log("AGENT", "action-handler");
 
 class ActionHandler {
 
@@ -12,11 +12,11 @@ class ActionHandler {
                 await ActionHandler.Execute(commands[c], dontclose);
                 command_count++;
             }
-        console.log('Action Count', command_count);
+        console.log("AGENT", 'Action Count', command_count);
     }
 
     static async Execute(command, dontclose) {
-        console.log("Action", command);
+        console.log("AGENT", "Action", command);
         switch (command?.action?.toLowerCase()) {
             case "go":
                 ActionHandler.OnGo(command.params);
@@ -41,7 +41,7 @@ class ActionHandler {
                 if (!dontclose)
                     ActionHandler.OnClose();
                 break;
-            case "wait":
+                        case "wait":
                 await ActionHandler.OnWait(command.params);
                 break;
             default:

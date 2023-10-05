@@ -1,4 +1,4 @@
-console.log("menu.js");
+console.log("AGENT", "menu.js");
 
 const Manifest = chrome.runtime.getManifest();
 const OpenServer = document.getElementById('OpenServer');
@@ -15,7 +15,7 @@ ServerUrl.addEventListener("keyup", function (event) {
             while (url.endsWith('/')) url = url.substr(0, url.length - 1);
             ServerUrl.value = url;
         }
-        console.log("Menu", "ServerUrl", url);
+        console.log("AGENT", "Menu", "ServerUrl", url);
         StorageHandler.ServerUrl = url;
     }
 });
@@ -25,7 +25,7 @@ OpenServer.addEventListener("click", async function () {
 });
 
 async function LoadData() {
-    console.log("Menu", "LoadData");
+    console.log("AGENT", "Menu", "LoadData");
     ServerUrl.value = await StorageHandler.ServerUrlAsync();
     ManifestTitle.innerText = Manifest.name;
     ManifestDescr.innerText = Manifest.description ?? "";

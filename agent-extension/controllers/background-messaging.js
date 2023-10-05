@@ -1,4 +1,4 @@
-console.log("background-messaging");
+console.log("AGENT", "background-messaging");
 
 class BackgroundMessaging {
 
@@ -12,7 +12,7 @@ class BackgroundMessaging {
         chrome.runtime.onMessage.addListener(
             function (response) {
                 if (chrome.runtime.lastError)
-                    console.log(chrome.runtime.lastError.message);
+                    console.log("AGENT", chrome.runtime.lastError.message);
 
                 if (!response.id || !response.body) return;
 
