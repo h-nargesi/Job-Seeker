@@ -6,9 +6,9 @@ namespace Photon.JobSeeker.IamExpat
     {
         protected static readonly Regex reg_login_but = new(@"<a[^>]+href=[""']/login[""']", RegexOptions.IgnoreCase);
 
-        protected static readonly Regex reg_login_url = new(@"^https?://[^/]*iamexpat\.com/login", RegexOptions.IgnoreCase);
+        protected static readonly Regex reg_login_url = new(@"^https?://[^/]*iamexpat\.[\w]{2,3}/login", RegexOptions.IgnoreCase);
 
-        internal static Regex reg_search_url = new(@"^https?://[^/]*iamexpat\.nl/career/jobs-netherlands", RegexOptions.IgnoreCase);
+        internal static Regex reg_search_url = new(@"^https?://[^/]*iamexpat\.[\w]{2,3}/career/jobs-netherlands", RegexOptions.IgnoreCase);
 
         protected static readonly Regex reg_search_title = new(@"<h1>[^<]*IT[^<]*Technology[^<]*</h1>", RegexOptions.IgnoreCase);
 
@@ -35,7 +35,7 @@ namespace Photon.JobSeeker.IamExpat
         protected static string GetJobCode(Match match)
         {
             var i = match.Groups.Count;
-            var code = "";
+            var code = string.Empty;
             while (string.IsNullOrEmpty(code) && --i >= 0)
                 code = match.Groups[i].Value;
             return code;

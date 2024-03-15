@@ -30,37 +30,6 @@ namespace Photon.JobSeeker
         }
 
         [HttpPost]
-        public IActionResult Revaluate()
-        {
-            try
-            {
-                JobEligibilityHelper.RunRevaluateProcess(analyzer);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
-                throw;
-            }
-        }
-
-        [HttpPost]
-        public IActionResult Clean()
-        {
-            try
-            {
-                using var database = Database.Open();
-                database.Job.Clean(3);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
-                throw;
-            }
-        }
-
-        [HttpPost]
         public IActionResult Apply([FromQuery] long jobid)
         {
             try
@@ -82,6 +51,7 @@ namespace Photon.JobSeeker
             try
             {
                 using var database = Database.Open();
+                database.Job.RemoveHtmlContent(jobid);
                 database.Job.ChangeState(jobid, JobState.Rejected);
                 return Ok();
             }
@@ -100,7 +70,7 @@ namespace Photon.JobSeeker
                 var resume = ResumeContext.SimlpeDeserialize(options);
                 using var database = Database.Open();
                 database.Job.ChangeOptions(jobid, resume);
-                return Ok();
+                return Ok(resume?.SimlpeSerialize());
             }
             catch (Exception ex)
             {
@@ -148,5 +118,67 @@ namespace Photon.JobSeeker
                 throw;
             }
         }
+
+        [HttpPost]
+        public IActionResult Revaluate()
+        {
+            try
+            {
+                JobEligibilityHelper.RunRevaluateProcess(analyzer);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+                throw;
+            }
+        }
+
+        [HttpPost]
+        public IActionResult Clean()
+        {
+            try
+            {
+                using var database = Database.Open();
+                database.Job.Clean(3);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+                throw;
+            }
+        }
+
+        [HttpGet]
+        public IActionResult Options()
+        {
+            try
+            {
+                return View("~/views/job-options.cshtml");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+                throw;
+            }
+        }
+
+        [HttpPost]
+        public IActionResult Setting([FromBody] string options)
+        {
+            try
+            {
+                using var database = Database.Open();
+                database.Execute(options);
+                return Ok("Done");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+                throw;
+            }
+        }
+
     }
 }

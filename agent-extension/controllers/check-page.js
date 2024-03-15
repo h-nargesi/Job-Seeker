@@ -1,14 +1,14 @@
-console.log("check-page");
+console.log("AGENT", "check-page");
 
 ActionHandler.OnPageLoad = function () {
-    console.log('Page', 'loaded');
+    console.log("AGENT", 'Page', 'loaded');
     setTimeout(async function () {
         const scopes = await BackgroundMessaging.Scopes();
         const host = window.location.hostname;
-        console.log('Page', "hostname:", host);
+        console.log("AGENT", 'Page', "hostname:", host);
         for (let s in scopes) {
             if (host.match(new RegExp(scopes[s].domain, 'i'))) {
-                console.log('Page', "matched", scopes[s].domain);
+                console.log("AGENT", 'Page', "matched", scopes[s].domain);
                 SendingPageInfo(scopes[s]);
                 break;
             }
@@ -35,10 +35,10 @@ ActionHandler.OnPageLoad = function () {
             if (current !== 'true') {
                 CheckNewOrders();
                 ordering_interval = setInterval(CheckNewOrders, millisecnod * 20);
-                current = 'false';
+                current = 'true';
 
             } else {
-                current = 'true';
+                current = 'false';
             }
 
             ordering_button.setAttribute('ordering', current);
@@ -48,7 +48,9 @@ ActionHandler.OnPageLoad = function () {
 }
 
 async function SendingPageInfo(scope) {
-    console.log('Page', "sending", window.location.hostname, scope);
+    if (scope.waiting) await ActionHandler.OnWait({ miliseconds: scope.waiting });
+
+    console.log("AGENT", 'Page', "sending", window.location.hostname, scope);
 
     const commands = await BackgroundMessaging.Send({
         agency: scope.name,
@@ -56,11 +58,12 @@ async function SendingPageInfo(scope) {
         content: document.documentElement.outerHTML,
     });
 
-    console.log('Page', "commands", commands);
+    console.log("AGENT", 'Page', "commands", commands);
     ActionHandler.Handle(commands, false);
 }
 
 async function CheckNewOrders() {
+    console.log("AGENT", 'Page', 'Taking Orders ...');
     const result = await BackgroundMessaging.Orders();
     ActionHandler.Handle(result.commands, true);
 }

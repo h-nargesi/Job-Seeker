@@ -157,6 +157,11 @@ namespace Photon.JobSeeker
             Save(new { JobID = id, State = state });
         }
 
+        public void RemoveHtmlContent(long id)
+        {
+            Save(new { JobID = id, Html = (string?)null, Content = (string?)null });
+        }
+
         public void ChangeOptions(long id, ResumeContext? options)
         {
             Save(new { JobID = id, Options = options });
@@ -165,6 +170,8 @@ namespace Photon.JobSeeker
         public void Clean(int mounths)
         {
             database.Execute(Q_CLEAN, DateTime.Now.AddMonths(-mounths));
+            database.Execute(Q_CLEAN_ATTENTION, DateTime.Now.AddDays(-mounths * 7));
+            database.Execute(Q_CLEAN_NOT_APPROVED, DateTime.Now.AddDays(-7));
             database.Execute(Q_VACUUM);
         }
 
@@ -204,19 +211,22 @@ namespace Photon.JobSeeker
         }
 
         /*
-        c=\frac{b\cdot6}{7}
-        X=x-b
-        Y=ae^{-\frac{X^{2}}{2c^{2}}}
-        U=-e^{\left(\frac{2\cdot X}{c}\right)}
-        Y+U
+         * Sorting Algorithm:
+
+            c=\frac{b\cdot6}{7}
+            X=x-b
+            Y=ae^{-\frac{X^{2}}{2c^{2}}}
+            U=-e^{\left(\frac{2\cdot X}{c}\right)}
+            Y+U
         */
-        private const int DaysPriod = 14;
+        private const int MaxScore = 30;
+        private const int DaysPriod = 10;
 
         private readonly static string Q_INDEX = @$"
 WITH date_diff AS (
     SELECT job.*
          , JulianDay(latest.LatestTime) - JulianDay(job.RegTime) - {DaysPriod} AS X
-         , latest.TopScore AS A
+         , MIN({MaxScore}, latest.TopScore) AS A
          , {DaysPriod} * 6 / 7 AS C
     FROM (
         SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
@@ -234,14 +244,13 @@ WITH date_diff AS (
         FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
     ) job
     CROSS JOIN (
-        SELECT MAX(RegTime) AS LatestTime, MAX(Score) / 2 AS TopScore FROM Job
+        SELECT MAX(RegTime) AS LatestTime, MAX(Score) / 13 AS TopScore FROM Job
     ) latest
 
 ), ranking AS (
     SELECT job.JobID, job.RegTime, job.ModifiedOn, job.AgencyID, job.Code, job.Title
          , job.State, job.Score, job.Url, job.Link, job.Relocation
          , job.AgencyName, job.Category, job.RegDate
-         --*, A * EXP(YF) AS Y, - EXP(UF) AS U, A * EXP(YF) - EXP(UF) AS TimeScore
          , Score + A * EXP(YF) - EXP(UF) AS RankScore
     FROM (
         SELECT *
@@ -291,7 +300,16 @@ WHERE AgencyID = $agency AND State = '{nameof(JobState.Saved)}' AND (Tries IS NU
 ORDER BY Tries IS NULL DESC, Tries DESC, JobID LIMIT 1";
 
         private const string Q_CLEAN = @$"
-DELETE FROM Job WHERE RegTime < $date AND State NOT IN ('{nameof(JobState.Applied)}', '{nameof(JobState.Revaluation)}')";
+DELETE FROM Job WHERE RegTime < $date AND (State != '{nameof(JobState.Applied)}' OR Tries LIKE '%4: %')";
+
+        private const string Q_CLEAN_ATTENTION = @$"
+UPDATE Job SET Html = null
+WHERE RegTime < $date AND State IN ('{nameof(JobState.Attention)}') AND JobID NOT IN (
+    SELECT JobID FROM Job WHERE State IN ('{nameof(JobState.Attention)}')
+    ORDER BY Score DESC LIMIT 0, 100)";
+
+        private const string Q_CLEAN_NOT_APPROVED = @$"
+UPDATE Job SET Html = null, Content = null WHERE RegTime < $date AND State IN ('{nameof(JobState.NotApproved)}')";
 
         private const string Q_VACUUM = "vacuum;";
 

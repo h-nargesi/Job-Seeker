@@ -10,6 +10,10 @@
 <script>
     const VERSION = @ResumeContext.Version;
     const LENGTH = @Model.Length;
+    const INPUT_DATA = {
+        BACK_END_EXP: @Model.InputData.BACK_END_EXP,
+        FRONT_END_EXP: @Model.InputData.BACK_END_EXP,
+    };
     const KEYS = {
         DOTNET: @Model.Keys.DOTNET.JS(),
         JAVA: @Model.Keys.JAVA.JS(),
@@ -27,10 +31,15 @@
     const NOT_INCLUDED = [
         @Html.Raw(Model.NotIncluded.ToSimpleJson())
     ];
+    const INCLUDED = [
+        @Html.Raw(Model.Included.ToSimpleJson())
+    ];
     const ELEMENTS = {
-        LOCATION: @Model.Elements.LOCATION.JS(),
+        IMAGE: @Model.Elements.IMAGE.JS(),
         PHONE: @Model.Elements.PHONE.JS(),
         LINKEDIN: @Model.Elements.LINKEDIN.JS(),
+        SKYPE: @Model.Elements.SKYPE.JS(),
+        LOCATION: @Model.Elements.LOCATION.JS(),
         FOOTER: @Model.Elements.FOOTER.JS(),
     }
 </script>
@@ -77,6 +86,13 @@
         display: flex;
         flex-direction: row-reverse;
     }
+        .header.cls-image {
+            background-image: url('/images/portrate.png');
+            background-repeat: no-repeat;
+            background-size: contain;
+            background-position-x: right;
+            flex-direction: column;
+        }
         .header, .header a, .header a:visited {
             color: var(--high-color);
             text-decoration: none;
@@ -109,6 +125,9 @@
         }
         .header-right {
             text-align: right;
+        }
+        .header.cls-image .header-right {
+            text-align: left;
         }
     main {
         padding-top: 5pt;
@@ -150,10 +169,12 @@
         article h3 {
             margin: 0;
             margin-bottom: 5pt;
+            margin-left: 20pt;
         }
         article h4 {
             margin: 0;
             margin-bottom: 5pt;
+            margin-left: 20pt;
         }
         article .exp-date {
             float: right;
@@ -161,6 +182,12 @@
         }
         article ul {
             margin: 0;
+        }
+        article .bull {
+            position: absolute;
+            font-size: 15pt;
+            left: 30pt;
+            color: var(--high-ground);
         }
     .version {
         opacity: 0.125;
@@ -176,7 +203,7 @@
 </head>
 <body>
 
-<header class="header highligh">
+<header class="header highligh cls-image">
     <div class="header-column header-right">
         <h1 class="header-fullname">Hamed Nargesi</h1>
         <h2 class="header-job-title">Software Developer</h2>
@@ -187,7 +214,7 @@
             <li class="header-item"><i class="fa fa-envelope"></i><a href="mailto:hamed.nargesi.jar@@gmail.com">hamed.nargesi.jar@@gmail.com</a></li>
             <li class="header-item elm-linkedin"><i class="fab fa-linkedin"></i><a href="https://www.linkedin.com/in/hamed-nargesi/">linkedin.com/in/hamed-nargesi</a></li>
             <li class="header-item"><i class="fab fa-github"></i><a href="https://github.com/h-nargesi/">github.com/h-nargesi</a></li>
-            <li class="header-item"><i class="fab fa-skype"></i><a href="skype:hamed.nargesi?call">hamed.nargesi</a></li>
+            <li class="header-item elm-skype"><i class="fab fa-skype"></i><a href="skype:hamed.nargesi?call">hamed.nargesi</a></li>
             <li class="header-item elm-location"><i class="fa fa-map-marker"></i><span>Tehran, Iran</span></li>
         </ul>
     </div>
@@ -196,15 +223,15 @@
     <section>
         <h2>Summary</h2>
         <p>
-            As a person who works fondly and professionally in the field of software engineering, I would like to share my skills and motivation with other teams. With more than 13 years experience in back-end development and 2 years experience in front-end, I am eager to play an active role in creating complex and quality products.
+            As a person who works passionately and professionally in the field of software engineering and e-commerce, I would like to share my skills and motivation with other teams. With over <span class="back-end-exp">13</span> years of experience in back-end development and troubleshooting, and <span class="front-end-exp">2</span> years of experience in front-end development, I am eager to play an active role in creating complex and quality products.
         </p>
         <p class="key-extra-3">
-            Some of my distinguished characteristics are <b>responsibility</b>, <b>from teamwork spirit</b>, <b>purposefulness</b>, <b>flexibility</b>, <b>compatibility</b> and a <b>curious mind</b>.
+            Some of my distinctive characteristics are <b>responsibility</b>, <b>teamwork spirit</b>, <b>purposefulness</b>, <b>flexibility</b>, <b>compatibility</b>, and a <b>curious mind</b>.
         </p>
         <p class="key-extra-2">
-            As a freelancer, I have done more than 15 small and medium scale projects to improve efficiency for clients.
+            As a freelancer, I have done more than 15 small- and medium-scale projects to improve efficiency for clients.
             <br/>
-            In the companies I have worked for, I used low-cost algorithms to develop complex business solutions and satisfied customer needs with more than 5000 employees in different branches.
+            In the companies I have worked for, I used low-cost algorithms to develop complex business solutions and satisfied the needs of customers with over 5,000 employees in different branches.
         </p>
     </section>
     <section>
@@ -214,7 +241,7 @@
             <span class="skill highligh">Web Applications</span>
             <span class="skill highligh">Design Patterns</span>
             <span class="skill highligh">Clean Code</span>
-            <span class="skill highligh">Object-Oriented<small class="key-extra-2"> (OOP)</small></span>
+            <span class="skill highligh">Object-Oriented<small> (OOP)</small></span>
             <span class="skill highligh">Algorithms</span>
             <span class="skill highligh">Data Structures</span>
             <span class="skill highligh key-dotnet">C#, ASP.NET Core</span>
@@ -243,7 +270,7 @@
         <h2>Experience</h2>
         <article class="key-dotnet key-not-extra-3" id="system-group-total">
             <span class="exp-date">Mar 2022 - Present<br/>(11 months +)</span>
-            <h3>Full-stack Developer on The Rahkaran ERP Web Application</h3>
+            <h3><i class="bull fa fa-check-circle"></i>Full-stack Developer on The Rahkaran ERP Web Application</h3>
             <h4><a href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
             <ul>
                 <li>Providing solutions for customers to reduce data volume up to 5% and avoid system problems.</li>
@@ -255,7 +282,7 @@
         </article>
         <article class="key-dotnet key-extra-3" id="system-group-2">
             <span class="exp-date">Sep 2022 - Present<br/>(5 months +)</span>
-            <h3>Full-stack Developer on The Rahkaran ERP Web Application</h3>
+            <h3><i class="bull fa fa-check-circle"></i>Full-stack Developer on The Rahkaran ERP Web Application</h3>
             <h4><a href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
             <ul>
                 <li>Providing solutions for customers to reduce data volume up to 5% and avoid system problems.</li>
@@ -266,7 +293,7 @@
         </article>
         <article class="key-dotnet key-extra-3" id="system-group-1">
             <span class="exp-date">Mar 2022 - Aug 2022<br/>(6 months)</span>
-            <h3>.NET Developer on The Rahkaran ERP Web Application</h3>
+            <h3><i class="bull fa fa-check-circle"></i>.NET Developer on The Rahkaran ERP Web Application</h3>
             <h4><a href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
             <ul>
                 <li>Improved more than 10 different procedures via fixing algorithms' mistakes.</li>
@@ -277,7 +304,7 @@
         </article>
         <article class="key-java" id="douran">
             <span class="exp-date">Apr 2019 - Feb 2022<br/>(2 years 11 months)</span>
-            <h3>Java Developer on The Douran ERP Web Application</h3>
+            <h3><i class="bull fa fa-check-circle"></i>Java Developer on The Douran ERP Web Application</h3>
             <h4><a href="https://douran.com/en-US/Dourtal/1/page/Home">DOURAN GROUP | گروه دوران</a></h4>
             <ul>
                 <li>Boosted +15 business procedures in 5 HR modules via low-cost algorithms.</li>
@@ -288,9 +315,12 @@
                     <li>Powered by Java and PL/SQL.</li>
             </ul>
         </article>
+    </section>
+    <section class="experience">
+        <h2>Projects</h2>
         <article class="key-dotnet key-extra-2" id="exportchance">
             <span class="exp-date">Oct 2018 - Apr 2019<br/>(7 months)</span>
-            <h3>Full-stack Developer on The B2B E-Commerce Web Application</h3>
+            <h3><i class="bull fa fa-check-circle"></i>Full-stack Developer on The B2B E-Commerce Web Application</h3>
             <h4>Self-Employed</h4>
             <ul>
                 <li>Formed the modeling of this web application with almost 30 main entities.</li>
@@ -302,7 +332,7 @@
         </article>
         <article class="key-web" id="web-sites">
             <span class="exp-date">Apr 2018 - Sep 2018<br/>(6 months)</span>
-            <h3>Web Developer</h3>
+            <h3><i class="bull fa fa-check-circle"></i>Web Developer</h3>
             <h4>Self-Employed</h4>
             <ul>
                 <li>Launched +10 web sites, like Behin Energy Co., Eehaam magazine, etc.</li>
@@ -312,7 +342,7 @@
         </article>
         <article class="key-dotnet" id="clearance-monitoring">
             <span class="exp-date">Sep 2017 - Mar 2018<br/>(7 months)</span>
-            <h3>Web Application Developer on The Clearance Monitoring Application</h3>
+            <h3><i class="bull fa fa-check-circle"></i>Web Application Developer on The Clearance Monitoring Application</h3>
             <h4>Self-Employed</h4>
             <ul>
                 <li>Optimized the efficiency of monitoring products cleared from each customs up to 70%.</li>
@@ -323,7 +353,7 @@
         </article>
         <article class="key-network" id="behin">
             <span class="exp-date">Oct 2012 - Sep 2016<br/>(4 years)</span>
-            <h3>Network Technician</h3>
+            <h3><i class="bull fa fa-check-circle"></i>Network Technician</h3>
             <h4>Behin Energy Co. (BEC)</h4>
             <ul>
                 <li>Installed and managed about 30 end-points and routers for Behin Energy Co.</li>
@@ -331,7 +361,7 @@
         </article>
         <article class="key-dotnet key-extra-2" id="image-tagging">
             <span class="exp-date">Mar 2012 - Jul 2012<br/>(5 months)</span>
-            <h3>.NET Developer on The Image Tagging Tool</h3>
+            <h3><i class="bull fa fa-check-circle"></i>.NET Developer on The Image Tagging Tool</h3>
             <h4>Self-Employed</h4>
             <ul>
                 <li>Designed to manage the images' tags in files' meta-data.</li>
@@ -341,7 +371,7 @@
         </article>
         <article class="key-java key-extra-2" id="android">
             <span class="exp-date">Mar 2010 - Aug 2010<br/>(7 months)</span>
-            <h3>Android Application Developer</h3>
+            <h3><i class="bull fa fa-check-circle"></i>Android Application Developer</h3>
             <h4>Self-Employed</h4>
             <ul>
                 <li>Built a password management application that uses NoSQL to store passwords.</li>
@@ -350,18 +380,18 @@
                 <li>Powered by Java and SQLite.</li>
             </ul>
         </article>
-        <article class="key-sql" id="databas">
+        <article class="key-sql" id="database">
             <span class="exp-date">Aug 2009 - Feb 2010<br/>(7 months)</span>
-            <h3>Database Developer</h3>
+            <h3><i class="bull fa fa-check-circle"></i>Database Developer</h3>
             <h4>Self-Employed</h4>
             <ul>
                 <li>Designed the models for databases of hospital resource planning and project control.</li>
                 <li>Powered by T-SQL.</li>
             </ul>
         </article>
-        <article class="key-dotnet key-extra-3" id="epilepsy">
+        <article class="key-dotnet key-extra-3" id="siah-bishe">
             <span class="exp-date">Nov 2008 - Jul 2009<br/>(9 months)</span>
-            <h3>.NET Developer on Project Control Software</h3>
+            <h3><i class="bull fa fa-check-circle"></i>.NET Developer on Project Control Software</h3>
             <h4>Self-Employed</h4>
             <ul>
                 <li>Formalized a project control software system that specialized for the turbines and generators of Siah Bishe Dam.</li>
@@ -371,7 +401,7 @@
         </article>
         <article class="key-web key-extra-3" id="epilepsy">
             <span class="exp-date">Apr 2008 - Oct 2008<br/>(7 months)</span>
-            <h3>Web Developer</h3>
+            <h3><i class="bull fa fa-check-circle"></i>Web Developer</h3>
             <h4>Self-Employed</h4>
             <ul>
                 <li>Founded the Iranian Associations of Epilepsy website.</li>
@@ -379,7 +409,7 @@
         </article>
         <article class="key-dotnet key-extra-3" id="phone-book">
             <span class="exp-date">Apr 2008<br/>(1 month)</span>
-            <h3>.NET Developer</h3>
+            <h3><i class="bull fa fa-check-circle"></i>.NET Developer</h3>
             <h4>Self-Employed</h4>
             <ul>
                 <li>Developed a phone-book application for desktop users.</li>
@@ -399,8 +429,8 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        for (const i in NOT_INCLUDED)
-            document.querySelectorAll(NOT_INCLUDED[i])
+        for (const not_included of NOT_INCLUDED)
+            document.querySelectorAll(not_included)
                     .forEach((element) => element.style.display = 'none');
 
         const reg_legth = new RegExp('key-(not-)?extra-(\\d+)');
@@ -421,7 +451,7 @@
         const words = new Set();
 
         for (const k in KEYS) {
-            const class_name = k.replace('_', '-').toLowerCase();
+            const class_name = k.replaceAll('_', '-').toLowerCase();
             let selector = '.key-';
 
             if (KEYS[k]) {
@@ -439,17 +469,21 @@
         }
 
         for (const k in MORE) {
-            const class_name = k.replace('_', '-').toLowerCase();
+            const class_name = k.replaceAll('_', '-').toLowerCase();
             const selector = '.skill.key-';
 
             let element = document.querySelectorAll(selector + class_name);
             if (!element.length) element = document.querySelectorAll('[last-item]');
             element = element[element.length - 1];
 
-            for (const title of MORE[k]) {
+            for (const title of MORE[k].slice().reverse()) {
                 element.insertAdjacentHTML('afterend', `\n<span class="skill highligh key-${class_name}">${title}</span>`);
             }
         }
+
+        for (const included of INCLUDED)
+            document.querySelectorAll(included)
+                    .forEach((element) => element.style.display = null);
 
         const data = [VERSION, Array.from(letters).join('')];
         if (words.size > 0)
@@ -466,8 +500,20 @@
 
         for (const e in ELEMENTS)
             if (!ELEMENTS[e]) {
-                document.querySelectorAll('.elm-' + e.replace('_', '-').toLowerCase())
+                const elm = '.elm-' + e.replaceAll('_', '-').toLowerCase();
+                document.querySelectorAll(elm)
                         .forEach((element) => element.style.display = 'none');
+
+                const cls = 'cls-' + e.replaceAll('_', '-').toLowerCase();
+                document.querySelectorAll('.' + cls)
+                        .forEach((element) => element.classList.remove(cls));
+            }
+
+        for (const id in INPUT_DATA) {
+            const value = INPUT_DATA[id];
+            const class_name = id.replaceAll('_', '-').toLowerCase();
+            document.querySelectorAll('.' + class_name)
+                    .forEach((element) => { element.innerText = value; });
             }
 
         document.querySelectorAll('.exp-date')

@@ -66,6 +66,7 @@ namespace Photon.JobSeeker
                 {
                     a.Name,
                     a.Domain,
+                    a.Waiting,
                 });
 
                 return Ok(agencies);
@@ -114,7 +115,7 @@ namespace Photon.JobSeeker
                     agency.Status &= ~AgencyStatus.ActiveSeeking;
                 }
 
-                database.Agency.ChangeRunningMethod(agency);
+                database.Agency.SaveState(agency);
                 return Ok();
             }
             catch (Exception ex)

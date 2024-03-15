@@ -96,12 +96,13 @@ async function submit_options(job_id, json_id) {
         const data = {
             method: 'POST',
             headers: {
-                'Accept': 'application/json',
+                'Accept': 'plain/text',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(resume_element.value)
         }
-        await fetch(`/job/options?jobid=${job_id}`, data);
+        let response = await fetch(`/job/options?jobid=${job_id}`, data);
+        resume_element.value = await response.text();
 
     } catch (e) {
         console.error(e);
