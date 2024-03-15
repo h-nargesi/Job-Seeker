@@ -10,9 +10,7 @@
 
         public override Command[]? IssueCommand(string url, string content)
         {
-            Command[]? commands;
-
-            if (CheckInvalidUrl(url, out commands)) return commands;
+            if (CheckInvalidUrl(url, out Command[]? commands)) return commands;
 
             if (CheckInvalidSearchTitle(content, out commands)) return commands;
 
@@ -27,6 +25,7 @@
                 database.Job.Save(new
                 {
                     AgencyID = Parent.ID,
+                    Country = Parent.CurrentMethodTitle,
                     Url = link,
                     Code = code,
                     State = JobState.Saved
@@ -34,7 +33,7 @@
             }
 
             if (CheckNextButton(content, out commands)) return commands;
-            else return new Command[0];
+            else return Array.Empty<Command>();
         }
 
         protected abstract bool CheckInvalidSearchTitle(string text, out Command[]? commands);
