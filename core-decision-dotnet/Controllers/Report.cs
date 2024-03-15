@@ -1,131 +1,130 @@
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
-namespace Photon.JobSeeker
+namespace Photon.JobSeeker;
+
+[Route("[controller]/[action]")]
+public class ReportController : Controller
 {
-    [Route("[controller]/[action]")]
-    public class ReportController : Controller
+    private readonly Analyzer analyzer;
+
+    public ReportController(Analyzer analyzer) => this.analyzer = analyzer;
+
+    [HttpGet]
+    public IActionResult Trends()
     {
-        private readonly Analyzer analyzer;
-
-        public ReportController(Analyzer analyzer) => this.analyzer = analyzer;
-
-        [HttpGet]
-        public IActionResult Trends()
+        try
         {
-            try
-            {
-                using var database = Database.Open();
-                var result = GetTrends(database);
+            using var database = Database.Open();
+            var result = GetTrends(database);
 
-                return View("~/views/trends.cshtml", result);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
-                throw;
-            }
+            return View("~/views/trends.cshtml", result);
         }
-
-        [HttpGet]
-        public IActionResult Jobs(string? agencies)
+        catch (Exception ex)
         {
-            try
-            {
-                using var database = Database.Open();
-                var list = GetJobs(database, agencies);
-
-                return View("~/views/jobs.cshtml", list);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
-                throw;
-            }
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
         }
+    }
 
-        [HttpGet]
-        public IActionResult Agencies()
+    [HttpGet]
+    public IActionResult Jobs(string? agencies)
+    {
+        try
         {
-            try
-            {
-                using var database = Database.Open();
-                return View("~/views/agencies.cshtml", GetAgencies(database));
-            }
-            catch (Exception ex)
-            {
-                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
-                throw;
-            }
+            using var database = Database.Open();
+            var list = GetJobs(database, agencies);
+
+            return View("~/views/jobs.cshtml", list);
         }
-
-        [HttpGet("/")]
-        public IActionResult Index()
+        catch (Exception ex)
         {
-            try
-            {
-                using var database = Database.Open();
-                var jobs = GetJobs(database, null);
-                var trends = GetTrends(database);
-                var agencies = GetAgencies(database);
-
-                return View("~/views/index.cshtml", new { Trends = trends, Jobs = jobs, Agencies = agencies });
-            }
-            catch (Exception ex)
-            {
-                Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
-                throw;
-            }
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
         }
+    }
 
-        private List<dynamic> GetJobs(Database database, string? agencies)
+    [HttpGet]
+    public IActionResult Agencies()
+    {
+        try
         {
-            var agencyids = agencies?.Split(',')
-                                     .Where(id => !string.IsNullOrEmpty(id))
-                                     .Select(id => { int.TryParse(id, out var value); return value; })
-                                     .Where(id => id > 0)
-                                     .ToArray() ?? new int[0];
-
-            return database.Job.Fetch(agencyids);
+            using var database = Database.Open();
+            return View("~/views/agencies.cshtml", GetAgencies(database));
         }
-
-        private List<dynamic> GetTrends(Database database)
+        catch (Exception ex)
         {
-            database.Trend.DeleteExpired();
-            var result = database.Trend.Report();
-
-            if (JobEligibilityHelper.CurrentRevaluationProcess != null)
-                result.Add(JobEligibilityHelper.CurrentRevaluationProcess.GetReportObject());
-
-            return result;
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
         }
+    }
 
-        private dynamic[] GetAgencies(Database database)
+    [HttpGet("/")]
+    public IActionResult Index()
+    {
+        try
         {
-            var report = database.Agency.JobRateReport();
-            var agencies = analyzer.Agencies;
+            using var database = Database.Open();
+            var jobs = GetJobs(database, null);
+            var trends = GetTrends(database);
+            var agencies = GetAgencies(database);
 
-            return report.Select(r =>
+            return View("~/views/index.cshtml", new { Trends = trends, Jobs = jobs, Agencies = agencies });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
+    private List<dynamic> GetJobs(Database database, string? agencies)
+    {
+        var agencyids = agencies?.Split(',')
+                                 .Where(id => !string.IsNullOrEmpty(id))
+                                 .Select(id => { int.TryParse(id, out var value); return value; })
+                                 .Where(id => id > 0)
+                                 .ToArray() ?? new int[0];
+
+        return database.Job.Fetch(agencyids);
+    }
+
+    private static List<dynamic> GetTrends(Database database)
+    {
+        database.Trend.DeleteExpired();
+        var result = database.Trend.Report();
+
+        if (JobEligibilityHelper.CurrentRevaluationProcess != null)
+            result.Add(JobEligibilityHelper.CurrentRevaluationProcess.GetReportObject());
+
+        return result;
+    }
+
+    private dynamic[] GetAgencies(Database database)
+    {
+        var report = database.Agency.JobRateReport();
+        var agencies = analyzer.Agencies;
+
+        return report.Select(r =>
             {
                 agencies.TryGetValue(r.Title, out Agency agency);
                 return new
                 {
-                    AgencyID = r.AgencyID,
+                    r.AgencyID,
                     Name = r.Title,
-                    SearchLink = agency?.SearchLink,
-                    JobCount = r.JobCount,
-                    Analyzed = r.Analyzed,
-                    Accepted = r.Accepted,
-                    Applied = r.Applied,
-                    AnalyzingRate = r.AnalyzingRate,
-                    AcceptingRate = r.AcceptingRate,
+                    agency?.SearchLink,
+                    r.JobCount,
+                    r.Analyzed,
+                    r.Accepted,
+                    r.Applied,
+                    r.AnalyzingRate,
+                    r.AcceptingRate,
                     Running = agency == null ? null : agency.Status.HasFlag(AgencyStatus.ActiveSeeking) ? agency.RunningSearchingMethodIndex : (int?)-1,
                     Methods = agency?.SearchingMethodTitles
                 };
             })
-                .OrderBy(r => r.AgencyID)
-                .ToArray();
+            .OrderBy(r => r.AgencyID)
+            .ToArray();
 
-        }
     }
 }

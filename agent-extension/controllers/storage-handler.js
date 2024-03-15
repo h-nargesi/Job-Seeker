@@ -3,7 +3,7 @@ console.log("AGENT", "storage-handler");
 class StorageHandler {
 
     static SERVER_URL = "SERVER_URL";
-    static SERVER_URL_DEFAULT = "http://localhost:8080/";
+    static SERVER_URL_DEFAULT = "http://localhost:8081/";
 
     static async Get(key, default_value) {
         return new Promise(function (resolve, reject) {
@@ -21,11 +21,11 @@ class StorageHandler {
     static Set(key, value) {
         let setting = {};
         setting[key] = value;
-		chrome.storage.local.set(setting);
+        chrome.storage.local.set(setting);
     }
 
     static async ServerUrlAsync() {
-        return (async() => String(await StorageHandler.Get(StorageHandler.SERVER_URL, StorageHandler.SERVER_URL_DEFAULT)))();
+        return (async () => String(await StorageHandler.Get(StorageHandler.SERVER_URL, StorageHandler.SERVER_URL_DEFAULT)))();
     }
 
     static set ServerUrl(value) {

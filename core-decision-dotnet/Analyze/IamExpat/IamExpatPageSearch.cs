@@ -42,12 +42,13 @@ namespace Photon.JobSeeker.IamExpat
                 {
                     AgencyID = parent.ID,
                     Url = string.Join("", parent.BaseUrl, job_match.Value),
+                    Country = parent.CurrentMethodTitle,
                     Code = code,
                     State = JobState.Saved
                 });
             }
 
-            if (!reg_search_end.IsMatch(content)) return new Command[0];
+            if (!reg_search_end.IsMatch(content)) return Array.Empty<Command>();
             else return new Command[] { Command.Click(@"a[title=""Go to next page""]") };
         }
     }

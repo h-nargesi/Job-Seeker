@@ -3,20 +3,21 @@
 {
     var index = -1;
     <div class="agency mt-3" aria-title="@agency.Name">
-        <h4><a href="@agency.SearchLink">@agency.Name</a></h4>
-        <p>
-            <span title="Applied">(<small>Applied:</small> @agency.Applied)</span> - 
-            <span title="Accepted">@agency.Accepted</span> <small title="Accepting Rate">(@agency.AcceptingRate %)</small> / 
-            <span title="Analyzed">@agency.Analyzed</span> <small title="Analyzing Rate">(@agency.AnalyzingRate %)</small> / 
-            <span title="Total Jobs">@agency.JobCount</span>
-        </p>
-        @if (agency.Running is int running)
+    <h4><a href="@agency.SearchLink">@agency.Name</a></h4>
+    <p>
+        <span title="Applied">(<small>Applied:</small> @agency.Applied)</span> -
+        <span title="Accepted">@agency.Accepted</span> <small title="Accepting Rate">(@agency.AcceptingRate %)</small> /
+        <span title="Analyzed">@agency.Analyzed</span> <small title="Analyzing Rate">(@agency.AnalyzingRate %)</small> /
+        <span title="Total Jobs">@agency.JobCount</span>
+    </p>
+    @if (agency.Running is int running)
         {
             @foreach (var method in agency.Methods)
             {
                 index += 1;
                 var current = index == running ? "btn-success" : "btn-outline-info";
-                <button id="RM-@(agency.Name)-@(index)" class="btn @current mt-1" onclick="change_running('@agency.Name', @index)">@method</button>
+                <button id="RM-@(agency.Name)-@(index)" class="btn @current mt-1"
+                    onclick="change_running('@agency.Name', @index)">@method.Title</button>
             }
         }
     </div>
