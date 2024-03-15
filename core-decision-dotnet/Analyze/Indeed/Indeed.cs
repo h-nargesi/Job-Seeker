@@ -23,7 +23,7 @@ class Indeed : Agency
         }
     }
 
-    public override string SearchLink => LocationDomains[RunningSearchingMethodIndex] + "jobs?q=" + Agency.SearchTitle;
+    public override string SearchLink => LocationDomains[RunningSearchingMethodIndex].Url + "jobs?q=" + SearchTitle;
 
     public override Regex? JobAcceptabilityChecker => IndeedPage.reg_job_acceptability_checker;
 
