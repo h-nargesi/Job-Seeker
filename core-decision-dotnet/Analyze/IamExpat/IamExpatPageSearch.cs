@@ -48,7 +48,7 @@ namespace Photon.JobSeeker.IamExpat
                 });
             }
 
-            if (!reg_search_end.IsMatch(content)) return new Command[0];
+            if (!reg_search_end.IsMatch(content)) return Array.Empty<Command>();
             else return new Command[] { Command.Click(@"a[title=""Go to next page""]") };
         }
     }
