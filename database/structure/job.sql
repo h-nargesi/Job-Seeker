@@ -3,6 +3,7 @@ create table if not exists Job (
 	RegTime			timestamp	not null	default current_timestamp,
 	ModifiedOn		timestamp	not null	default current_timestamp,
 	AgencyID		integer 	not null,
+	Country			text		not null,
 	Code			text		not null,
 	Title			text			null,
 	State			text		not null,
@@ -12,6 +13,7 @@ create table if not exists Job (
 	Content			text			null,
 	Link			text			null,
 	Log				text			null,
+	Options			text			null,
 	Tries			text			null,
 
 	unique			(AgencyID, Code),

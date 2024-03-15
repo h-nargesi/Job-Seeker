@@ -1,4 +1,4 @@
-console.log("action-handler");
+console.log("AGENT", "action-handler");
 
 class ActionHandler {
 
@@ -6,13 +6,17 @@ class ActionHandler {
     static OnPageLoad = null;
 
     static async Handle(commands, dontclose) {
+        let command_count = 0;
         for (let c in commands)
-            if (commands[c])
+            if (commands[c]) {
                 await ActionHandler.Execute(commands[c], dontclose);
+                command_count++;
+            }
+        console.log("AGENT", 'Action Count', command_count);
     }
 
     static async Execute(command, dontclose) {
-        console.log("Action", command);
+        console.log("AGENT", "Action", command);
         switch (command?.action?.toLowerCase()) {
             case "go":
                 ActionHandler.OnGo(command.params);
@@ -30,12 +34,15 @@ class ActionHandler {
                 break;
             case "recheck":
                 if (!ActionHandler.OnPageLoad)
-                    console.warn("The OnRecheck event is not set!");
+                    console.warn("The OnPageLoad event is not set!");
                 ActionHandler.OnPageLoad();
                 break;
             case "close":
                 if (!dontclose)
                     ActionHandler.OnClose();
+                break;
+            case "reload":
+                ActionHandler.OnReload();
                 break;
             case "wait":
                 await ActionHandler.OnWait(command.params);
@@ -69,6 +76,10 @@ class ActionHandler {
         elements.forEach(element => {
             if (element) element.click()
         });
+    }
+
+    static OnReload() {
+        location.reload();
     }
 
     static OnClose() {

@@ -3,6 +3,8 @@
 *.csv
 *.pyc
 *.log
+*.zip
+*.pdf
 
 /documents/
 /selenium/driver/
@@ -13,6 +15,7 @@
 *.sln
 *.csproj.user
 .vs/
+[Pp]roperties/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/

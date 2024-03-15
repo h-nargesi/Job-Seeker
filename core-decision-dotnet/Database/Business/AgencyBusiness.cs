@@ -29,7 +29,7 @@ namespace Photon.JobSeeker
             return list;
         }
 
-        public void ChangeRunningMethod(Agency agency)
+        public void SaveState(Agency agency)
         {
             string? settings;
             using (var reader = database.Read(Q_LOAD_SETTING, agency.ID))

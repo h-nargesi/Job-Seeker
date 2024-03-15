@@ -1,51 +1,58 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace Photon.JobSeeker.IamExpat
+namespace Photon.JobSeeker.IamExpat;
+
+class IamExpat : Agency
 {
-    class IamExpat : Agency
+    private static readonly object @lock = new();
+
+    private Location[] LocationUrls { get; set; } = Array.Empty<Location>();
+
+
+    public override string Name => "IamExpat";
+
+    public override Location[] SearchingMethodTitles => LocationUrls;
+
+
+    public override string BaseUrl => "https://iamexpat." + LocationUrls[RunningSearchingMethodIndex].Url[0..2];
+
+    public override string SearchLink => "https://iamexpat." + LocationUrls[RunningSearchingMethodIndex].Url;
+
+    public override Regex? JobAcceptabilityChecker => null;
+
+
+    public override string GetMainHtml(string html) => IamExpatPageJob.GetHtmlContent(html);
+
+    protected override void LoadSettings(dynamic? settings)
     {
-        private static readonly object @lock = new();
-
-        private string[] LocationUrls { get; set; } = new string[0];
-
-
-        public override string Name => "IamExpat";
-
-        public override string[] SearchingMethodTitles => LocationUrls;
-
-        public override string SearchLink => "https://iamexpat." + LocationUrls[RunningSearchingMethodIndex];
-
-        public override Regex? JobAcceptabilityChecker => null;
-
-
-        public override string GetMainHtml(string html) => IamExpatPageJob.GetHtmlContent(html);
-
-        protected override void ChangeSettings(dynamic? settings)
+        lock (@lock)
         {
-            lock (@lock)
+            if (settings == null)
             {
-                if (settings == null)
-                {
-                    LocationUrls = new string[] { string.Empty };
-                    RunningSearchingMethodIndex = 0;
-                }
-                else
-                {
-                    if (RunningSearchingMethodIndex == (int)settings.running) return;
+                LocationUrls = new Location[] { new() };
+                RunningSearchingMethodIndex = 0;
+            }
+            else
+            {
+                if (RunningSearchingMethodIndex == (int)settings.running) return;
 
-                    LocationUrls = settings.urls.ToObject<string[]>();
-                    RunningSearchingMethodIndex = (int)settings.running;
-
-                    IamExpatPage.reg_search_url = new Regex(
-                        @$"://[^/]*iamexpat\.{LocationUrls[RunningSearchingMethodIndex]}",
-                        RegexOptions.IgnoreCase);
-                }
+                LocationUrls = settings.locations.ToObject<Location[]>();
+                RunningSearchingMethodIndex = (int)settings.running;
             }
         }
+    }
 
-        protected override IEnumerable<Type> GetSubPages()
-        {
-            return TypeHelper.GetSubTypes(typeof(IamExpatPage));
-        }
+    protected override void RunningSearchingMethodChanged(int value)
+    {
+        var location = LocationUrls[value].Url.Replace(@"\", @"\\")
+                                              .Replace(@".", @"\.");
+
+        IamExpatPage.reg_search_url = new Regex(
+            @$"://[^/]*iamexpat\.{location}", RegexOptions.IgnoreCase);
+    }
+
+    protected override IEnumerable<Type> GetSubPages()
+    {
+        return TypeHelper.GetSubTypes(typeof(IamExpatPage));
     }
 }

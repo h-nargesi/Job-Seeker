@@ -18,11 +18,11 @@
             "serverReadyAction": {
                 "action": "openExternally",
                 "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
-                "uriFormat": "%s/report/index"
+                "uriFormat": "%s"
             },
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "ASPNETCORE_URLS": "http://localhost:8080"
+                "ASPNETCORE_URLS": "http://localhost:8081"
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -41,7 +41,7 @@
             "program": "manage.py",
             "args": [
                 "runserver",
-                "0.0.0.0:8080",
+                "0.0.0.0:8081",
             ],
             "django": true,
             "console": "integratedTerminal",
