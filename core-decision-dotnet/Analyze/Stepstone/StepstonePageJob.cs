@@ -2,19 +2,19 @@
 using HtmlAgilityPack;
 using Serilog;
 
-namespace Photon.JobSeeker.Indeed
+namespace Photon.JobSeeker.Stepstone
 {
-    class IndeedPageJob : IndeedPage
+    class StepstonePageJob : StepstonePage
     {
         public override int Order => 10;
 
-        public IndeedPageJob(Indeed parent) : base(parent) { }
+        public StepstonePageJob(Stepstone parent) : base(parent) { }
 
         public override TrendState TrendState => TrendState.Analyzing;
 
         public override Command[]? IssueCommand(string url, string content)
         {
-            if (!reg_job_view.IsMatch(url)) return null;
+            if (!reg_job_url.IsMatch(url)) return null;
 
             var job = LoadJob(url, content);
 
@@ -41,7 +41,7 @@ namespace Photon.JobSeeker.Indeed
         {
             using var database = Database.Open();
 
-            var url_matched = reg_job_view.Match(url);
+            var url_matched = reg_job_url.Match(url);
             if (!url_matched.Success) throw new Exception($"Invalid job url ({parent.Name}).");
 
             var code = url_matched.Groups[1].Value;
@@ -55,7 +55,7 @@ namespace Photon.JobSeeker.Indeed
                     AgencyID = parent.ID,
                     Code = code,
                     State = JobState.Saved,
-                    Url = url_matched.Value,
+                    Url = string.Join("", parent.BaseUrl, url_matched.Value),
                 };
 
                 filter = JobFilter.All;
@@ -64,15 +64,12 @@ namespace Photon.JobSeeker.Indeed
             var title_match = reg_job_title.Match(html);
             if (!title_match.Success)
                 Log.Warning("Title not found ({0}, {1})", parent.Name, code);
-            else job.Title = HttpUtility.HtmlDecode(title_match.Groups[2].Value).Trim();
+            else job.Title = HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim();
 
             job.SetHtml(GetHtmlContent(html));
 
             Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
             database.Job.Save(job, filter);
-
-            if (job.Content?.Contains("Indeed does not provide services in your region") == true)
-                throw new Exception("Indeed does not provide services in your region.");
 
             return job;
         }
@@ -82,7 +79,7 @@ namespace Photon.JobSeeker.Indeed
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
 
-            var main_content = doc.DocumentNode.SelectNodes("//div[contains(@class,'jobsearch-ViewJobLayout-jobDisplay')]")?
+            var main_content = doc.DocumentNode.SelectNodes("//div[contains(@class,'reb-main')]")?
                                                .FirstOrDefault();
 
             return main_content?.OuterHtml ?? html;

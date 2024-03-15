@@ -1,4 +1,4 @@
-console.log("background");
+console.log("AGENT", "background");
 
 importScripts("./core-messaging.js", "./storage-handler.js", "./trend-collection.js");
 
@@ -7,7 +7,7 @@ const trends = new TrendCollection();
 
 chrome.runtime.onMessage.addListener(
     function (request, sender) {
-        // console.log("Background", request, sender.tab.windowId, sender.tab.id);
+        // console.log("AGENT", "Background", request, sender.tab.windowId, sender.tab.id);
 
         switch (request.title.toLowerCase()) {
             case "send":
@@ -29,14 +29,14 @@ async function Respond(tab, id, promise) {
 
     if (response.trend !== undefined) {
         if (response.trend) {
-            // console.log("Background", tab.windowId, tab.id);
+            // console.log("AGENT", "Background", tab.windowId, tab.id);
             trends.set(tab.windowId, tab.id, response.trend);
         }
         response = response.commands;
     }
 
     chrome.tabs.query({ windowId: tab.windowId, index: tab.index }, function (tabs) {
-        if (!tabs) return;
+        if (!tabs || !tabs[0]) return;
         chrome.tabs.sendMessage(tabs[0].id, { id, body: response });
     });
 }

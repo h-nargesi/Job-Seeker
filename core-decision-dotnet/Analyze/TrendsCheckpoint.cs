@@ -32,7 +32,7 @@ namespace Photon.JobSeeker
             database.Trend.DeleteExpired();
 
             AllCurrentTrends = database.Trend.FetchAll()
-                                            .ToDictionary(k => (k.AgencyID, k.Type));
+                                             .ToDictionary(k => (k.AgencyID, k.Type));
 
             var new_trends = CheckingSleptTrends();
 
@@ -88,7 +88,7 @@ namespace Photon.JobSeeker
             TrendType? new_trend;
             var new_trends = new List<(Agency agency, TrendType type)>();
 
-            foreach (var agency in analyzer.Agencies.Values)
+            foreach (var agency in analyzer.Agencies.Values.ToArray())
             {
                 new_trend = CheckingSleptLoginTrends(agency, out var go);
                 if (new_trend != null)
@@ -114,13 +114,13 @@ namespace Photon.JobSeeker
 
             var trend = MatchingWithAnalyzedResult(agency, TrendType.Login, out var matched_analyzed_result);
 
-            var had_not_trend = result.TrendID is null;
+            var had_no_trend = result.TrendID is null;
 
             if (trend is not null)
             {
                 go = trend.State > TrendState.Login;
 
-                if (matched_analyzed_result && had_not_trend)
+                if (matched_analyzed_result && had_no_trend)
                     new_trend = TrendType.Blocked;
             }
             else if (matched_analyzed_result)
@@ -131,7 +131,7 @@ namespace Photon.JobSeeker
             }
             else go = true;
 
-            LogCheckingSleptTrends(agency, TrendType.Login, trend, matched_analyzed_result, had_not_trend, new_trend);
+            LogCheckingSleptTrends(agency, TrendType.Login, trend, matched_analyzed_result, had_no_trend, new_trend);
 
             return new_trend;
         }
@@ -142,7 +142,7 @@ namespace Photon.JobSeeker
 
             var trend = MatchingWithAnalyzedResult(agency, TrendType.Search, out var matched_analyzed_result);
 
-            var had_not_trend = result.TrendID is null;
+            var had_no_trend = result.TrendID is null;
 
             if (!agency.IsActiveSeeking)
             {
@@ -158,7 +158,7 @@ namespace Photon.JobSeeker
             {
                 if (trend is not null)
                 {
-                    if (matched_analyzed_result && had_not_trend)
+                    if (matched_analyzed_result && had_no_trend)
                         new_trend = TrendType.Blocked;
                 }
                 else if (matched_analyzed_result)
@@ -167,7 +167,7 @@ namespace Photon.JobSeeker
                 else new_trend = TrendType.Search;
             }
 
-            LogCheckingSleptTrends(agency, TrendType.Search, trend, matched_analyzed_result, had_not_trend, new_trend);
+            LogCheckingSleptTrends(agency, TrendType.Search, trend, matched_analyzed_result, had_no_trend, new_trend);
 
             return new_trend;
         }
@@ -178,7 +178,7 @@ namespace Photon.JobSeeker
 
             var trend = MatchingWithAnalyzedResult(agency, TrendType.Job, out var matched_analyzed_result);
 
-            var had_not_trend = result.TrendID is null;
+            var had_no_trend = result.TrendID is null;
 
             if (!agency.IsActiveAnalyzing)
             {
@@ -211,7 +211,7 @@ namespace Photon.JobSeeker
                 }
             }
 
-            LogCheckingSleptTrends(agency, TrendType.Job, trend, matched_analyzed_result, had_not_trend, new_trend);
+            LogCheckingSleptTrends(agency, TrendType.Job, trend, matched_analyzed_result, had_no_trend, new_trend);
 
             return new_trend;
         }
@@ -288,7 +288,7 @@ namespace Photon.JobSeeker
             return trend;
         }
 
-        private void LogCheckingSleptTrends(Agency agency, TrendType type, Trend? trend,
+        private static void LogCheckingSleptTrends(Agency agency, TrendType type, Trend? trend,
             bool matched_analyzed_result, bool had_not_trend, TrendType? new_trend)
         {
             var active = type == TrendType.Search ? agency.IsActiveSeeking : agency.IsActiveAnalyzing;
@@ -307,7 +307,7 @@ namespace Photon.JobSeeker
         private static int AgencyNameLength = 6;
         private static int TrednTypeLength = 6;
 
-        private string FillSpace(string text, int max = 6)
+        private static string FillSpace(string text, int max = 6)
         {
             return string.Join("", text, new string(' ', max - text.Length));
         }

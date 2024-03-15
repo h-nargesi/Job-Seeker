@@ -1,3 +1,6 @@
+using System.Collections;
+using Newtonsoft.Json;
+
 namespace Photon.JobSeeker
 {
     static class DbType
@@ -17,13 +20,12 @@ namespace Photon.JobSeeker
                 if (value is not DBNull)
                     value = value.ToString() ?? (object)DBNull.Value;
             }
-            // else if (value is DateTime datetime)
-            // {
-            //     value = datetime.ToString("yyyy-MM-dd HH:mm:ss");
-            // }
-
-            if (!SYSTEM_TYPE_MAP.ContainsKey(type))
-                throw new ArgumentOutOfRangeException(nameof(value), type.FullName);
+            else if (!SYSTEM_TYPE_MAP.ContainsKey(type))
+            {
+                type = typeof(string);
+                if (value is not DBNull)
+                    value = JsonConvert.SerializeObject(value);
+            }
 
             return (SYSTEM_TYPE_MAP[type], value);
         }

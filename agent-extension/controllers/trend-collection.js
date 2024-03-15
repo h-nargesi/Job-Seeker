@@ -1,4 +1,4 @@
-console.log("trend-collection");
+console.log("AGENT", "trend-collection");
 
 class TrendCollection {
 

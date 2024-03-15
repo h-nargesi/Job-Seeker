@@ -10,7 +10,7 @@
 
         public override Command[]? IssueCommand(string url, string content)
         {
-            return new Command[0];
+            return Array.Empty<Command>();
         }
     }
 }

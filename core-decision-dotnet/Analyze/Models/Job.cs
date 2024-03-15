@@ -8,6 +8,8 @@
 
         public long AgencyID { get; set; }
 
+        public string? Country { get; set; }
+
         public string? Code { get; set; }
 
         public string? Title { get; set; }
@@ -25,6 +27,8 @@
         public string? Link { get; set; }
 
         public string? Log { get; set; }
+
+        public ResumeContext? Options { get; set; }
 
         public string? Tries { get; set; }
 

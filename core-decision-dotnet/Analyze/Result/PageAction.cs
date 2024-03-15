@@ -9,5 +9,6 @@
         recheck = 5,
         close = 6,
         wait = 7,
+        reload = 8,
     }
 }
