@@ -36,6 +36,7 @@ namespace Photon.JobSeeker.Indeed
                 {
                     AgencyID = parent.ID,
                     Url = string.Join("", parent.Link, "/viewjob?jk=", code),
+                    Country = parent.CurrentMethodTitle,
                     Code = code,
                     State = JobState.Saved
                 });

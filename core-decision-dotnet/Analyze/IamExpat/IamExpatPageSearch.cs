@@ -42,6 +42,7 @@ namespace Photon.JobSeeker.IamExpat
                 {
                     AgencyID = parent.ID,
                     Url = string.Join("", parent.BaseUrl, job_match.Value),
+                    Country = parent.CurrentMethodTitle,
                     Code = code,
                     State = JobState.Saved
                 });
