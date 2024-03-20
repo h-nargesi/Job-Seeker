@@ -47,27 +47,27 @@ class LinkedInPageSearch : LinkedInPage
         return GetNextPageButton(content);
     }
 
-    private Command[] GetNextPageButton(string content)
+    private static Command[] GetNextPageButton(string content)
     {
         var match = reg_search_page_panel.Match(content);
-        if (!match.Success) return new Command[0];
-        content = content.Substring(match.Index + match.Length);
+        if (!match.Success) return Array.Empty<Command>();
+        content = content[(match.Index + match.Length)..];
 
         match = reg_search_page_panel_end.Match(content);
-        if (!match.Success) return new Command[0];
-        content = content.Substring(0, match.Index);
+        if (!match.Success) return Array.Empty<Command>();
+        content = content[..match.Index];
 
         match = reg_search_current_page.Match(content);
-        if (!match.Success) return new Command[0];
-        content = content.Substring(match.Index + match.Length);
+        if (!match.Success) return Array.Empty<Command>();
+        content = content[(match.Index + match.Length)..];
 
         match = reg_search_other_page.Match(content);
-        if (!match.Success) return new Command[0];
+        if (!match.Success) return Array.Empty<Command>();
 
         return new Command[]
         {
-                Command.Click(@$"button[aria-label=""{match.Groups[1].Value}""]"),
-                Command.Recheck(),
+            Command.Click(@$"button[aria-label=""{match.Groups[1].Value}""]"),
+            Command.Recheck(),
         };
     }
 }

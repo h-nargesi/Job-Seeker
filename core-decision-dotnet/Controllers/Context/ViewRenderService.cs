@@ -29,31 +29,30 @@ public class ViewRenderService : IViewRenderService
     {
         var actionContext = new ActionContext(http_context, http_context.GetRouteData(), new ActionDescriptor());
 
-        using (var writer = new StringWriter())
+        using var writer = new StringWriter();
+
+        var viewResult = razor_view_engine.GetView("", view_name, true);
+
+        if (viewResult.View == null)
         {
-            var viewResult = razor_view_engine.GetView("", view_name, true);
-
-            if (viewResult.View == null)
-            {
-                throw new ArgumentNullException($"{view_name} does not match any available view");
-            }
-
-            var viewDictionary = new ViewDataDictionary(new EmptyModelMetadataProvider(), new ModelStateDictionary())
-            {
-                Model = model
-            };
-
-            var viewContext = new ViewContext(
-                actionContext,
-                viewResult.View,
-                viewDictionary,
-                new TempDataDictionary(actionContext.HttpContext, temp_data_provider),
-                writer,
-                new HtmlHelperOptions()
-            );
-
-            await viewResult.View.RenderAsync(viewContext);
-            return writer.ToString();
+            throw new ArgumentNullException($"{view_name} does not match any available view");
         }
+
+        var viewDictionary = new ViewDataDictionary(new EmptyModelMetadataProvider(), new ModelStateDictionary())
+        {
+            Model = model
+        };
+
+        var viewContext = new ViewContext(
+            actionContext,
+            viewResult.View,
+            viewDictionary,
+            new TempDataDictionary(actionContext.HttpContext, temp_data_provider),
+            writer,
+            new HtmlHelperOptions()
+        );
+
+        await viewResult.View.RenderAsync(viewContext);
+        return writer.ToString();
     }
 }

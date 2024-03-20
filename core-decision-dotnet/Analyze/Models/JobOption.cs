@@ -15,17 +15,17 @@ namespace Photon.JobSeeker
 
         public dynamic? Settings { get; set; }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return $"({Score}) {Title}";
         }
 
-        public string ToString(char state, long? score = null)
+        public readonly string ToString(char state, long? score = null)
         {
             return $"({state}{score ?? Score}) {Title}";
         }
 
-        public void AddKeyword(ResumeContext resume, string matched, out string main)
+        public readonly void AddKeyword(ResumeContext resume, string matched, out string main)
         {
             if (ResumeKeyword(out main, out var keyword, out var include_matched))
             {
@@ -56,7 +56,7 @@ namespace Photon.JobSeeker
             }
         }
 
-        private bool ResumeKeyword(out string main, out string? keyword, out bool include_matched)
+        private readonly bool ResumeKeyword(out string main, out string? keyword, out bool include_matched)
         {
             main = string.Empty;
             keyword = null;
@@ -72,7 +72,7 @@ namespace Photon.JobSeeker
                     try
                     {
                         main = (string)resume.key;
-                        if (main == null) main = Title;
+                        main ??= Title;
                     }
                     catch (RuntimeBinderException) { main = Title; }
 

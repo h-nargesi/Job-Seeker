@@ -78,13 +78,13 @@ public class ReportController : Controller
         }
     }
 
-    private List<dynamic> GetJobs(Database database, string? agencies)
+    private static List<dynamic> GetJobs(Database database, string? agencies)
     {
         var agencyids = agencies?.Split(',')
                                  .Where(id => !string.IsNullOrEmpty(id))
-                                 .Select(id => { int.TryParse(id, out var value); return value; })
+                                 .Select(id => { _ = int.TryParse(id, out var value); return value; })
                                  .Where(id => id > 0)
-                                 .ToArray() ?? new int[0];
+                                 .ToArray() ?? Array.Empty<int>();
 
         return database.Job.Fetch(agencyids);
     }

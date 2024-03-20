@@ -1,7 +1,6 @@
-namespace Photon.JobSeeker
+namespace Photon.JobSeeker;
+
+public enum TrendType
 {
-    public enum TrendType
-    {
-        Blocked, Login, Search, Job,
-    }
+    Blocked, Login, Search, Job,
 }
