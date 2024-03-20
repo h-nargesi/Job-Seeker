@@ -12,7 +12,7 @@ namespace Photon.JobSeeker
         public TrendsCheckpoint(Analyzer analyzer)
         {
             this.analyzer = analyzer;
-            this.result = new Result();
+            result = new Result();
             database = Database.Open();
             AllCurrentTrends = new Dictionary<(long, TrendType), Trend>();
         }

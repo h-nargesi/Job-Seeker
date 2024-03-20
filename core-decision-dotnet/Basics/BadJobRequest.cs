@@ -1,7 +1,6 @@
-namespace Photon.JobSeeker
+namespace Photon.JobSeeker;
+
+public class BadJobRequest : Exception
 {
-    public class BadJobRequest : Exception
-    {
-        public BadJobRequest(string message) : base(message) { }
-    }
+    public BadJobRequest(string message) : base(message) { }
 }

@@ -1,4 +1,3 @@
-using System.Collections;
 using Newtonsoft.Json;
 
 namespace Photon.JobSeeker

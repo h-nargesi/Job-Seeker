@@ -128,7 +128,7 @@ public class ResumeContext
             Elements.FOOTER = false;
         }
 
-        if (keywords.Contains("d") && keywords.Contains("j"))
+        if (keywords.Contains('d') && keywords.Contains('j'))
         {
             NotIncluded.Add(NotIncludedContext.ClearanceMonitoring);
         }
