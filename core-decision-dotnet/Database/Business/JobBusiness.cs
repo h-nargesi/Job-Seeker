@@ -82,11 +82,10 @@ namespace Photon.JobSeeker
         {
             using var reader = database.Read(Q_FETCH_OPTIONS, job_id);
 
-            if (!reader.Read()) return default;
-
-            var options = reader[nameof(Job.Options)] as string;
-
-            if (options == null) return default;
+            if (!reader.Read() || reader[nameof(Job.Options)] is not string options)
+            {
+                return default;
+            }
 
             return JsonConvert.DeserializeObject<ResumeContext>(options);
         }
@@ -197,14 +196,10 @@ namespace Photon.JobSeeker
                 Log = full ? reader[nameof(Job.Log)] as string : null,
             };
 
-            if (full)
+            if (full && reader[nameof(Job.Options)] is string json)
             {
-                var json = reader[nameof(Job.Options)] as string;
-                if (json != null)
-                {
-                    try { job.Options = JsonConvert.DeserializeObject<ResumeContext>(json); }
-                    catch { }
-                }
+                try { job.Options = JsonConvert.DeserializeObject<ResumeContext>(json); }
+                catch { }
             }
 
             return job;

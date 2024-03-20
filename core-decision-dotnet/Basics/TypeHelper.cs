@@ -1,12 +1,11 @@
-namespace Photon.JobSeeker
+namespace Photon.JobSeeker;
+
+static class TypeHelper
 {
-    static class TypeHelper
+    public static IEnumerable<Type> GetSubTypes(Type root)
     {
-        public static IEnumerable<Type> GetSubTypes(Type root)
-        {
-            return AppDomain.CurrentDomain.GetAssemblies()
-                                          .SelectMany(s => s.GetTypes())
-                                          .Where(p => root.IsAssignableFrom(p) && !p.Equals(root));
-        }
+        return AppDomain.CurrentDomain.GetAssemblies()
+                                      .SelectMany(s => s.GetTypes())
+                                      .Where(p => root.IsAssignableFrom(p) && !p.Equals(root));
     }
 }

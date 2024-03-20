@@ -1,12 +1,11 @@
-namespace Photon.JobSeeker
+namespace Photon.JobSeeker;
+
+enum TrendFilter
 {
-    enum TrendFilter
-    {
-        AgencyID = 1,
-        LastActivity = 2,
-        Type = 4,
-        State = 8,
-        Reserved = 16,
-        All = 31,
-    }
+    AgencyID = 1,
+    LastActivity = 2,
+    Type = 4,
+    State = 8,
+    Reserved = 16,
+    All = 31,
 }
