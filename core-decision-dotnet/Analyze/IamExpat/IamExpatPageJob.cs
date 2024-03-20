@@ -135,7 +135,7 @@ namespace Photon.JobSeeker.IamExpat
             var end_match = IamExpatPageInterface.reg_job_content_end.Match(html);
             if (!end_match.Success) return html;
 
-            html = html.Substring(start_match.Index, end_match.Index + end_match.Length - start_match.Index);
+            html = html[start_match.Index..(end_match.Index + end_match.Length)];
             
             start_match = IamExpatPageInterface.reg_job_content_apply_start.Match(html);
             if (!start_match.Success) return html;
