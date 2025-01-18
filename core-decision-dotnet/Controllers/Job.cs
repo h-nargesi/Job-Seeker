@@ -169,6 +169,9 @@ namespace Photon.JobSeeker
         {
             try
             {
+                if (options.Query == null)
+                    return Ok("No Result");
+
                 using var database = Database.Open();
                 if (options.Type == "E") {
                     database.Execute(options.Query);
@@ -189,9 +192,9 @@ namespace Photon.JobSeeker
 
         public class SettingContext
         {
-            public string Type { get; set; }
+            public string? Type { get; set; }
 
-            public string Query { get; set; }
+            public string? Query { get; set; }
         }
     }
 }

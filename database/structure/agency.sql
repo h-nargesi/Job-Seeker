@@ -40,5 +40,6 @@ values
 
 	('Stepstone',	'(.+\.)?stepstone\.de$',		'http://stepstone.de',		'username', 'password',	null)
 on conflict (Title) do update set 
-	Domain = excluded.Domain, Link = excluded.Link,
+	Domain = excluded.Domain, 
+	Link = excluded.Link,
 	Settings = excluded.Settings;
