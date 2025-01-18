@@ -7,13 +7,20 @@ namespace Photon.JobSeeker
     {
         public JobBusiness(Database database) : base(database) { }
 
-        public List<object> Fetch(int[] agencyids)
+        public List<object> Fetch(int[] agencyids, string[] countrycodes)
         {
-            string agencies;
-            if (agencyids.Length < 1) agencies = string.Empty;
-            else agencies = $"WHERE Agency.AgencyID IN ({string.Join(",", agencyids)})";
+            var where = string.Empty;
 
-            using var reader = database.Read(Q_INDEX.Replace("@where@", agencies));
+            if (agencyids?.Length > 0)
+                where += $" AND Agency.AgencyID IN ({string.Join(",", agencyids)})";
+
+            if (countrycodes?.Length > 0)
+                where = $" AND Job.Country IN ('{string.Join("','", countrycodes)}')";
+
+            if (!string.IsNullOrEmpty(where))
+                where = "WHERE" + where.Substring(0, 4);
+
+            using var reader = database.Read(Q_INDEX.Replace("@where@", where));
             var list = new List<object>();
 
             while (reader.Read())
@@ -237,6 +244,7 @@ WITH date_diff AS (
              , SUBSTR(Job.RegTime, 1, 10) AS RegDate
              , CASE WHEN Job.Log LIKE '%) Relocation**%' THEN 1 ELSE 0 END AS Relocation
         FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+        @where@
     ) job
     CROSS JOIN (
         SELECT MAX(RegTime) AS LatestTime, MAX(Score) / 13 AS TopScore FROM Job

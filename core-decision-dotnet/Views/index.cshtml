@@ -69,5 +69,9 @@
         <div id="job-seeker-agency-list" class="agency-list mt-3 d-flex flex-column">
             @await Html.PartialAsync("~/views/agencies.cshtml", (dynamic[])Model.Agencies)
         </div>
+        <div class="mt-3 d-flex flex-column">
+            <input id="job-agency-filter" type="text" class="form-control" placeholder="Counrty Filter"/>
+            <input id="job-country-filter" type="text" class="form-control" placeholder="Agency Filter"/>
+        </div>
     </article>
 </div>
