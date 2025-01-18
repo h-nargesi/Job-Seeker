@@ -13,7 +13,7 @@ function select_job(query) {
     });
 }
 
-async function update_setting(query_id, result_id) {
+async function update_setting(query_id, result_id, type) {
     const result_element = document.getElementById(result_id);
     
     try {
@@ -26,10 +26,18 @@ async function update_setting(query_id, result_id) {
                 'Accept': 'plain/text',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(query_element.value)
+            body: JSON.stringify({ type, query: query_element.value })
         }
-        let response = await fetch('/job/setting', data);
-        if (result_element) result_element.innerHTML = await response.text();
+        const response = await fetch('/job/setting', data);
+        if (result_element) {
+            const result_obj = await response.json();
+            const text = JSON.stringify(result_obj, (key, value) => {
+                if (key !== "Settings") return value;
+                if (typeof value !== "string") return value;
+                return JSON.parse(value);
+            }, "\t");
+            result_element.innerHTML = text;
+        }
 
     } catch (e) {
         if (result_element) result_element.innerHTML = e.message;
