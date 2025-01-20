@@ -150,7 +150,7 @@ public class ResumeContext
         return string.Join("", keys);
     }
 
-    private readonly static Regex 
+    private readonly static Regex
         Deserializer = new(@"\w+(?=\s*:)"),
         Serializer = new(@"""(\w+)""(?=\s*:)");
 

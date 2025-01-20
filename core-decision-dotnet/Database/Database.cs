@@ -40,7 +40,7 @@ namespace Photon.JobSeeker
             var executer = connection.CreateCommand();
 
             connection.Open();
-            
+
             return new Database(connection, executer);
         }
 

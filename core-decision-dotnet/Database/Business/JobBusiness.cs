@@ -234,7 +234,7 @@ WITH date_diff AS (
         SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
              , Job.State, Job.Score, Job.Url, Job.Link
              , Agency.Title AS AgencyName
-             , CASE State 
+             , CASE State
                WHEN '{nameof(JobState.Attention)}' THEN 1
                WHEN '{nameof(JobState.NotApproved)}' THEN 2
                WHEN '{nameof(JobState.Applied)}' THEN 4

@@ -1,5 +1,5 @@
 function select_job(query) {
-    
+
     document.querySelectorAll('tr.Selected').forEach(function (item) {
         item.classList.remove('Selected');
         item.previousElementSibling?.classList.remove('Selected-pr');
@@ -15,7 +15,7 @@ function select_job(query) {
 
 async function update_setting(query_id, result_id, type) {
     const result_element = document.getElementById(result_id);
-    
+
     try {
         const query_element = document.getElementById(query_id);
         if (!query_element) return;

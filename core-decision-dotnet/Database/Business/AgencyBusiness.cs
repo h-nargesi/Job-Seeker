@@ -101,7 +101,7 @@ FROM (
             , SUM(CASE State WHEN '{nameof(JobState.Applied)}' THEN 1 ELSE 0 END) AS Applied
         FROM Job
         GROUP BY AgencyID
-    
+
     ) job on agc.AgencyID = job.AgencyID
 
 ) rate";

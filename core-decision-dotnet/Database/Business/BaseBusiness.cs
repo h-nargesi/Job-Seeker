@@ -25,7 +25,7 @@ namespace Photon.JobSeeker
             {
                 var unique = GetUniqueColumns == null ? null :
                     $"ON CONFLICT({string.Join(", ", GetUniqueColumns)}) DO NOTHING;";
-                
+
                 database.Insert(typeof(T).Name, model, filter, unique);
 
                 if (job != null)
