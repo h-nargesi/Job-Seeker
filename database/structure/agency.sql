@@ -13,7 +13,7 @@ create table if not exists Agency (
 
 insert into Agency (Title, Domain, Link, UserName, Password, Settings)
 values
-	('Indeed',		'(.+\.)?indeed\.com$',			'https://indeed.com',		'username', 'password',
+	('Indeed',		'(.+\.)?indeed\.com$',				'https://indeed.com',		'username', 'password',
 					'{ "running": 0, "locations": [
 						{ "Title": "NL", "Url": "https://nl.indeed.com/" },
 						{ "Title": "AU", "Url": "https://au.indeed.com/" },
@@ -24,14 +24,14 @@ values
 						{ "Title": "UK", "Url": "https://uk.indeed.com/" }]
 					}'),
 
-	('IamExpat',	'(.+\.)?iamexpat\.(nl|de|ch|com)$',	'http://iamexpat.nl',	'username', 'passwords',
+	('IamExpat',	'(.+\.)?iamexpat\.(nl|de|ch|com)$',	'http://iamexpat.nl',		'username', 'passwords',
 					'{ "running": 0, "locations": [
 						{ "Title": "NL", "Url": "nl/career/jobs-netherlands" },
 						{ "Title": "DE", "Url": "de/career/jobs-germany" },
 						{ "Title": "CH", "Url": "ch/career/jobs-switzerland" }]
 					}'),
 
-	('LinkedIn',	'(.+\.)?linkedin\.com$',		'https://linkedin.com',		'username', 'password',
+	('LinkedIn',	'(.+\.)?linkedin\.com$',			'https://linkedin.com',		'username', 'password',
 					'{ "running": 0, "locations": [
 						{ "Title": "NL", "Url": "Netherlands" },
 						{ "Title": "AU", "Url": "Australia" },
@@ -43,13 +43,13 @@ values
 						{ "Title": "UK", "Url": "United Kingdom" }]
 					}'),
 
-	('Byat',		'(.+\.)?bayt.\.com$',		'https://www.bayt.com/',		'username', 'password',
+	('Byat',		'(.+\.)?bayt.\.com$',				'https://www.bayt.com/',	'username', 'password',
 					'{ "running": 0, "locations": [
 						{ "Title": "OM", "Url": "oman" },
 						{ "Title": "QA", "Url": "qatar" }]
 					}'),
 
-	('Stepstone',	'(.+\.)?stepstone\.de$',		'https://stepstone.de',		'username', 'password',	null)
+	('Stepstone',	'(.+\.)?stepstone\.de$',			'https://stepstone.de',		'username', 'password',	null)
 on conflict (Title) do update set
 	Domain = excluded.Domain,
 	Link = excluded.Link,
