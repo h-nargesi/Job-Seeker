@@ -19,6 +19,8 @@ values
 						{ "Title": "AU", "Url": "https://au.indeed.com/" },
 						{ "Title": "DE", "Url": "https://de.indeed.com/" },
 						{ "Title": "SE", "Url": "https://se.indeed.com/" },
+						{ "Title": "OM", "Url": "https://om.indeed.com/" },
+						{ "Title": "QA", "Url": "https://qa.indeed.com/" },
 						{ "Title": "UK", "Url": "https://uk.indeed.com/" }]
 					}'),
 
@@ -29,16 +31,25 @@ values
 						{ "Title": "CH", "Url": "ch/career/jobs-switzerland" }]
 					}'),
 
-	('LinkedIn',	'(.+\.)?linkedin\.com$',		'http://linkedin.com',		'username', 'password',
+	('LinkedIn',	'(.+\.)?linkedin\.com$',		'https://linkedin.com',		'username', 'password',
 					'{ "running": 0, "locations": [
 						{ "Title": "NL", "Url": "Netherlands" },
 						{ "Title": "AU", "Url": "Australia" },
 						{ "Title": "DE", "Url": "Germany" },
 						{ "Title": "SE", "Url": "Sweden" },
+						{ "Title": "AM", "Url": "Armenia" },
+						{ "Title": "OM", "Url": "Oman" },
+						{ "Title": "QA", "Url": "Qatar" },
 						{ "Title": "UK", "Url": "United Kingdom" }]
 					}'),
 
-	('Stepstone',	'(.+\.)?stepstone\.de$',		'http://stepstone.de',		'username', 'password',	null)
+	('Byat',		'(.+\.)?bayt.\.com$',		'https://www.bayt.com/',		'username', 'password',
+					'{ "running": 0, "locations": [
+						{ "Title": "OM", "Url": "oman" },
+						{ "Title": "QA", "Url": "qatar" }]
+					}'),
+
+	('Stepstone',	'(.+\.)?stepstone\.de$',		'https://stepstone.de',		'username', 'password',	null)
 on conflict (Title) do update set
 	Domain = excluded.Domain,
 	Link = excluded.Link,
