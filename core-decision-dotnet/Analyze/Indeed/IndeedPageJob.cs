@@ -2,90 +2,89 @@
 using HtmlAgilityPack;
 using Serilog;
 
-namespace Photon.JobSeeker.Indeed
+namespace Photon.JobSeeker.Indeed;
+
+class IndeedPageJob : IndeedPage
 {
-    class IndeedPageJob : IndeedPage
+    public override int Order => 10;
+
+    public IndeedPageJob(Indeed parent) : base(parent) { }
+
+    public override TrendState TrendState => TrendState.Analyzing;
+
+    public override Command[]? IssueCommand(string url, string content)
     {
-        public override int Order => 10;
+        if (!reg_job_view.IsMatch(url)) return null;
 
-        public IndeedPageJob(Indeed parent) : base(parent) { }
+        var job = LoadJob(url, content);
 
-        public override TrendState TrendState => TrendState.Analyzing;
+        using var evaluator = new JobEligibilityHelper();
+        var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
 
-        public override Command[]? IssueCommand(string url, string content)
+        var commands = new List<Command>();
+
+        if (state == JobState.Attention)
         {
-            if (!reg_job_view.IsMatch(url)) return null;
-
-            var job = LoadJob(url, content);
-
-            using var evaluator = new JobEligibilityHelper();
-            var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
-
-            var commands = new List<Command>();
-
-            if (state == JobState.Attention)
+            if (reg_job_adding.IsMatch(content))
             {
-                if (reg_job_adding.IsMatch(content))
-                {
-                    commands.Add(Command.Click(@"button.jobs-save-button"));
-                    commands.Add(Command.Wait(3000));
-                }
-
-                // TODO: apply link
+                commands.Add(Command.Click(@"button.jobs-save-button"));
+                commands.Add(Command.Wait(3000));
             }
 
-            return commands.ToArray();
+            // TODO: apply link
         }
 
-        private Job LoadJob(string url, string html)
+        return commands.ToArray();
+    }
+
+    private Job LoadJob(string url, string html)
+    {
+        using var database = Database.Open();
+
+        var url_matched = reg_job_view.Match(url);
+        if (!url_matched.Success) throw new Exception($"Invalid job url ({parent.Name}).");
+
+        var code = url_matched.Groups[1].Value;
+        var job = database.Job.Fetch(parent.ID, code);
+        var filter = JobFilter.Title | JobFilter.Html | JobFilter.Content | JobFilter.Tries;
+
+        if (job == null)
         {
-            using var database = Database.Open();
-
-            var url_matched = reg_job_view.Match(url);
-            if (!url_matched.Success) throw new Exception($"Invalid job url ({parent.Name}).");
-
-            var code = url_matched.Groups[1].Value;
-            var job = database.Job.Fetch(parent.ID, code);
-            var filter = JobFilter.Title | JobFilter.Html | JobFilter.Content | JobFilter.Tries;
-
-            if (job == null)
+            job = new Job
             {
-                job = new Job
-                {
-                    AgencyID = parent.ID,
-                    Code = code,
-                    State = JobState.Saved,
-                    Url = url_matched.Value,
-                };
+                AgencyID = parent.ID,
+                Code = code,
+                State = JobState.Saved,
+                Url = url_matched.Value,
+            };
 
-                filter = JobFilter.All;
-            }
-
-            var title_match = reg_job_title.Match(html);
-            if (!title_match.Success)
-                Log.Warning("Title not found ({0}, {1})", parent.Name, code);
-            else job.Title = HttpUtility.HtmlDecode(title_match.Groups[2].Value).Trim();
-
-            job.SetHtml(GetHtmlContent(html));
-
-            Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
-            database.Job.Save(job, filter);
-
-            if (job.Content?.Contains("Indeed does not provide services in your region") == true)
-                throw new Exception("Indeed does not provide services in your region.");
-
-            return job;
+            filter = JobFilter.All;
         }
 
-        public static string GetHtmlContent(string html)
-        {
-            var doc = new HtmlDocument();
-            doc.LoadHtml(html);
+        var title_match = reg_job_title.Match(html);
+        if (!title_match.Success)
+            Log.Warning("Title not found ({0}, {1})", parent.Name, code);
+        else job.Title = HttpUtility.HtmlDecode(title_match.Groups[2].Value).Trim();
 
-            var main_content = doc.DocumentNode.SelectNodes("//div[contains(@class,'jobsearch-ViewJobLayout-jobDisplay')]")?
-                                               .FirstOrDefault();
+        job.SetHtml(GetHtmlContent(html));
 
-            return main_content?.OuterHtml ?? html;
-        }
+        Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
+        database.Job.Save(job, filter);
+
+        if (job.Content?.Contains("Indeed does not provide services in your region") == true)
+            throw new Exception("Indeed does not provide services in your region.");
+
+        return job;
+    }
+
+    public static string GetHtmlContent(string html)
+    {
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var main_content = doc.DocumentNode.SelectNodes("//div[contains(@class,'jobsearch-ViewJobLayout-jobDisplay')]")?
+                                            .FirstOrDefault();
+
+        return main_content?.OuterHtml ?? html;
     }
 }
