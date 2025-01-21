@@ -1,149 +1,63 @@
 ﻿using System.Web;
 using Photon.JobSeeker.Pages;
-using Serilog;
 
-namespace Photon.JobSeeker.IamExpat
+namespace Photon.JobSeeker.IamExpat;
+
+class IamExpatPageJob : JobPage, IamExpatPage
 {
-    class IamExpatPageJob : JobPage, IamExpatPageInterface
+    public IamExpatPageJob(IamExpat parent) : base(parent) { }
+
+    protected override bool CheckInvalidUrl(string url, string content, out Command[]? commands)
     {
-        public override int Order => 10;
+        commands = null;
+        return !IamExpatPage.reg_job_url.IsMatch(url);
+    }
 
-        public IamExpatPageJob(IamExpat parent) : base(parent) { }
+    protected override string GetJobCode(string text)
+    {
+        var url_matched = IamExpatPage.reg_job_url.Match(text);
+        if (!url_matched.Success) return string.Empty;
 
-        public override TrendState TrendState => TrendState.Analyzing;
+        return IamExpatPage.GetJobCode(url_matched);
+    }
 
-        public override Command[]? IssueCommand(string url, string content)
-        {
-            if (!reg_job_url.IsMatch(url)) return null;
+    protected override bool JobFallow(string text, out Command[] commands)
+    {
+        commands = new Command[] {
+            Command.Click(@"a[rel=""nofollow""]"),
+            Command.Wait(3000)
+        };
+        return IamExpatPage.reg_job_adding.IsMatch(text);
+    }
 
-            var job = LoadJob(url, content);
+    protected override void GetJobContent(string html, out string? code, out string? apply, out string? title)
+    {
+        var code_matched = IamExpatPage.reg_job_shortlink.Match(html);
+        code = code_matched.Success ? code_matched.Groups[1].Value : null;
 
-            using var evaluator = new JobEligibilityHelper();
-            var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
+        var apply_match = IamExpatPage.reg_job_apply.Match(html);
+        apply = apply_match.Success ? apply_match.Groups[1].Value : null;
 
-            var commands = new List<Command>();
+        var title_match = IamExpatPage.reg_job_title.Match(html);
+        title = title_match.Success ? HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim() : null;
+    }
 
-            if (state == JobState.Attention)
-            {
-                if (reg_job_adding.IsMatch(content))
-                {
-                    commands.Add(Command.Click(@"a[rel=""nofollow""]"));
-                    commands.Add(Command.Wait(3000));
-                }
+    protected override string GetHtmlContent(string html)
+    {
+        var start_match = IamExpatPage.reg_job_content_start.Match(html);
+        if (!start_match.Success) return html;
 
-                if (job.Link?.StartsWith("#") == true)
-                {
-                    // TODO: easy apply
-                }
-            }
+        var end_match = IamExpatPage.reg_job_content_end.Match(html);
+        if (!end_match.Success) return html;
 
-            return commands.ToArray();
-        }
+        html = html[start_match.Index..(end_match.Index + end_match.Length)];
 
-        private Job LoadJob(string url, string html)
-        {
-            using var database = Database.Open();
+        start_match = IamExpatPage.reg_job_content_apply_start.Match(html);
+        if (!start_match.Success) return html;
 
-            var url_matched = reg_job_url.Match(url);
-            if (!url_matched.Success) throw new Exception($"Invalid job url ({parent.Name}).");
+        end_match = IamExpatPage.reg_job_content_apply_end.Match(html);
+        if (!end_match.Success) return html;
 
-            var code = GetJobCode(url_matched);
-            var job = database.Job.Fetch(parent.ID, code);
-
-            var filter = JobFilter.Title | JobFilter.Html | JobFilter.Content | JobFilter.Link | JobFilter.Tries;
-
-            var code_matched = reg_job_shortlink.Match(html);
-            if (!code_matched.Success) throw new Exception($"Job shortlink not found ({parent.Name}).");
-            code = code_matched.Groups[1].Value;
-            if (job != null)
-            {
-                var temp_job = database.Job.Fetch(parent.ID, code);
-                if (temp_job == null)
-                {
-                    job.Code = code;
-                    filter |= JobFilter.Code;
-                }
-                else
-                {
-                    database.Job.Delete(job.JobID);
-                    job = temp_job;
-                }
-            }
-            else
-            {
-                job = database.Job.Fetch(parent.ID, code);
-
-                if (job == null)
-                {
-                    job = new Job
-                    {
-                        AgencyID = parent.ID,
-                        Code = code,
-                        State = JobState.Saved,
-                        Url = string.Join("", parent.BaseUrl, url_matched.Value),
-                    };
-
-                    filter = JobFilter.All;
-                }
-            }
-
-            var apply_match = reg_job_apply.Match(html);
-            if (apply_match.Success) job.Link = apply_match.Groups[1].Value;
-
-            var title_match = reg_job_title.Match(html);
-            if (!title_match.Success)
-                Log.Warning("Title not found ({0}, {1})", parent.Name, code);
-            else job.Title = HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim();
-
-            job.SetHtml(GetHtmlContent(html));
-
-            Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
-            database.Job.Save(job, filter);
-
-            return job;
-        }
-
-        protected override bool CheckInvalidUrl(string text, out Command[]? commands)
-        {
-            commands = null;
-            return !IamExpatPageInterface.reg_job_url.IsMatch(text);
-        }
-
-        protected override string GetJobCode(string text)
-        {
-            var url_matched = IamExpatPageInterface.reg_job_url.Match(text);
-            if (!url_matched.Success) return string.Empty;
-
-            return IamExpatPageInterface.GetJobCode(url_matched);
-        }
-
-        protected override bool JobFallow(string text, out Command[] commands)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override void GetJobContent(string html, out string? code, out string? apply, out string? title)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override string GetHtmlContent(string html)
-        {
-            var start_match = IamExpatPageInterface.reg_job_content_start.Match(html);
-            if (!start_match.Success) return html;
-
-            var end_match = IamExpatPageInterface.reg_job_content_end.Match(html);
-            if (!end_match.Success) return html;
-
-            html = html[start_match.Index..(end_match.Index + end_match.Length)];
-            
-            start_match = IamExpatPageInterface.reg_job_content_apply_start.Match(html);
-            if (!start_match.Success) return html;
-
-            end_match = IamExpatPageInterface.reg_job_content_apply_end.Match(html);
-            if (!end_match.Success) return html;
-
-            return html.Remove(start_match.Index, end_match.Index + end_match.Length - start_match.Index);
-        }
+        return html.Remove(start_match.Index, end_match.Index + end_match.Length - start_match.Index);
     }
 }
