@@ -43,6 +43,8 @@ public abstract class JobPage : PageBase
 
     protected abstract string GetHtmlContent(string html);
 
+    protected virtual void ChceckJob(Job job) { }
+
     private Job LoadJob(string url, string html)
     {
         using var database = Database.Open();
@@ -53,9 +55,11 @@ public abstract class JobPage : PageBase
         var job = database.Job.Fetch(Parent.ID, code);
         var filter = JobFilter.Title | JobFilter.Html | JobFilter.Content;
 
-        GetJobContent(html, out code, out var apply_link, out var title);
+        GetJobContent(html, out var html_code, out var apply_link, out var title);
 
-        if (string.IsNullOrEmpty(code)) throw new Exception($"Job shortlink not found ({Parent.Name}).");
+        if (string.IsNullOrEmpty(code))
+            if (!string.IsNullOrEmpty(html_code)) code = html_code;
+            else throw new Exception($"Job shortlink not found ({Parent.Name}).");
 
         if (job != null)
         {
@@ -100,6 +104,8 @@ public abstract class JobPage : PageBase
         else job.Title = HttpUtility.HtmlDecode(title).Trim();
 
         job.SetHtml(GetHtmlContent(html));
+
+        ChceckJob(job);
 
         Log.Information("{0} Job: {1} ({2})", Parent.Name, job.Title, job.Code);
         database.Job.Save(job, filter);

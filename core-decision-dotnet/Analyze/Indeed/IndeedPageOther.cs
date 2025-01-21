@@ -1,16 +1,13 @@
-﻿namespace Photon.JobSeeker.Indeed
+﻿using Photon.JobSeeker.Pages;
+
+namespace Photon.JobSeeker.Indeed;
+
+class IndeedPageOther : OtherPages, IndeedPage
 {
-    class IndeedPageOther : IndeedPage
+    public IndeedPageOther(Indeed parent) : base(parent) { }
+
+    public override Command[]? IssueCommand(string url, string content)
     {
-        public override int Order => 100;
-
-        public override TrendState TrendState => TrendState.Other;
-
-        public IndeedPageOther(Indeed parent) : base(parent) { }
-
-        public override Command[]? IssueCommand(string url, string content)
-        {
-            return Array.Empty<Command>();
-        }
+        return Array.Empty<Command>();
     }
 }

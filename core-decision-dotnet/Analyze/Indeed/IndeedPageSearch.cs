@@ -1,49 +1,58 @@
-﻿using System.Text.RegularExpressions;
+﻿using Photon.JobSeeker.Pages;
+using System.Text.RegularExpressions;
 
-namespace Photon.JobSeeker.Indeed
+namespace Photon.JobSeeker.Indeed;
+
+class IndeedPageSearch : SearchPage, IndeedPage
 {
-    class IndeedPageSearch : IndeedPage
+    public IndeedPageSearch(Indeed parent) : base(parent) { }
+
+    protected override bool CheckInvalidUrl(string url, string content, out Command[]? commands)
     {
-        public override int Order => 20;
+        commands = null;
+        return !IndeedPage.reg_search_url.IsMatch(url);
+    }
 
-        public override TrendState TrendState => TrendState.Seeking;
-
-        public IndeedPageSearch(Indeed parent) : base(parent) { }
-
-        public override Command[]? IssueCommand(string url, string content)
+    protected override bool CheckInvalidSearchTitle(string url, string content, out Command[]? commands)
+    {
+        if (IndeedPage.reg_search_keywords_url.IsMatch(url))
         {
-            if (!reg_search_url.IsMatch(url)) return null;
+            commands = null;
+            return true;
+        }
+        else
+        {
+            commands = new[] { Command.Go(@$"/jobs?q=developer") };
+            return true;
+        }
+    }
 
-            if (!reg_search_keywords_url.IsMatch(url))
-            {
-                return new Command[]
-                {
-                    Command.Go(@$"/jobs?q=developer"),
-                };
-            }
+    protected override IEnumerable<(string url, string code)> GetJobUrls(string text)
+    {
+        var result = new List<(string url, string code)>();
+        var job_matches = IndeedPage.reg_job_url.Matches(text).Cast<Match>();
 
-            var codes = new HashSet<string>();
-            using var database = Database.Open();
+        foreach (Match job_match in job_matches)
+        {
+            var code = job_match.Groups[1].Value;
+            var url = string.Join("", Parent.Link, "/viewjob?jk=", code);
+            result.Add((url, code));
+        }
 
-            foreach (Match job_match in reg_job_url.Matches(content).Cast<Match>())
-            {
-                var code = job_match.Groups[1].Value;
+        return result;
+    }
 
-                if (codes.Contains(code)) continue;
-                codes.Add(code);
-
-                database.Job.Save(new
-                {
-                    AgencyID = parent.ID,
-                    Url = string.Join("", parent.Link, "/viewjob?jk=", code),
-                    Country = parent.CurrentMethodTitle,
-                    Code = code,
-                    State = JobState.Saved
-                });
-            }
-
-            if (!reg_search_end.IsMatch(content)) return Array.Empty<Command>();
-            else return new Command[] { Command.Click(@"a[aria-label=""Next Page""]") };
+    protected override bool CheckNextButton(string text, out Command[]? commands)
+    {
+        if (IndeedPage.reg_search_end.IsMatch(text))
+        {
+            commands = new[] { Command.Click(@"a[aria-label=""Next Page""]") };
+            return true;
+        }
+        else
+        {
+            commands = null;
+            return false;
         }
     }
 }

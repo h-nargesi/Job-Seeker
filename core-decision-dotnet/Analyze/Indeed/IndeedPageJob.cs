@@ -1,83 +1,56 @@
 ﻿using System.Web;
 using HtmlAgilityPack;
+using Photon.JobSeeker.IamExpat;
+using Photon.JobSeeker.Pages;
 using Serilog;
 
 namespace Photon.JobSeeker.Indeed;
 
-class IndeedPageJob : IndeedPage
+class IndeedPageJob : JobPage, IndeedPage
 {
-    public override int Order => 10;
-
     public IndeedPageJob(Indeed parent) : base(parent) { }
 
-    public override TrendState TrendState => TrendState.Analyzing;
-
-    public override Command[]? IssueCommand(string url, string content)
+    protected override bool CheckInvalidUrl(string url, string content, out Command[]? commands)
     {
-        if (!reg_job_view.IsMatch(url)) return null;
-
-        var job = LoadJob(url, content);
-
-        using var evaluator = new JobEligibilityHelper();
-        var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
-
-        var commands = new List<Command>();
-
-        if (state == JobState.Attention)
-        {
-            if (reg_job_adding.IsMatch(content))
-            {
-                commands.Add(Command.Click(@"button.jobs-save-button"));
-                commands.Add(Command.Wait(3000));
-            }
-
-            // TODO: apply link
-        }
-
-        return commands.ToArray();
+        commands = null;
+        return !IndeedPage.reg_job_view.IsMatch(url);
     }
 
-    private Job LoadJob(string url, string html)
+    protected override string GetJobCode(string text)
     {
-        using var database = Database.Open();
+        var url_matched = IndeedPage.reg_job_view.Match(text);
+        if (!url_matched.Success) return string.Empty;
 
-        var url_matched = reg_job_view.Match(url);
-        if (!url_matched.Success) throw new Exception($"Invalid job url ({parent.Name}).");
+        return url_matched.Groups[1].Value;
+    }
 
-        var code = url_matched.Groups[1].Value;
-        var job = database.Job.Fetch(parent.ID, code);
-        var filter = JobFilter.Title | JobFilter.Html | JobFilter.Content | JobFilter.Tries;
-
-        if (job == null)
+    protected override bool JobFallow(string text, out Command[] commands)
+    {
+        commands = new Command[]
         {
-            job = new Job
-            {
-                AgencyID = parent.ID,
-                Code = code,
-                State = JobState.Saved,
-                Url = url_matched.Value,
-            };
+            Command.Click(@"button.jobs-save-button"),
+            Command.Wait(3000),
+        };
 
-            filter = JobFilter.All;
-        }
+        return IndeedPage.reg_job_adding.IsMatch(text);
+    }
 
-        var title_match = reg_job_title.Match(html);
-        if (!title_match.Success)
-            Log.Warning("Title not found ({0}, {1})", parent.Name, code);
-        else job.Title = HttpUtility.HtmlDecode(title_match.Groups[2].Value).Trim();
+    protected override void GetJobContent(string html, out string? code, out string? apply, out string? title)
+    {
+        apply = null;
+        code = null;
 
-        job.SetHtml(GetHtmlContent(html));
+        var title_match = IndeedPage.reg_job_title.Match(html);
+        title = title_match.Success ? HttpUtility.HtmlDecode(title_match.Groups[2].Value).Trim() : null;
+    }
 
-        Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
-        database.Job.Save(job, filter);
-
+    protected override void ChceckJob(Job job)
+    {
         if (job.Content?.Contains("Indeed does not provide services in your region") == true)
             throw new Exception("Indeed does not provide services in your region.");
-
-        return job;
     }
 
-    public static string GetHtmlContent(string html)
+    protected override string GetHtmlContent(string html)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
