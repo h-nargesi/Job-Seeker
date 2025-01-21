@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using Photon.JobSeeker.Analyze.Pages;
+using System.Text.RegularExpressions;
 
 /*
 https://www.stepstone.de/work/full-time/developer?ct=222&fdl=en

@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using Photon.JobSeeker.Analyze.Pages;
+using System.Text.RegularExpressions;
 
 namespace Photon.JobSeeker.Bayt;
 

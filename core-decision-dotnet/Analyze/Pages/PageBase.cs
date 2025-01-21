@@ -1,3 +1,5 @@
+using Photon.JobSeeker.Analyze.Pages;
+
 namespace Photon.JobSeeker.Pages;
 
 public abstract class PageBase : Page

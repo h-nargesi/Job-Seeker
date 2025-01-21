@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Photon.JobSeeker.Analyze.Pages;
 using Serilog;
 
 namespace Photon.JobSeeker;

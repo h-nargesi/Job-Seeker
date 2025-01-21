@@ -1,4 +1,6 @@
-﻿namespace Photon.JobSeeker.Pages;
+﻿using Photon.JobSeeker.Analyze.Pages;
+
+namespace Photon.JobSeeker.Pages;
 
 public abstract class OtherPages : Page
 {

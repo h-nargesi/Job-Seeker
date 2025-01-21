@@ -1,4 +1,4 @@
-namespace Photon.JobSeeker;
+namespace Photon.JobSeeker.Analyze.Pages;
 
 public abstract class Page : IComparable<Page>
 {
