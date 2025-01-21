@@ -22,7 +22,7 @@ values
 												'{ "resume": { "key": "DOTNET", "include_matched": false } }')
 	,	(80,	'field',	'Java',				'\b(java|spring boot|kotlin)\b',
 												null)
-	,	(30,	'field',	'GO-Lang',			'\b(go[- ]?lang|(?-i)G[Oo])\b', 
+	,	(30,	'field',	'GO-Lang',			'\b(go[- ]?lang|(?-i)G[Oo])\b',
 												'{ "resume": { "key": "GOLANG", "include_matched": false } }')
 	,	(60,	'field',	'Front-End',		'\b(angular)\b',
 												'{ "resume": { "include_matched": false } }')
@@ -45,25 +45,25 @@ values
 
 	,	(10,	'tech',		'Machine-Learning',	'\b((machine|deep)[- ]learning|natural[- ]network|(?-i)ML|(?-i)AI|tensor[- ]?flow)\b',
 												null)
-	,	(20,	'tech',		'Entity-Framework',	'\b(entity[- ]framework|ef)\b', 
+	,	(20,	'tech',		'Entity-Framework',	'\b(entity[- ]framework|ef)\b',
 												null)
 	,	(10,	'tech',		'Rest-API',			'\b(web[- ]services|saas)\b',
 												'{ "resume": { "parent": "Front-End" } }')
 	,	(10,	'tech',		'Rest-API-Key',		'\b(rest[- ]?(api|ful)|web[- ]api)\b',
 												'{ "resume": { "key": "Rest-API", "parent": "Front-End", "include_matched": false } }')
-	,	(05,	'tech',		'Git',				'\bgit\b', 
+	,	(05,	'tech',		'Git',				'\bgit\b',
 												null)
 	,	(05,	'tech',		'Microservices',	'\b(microservices?)\b',
 												'{ "resume": { "parent": "GOLANG", "include_matched": false } }')
 
 	--	Company Production
 
-	,	(30,	'production',	'ERP',			'\berp\b', 
+	,	(30,	'production',	'ERP',			'\berp\b',
 												null)
 
 	--	Company Benefits
 
-	,	(170,	'benefit',	'Relocation',		'(?<!no )\brelocation(\s+(support|package|assistance))?\b|\bvisa(\s+(support|sponsorship))?\b', 
+	,	(170,	'benefit',	'Relocation',		'(?<!no )\brelocation(\s+(support|package|assistance))?\b|\bvisa(\s+(support|sponsorship))?\b',
 												'{ "resume": null }')
 	,	(02,	'salary',	'Salary',			'\bsalary\b.*?(\d[\d,]*(000|k))(.+?\b(month|year)\b)?',
 												'{ "resume": null , "money": 1, "period": 4}')
@@ -85,9 +85,9 @@ values
 
 	--	Resume
 
-	,	(00,	'reumse',	'AWS',				'\b(aws)\b', 
+	,	(00,	'reumse',	'AWS',				'\b(aws)\b',
 												null)
-	,	(00,	'reumse',	'CI/CD',			'\b(?-i)(CI[/-]?CD)\b', 
+	,	(00,	'reumse',	'CI/CD',			'\b(?-i)(CI[/-]?CD)\b',
 												null)
 
 	;

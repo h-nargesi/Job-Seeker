@@ -112,3 +112,7 @@ footer {
 .modal-body {
     white-space: pre-line;
 }
+
+.job-filter > * {
+    margin-bottom: 5pt;
+}

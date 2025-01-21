@@ -30,7 +30,7 @@ namespace Photon.JobSeeker.IamExpat
                     commands.Add(Command.Click(@"a[rel=""nofollow""]"));
                     commands.Add(Command.Wait(3000));
                 }
-                
+
                 if (job.Link?.StartsWith("#") == true)
                 {
                     // TODO: easy apply
@@ -89,7 +89,7 @@ namespace Photon.JobSeeker.IamExpat
 
             var apply_match = reg_job_apply.Match(html);
             if (apply_match.Success) job.Link = apply_match.Groups[1].Value;
-            
+
             var title_match = reg_job_title.Match(html);
             if (!title_match.Success)
                 Log.Warning("Title not found ({0}, {1})", parent.Name, code);

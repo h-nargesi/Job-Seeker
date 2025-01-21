@@ -1,21 +1,36 @@
-
-let job_seeker_jobs = document.getElementById('job-list');
-let job_seeker_trends = document.getElementById('job-seeker-trend-list');
-let job_seeker_agencies = document.getElementById('job-seeker-agency-list');
+const job_seeker_jobs = document.getElementById('job-list');
+const job_seeker_trends = document.getElementById('job-seeker-trend-list');
+const job_seeker_agencies = document.getElementById('job-seeker-agency-list');
+const job_agency_filter = document.getElementById('job-agency-filter');
+const job_country_filter = document.getElementById('job-country-filter');
 let intervals = null;
 
 async function LoadTrands() {
-    let response = await fetch("/report/trends", { method: 'GET' });
+    const response = await fetch("/report/trends", { method: 'GET' });
     job_seeker_trends.innerHTML = await response.text();
 }
 
 async function LoadJobs() {
-    let response = await fetch("/report/jobs", { method: 'GET' });
+    let query = "";
+
+    console.log('agency_filter', job_agency_filter?.value);
+    console.log('country_filter', job_country_filter?.value);
+
+    const agency_filter = job_agency_filter?.value;
+    if (agency_filter) query += `&agencies=${agency_filter}`;
+
+    const country_filter = job_country_filter?.value;
+    if (country_filter) query += `&countries=${country_filter}`;
+
+    if (query.length > 0) query = "?" + query.substring(1);
+    console.log('query', query);
+
+    const response = await fetch(`/report/jobs${query}`, { method: 'GET' });
     job_seeker_jobs.innerHTML = await response.text();
 }
 
 async function LoadAgencies() {
-    let response = await fetch("/report/agencies", { method: 'GET' });
+    const response = await fetch("/report/agencies", { method: 'GET' });
     job_seeker_agencies.innerHTML = await response.text();
 }
 
@@ -63,7 +78,7 @@ async function change_running(agency, running) {
         const current_element = document.getElementById(`RM-${agency}-${running}`);
         if (!current_element) return;
 
-        let enabled = current_element.classList.contains('btn-success');
+        const enabled = current_element.classList.contains('btn-success');
 
         const data = {
             method: 'POST',
@@ -101,7 +116,7 @@ async function submit_options(job_id, json_id) {
             },
             body: JSON.stringify(resume_element.value)
         }
-        let response = await fetch(`/job/options?jobid=${job_id}`, data);
+        const response = await fetch(`/job/options?jobid=${job_id}`, data);
         resume_element.value = await response.text();
 
     } catch (e) {

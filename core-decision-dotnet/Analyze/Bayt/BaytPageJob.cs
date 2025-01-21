@@ -2,13 +2,13 @@
 using HtmlAgilityPack;
 using Serilog;
 
-namespace Photon.JobSeeker.Indeed;
+namespace Photon.JobSeeker.Bayt;
 
-class IndeedPageJob : IndeedPage
+class BaytPageJob : BaytPage
 {
     public override int Order => 10;
 
-    public IndeedPageJob(Indeed parent) : base(parent) { }
+    public BaytPageJob(Bayt parent) : base(parent) { }
 
     public override TrendState TrendState => TrendState.Analyzing;
 
@@ -25,11 +25,7 @@ class IndeedPageJob : IndeedPage
 
         if (state == JobState.Attention)
         {
-            if (reg_job_adding.IsMatch(content))
-            {
-                commands.Add(Command.Click(@"button.jobs-save-button"));
-                commands.Add(Command.Wait(3000));
-            }
+            // TODO: save link
 
             // TODO: apply link
         }
@@ -71,8 +67,8 @@ class IndeedPageJob : IndeedPage
         Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
         database.Job.Save(job, filter);
 
-        if (job.Content?.Contains("Indeed does not provide services in your region") == true)
-            throw new Exception("Indeed does not provide services in your region.");
+        if (job.Content?.Contains("Bayt does not provide services in your region") == true)
+            throw new Exception("Bayt does not provide services in your region.");
 
         return job;
     }
