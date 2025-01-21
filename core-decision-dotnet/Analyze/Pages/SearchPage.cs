@@ -12,7 +12,7 @@ abstract class SearchPage : PageBase
     {
         if (CheckInvalidUrl(url, content, out Command[]? commands)) return commands;
 
-        if (CheckInvalidSearchTitle(content, out commands)) return commands;
+        if (CheckInvalidSearchTitle(url, content, out commands)) return commands;
 
         var codes = new HashSet<string>();
         using var database = Database.Open();
@@ -36,7 +36,7 @@ abstract class SearchPage : PageBase
         else return Array.Empty<Command>();
     }
 
-    protected abstract bool CheckInvalidSearchTitle(string text, out Command[]? commands);
+    protected abstract bool CheckInvalidSearchTitle(string url, string content, out Command[]? commands);
 
     protected abstract IEnumerable<(string url, string code)> GetJobUrls(string text);
 

@@ -13,9 +13,9 @@ class IamExpatPageSearch : SearchPage, IamExpatPage
         return !IamExpatPage.reg_search_url.IsMatch(url);
     }
 
-    protected override bool CheckInvalidSearchTitle(string text, out Command[]? commands)
+    protected override bool CheckInvalidSearchTitle(string url, string content, out Command[]? commands)
     {
-        if (IamExpatPage.reg_search_title.IsMatch(text))
+        if (IamExpatPage.reg_search_title.IsMatch(content))
         {
             commands = null;
             return false;
@@ -23,7 +23,6 @@ class IamExpatPageSearch : SearchPage, IamExpatPage
         else
         {
             commands = FillSearchCommands();
-
             return true;
         }
     }
@@ -49,13 +48,11 @@ class IamExpatPageSearch : SearchPage, IamExpatPage
         if (IamExpatPage.reg_search_end.IsMatch(text))
         {
             commands = FillSearchCommands();
-
             return true;
         }
         else
         {
             commands = null;
-
             return false;
         }
     }
