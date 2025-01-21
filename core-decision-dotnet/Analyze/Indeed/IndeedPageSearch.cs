@@ -7,9 +7,8 @@ class IndeedPageSearch : SearchPage, IndeedPage
 {
     public IndeedPageSearch(Indeed parent) : base(parent) { }
 
-    protected override bool CheckInvalidUrl(string url, string content, out Command[]? commands)
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        commands = null;
         return !IndeedPage.reg_search_url.IsMatch(url);
     }
 
@@ -27,10 +26,10 @@ class IndeedPageSearch : SearchPage, IndeedPage
         }
     }
 
-    protected override IEnumerable<(string url, string code)> GetJobUrls(string text)
+    protected override IEnumerable<(string url, string code)> GetJobUrls(string content)
     {
         var result = new List<(string url, string code)>();
-        var job_matches = IndeedPage.reg_job_url.Matches(text).Cast<Match>();
+        var job_matches = IndeedPage.reg_job_url.Matches(content).Cast<Match>();
 
         foreach (Match job_match in job_matches)
         {
@@ -42,17 +41,9 @@ class IndeedPageSearch : SearchPage, IndeedPage
         return result;
     }
 
-    protected override bool CheckNextButton(string text, out Command[]? commands)
+    protected override Command[] CheckNextButton(string text)
     {
-        if (IndeedPage.reg_search_end.IsMatch(text))
-        {
-            commands = new[] { Command.Click(@"a[aria-label=""Next Page""]") };
-            return true;
-        }
-        else
-        {
-            commands = null;
-            return false;
-        }
+        if (!IndeedPage.reg_search_end.IsMatch(text)) return Array.Empty<Command>();
+        return new[] { Command.Click(@"a[aria-label=""Next Page""]") };
     }
 }

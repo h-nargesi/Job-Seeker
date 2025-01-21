@@ -7,27 +7,26 @@ class IamExpatPageJob : JobPage, IamExpatPage
 {
     public IamExpatPageJob(IamExpat parent) : base(parent) { }
 
-    protected override bool CheckInvalidUrl(string url, string content, out Command[]? commands)
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        commands = null;
         return !IamExpatPage.reg_job_url.IsMatch(url);
     }
 
-    protected override string GetJobCode(string text)
+    protected override string GetJobCode(string url)
     {
-        var url_matched = IamExpatPage.reg_job_url.Match(text);
+        var url_matched = IamExpatPage.reg_job_url.Match(url);
         if (!url_matched.Success) return string.Empty;
 
         return IamExpatPage.GetJobCode(url_matched);
     }
 
-    protected override bool JobFallow(string text, out Command[] commands)
+    protected override Command[]? JobFallow(string content)
     {
-        commands = new Command[] {
+        if (!IamExpatPage.reg_job_adding.IsMatch(content)) return null;
+        return new Command[] {
             Command.Click(@"a[rel=""nofollow""]"),
             Command.Wait(3000)
         };
-        return IamExpatPage.reg_job_adding.IsMatch(text);
     }
 
     protected override void GetJobContent(string html, out string? code, out string? apply, out string? title)

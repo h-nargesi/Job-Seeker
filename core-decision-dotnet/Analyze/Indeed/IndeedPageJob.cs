@@ -1,8 +1,6 @@
-﻿using System.Web;
-using HtmlAgilityPack;
-using Photon.JobSeeker.IamExpat;
+﻿using HtmlAgilityPack;
 using Photon.JobSeeker.Pages;
-using Serilog;
+using System.Web;
 
 namespace Photon.JobSeeker.Indeed;
 
@@ -10,29 +8,27 @@ class IndeedPageJob : JobPage, IndeedPage
 {
     public IndeedPageJob(Indeed parent) : base(parent) { }
 
-    protected override bool CheckInvalidUrl(string url, string content, out Command[]? commands)
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        commands = null;
         return !IndeedPage.reg_job_view.IsMatch(url);
     }
 
-    protected override string GetJobCode(string text)
+    protected override string GetJobCode(string url)
     {
-        var url_matched = IndeedPage.reg_job_view.Match(text);
+        var url_matched = IndeedPage.reg_job_view.Match(url);
         if (!url_matched.Success) return string.Empty;
 
         return url_matched.Groups[1].Value;
     }
 
-    protected override bool JobFallow(string text, out Command[] commands)
+    protected override Command[]? JobFallow(string content)
     {
-        commands = new Command[]
+        if (!IndeedPage.reg_job_adding.IsMatch(content)) return null;
+        return new Command[]
         {
             Command.Click(@"button.jobs-save-button"),
             Command.Wait(3000),
         };
-
-        return IndeedPage.reg_job_adding.IsMatch(text);
     }
 
     protected override void GetJobContent(string html, out string? code, out string? apply, out string? title)

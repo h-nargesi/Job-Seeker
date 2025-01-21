@@ -13,7 +13,7 @@ public abstract class JobPage : PageBase
 
     public override Command[]? IssueCommand(string url, string content)
     {
-        if (CheckInvalidUrl(url, content, out var command)) return command;
+        if (CheckInvalidUrl(url, content)) return null;
 
         var job = LoadJob(url, content);
 
@@ -24,9 +24,10 @@ public abstract class JobPage : PageBase
 
         if (state == JobState.Attention)
         {
-            if (JobFallow(content, out var fllow))
+            var fallow = JobFallow(content);
+            if (fallow?.Length > 0)
             {
-                commands.AddRange(fllow);
+                commands.AddRange(fallow);
             }
 
             // TODO: apply link
@@ -35,9 +36,9 @@ public abstract class JobPage : PageBase
         return commands.ToArray();
     }
 
-    protected abstract string GetJobCode(string text);
+    protected abstract string GetJobCode(string url);
 
-    protected abstract bool JobFallow(string text, out Command[] commands);
+    protected abstract Command[]? JobFallow(string content);
 
     protected abstract void GetJobContent(string html, out string? code, out string? apply, out string? title);
 

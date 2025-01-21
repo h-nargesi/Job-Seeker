@@ -7,9 +7,8 @@ class IamExpatPageSearch : SearchPage, IamExpatPage
 {
     public IamExpatPageSearch(IamExpat parent) : base(parent) { }
 
-    protected override bool CheckInvalidUrl(string url, string content, out Command[]? commands)
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        commands = null;
         return !IamExpatPage.reg_search_url.IsMatch(url);
     }
 
@@ -27,11 +26,11 @@ class IamExpatPageSearch : SearchPage, IamExpatPage
         }
     }
 
-    protected override IEnumerable<(string url, string code)> GetJobUrls(string text)
+    protected override IEnumerable<(string url, string code)> GetJobUrls(string content)
     {
         var result = new List<(string url, string code)>();
         var base_link = Parent.Link.Trim().EndsWith("/") ? Parent.Link[..^1] : Parent.Link;
-        var job_matches = IamExpatPage.reg_job_url.Matches(text).Cast<Match>();
+        var job_matches = IamExpatPage.reg_job_url.Matches(content).Cast<Match>();
 
         foreach (Match job_match in job_matches)
         {
@@ -43,18 +42,10 @@ class IamExpatPageSearch : SearchPage, IamExpatPage
         return result;
     }
 
-    protected override bool CheckNextButton(string text, out Command[]? commands)
+    protected override Command[] CheckNextButton(string text)
     {
-        if (IamExpatPage.reg_search_end.IsMatch(text))
-        {
-            commands = FillSearchCommands();
-            return true;
-        }
-        else
-        {
-            commands = null;
-            return false;
-        }
+        if (!IamExpatPage.reg_search_end.IsMatch(text)) return Array.Empty<Command>();
+        return FillSearchCommands();
     }
 
     private static Command[] FillSearchCommands() => new Command[]

@@ -1,6 +1,6 @@
 ﻿namespace Photon.JobSeeker.Pages;
 
-public abstract class OtherPages : PageBase
+public abstract class OtherPages : Page
 {
     public override int Order => 100;
 
@@ -10,11 +10,6 @@ public abstract class OtherPages : PageBase
 
     public override Command[]? IssueCommand(string url, string content)
     {
-        return new Command[0];
-    }
-
-    protected override bool CheckInvalidUrl(string url, string content, out Command[]? commands)
-    {
-        throw new NotImplementedException();
+        return Array.Empty<Command>();
     }
 }

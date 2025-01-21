@@ -6,9 +6,8 @@ class IndeedPageLogin : LoginPage, IndeedPage
 {
     public IndeedPageLogin(Indeed parent) : base(parent) { }
 
-    protected override bool CheckInvalidUrl(string url, string content, out Command[]? commands)
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        commands = null;
         return !IndeedPage.reg_login_url.IsMatch(url);
     }
 

@@ -10,7 +10,7 @@ public abstract class LoginPage : PageBase
 
     public override Command[]? IssueCommand(string url, string content)
     {
-        if (CheckInvalidUrl(url, content, out var command)) return command;
+        if (CheckInvalidUrl(url, content)) return null;
 
         return LoginCommands();
     }

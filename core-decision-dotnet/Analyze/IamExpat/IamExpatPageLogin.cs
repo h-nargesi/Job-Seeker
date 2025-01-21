@@ -6,9 +6,8 @@ class IamExpatPageLogin : LoginPage, IamExpatPage
 {
     public IamExpatPageLogin(IamExpat parent) : base(parent) { }
 
-    protected override bool CheckInvalidUrl(string url, string content, out Command[]? commands)
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        commands = null;
         return !IamExpatPage.reg_login_url.IsMatch(content);
     }
 
