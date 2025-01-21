@@ -1,16 +1,8 @@
-﻿namespace Photon.JobSeeker.LinkedIn
+﻿using Photon.JobSeeker.Pages;
+
+namespace Photon.JobSeeker.LinkedIn;
+
+class LinkedInPageOther : OtherPages, LinkedInPage
 {
-    class LinkedInPageOther : LinkedInPage
-    {
-        public override int Order => 100;
-
-        public override TrendState TrendState => TrendState.Other;
-
-        public LinkedInPageOther(LinkedIn parent) : base(parent) { }
-
-        public override Command[]? IssueCommand(string url, string content)
-        {
-            return Array.Empty<Command>();
-        }
-    }
+    public LinkedInPageOther(LinkedIn parent) : base(parent) { }
 }

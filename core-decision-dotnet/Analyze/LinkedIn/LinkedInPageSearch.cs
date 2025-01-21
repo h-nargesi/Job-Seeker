@@ -1,67 +1,67 @@
-﻿using System.Text.RegularExpressions;
+﻿using Photon.JobSeeker.Pages;
+using System.Text.RegularExpressions;
 
 namespace Photon.JobSeeker.LinkedIn;
 
-class LinkedInPageSearch : LinkedInPage
+class LinkedInPageSearch : SearchPage, LinkedInPage
 {
-    public override int Order => 20;
-
-    public override TrendState TrendState => TrendState.Seeking;
-
     public LinkedInPageSearch(LinkedIn parent) : base(parent) { }
 
-    public override Command[]? IssueCommand(string url, string content)
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        if (!reg_search_url.IsMatch(url)) return null;
-
-        if (!reg_search_keywords_url.IsMatch(url) ||
-            !reg_search_location_url.IsMatch(url) ||
-            !reg_search_options_url.IsMatch(url))
-        {
-            return new Command[]
-            {
-                    Command.Go(@$"/jobs/search/?f_E=3%2C4&keywords={Agency.SearchTitle}&location={parent.RunningUrl}&refresh=true"),
-            };
-        }
-
-        var codes = new HashSet<long>();
-        using var database = Database.Open();
-
-        foreach (Match job_match in reg_job_url.Matches(content).Cast<Match>())
-        {
-            var code = long.Parse(job_match.Groups[1].Value);
-
-            if (codes.Contains(code)) continue;
-            codes.Add(code);
-
-            database.Job.Save(new
-            {
-                AgencyID = parent.ID,
-                Url = string.Join("", parent.BaseUrl, job_match.Value),
-                Country = parent.CurrentMethodTitle,
-                Code = code.ToString(),
-                State = JobState.Saved
-            });
-        }
-
-        return GetNextPageButton(content);
+        return !LinkedInPage.reg_search_url.IsMatch(url);
     }
 
-    private static Command[] GetNextPageButton(string content)
+    protected override bool CheckInvalidSearchTitle(string url, string content, out Command[]? commands)
     {
-        var match = reg_search_page_panel.Match(content);
+        if (!LinkedInPage.reg_search_keywords_url.IsMatch(url) ||
+            !LinkedInPage.reg_search_location_url.IsMatch(url) ||
+            !LinkedInPage.reg_search_options_url.IsMatch(url))
+        {
+            var parent = Parent as LinkedIn;
+            commands = new Command[]
+            {
+                Command.Go(@$"/jobs/search/?f_E=3%2C4&keywords={Agency.SearchTitle}&location={parent?.RunningUrl}&refresh=true"),
+            };
+            return true;
+        }
+        else
+        {
+            commands = null;
+            return false;
+        }
+    }
+
+    protected override IEnumerable<(string url, string code)> GetJobUrls(string content)
+    {
+        var result = new List<(string url, string code)>();
+        var job_matches = LinkedInPage.reg_job_url.Matches(content).Cast<Match>();
+
+        foreach (Match job_match in job_matches)
+        {
+            var code = job_match.Groups[1].Value;
+            var url = string.Join("", Parent.BaseUrl, job_match.Value);
+            result.Add((url, code));
+        }
+
+        return result;
+    }
+
+    protected override Command[] CheckNextButton(string content)
+    {
+        var match = LinkedInPage.reg_search_page_panel.Match(content);
         if (!match.Success) return Array.Empty<Command>();
         content = content[(match.Index + match.Length)..];
 
-        match = reg_search_page_panel_end.Match(content);
+        match = LinkedInPage.reg_search_page_panel_end.Match(content);
         if (!match.Success) return Array.Empty<Command>();
         content = content[..match.Index];
 
-        match = reg_search_current_page.Match(content);
+        match = LinkedInPage.reg_search_current_page.Match(content);
         if (!match.Success) return Array.Empty<Command>();
         content = content[(match.Index + match.Length)..];
 
-        match = reg_search_other_page.Match(content);
+        match = LinkedInPage.reg_search_other_page.Match(content);
         if (!match.Success) return Array.Empty<Command>();
 
         return new Command[]
