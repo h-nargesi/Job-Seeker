@@ -1,14 +1,9 @@
-﻿using Photon.JobSeeker.Analyze.Pages;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace Photon.JobSeeker.Bayt;
 
-abstract class BaytPage : Page
+interface BaytPage
 {
-    protected readonly Bayt parent;
-
-    protected BaytPage(Bayt parent) : base(parent) => this.parent = parent;
-
     protected static readonly Regex reg_login_but = new(@"<a[^>]+href=[""']https://[\w\.]*bayt\.com/account/login[^""']*[""'][^>]*>Sign in</a>", RegexOptions.IgnoreCase);
 
     // protected static readonly Regex reg_login_url = new(@"^https?://secure\.indeed\.com/auth", RegexOptions.IgnoreCase);

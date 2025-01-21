@@ -1,79 +1,39 @@
-﻿using System.Web;
-using HtmlAgilityPack;
-using Serilog;
+﻿using HtmlAgilityPack;
+using Photon.JobSeeker.Pages;
+using System.Web;
 
 namespace Photon.JobSeeker.Bayt;
 
-class BaytPageJob : BaytPage
+class BaytPageJob : JobPage, BaytPage
 {
-    public override int Order => 10;
-
     public BaytPageJob(Bayt parent) : base(parent) { }
 
-    public override TrendState TrendState => TrendState.Analyzing;
-
-    public override Command[]? IssueCommand(string url, string content)
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        if (!reg_job_view.IsMatch(url)) return null;
-
-        var job = LoadJob(url, content);
-
-        using var evaluator = new JobEligibilityHelper();
-        var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
-
-        var commands = new List<Command>();
-
-        if (state == JobState.Attention)
-        {
-            // TODO: save link
-
-            // TODO: apply link
-        }
-
-        return commands.ToArray();
+        return !BaytPage.reg_job_view.IsMatch(url);
     }
 
-    private Job LoadJob(string url, string html)
+    protected override string GetJobCode(string url)
     {
-        using var database = Database.Open();
-
-        var url_matched = reg_job_view.Match(url);
-        if (!url_matched.Success) throw new Exception($"Invalid job url ({parent.Name}).");
-
-        var code = url_matched.Groups[1].Value;
-        var job = database.Job.Fetch(parent.ID, code);
-        var filter = JobFilter.Title | JobFilter.Html | JobFilter.Content | JobFilter.Tries;
-
-        if (job == null)
-        {
-            job = new Job
-            {
-                AgencyID = parent.ID,
-                Code = code,
-                State = JobState.Saved,
-                Url = url_matched.Value,
-            };
-
-            filter = JobFilter.All;
-        }
-
-        var title_match = reg_job_title.Match(html);
-        if (!title_match.Success)
-            Log.Warning("Title not found ({0}, {1})", parent.Name, code);
-        else job.Title = HttpUtility.HtmlDecode(title_match.Groups[2].Value).Trim();
-
-        job.SetHtml(GetHtmlContent(html));
-
-        Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
-        database.Job.Save(job, filter);
-
-        if (job.Content?.Contains("Bayt does not provide services in your region") == true)
-            throw new Exception("Bayt does not provide services in your region.");
-
-        return job;
+        var url_matched = BaytPage.reg_job_view.Match(url);
+        return url_matched.Success ? url_matched.Groups[1].Value : string.Empty;
     }
 
-    public static string GetHtmlContent(string html)
+    protected override Command[]? JobFallow(string content)
+    {
+        return null;
+    }
+
+    protected override void GetJobContent(string html, out string? code, out string? apply, out string? title)
+    {
+        code = null;
+        apply = null;
+
+        var title_match = BaytPage.reg_job_title.Match(html);
+        title = title_match.Success ? HttpUtility.HtmlDecode(title_match.Groups[2].Value).Trim() : null;
+    }
+
+    protected override string GetHtmlContent(string html)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);

@@ -1,17 +1,18 @@
-﻿namespace Photon.JobSeeker.Bayt;
+﻿using Photon.JobSeeker.Pages;
 
-class BaytPageAuth : BaytPage
+namespace Photon.JobSeeker.Bayt;
+
+class BaytPageAuth : AuthPage, BaytPage
 {
-    public override int Order => 2;
-
-    public override TrendState TrendState => TrendState.Auth;
-
     public BaytPageAuth(Bayt parent) : base(parent) { }
 
-    public override Command[]? IssueCommand(string url, string content)
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        if (!reg_login_but.IsMatch(content)) return null;
+        return !BaytPage.reg_login_but.IsMatch(content);
+    }
 
+    protected override Command[] LoginUrl()
+    {
         return new Command[] { Command.Click(@"a[href^=""https://www.bayt.com/en/login/""]") };
     }
 }
