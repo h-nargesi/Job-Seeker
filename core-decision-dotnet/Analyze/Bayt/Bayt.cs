@@ -24,6 +24,7 @@ class Bayt : Agency
             return base_link.EndsWith('/') ? base_link[..^1] : base_link;
         }
     }
+
     public override string SearchLink => $"https://www.bayt.com/en/{LocationDomains[RunningSearchingMethodIndex].Url}/jobs/{SearchTitle}-jobs/";
 
     public override Regex? JobAcceptabilityChecker => BaytPage.reg_job_no_longer_accepting;

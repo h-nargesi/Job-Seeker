@@ -34,10 +34,11 @@ class IamExpat : Agency
             }
             else
             {
-                if (RunningSearchingMethodIndex == (int)settings.running) return;
+                var running = (int)settings!.running;
+                if (RunningSearchingMethodIndex == running) return;
 
                 LocationUrls = settings.locations.ToObject<Location[]>();
-                RunningSearchingMethodIndex = (int)settings.running;
+                RunningSearchingMethodIndex = running;
             }
         }
     }
