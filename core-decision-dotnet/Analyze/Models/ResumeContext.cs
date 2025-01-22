@@ -4,8 +4,9 @@ using Newtonsoft.Json;
 namespace Photon.JobSeeker;
 
 [Serializable]
-public class ResumeContext
+public partial class ResumeContext
 {
+    public int Version => 42;
     public int Length { get; set; } = 1;
     public InputDataContext InputData = new()
     {
@@ -24,8 +25,8 @@ public class ResumeContext
         { nameof(KeysContext.MACHINE_LEARNING), null },
         { nameof(KeysContext.NETWORK), null },
     };
-    public NotIncludedContext NotIncluded { get; } = new();
-    public NotIncludedContext Included { get; } = new();
+    public NotIncludedContext NotIncluded { get; } = [];
+    public NotIncludedContext Included { get; } = [];
     public ElementsContext Elements { get; } = new();
 
     [Serializable]
@@ -150,24 +151,26 @@ public class ResumeContext
         return string.Join("", keys);
     }
 
-    private readonly static Regex
-        Deserializer = new(@"\w+(?=\s*:)"),
-        Serializer = new(@"""(\w+)""(?=\s*:)");
-
     public string SimlpeSerialize()
     {
         var json =  JsonConvert.SerializeObject(this, Formatting.Indented);
-        return Serializer.Replace(json, "$1");
+        return Serializer().Replace(json, "$1");
     }
 
     public static ResumeContext? SimlpeDeserialize(string text)
     {
         if (text == null) return null;
 
-        text = Deserializer.Replace(text, "\"$0\"");
+        text = Deserializer().Replace(text, "\"$0\"");
 
         return JsonConvert.DeserializeObject<ResumeContext>(text);
     }
+
+    [GeneratedRegex(@"\w+(?=\s*:)")]
+    private static partial Regex Deserializer();
+
+    [GeneratedRegex(@"""(\w+)""(?=\s*:)")]
+    private static partial Regex Serializer();
 }
 
 public static class ResumeContextExtentions
