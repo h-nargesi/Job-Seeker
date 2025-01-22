@@ -25,8 +25,9 @@ class Bayt : Agency
         }
     }
 
-    public override string SearchLink => $"https://www.bayt.com/en/{SearchingMethodTitles[RunningSearchingMethodIndex].Url}/jobs/{SearchTitle}-jobs/";
+    public override string SearchLink => $"https://www.bayt.com/en/{Locations[RunningSearchingMethodIndex].Url}/jobs/{SearchTitle}-jobs/";
 
+    public override Regex? JobAcceptabilityChecker => null;
     public override Regex? JobAcceptabilityChecker => null;
 
 
