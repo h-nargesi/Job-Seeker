@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Photon.JobSeeker.Analyze.Pages;
+using Photon.JobSeeker.Pages;
 using Serilog;
 
 namespace Photon.JobSeeker;
@@ -7,6 +8,8 @@ namespace Photon.JobSeeker;
 public abstract class Agency
 {
     private int running_searching_method_index = -1;
+
+    private JobPage? jobPage;
 
     private readonly List<Page> pages = new();
 
@@ -66,7 +69,10 @@ public abstract class Agency
     public abstract string SearchLink { get; }
 
 
-    public abstract string GetMainHtml(string html);
+    public string GetMainHtml(string html)
+    {
+        return jobPage?.GetHtmlContent(html) ?? string.Empty;
+    }
 
     public Result AnalyzeContent(string url, string content)
     {
@@ -140,6 +146,8 @@ public abstract class Agency
         foreach (var type in GetSubPages())
         {
             if (Activator.CreateInstance(type, this) is not Page page) continue;
+
+            if (page is JobPage job_page) jobPage = job_page;
 
             pages.Add(page);
             Log.Debug("page added: {0}", type.Name);
