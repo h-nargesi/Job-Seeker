@@ -38,7 +38,7 @@ class LinkedInPageJob : JobPage, LinkedInPage
 
     }
 
-    protected override string GetHtmlContent(string html)
+    public override string GetHtmlContent(string html)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);

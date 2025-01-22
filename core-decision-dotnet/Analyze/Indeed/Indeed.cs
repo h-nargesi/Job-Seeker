@@ -28,8 +28,6 @@ class Indeed : Agency
     public override Regex? JobAcceptabilityChecker => IndeedPage.reg_job_acceptability_checker;
 
 
-    public override string GetMainHtml(string html) => IndeedPageJob.GetHtmlContent(html);
-
     protected override void LoadSettings(dynamic? settings)
     {
         lock (@lock)

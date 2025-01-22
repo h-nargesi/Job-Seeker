@@ -46,7 +46,7 @@ class IndeedPageJob : JobPage, IndeedPage
             throw new Exception("Indeed does not provide services in your region.");
     }
 
-    protected override string GetHtmlContent(string html)
+    public override string GetHtmlContent(string html)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);

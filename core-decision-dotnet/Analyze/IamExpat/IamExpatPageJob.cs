@@ -41,7 +41,7 @@ class IamExpatPageJob : JobPage, IamExpatPage
         title = title_match.Success ? HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim() : null;
     }
 
-    protected override string GetHtmlContent(string html)
+    public override string GetHtmlContent(string html)
     {
         var start_match = IamExpatPage.reg_job_content_start.Match(html);
         if (!start_match.Success) return html;

@@ -42,7 +42,7 @@ public abstract class JobPage : PageBase
 
     protected abstract void GetJobContent(string html, out string? code, out string? apply, out string? title);
 
-    protected abstract string GetHtmlContent(string html);
+    public abstract string GetHtmlContent(string html);
 
     protected virtual void ChceckJob(Job job) { }
 

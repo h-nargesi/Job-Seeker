@@ -6,6 +6,7 @@ namespace Photon.JobSeeker;
 [Serializable]
 public class ResumeContext
 {
+    public int Version => 42;
     public int Length { get; set; } = 1;
     public InputDataContext InputData = new()
     {
