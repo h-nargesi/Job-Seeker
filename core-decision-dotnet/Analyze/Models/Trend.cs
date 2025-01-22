@@ -1,17 +1,16 @@
-namespace Photon.JobSeeker
+namespace Photon.JobSeeker;
+
+public class Trend
 {
-    public class Trend
-    {
-        public long TrendID { get; set; }
+    public long TrendID { get; set; }
 
-        public long AgencyID { get; set; }
+    public long AgencyID { get; set; }
 
-        public TrendState State { get; set; }
+    public TrendState State { get; set; }
 
-        public TrendType Type => State.GetTrendType();
+    public TrendType Type => State.GetTrendType();
 
-        public DateTime LastActivity { get; set; } = DateTime.Now;
+    public DateTime LastActivity { get; set; } = DateTime.Now;
 
-        public bool Reserved { get; set; }
-    }
+    public bool Reserved { get; set; }
 }

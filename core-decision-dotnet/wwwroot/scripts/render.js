@@ -11,7 +11,7 @@ function display(element) {
 }
 
 function logs(id) {
-    let content = document.getElementById('logs-body-' + id).innerHTML;
+    const content = document.getElementById('logs-body-' + id).innerHTML;
     document.getElementById('logs-body').innerHTML = content;
     display('logs-body');
     console.log(document.getElementById('logs-body').innerHTML);

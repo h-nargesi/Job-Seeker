@@ -1,31 +1,25 @@
 ﻿using Photon.JobSeeker.Pages;
 
-namespace Photon.JobSeeker.IamExpat
+namespace Photon.JobSeeker.IamExpat;
+
+class IamExpatPageLogin : LoginPage, IamExpatPage
 {
-    class IamExpatPageLogin : LoginPage, IamExpatPageInterface
+    public IamExpatPageLogin(IamExpat parent) : base(parent) { }
+
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        public override int Order => 1;
+        return !IamExpatPage.reg_login_url.IsMatch(content);
+    }
 
-        public override TrendState TrendState => TrendState.Login;
+    protected override Command[] LoginCommands()
+    {
+        var (user, pass) = GetUserPass();
 
-        public IamExpatPageLogin(IamExpat parent) : base(parent) { }
-
-        protected override bool CheckInvalidUrl(string text, out Command[]? commands)
+        return new Command[]
         {
-            commands = null;
-            return !IamExpatPageInterface.reg_login_url.IsMatch(text);
-        }
-
-        protected override Command[] LoginCommands()
-        {
-            var (user, pass) = GetUserPass();
-
-            return new Command[]
-            {
-                Command.Fill(@"#edit-name", user),
-                Command.Fill(@"#edit-pass", pass),
-                Command.Click(@"#edit-submit")
-            };
-        }
+            Command.Fill(@"#edit-name", user),
+            Command.Fill(@"#edit-pass", pass),
+            Command.Click(@"#edit-submit")
+        };
     }
 }

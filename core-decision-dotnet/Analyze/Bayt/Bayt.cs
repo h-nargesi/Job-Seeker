@@ -1,15 +1,15 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace Photon.JobSeeker.LinkedIn;
+namespace Photon.JobSeeker.Bayt;
 
-class LinkedIn : Agency
+class Bayt : Agency
 {
     private static readonly object @lock = new();
 
     private Location[] Locations { get; set; } = Array.Empty<Location>();
 
 
-    public override string Name => "LinkedIn";
+    public override string Name => "Bayt";
 
     public override Location[] SearchingMethodTitles => Locations;
 
@@ -25,9 +25,9 @@ class LinkedIn : Agency
         }
     }
 
-    public override string SearchLink => "https://www.linkedin.com/jobs/search/";
+    public override string SearchLink => $"https://www.bayt.com/en/{SearchingMethodTitles[RunningSearchingMethodIndex].Url}/jobs/{SearchTitle}-jobs/";
 
-    public override Regex? JobAcceptabilityChecker => LinkedInPage.reg_job_no_longer_accepting;
+    public override Regex? JobAcceptabilityChecker => null;
 
 
     protected override void LoadSettings(dynamic? settings)
@@ -54,12 +54,11 @@ class LinkedIn : Agency
     {
         var location = Uri.EscapeDataString(Locations[value].Url);
 
-        LinkedInPage.reg_search_location_url = new Regex(
-            @$"(^|&)location={location}(&|$)", RegexOptions.IgnoreCase);
+        BaytPage.reg_search_location_url = new Regex(@$"/en/{location}/jobs", RegexOptions.IgnoreCase);
     }
 
     protected override IEnumerable<Type> GetSubPages()
     {
-        return TypeHelper.GetSubTypes(typeof(LinkedInPage));
+        return TypeHelper.GetSubTypes(typeof(BaytPage));
     }
 }

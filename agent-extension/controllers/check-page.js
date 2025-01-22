@@ -31,7 +31,7 @@ ActionHandler.OnPageLoad = function () {
             }
 
             let current = ordering_button.getAttribute('ordering');
-            
+
             if (current !== 'true') {
                 CheckNewOrders();
                 ordering_interval = setInterval(CheckNewOrders, millisecnod * 20);

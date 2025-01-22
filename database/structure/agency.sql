@@ -13,32 +13,44 @@ create table if not exists Agency (
 
 insert into Agency (Title, Domain, Link, UserName, Password, Settings)
 values
-	('Indeed',		'(.+\.)?indeed\.com$',			'https://indeed.com',		'username', 'password',
+	('Indeed',		'(.+\.)?indeed\.com$',				'https://indeed.com',		'username', 'password',
 					'{ "running": 0, "locations": [
-						{ "Title": "NL", "Url": "https://nl.indeed.com/" }, 
-						{ "Title": "AU", "Url": "https://au.indeed.com/" }, 
-						{ "Title": "DE", "Url": "https://de.indeed.com/" }, 
-						{ "Title": "SE", "Url": "https://se.indeed.com/" }, 
+						{ "Title": "NL", "Url": "https://nl.indeed.com/" },
+						{ "Title": "AU", "Url": "https://au.indeed.com/" },
+						{ "Title": "DE", "Url": "https://de.indeed.com/" },
+						{ "Title": "SE", "Url": "https://se.indeed.com/" },
+						{ "Title": "OM", "Url": "https://om.indeed.com/" },
+						{ "Title": "QA", "Url": "https://qa.indeed.com/" },
 						{ "Title": "UK", "Url": "https://uk.indeed.com/" }]
 					}'),
 
-	('IamExpat',	'(.+\.)?iamexpat\.(nl|de|ch|com)$',	'http://iamexpat.nl',	'username', 'passwords',
+	('IamExpat',	'(.+\.)?iamexpat\.(nl|de|ch|com)$',	'http://iamexpat.nl',		'username', 'passwords',
 					'{ "running": 0, "locations": [
-						{ "Title": "NL", "Url": "nl/career/jobs-netherlands" }, 
-						{ "Title": "DE", "Url": "de/career/jobs-germany" }, 
+						{ "Title": "NL", "Url": "nl/career/jobs-netherlands" },
+						{ "Title": "DE", "Url": "de/career/jobs-germany" },
 						{ "Title": "CH", "Url": "ch/career/jobs-switzerland" }]
 					}'),
 
-	('LinkedIn',	'(.+\.)?linkedin\.com$',		'http://linkedin.com',		'username', 'password',
+	('LinkedIn',	'(.+\.)?linkedin\.com$',			'https://linkedin.com',		'username', 'password',
 					'{ "running": 0, "locations": [
 						{ "Title": "NL", "Url": "Netherlands" },
 						{ "Title": "AU", "Url": "Australia" },
 						{ "Title": "DE", "Url": "Germany" },
 						{ "Title": "SE", "Url": "Sweden" },
+						{ "Title": "AM", "Url": "Armenia" },
+						{ "Title": "OM", "Url": "Oman" },
+						{ "Title": "QA", "Url": "Qatar" },
 						{ "Title": "UK", "Url": "United Kingdom" }]
 					}'),
 
-	('Stepstone',	'(.+\.)?stepstone\.de$',		'http://stepstone.de',		'username', 'password',	null)
-on conflict (Title) do update set 
-	Domain = excluded.Domain, Link = excluded.Link,
+	('Byat',		'(.+\.)?bayt.\.com$',				'https://www.bayt.com/',	'username', 'password',
+					'{ "running": 0, "locations": [
+						{ "Title": "OM", "Url": "oman" },
+						{ "Title": "QA", "Url": "qatar" }]
+					}'),
+
+	('Stepstone',	'(.+\.)?stepstone\.de$',			'https://stepstone.de',		'username', 'password',	null)
+on conflict (Title) do update set
+	Domain = excluded.Domain,
+	Link = excluded.Link,
 	Settings = excluded.Settings;

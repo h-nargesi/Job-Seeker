@@ -6,7 +6,7 @@ namespace Photon.JobSeeker;
 [Serializable]
 public class ResumeContext
 {
-    public const int Version = 40;
+    public int Version => 42;
     public int Length { get; set; } = 1;
     public InputDataContext InputData = new()
     {
@@ -128,7 +128,7 @@ public class ResumeContext
             Elements.FOOTER = false;
         }
 
-        if (keywords.Contains("d") && keywords.Contains("j"))
+        if (keywords.Contains('d') && keywords.Contains('j'))
         {
             NotIncluded.Add(NotIncludedContext.ClearanceMonitoring);
         }
@@ -151,7 +151,7 @@ public class ResumeContext
         return string.Join("", keys);
     }
 
-    private readonly static Regex 
+    private readonly static Regex
         Deserializer = new(@"\w+(?=\s*:)"),
         Serializer = new(@"""(\w+)""(?=\s*:)");
 

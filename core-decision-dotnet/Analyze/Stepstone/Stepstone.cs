@@ -25,8 +25,6 @@ class Stepstone : Agency
     public override Regex? JobAcceptabilityChecker => null;
 
 
-    public override string GetMainHtml(string html) => StepstonePageJob.GetHtmlContent(html);
-
     protected override void LoadSettings(dynamic? settings)
     {
         RunningSearchingMethodIndex = 0;

@@ -28,8 +28,6 @@ class Indeed : Agency
     public override Regex? JobAcceptabilityChecker => IndeedPage.reg_job_acceptability_checker;
 
 
-    public override string GetMainHtml(string html) => IndeedPageJob.GetHtmlContent(html);
-
     protected override void LoadSettings(dynamic? settings)
     {
         lock (@lock)
@@ -41,10 +39,11 @@ class Indeed : Agency
             }
             else
             {
-                if (RunningSearchingMethodIndex == (int)settings.running) return;
+                var running = (int)settings!.running;
+                if (RunningSearchingMethodIndex == running) return;
 
                 LocationDomains = settings.locations.ToObject<Location[]>();
-                RunningSearchingMethodIndex = (int)settings.running;
+                RunningSearchingMethodIndex = running;
             }
         }
     }

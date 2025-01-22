@@ -1,24 +1,24 @@
-﻿namespace Photon.JobSeeker.LinkedIn
+﻿using Photon.JobSeeker.Pages;
+
+namespace Photon.JobSeeker.LinkedIn;
+
+class LinkedInPageLogin : LoginPage, LinkedInPage
 {
-    class LinkedInPageLogin : LinkedInPage
+    public LinkedInPageLogin(LinkedIn parent) : base(parent) { }
+
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        public override int Order => 1;
+        return !LinkedInPage.reg_login_but.IsMatch(content);
+    }
 
-        public override TrendState TrendState => TrendState.Login;
+    protected override Command[] LoginCommands()
+    {
+        var (user, pass) = GetUserPass();
 
-        public LinkedInPageLogin(LinkedIn parent) : base(parent) { }
-
-        public override Command[]? IssueCommand(string url, string content)
-        {
-            if (!reg_login_but.IsMatch(content)) return null;
-
-            var (user, pass) = GetUserPass();
-
-            return new Command[] {
-                Command.Fill(@"#session_key", user),
-                Command.Fill(@"#session_password", pass),
-                Command.Click(@"button[type=""submit""]")
-            };
-        }
+        return new Command[] {
+            Command.Fill(@"#session_key", user),
+            Command.Fill(@"#session_password", pass),
+            Command.Click(@"button[type=""submit""]")
+        };
     }
 }

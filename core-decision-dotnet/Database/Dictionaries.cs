@@ -39,7 +39,7 @@ namespace Photon.JobSeeker
         {
             var word_set = string.Join("','", words);
             executer.CommandText = string.Format(Q_CONTAINS, word_set);
-            
+
             using var reader = executer.ExecuteReader();
             if (reader.Read()) return (long)reader[0];
 

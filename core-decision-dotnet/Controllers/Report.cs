@@ -28,12 +28,12 @@ public class ReportController : Controller
     }
 
     [HttpGet]
-    public IActionResult Jobs(string? agencies)
+    public IActionResult Jobs(string? agencies, string? countries)
     {
         try
         {
             using var database = Database.Open();
-            var list = GetJobs(database, agencies);
+            var list = GetJobs(database, agencies, countries);
 
             return View("~/views/jobs.cshtml", list);
         }
@@ -65,7 +65,7 @@ public class ReportController : Controller
         try
         {
             using var database = Database.Open();
-            var jobs = GetJobs(database, null);
+            var jobs = GetJobs(database, null, null);
             var trends = GetTrends(database);
             var agencies = GetAgencies(database);
 
@@ -78,15 +78,19 @@ public class ReportController : Controller
         }
     }
 
-    private List<dynamic> GetJobs(Database database, string? agencies)
+    private static List<dynamic> GetJobs(Database database, string? agencies, string? countries)
     {
         var agencyids = agencies?.Split(',')
                                  .Where(id => !string.IsNullOrEmpty(id))
-                                 .Select(id => { int.TryParse(id, out var value); return value; })
+                                 .Select(id => { _ = int.TryParse(id, out var value); return value; })
                                  .Where(id => id > 0)
-                                 .ToArray() ?? new int[0];
+                                 .ToArray() ?? Array.Empty<int>();
 
-        return database.Job.Fetch(agencyids);
+        var countrycodes = countries?.Split(',')
+                                     .Where(id => !string.IsNullOrEmpty(id))
+                                     .ToArray() ?? Array.Empty<string>();
+
+        return database.Job.Fetch(agencyids, countrycodes);
     }
 
     private static List<dynamic> GetTrends(Database database)

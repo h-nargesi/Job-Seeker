@@ -21,8 +21,6 @@ class IamExpat : Agency
     public override Regex? JobAcceptabilityChecker => null;
 
 
-    public override string GetMainHtml(string html) => IamExpatPageJob.GetHtmlContent(html);
-
     protected override void LoadSettings(dynamic? settings)
     {
         lock (@lock)
@@ -34,10 +32,11 @@ class IamExpat : Agency
             }
             else
             {
-                if (RunningSearchingMethodIndex == (int)settings.running) return;
+                var running = (int)settings!.running;
+                if (RunningSearchingMethodIndex == running) return;
 
                 LocationUrls = settings.locations.ToObject<Location[]>();
-                RunningSearchingMethodIndex = (int)settings.running;
+                RunningSearchingMethodIndex = running;
             }
         }
     }

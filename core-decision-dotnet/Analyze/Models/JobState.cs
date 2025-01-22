@@ -1,12 +1,11 @@
-﻿namespace Photon.JobSeeker
+﻿namespace Photon.JobSeeker;
+
+public enum JobState
 {
-    public enum JobState
-    {
-        Saved = 1,
-        Revaluation,
-        NotApproved,
-        Attention,
-        Rejected,
-        Applied,
-    }
+    Saved = 1,
+    Revaluation,
+    NotApproved,
+    Attention,
+    Rejected,
+    Applied,
 }

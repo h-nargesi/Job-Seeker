@@ -95,7 +95,7 @@ namespace Photon.JobSeeker
                 if (agency.IsActiveSeeking || agency.IsActiveAnalyzing)
                     agencies_by_name.Add(agency.Name, agency);
                 agencies_by_id.Add(agency.ID, agency);
-                Log.Debug("agency added: {0} ({1}) - seeking={2}, analyzin={3}", 
+                Log.Debug("agency added: {0} ({1}) - seeking={2}, analyzin={3}",
                     agency.Name, agency.ID, agency.IsActiveSeeking, agency.IsActiveAnalyzing);
             }
         }

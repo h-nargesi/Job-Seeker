@@ -53,7 +53,7 @@ namespace Photon.JobSeeker
         public void Save(object model, TrendFilter filter = TrendFilter.All)
         {
             long id;
-            
+
             var trend = model as Trend;
             if (trend != null) id = trend.TrendID;
             else

@@ -165,13 +165,23 @@ namespace Photon.JobSeeker
         }
 
         [HttpPost]
-        public IActionResult Setting([FromBody] string options)
+        public IActionResult Setting([FromBody] SettingContext options)
         {
             try
             {
+                if (options.Query == null)
+                    return Ok("No Result");
+
                 using var database = Database.Open();
-                database.Execute(options);
-                return Ok("Done");
+                if (options.Type == "E") {
+                    database.Execute(options.Query);
+                    return Ok("Done");
+                } else if (options.Type == "Q") {
+                    var result = database.ReadAll(options.Query);
+                    return Ok(result);
+                }
+
+                return Ok("No Result");
             }
             catch (Exception ex)
             {
@@ -180,5 +190,11 @@ namespace Photon.JobSeeker
             }
         }
 
+        public class SettingContext
+        {
+            public string? Type { get; set; }
+
+            public string? Query { get; set; }
+        }
     }
 }

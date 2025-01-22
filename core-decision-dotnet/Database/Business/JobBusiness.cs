@@ -7,13 +7,20 @@ namespace Photon.JobSeeker
     {
         public JobBusiness(Database database) : base(database) { }
 
-        public List<object> Fetch(int[] agencyids)
+        public List<object> Fetch(int[] agencyids, string[] countrycodes)
         {
-            string agencies;
-            if (agencyids.Length < 1) agencies = string.Empty;
-            else agencies = $"WHERE Agency.AgencyID IN ({string.Join(",", agencyids)})";
+            var where = string.Empty;
 
-            using var reader = database.Read(Q_INDEX.Replace("@where@", agencies));
+            if (agencyids?.Length > 0)
+                where += $" AND Agency.AgencyID IN ({string.Join(",", agencyids)})";
+
+            if (countrycodes?.Length > 0)
+                where = $" AND Job.Country IN ('{string.Join("','", countrycodes)}')";
+
+            if (!string.IsNullOrEmpty(where))
+                where = "WHERE" + where.Substring(0, 4);
+
+            using var reader = database.Read(Q_INDEX.Replace("@where@", where));
             var list = new List<object>();
 
             while (reader.Read())
@@ -82,11 +89,10 @@ namespace Photon.JobSeeker
         {
             using var reader = database.Read(Q_FETCH_OPTIONS, job_id);
 
-            if (!reader.Read()) return default;
-
-            var options = reader[nameof(Job.Options)] as string;
-
-            if (options == null) return default;
+            if (!reader.Read() || reader[nameof(Job.Options)] is not string options)
+            {
+                return default;
+            }
 
             return JsonConvert.DeserializeObject<ResumeContext>(options);
         }
@@ -197,14 +203,10 @@ namespace Photon.JobSeeker
                 Log = full ? reader[nameof(Job.Log)] as string : null,
             };
 
-            if (full)
+            if (full && reader[nameof(Job.Options)] is string json)
             {
-                var json = reader[nameof(Job.Options)] as string;
-                if (json != null)
-                {
-                    try { job.Options = JsonConvert.DeserializeObject<ResumeContext>(json); }
-                    catch { }
-                }
+                try { job.Options = JsonConvert.DeserializeObject<ResumeContext>(json); }
+                catch { }
             }
 
             return job;
@@ -232,7 +234,7 @@ WITH date_diff AS (
         SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
              , Job.State, Job.Score, Job.Url, Job.Link
              , Agency.Title AS AgencyName
-             , CASE State 
+             , CASE State
                WHEN '{nameof(JobState.Attention)}' THEN 1
                WHEN '{nameof(JobState.NotApproved)}' THEN 2
                WHEN '{nameof(JobState.Applied)}' THEN 4
@@ -242,6 +244,7 @@ WITH date_diff AS (
              , SUBSTR(Job.RegTime, 1, 10) AS RegDate
              , CASE WHEN Job.Log LIKE '%) Relocation**%' THEN 1 ELSE 0 END AS Relocation
         FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+        @where@
     ) job
     CROSS JOIN (
         SELECT MAX(RegTime) AS LatestTime, MAX(Score) / 13 AS TopScore FROM Job

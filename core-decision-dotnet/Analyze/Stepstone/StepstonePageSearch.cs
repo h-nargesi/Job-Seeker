@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using Serilog;
 
 namespace Photon.JobSeeker.Stepstone
 {
