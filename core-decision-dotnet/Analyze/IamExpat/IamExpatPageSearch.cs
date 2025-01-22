@@ -3,10 +3,8 @@ using Photon.JobSeeker.Pages;
 
 namespace Photon.JobSeeker.IamExpat;
 
-class IamExpatPageSearch : SearchPage, IamExpatPage
+class IamExpatPageSearch(IamExpat parent) : SearchPage(parent), IamExpatPage
 {
-    public IamExpatPageSearch(IamExpat parent) : base(parent) { }
-
     protected override bool CheckInvalidUrl(string url, string content)
     {
         return !IamExpatPage.reg_search_url.IsMatch(url);
@@ -42,19 +40,19 @@ class IamExpatPageSearch : SearchPage, IamExpatPage
         return result;
     }
 
-    protected override Command[] CheckNextButton(string text)
+    protected override Command[] CheckNextButton(string url, string text)
     {
         if (!IamExpatPage.reg_search_end.IsMatch(text)) return Array.Empty<Command>();
         return FillSearchCommands();
     }
 
-    private static Command[] FillSearchCommands() => new Command[]
-    {
+    private static Command[] FillSearchCommands() =>
+    [
         Command.Click(@"label[for=""industry-260""]"), // it-technology
         Command.Click(@"label[for=""ccareer-level-19926""]"), // entry-level
         Command.Click(@"label[for=""career-level-19928""]"), // experienced
         Command.Click(@"label[for=""contract-19934""]"),
         Command.Wait(3000),
         Command.Click(@"input[type=""submit""][value=""Search""]"),
-    };
+    ];
 }

@@ -43,7 +43,7 @@ values
 						{ "Title": "UK", "Url": "United Kingdom" }]
 					}'),
 
-	('Byat',		'(.+\.)?bayt.\.com$',				'https://www.bayt.com/',	'username', 'password',
+	('Bayt',		'(.+\.)?bayt.\.com$',				'https://www.bayt.com/',	'username', 'password',
 					'{ "running": 0, "locations": [
 						{ "Title": "OM", "Url": "oman" },
 						{ "Title": "QA", "Url": "qatar" }]

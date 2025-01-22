@@ -47,7 +47,7 @@ class LinkedInPageSearch : SearchPage, LinkedInPage
         return result;
     }
 
-    protected override Command[] CheckNextButton(string content)
+    protected override Command[] CheckNextButton(string url, string content)
     {
         var match = LinkedInPage.reg_search_page_panel.Match(content);
         if (!match.Success) return Array.Empty<Command>();

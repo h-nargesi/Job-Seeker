@@ -32,12 +32,12 @@ abstract class SearchPage : PageBase
             });
         }
 
-        return CheckNextButton(content) ?? Array.Empty<Command>();
+        return CheckNextButton(url, content) ?? Array.Empty<Command>();
     }
 
     protected abstract bool CheckInvalidSearchTitle(string url, string content, out Command[]? commands);
 
     protected abstract IEnumerable<(string url, string code)> GetJobUrls(string content);
 
-    protected abstract Command[] CheckNextButton(string content);
+    protected abstract Command[] CheckNextButton(string url, string content);
 }

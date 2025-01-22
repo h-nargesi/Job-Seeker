@@ -30,7 +30,7 @@ class BaytPageSearch(Bayt parent) : SearchPage(parent), BaytPage
         var result = new List<(string url, string code)>();
         var job_matches = BaytPage.reg_job_url.Matches(content).Cast<Match>();
 
-        foreach (Match job_match in job_matches)
+        foreach (var job_match in job_matches)
         {
             var code = job_match.Groups[2].Value;
             var url = string.Join("", Parent.BaseUrl, job_match.Groups[1].Value);
@@ -40,11 +40,20 @@ class BaytPageSearch(Bayt parent) : SearchPage(parent), BaytPage
         return result;
     }
 
-    protected override Command[] CheckNextButton(string content)
+    protected override Command[] CheckNextButton(string url, string content)
     {
-        var match = BaytPage.reg_search_next.Matches(content).Cast<Match>().FirstOrDefault();
-        if (match?.Success != true) return [];
+        var url_page_match = BaytPage.reg_search_url_page.Match(url);
+        var current_page = (url_page_match.Success ? int.Parse(url_page_match.Groups[1].Value) + 1 : 2).ToString();
 
-        return [Command.Go(match.Groups[1].Value)];
+        var page_match = BaytPage.reg_search_next.Matches(content).Cast<Match>();
+        foreach (var page in page_match)
+        {
+            if (page.Success && page.Groups[2].Value == current_page)
+            {
+                return [Command.Go(page.Groups[1].Value)];
+            }
+        }
+
+        return [];
     }
 }

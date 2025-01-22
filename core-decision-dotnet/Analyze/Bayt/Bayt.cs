@@ -6,7 +6,7 @@ class Bayt : Agency
 {
     private static readonly object @lock = new();
 
-    private Location[] Locations { get; set; } = Array.Empty<Location>();
+    private Location[] Locations { get; set; } = [];
 
 
     public override string Name => "Bayt";
@@ -28,7 +28,6 @@ class Bayt : Agency
     public override string SearchLink => $"https://www.bayt.com/en/{Locations[RunningSearchingMethodIndex].Url}/jobs/{SearchTitle}-jobs/";
 
     public override Regex? JobAcceptabilityChecker => null;
-    public override Regex? JobAcceptabilityChecker => null;
 
 
     protected override void LoadSettings(dynamic? settings)
@@ -37,7 +36,7 @@ class Bayt : Agency
         {
             if (settings == null)
             {
-                Locations = new Location[] { new() };
+                Locations = [new()];
                 RunningSearchingMethodIndex = 0;
             }
             else

@@ -41,7 +41,7 @@ class IndeedPageSearch : SearchPage, IndeedPage
         return result;
     }
 
-    protected override Command[] CheckNextButton(string text)
+    protected override Command[] CheckNextButton(string url, string text)
     {
         if (!IndeedPage.reg_search_end.IsMatch(text)) return Array.Empty<Command>();
         return new[] { Command.Click(@"a[aria-label=""Next Page""]") };

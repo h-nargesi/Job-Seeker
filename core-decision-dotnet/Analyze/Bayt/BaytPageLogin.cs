@@ -6,7 +6,7 @@ class BaytPageLogin(Bayt parent) : LoginPage(parent), BaytPage
 {
     protected override bool CheckInvalidUrl(string url, string content)
     {
-        return !BaytPage.reg_login_url.IsMatch(content);
+        return !BaytPage.reg_login_url.IsMatch(url);
     }
 
     protected override Command[] LoginCommands()
