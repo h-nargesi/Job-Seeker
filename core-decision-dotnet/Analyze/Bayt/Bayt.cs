@@ -25,12 +25,10 @@ class Bayt : Agency
         }
     }
 
-    public override string SearchLink => $"https://www.bayt.com/en/{LocationDomains[RunningSearchingMethodIndex].Url}/jobs/{SearchTitle}-jobs/";
+    public override string SearchLink => $"https://www.bayt.com/en/{SearchingMethodTitles[RunningSearchingMethodIndex].Url}/jobs/{SearchTitle}-jobs/";
 
-    public override Regex? JobAcceptabilityChecker => BaytPage.reg_job_no_longer_accepting;
+    public override Regex? JobAcceptabilityChecker => null;
 
-
-    public override string GetMainHtml(string html) => BaytPageJob.GetHtmlContent(html);
 
     protected override void LoadSettings(dynamic? settings)
     {

@@ -2,10 +2,8 @@
 
 namespace Photon.JobSeeker.Bayt;
 
-class BaytPageAuth : AuthPage, BaytPage
+class BaytPageAuth(Bayt parent) : AuthPage(parent), BaytPage
 {
-    public BaytPageAuth(Bayt parent) : base(parent) { }
-
     protected override bool CheckInvalidUrl(string url, string content)
     {
         return !BaytPage.reg_login_but.IsMatch(content);

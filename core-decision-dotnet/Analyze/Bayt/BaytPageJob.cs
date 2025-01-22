@@ -4,10 +4,8 @@ using System.Web;
 
 namespace Photon.JobSeeker.Bayt;
 
-class BaytPageJob : JobPage, BaytPage
+class BaytPageJob(Bayt parent) : JobPage(parent), BaytPage
 {
-    public BaytPageJob(Bayt parent) : base(parent) { }
-
     protected override bool CheckInvalidUrl(string url, string content)
     {
         return !BaytPage.reg_job_view.IsMatch(url);
@@ -30,16 +28,16 @@ class BaytPageJob : JobPage, BaytPage
         apply = null;
 
         var title_match = BaytPage.reg_job_title.Match(html);
-        title = title_match.Success ? HttpUtility.HtmlDecode(title_match.Groups[2].Value).Trim() : null;
+        title = title_match.Success ? HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim() : null;
     }
 
-    protected override string GetHtmlContent(string html)
+    public override string GetHtmlContent(string html)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
 
-        var main_content = doc.DocumentNode.SelectNodes("//div[contains(@class,'jobsearch-ViewJobLayout-jobDisplay')]")?
-                                            .FirstOrDefault();
+        var main_content = doc.DocumentNode.SelectNodes("//div[contains(@id,'job_card')]")?
+                                           .FirstOrDefault();
 
         return main_content?.OuterHtml ?? html;
     }
