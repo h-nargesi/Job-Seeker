@@ -3,10 +3,8 @@ using System.Text.RegularExpressions;
 
 namespace Photon.JobSeeker.Indeed;
 
-class IndeedPageSearch : SearchPage, IndeedPage
+class IndeedPageSearch(Indeed parent) : SearchPage(parent), IndeedPage
 {
-    public IndeedPageSearch(Indeed parent) : base(parent) { }
-
     protected override bool CheckInvalidUrl(string url, string content)
     {
         return !IndeedPage.reg_search_url.IsMatch(url);
@@ -17,11 +15,11 @@ class IndeedPageSearch : SearchPage, IndeedPage
         if (IndeedPage.reg_search_keywords_url.IsMatch(url))
         {
             commands = null;
-            return true;
+            return false;
         }
         else
         {
-            commands = new[] { Command.Go(@$"/jobs?q=developer") };
+            commands = [Command.Go(@$"/jobs?q={Agency.SearchTitle}")];
             return true;
         }
     }
@@ -43,7 +41,7 @@ class IndeedPageSearch : SearchPage, IndeedPage
 
     protected override Command[] CheckNextButton(string url, string text)
     {
-        if (!IndeedPage.reg_search_end.IsMatch(text)) return Array.Empty<Command>();
-        return new[] { Command.Click(@"a[aria-label=""Next Page""]") };
+        if (!IndeedPage.reg_search_end.IsMatch(text)) return [];
+        return [Command.Click(@"a[aria-label=""Next Page""]")];
     }
 }

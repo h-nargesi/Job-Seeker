@@ -70,8 +70,8 @@
             @await Html.PartialAsync("~/views/agencies.cshtml", (dynamic[])Model.Agencies)
         </div>
         <div class="job-filter mt-3 d-flex flex-column">
-            <input id="job-agency-filter" type="text" class="form-control" placeholder="Counrty Filter"/>
-            <input id="job-country-filter" type="text" class="form-control" placeholder="Agency Filter"/>
+            <input id="job-agency-filter" type="text" class="form-control" onkeyup="filterChanged(event)" placeholder="Agency Filter" />
+            <input id="job-country-filter" type="text" class="form-control" onkeyup="filterChanged(event)" placeholder="Counrty Filter" />
         </div>
     </article>
 </div>

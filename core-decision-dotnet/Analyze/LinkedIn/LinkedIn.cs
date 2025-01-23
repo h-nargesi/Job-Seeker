@@ -4,17 +4,9 @@ namespace Photon.JobSeeker.LinkedIn;
 
 class LinkedIn : Agency
 {
-    private static readonly object @lock = new();
-
-    private Location[] Locations { get; set; } = Array.Empty<Location>();
-
-
     public override string Name => "LinkedIn";
 
-    public override Location[] SearchingMethodTitles => Locations;
-
-    internal string RunningUrl => Locations[RunningSearchingMethodIndex].Url;
-
+    internal string RunningUrl => CurrentMethod.Url;
 
     public override string BaseUrl
     {
@@ -29,30 +21,9 @@ class LinkedIn : Agency
 
     public override Regex? JobAcceptabilityChecker => LinkedInPage.reg_job_no_longer_accepting;
 
-
-    protected override void LoadSettings(dynamic? settings)
-    {
-        lock (@lock)
-        {
-            if (settings == null)
-            {
-                Locations = new Location[] { new() };
-                RunningSearchingMethodIndex = 0;
-            }
-            else
-            {
-                var running = (int)settings!.running;
-                if (RunningSearchingMethodIndex == running) return;
-
-                Locations = settings.locations.ToObject<Location[]>();
-                RunningSearchingMethodIndex = running;
-            }
-        }
-    }
-
     protected override void RunningSearchingMethodChanged(int value)
     {
-        var location = Uri.EscapeDataString(Locations[value].Url);
+        var location = Uri.EscapeDataString(RunningUrl);
 
         LinkedInPage.reg_search_location_url = new Regex(
             @$"(^|&)location={location}(&|$)", RegexOptions.IgnoreCase);

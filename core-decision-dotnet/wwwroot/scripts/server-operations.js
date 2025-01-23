@@ -13,9 +13,6 @@ async function LoadTrands() {
 async function LoadJobs() {
     let query = "";
 
-    console.log('agency_filter', job_agency_filter?.value);
-    console.log('country_filter', job_country_filter?.value);
-
     const agency_filter = job_agency_filter?.value;
     if (agency_filter) query += `&agencies=${agency_filter}`;
 
@@ -23,7 +20,6 @@ async function LoadJobs() {
     if (country_filter) query += `&countries=${country_filter}`;
 
     if (query.length > 0) query = "?" + query.substring(1);
-    console.log('query', query);
 
     const response = await fetch(`/report/jobs${query}`, { method: 'GET' });
     job_seeker_jobs.innerHTML = await response.text();
@@ -150,4 +146,9 @@ function ordering() {
         document.getElementById('stop-start-ordering').className = "btn btn-primary m-1";
         document.getElementById('stop-start-ordering').innerText = "To Start Ordering";
     }
+}
+
+function filterChanged(event) {
+    if (event.code === "Enter")
+        LoadJobs();
 }

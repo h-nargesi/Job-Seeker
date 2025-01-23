@@ -2,17 +2,9 @@
 
 namespace Photon.JobSeeker.Indeed;
 
-class IndeedPageAuth : AuthPage, IndeedPage
+class IndeedPageAuth(Indeed parent) : AuthPage(parent), IndeedPage
 {
-    public IndeedPageAuth(Indeed parent) : base(parent) { }
+    protected override bool CheckInvalidUrl(string url, string content) => !IndeedPage.reg_login_but.IsMatch(content);
 
-    protected override bool CheckInvalidUrl(string url, string content)
-    {
-        return !IndeedPage.reg_login_but.IsMatch(content);
-    }
-
-    protected override Command[] LoginUrl()
-    {
-        return new Command[] { Command.Click(@"a[href^=""https://secure.indeed.com/account/login""]") };
-    }
+    protected override Command[] LoginUrl() => [Command.Click(@"a[href^=""https://secure.indeed.com/auth""]")];
 }

@@ -7,18 +7,18 @@ namespace Photon.JobSeeker
     {
         public JobBusiness(Database database) : base(database) { }
 
-        public List<object> Fetch(int[] agencyids, string[] countrycodes)
+        public List<object> Fetch(string[] agency_titles, string[] country_codes)
         {
             var where = string.Empty;
 
-            if (agencyids?.Length > 0)
-                where += $" AND Agency.AgencyID IN ({string.Join(",", agencyids)})";
+            if (agency_titles?.Length > 0)
+                where += $" AND Agency.Title IN ('{string.Join("','", agency_titles)}')";
 
-            if (countrycodes?.Length > 0)
-                where = $" AND Job.Country IN ('{string.Join("','", countrycodes)}')";
+            if (country_codes?.Length > 0)
+                where = $" AND Job.Country IN ('{string.Join("','", country_codes)}')";
 
             if (!string.IsNullOrEmpty(where))
-                where = "WHERE" + where.Substring(0, 4);
+                where = "WHERE" + where.Substring(4);
 
             using var reader = database.Read(Q_INDEX.Replace("@where@", where));
             var list = new List<object>();
@@ -181,9 +181,9 @@ namespace Photon.JobSeeker
             database.Execute(Q_VACUUM);
         }
 
-        protected override string[]? GetUniqueColumns { get; } = new string[] {
+        protected override string[]? GetUniqueColumns { get; } = [
             nameof(JobFilter.AgencyID), nameof(JobFilter.Code)
-        };
+        ];
 
         private static Job ReadJob(SQLiteDataReader reader, bool full = false)
         {
@@ -196,6 +196,7 @@ namespace Photon.JobSeeker
                 Title = reader[nameof(Job.Title)] as string,
                 State = Enum.Parse<JobState>((string)reader[nameof(Job.State)]),
                 Score = reader[nameof(Job.Score)] as long?,
+                Country = reader[nameof(Job.Country)] as string,
                 Url = (string)reader[nameof(Job.Url)],
                 Html = full ? reader[nameof(Job.Html)] as string : null,
                 Content = full ? reader[nameof(Job.Content)] as string : null,
@@ -232,7 +233,7 @@ WITH date_diff AS (
          , {DaysPriod} * 6 / 7 AS C
     FROM (
         SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
-             , Job.State, Job.Score, Job.Url, Job.Link
+             , Job.State, Job.Score, job.Country, Job.Url, Job.Link
              , Agency.Title AS AgencyName
              , CASE State
                WHEN '{nameof(JobState.Attention)}' THEN 1
@@ -252,7 +253,7 @@ WITH date_diff AS (
 
 ), ranking AS (
     SELECT job.JobID, job.RegTime, job.ModifiedOn, job.AgencyID, job.Code, job.Title
-         , job.State, job.Score, job.Url, job.Link, job.Relocation
+         , job.State, job.Score, job.Country, job.Url, job.Link, job.Relocation
          , job.AgencyName, job.Category, job.RegDate
          , Score + A * EXP(YF) - EXP(UF) AS RankScore
     FROM (

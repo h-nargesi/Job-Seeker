@@ -8,9 +8,6 @@ class Stepstone : Agency
 
     public override int Waiting => 5000;
 
-    public override Location[] SearchingMethodTitles => new Location[] { new() { Title = "DE", Url = Link } };
-
-
     public override string BaseUrl
     {
         get
@@ -23,12 +20,6 @@ class Stepstone : Agency
     public override string SearchLink => $"{BaseUrl}/work/full-time/{SearchTitle}?ct=222&fdl=en";
 
     public override Regex? JobAcceptabilityChecker => null;
-
-
-    protected override void LoadSettings(dynamic? settings)
-    {
-        RunningSearchingMethodIndex = 0;
-    }
 
     protected override void RunningSearchingMethodChanged(int value)
     {

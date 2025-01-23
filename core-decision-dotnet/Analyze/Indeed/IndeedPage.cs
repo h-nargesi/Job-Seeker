@@ -4,7 +4,7 @@ namespace Photon.JobSeeker.Indeed;
 
 interface IndeedPage
 {
-    protected static readonly Regex reg_login_but = new(@"<a[^>]+href=[""']https://secure\.indeed\.com/account/login[^""']*[""'][^>]*>Sign in</a>", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_login_but = new(@"<a[^>]+href=[""']https://secure\.indeed\.com/auth[^""']*[""'][^>]*>Sign in</a>", RegexOptions.IgnoreCase);
 
     protected static readonly Regex reg_login_url = new(@"^https?://secure\.indeed\.com/auth", RegexOptions.IgnoreCase);
 

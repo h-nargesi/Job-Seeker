@@ -30,13 +30,18 @@ async function update_setting(query_id, result_id, type) {
         }
         const response = await fetch('/job/setting', data);
         if (result_element) {
-            const result_obj = await response.json();
-            const text = JSON.stringify(result_obj, (key, value) => {
-                if (key !== "Settings") return value;
-                if (typeof value !== "string") return value;
-                return JSON.parse(value);
-            }, "\t");
-            result_element.innerHTML = text;
+            let result = '';
+            if (type === 'Q') {
+                const result_obj = await response.json();
+                result = JSON.stringify(result_obj, (key, value) => {
+                    if (key !== "Settings") return value;
+                    if (typeof value !== "string") return value;
+                    return JSON.parse(value);
+                }, "\t");
+            } else {
+                result = await response.text();
+            }
+            result_element.innerHTML = result;
         }
 
     } catch (e) {

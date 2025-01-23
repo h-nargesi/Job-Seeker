@@ -4,11 +4,9 @@ using Serilog;
 namespace Photon.JobSeeker;
 
 [Route("[controller]/[action]")]
-public class ReportController : Controller
+public class ReportController(Analyzer analyzer) : Controller
 {
-    private readonly Analyzer analyzer;
-
-    public ReportController(Analyzer analyzer) => this.analyzer = analyzer;
+    private readonly Analyzer analyzer = analyzer;
 
     [HttpGet]
     public IActionResult Trends()
@@ -80,17 +78,15 @@ public class ReportController : Controller
 
     private static List<dynamic> GetJobs(Database database, string? agencies, string? countries)
     {
-        var agencyids = agencies?.Split(',')
-                                 .Where(id => !string.IsNullOrEmpty(id))
-                                 .Select(id => { _ = int.TryParse(id, out var value); return value; })
-                                 .Where(id => id > 0)
-                                 .ToArray() ?? Array.Empty<int>();
+        var agency_titles = agencies?.Split(',')
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToArray() ?? [];
 
-        var countrycodes = countries?.Split(',')
-                                     .Where(id => !string.IsNullOrEmpty(id))
-                                     .ToArray() ?? Array.Empty<string>();
+        var country_codes = countries?.Split(',')
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToArray() ?? [];
 
-        return database.Job.Fetch(agencyids, countrycodes);
+        return database.Job.Fetch(agency_titles, country_codes);
     }
 
     private static List<dynamic> GetTrends(Database database)
@@ -123,8 +119,8 @@ public class ReportController : Controller
                     r.Applied,
                     r.AnalyzingRate,
                     r.AcceptingRate,
-                    Running = agency == null ? null : agency.Status.HasFlag(AgencyStatus.ActiveSeeking) ? agency.RunningSearchingMethodIndex : (int?)-1,
-                    Methods = agency?.SearchingMethodTitles
+                    Running = agency == null ? null : agency.Status.HasFlag(AgencyStatus.ActiveSeeking) ? agency.CurrentMethodIndex : (int?)-1,
+                    Methods = agency?.EnabledSearchingMethod ?? []
                 };
             })
             .OrderBy(r => r.AgencyID)

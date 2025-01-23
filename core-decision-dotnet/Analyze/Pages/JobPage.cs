@@ -3,13 +3,11 @@ using Serilog;
 
 namespace Photon.JobSeeker.Pages;
 
-public abstract class JobPage : PageBase
+public abstract class JobPage(Agency parent) : PageBase(parent)
 {
     public override int Order => 10;
 
     public override TrendState TrendState => TrendState.Analyzing;
-
-    protected JobPage(Agency parent) : base(parent) { }
 
     public override Command[]? IssueCommand(string url, string content)
     {
@@ -54,29 +52,34 @@ public abstract class JobPage : PageBase
         if (string.IsNullOrEmpty(code)) throw new Exception($"Invalid job url ({Parent.Name}).");
 
         var job = database.Job.Fetch(Parent.ID, code);
-        var filter = JobFilter.Title | JobFilter.Html | JobFilter.Content;
+        var filter = JobFilter.Title | JobFilter.Country | JobFilter.Html | JobFilter.Content;
 
-        GetJobContent(html, out var html_code, out var apply_link, out var title);
+        GetJobContent(html, out var real_code, out var apply_link, out var title);
 
-        if (string.IsNullOrEmpty(code))
-            if (!string.IsNullOrEmpty(html_code)) code = html_code;
-            else throw new Exception($"Job shortlink not found ({Parent.Name}).");
+        if (string.IsNullOrEmpty(code) && string.IsNullOrEmpty(real_code))
+            throw new Exception($"Job shortlink not found ({Parent.Name}).");
 
-        if (job != null)
+        if (!string.IsNullOrEmpty(real_code))
         {
-            var temp_job = database.Job.Fetch(Parent.ID, code);
-            if (temp_job == null)
+            code = real_code;
+
+            if (job != null)
             {
-                job.Code = code;
-                filter |= JobFilter.Code;
-            }
-            else
-            {
-                database.Job.Delete(job.JobID);
-                job = temp_job;
+                var temp_job = database.Job.Fetch(Parent.ID, code);
+                if (temp_job == null)
+                {
+                    job.Code = code;
+                    filter |= JobFilter.Code;
+                }
+                else
+                {
+                    database.Job.Delete(job.JobID);
+                    job = temp_job;
+                }
             }
         }
-        else
+
+        if (job == null)
         {
             job = database.Job.Fetch(Parent.ID, code);
 
@@ -93,6 +96,8 @@ public abstract class JobPage : PageBase
                 filter = JobFilter.All;
             }
         }
+
+        job.Country = Parent.CurrentMethod.Title;
 
         if (!string.IsNullOrEmpty(apply_link))
         {

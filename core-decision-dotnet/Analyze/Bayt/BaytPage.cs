@@ -20,7 +20,7 @@ interface BaytPage
 
     protected static readonly Regex reg_job_url = new(@"href=[""'](/en/\w+/jobs/[\w-]+-(\d+)/)[""']", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_job_view = new(@"-(\d+)/^", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_job_view = new(@"-(\d+)/?$", RegexOptions.IgnoreCase);
 
     protected static readonly Regex reg_job_title = new(@"<h1[^>]+id=[""']job_title[""'][^>]*>([^<]+)</h1>", RegexOptions.IgnoreCase);
 

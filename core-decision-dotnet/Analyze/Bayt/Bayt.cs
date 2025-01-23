@@ -4,17 +4,7 @@ namespace Photon.JobSeeker.Bayt;
 
 class Bayt : Agency
 {
-    private static readonly object @lock = new();
-
-    private Location[] Locations { get; set; } = [];
-
-
     public override string Name => "Bayt";
-
-    public override Location[] SearchingMethodTitles => Locations;
-
-    internal string RunningUrl => Locations[RunningSearchingMethodIndex].Url;
-
 
     public override string BaseUrl
     {
@@ -25,34 +15,13 @@ class Bayt : Agency
         }
     }
 
-    public override string SearchLink => $"https://www.bayt.com/en/{Locations[RunningSearchingMethodIndex].Url}/jobs/{SearchTitle}-jobs/";
+    public override string SearchLink => $"https://www.bayt.com/en/{CurrentMethod.Url}/jobs/{SearchTitle}-jobs/";
 
     public override Regex? JobAcceptabilityChecker => null;
 
-
-    protected override void LoadSettings(dynamic? settings)
-    {
-        lock (@lock)
-        {
-            if (settings == null)
-            {
-                Locations = [new()];
-                RunningSearchingMethodIndex = 0;
-            }
-            else
-            {
-                var running = (int)settings!.running;
-                if (RunningSearchingMethodIndex == running) return;
-
-                Locations = settings.locations.ToObject<Location[]>();
-                RunningSearchingMethodIndex = running;
-            }
-        }
-    }
-
     protected override void RunningSearchingMethodChanged(int value)
     {
-        var location = Uri.EscapeDataString(Locations[value].Url);
+        var location = Uri.EscapeDataString(CurrentMethod.Url);
 
         BaytPage.reg_search_location_url = new Regex(@$"/en/{location}/jobs", RegexOptions.IgnoreCase);
     }

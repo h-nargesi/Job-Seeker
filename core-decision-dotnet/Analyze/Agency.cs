@@ -7,11 +7,13 @@ namespace Photon.JobSeeker;
 
 public abstract class Agency
 {
-    private int running_searching_method_index = -1;
+    private static readonly object @lock = new();
+
+    private AgencySetting settings = new();
+
+    private List<Page> pages = [];
 
     private JobPage? jobPage;
-
-    private readonly List<Page> pages = new();
 
     public const string SearchTitle = "developer";
 
@@ -37,32 +39,21 @@ public abstract class Agency
     public abstract Regex? JobAcceptabilityChecker { get; }
 
 
-    public int RunningSearchingMethodIndex
+    public int CurrentMethodIndex
     {
-        get => running_searching_method_index;
+        get => settings.Running;
         set
         {
-            if (value < 0 || value >= SearchingMethodTitles.Length)
-                throw new ArgumentOutOfRangeException(nameof(RunningSearchingMethodIndex));
-
-            running_searching_method_index = value;
-
-            RunningSearchingMethodChanged(value);
+            settings.SetRunningIndex(value);
+            RunningSearchingMethodChanged(settings.Running);
         }
     }
 
-    public abstract Location[] SearchingMethodTitles { get; }
+    public int SearchingMethodCount => settings.Length;
 
-    public string? CurrentMethodTitle
-    {
-        get
-        {
-            if (running_searching_method_index < 0 || running_searching_method_index >= SearchingMethodTitles.Length)
-                return null;
+    public SearchingMethod CurrentMethod => settings.Current;
 
-            return SearchingMethodTitles[running_searching_method_index].Title;
-        }
-    }
+    public SearchingMethod[]? EnabledSearchingMethod => settings.EnabledMethods;
 
     public abstract string BaseUrl { get; }
 
@@ -76,7 +67,7 @@ public abstract class Agency
 
     public Result AnalyzeContent(string url, string content)
     {
-        Log.Information("Agency ({0}): AnalyzeContent -running={1}", Name, RunningSearchingMethodIndex);
+        Log.Information("Agency ({0}): AnalyzeContent -running={1}", Name, CurrentMethodIndex);
 
         foreach (var page in Pages)
         {
@@ -88,14 +79,14 @@ public abstract class Agency
 
                 if (page.TrendState == TrendState.Seeking && commands.Length == 0)
                 {
-                    if (RunningSearchingMethodIndex + 1 < SearchingMethodTitles.Length)
+                    if (CurrentMethodIndex + 1 < settings.Length)
                     {
-                        RunningSearchingMethodIndex += 1;
-                        commands = new Command[] { Command.Go(SearchLink) };
+                        CurrentMethodIndex += 1;
+                        commands = [Command.Go(SearchLink)];
                     }
                     else
                     {
-                        RunningSearchingMethodIndex = 0;
+                        CurrentMethodIndex = 0;
                         trend_state = TrendState.Finished;
                         Status &= ~AgencyStatus.ActiveSeeking;
                     }
@@ -132,7 +123,17 @@ public abstract class Agency
         LoadPages();
     }
 
-    protected abstract void LoadSettings(dynamic? settings);
+    private void LoadSettings(AgencySetting settings)
+    {
+        if (settings == null) return;
+
+        lock (@lock)
+        {
+            this.settings = settings;
+            this.settings.Check();
+            RunningSearchingMethodChanged(this.settings.Running);
+        }
+    }
 
     protected abstract void RunningSearchingMethodChanged(int value);
 
@@ -157,10 +158,68 @@ public abstract class Agency
         Log.Information("pages: {0}", pages.StringJoin());
     }
 
-    public struct Location
+    public class AgencySetting
+    {
+        private SearchingMethod[]? all_methods = null;
+
+        public int Running { get; set; } = -1;
+
+        public SearchingMethod[]? Methods
+        {
+            get => all_methods;
+            set
+            {
+                all_methods = value;
+                EnabledMethods = all_methods?.Where(m => m.Enabled != false).ToArray();
+                if (EnabledMethods?.Length == 0) EnabledMethods = null;
+            }
+        }
+
+        public SearchingMethod[]? EnabledMethods { get; private set; }
+
+        public int Length => EnabledMethods?.Length ?? 0;
+
+
+        public SearchingMethod Current
+        {
+            get => EnabledMethods?[Running] ?? SearchingMethod.Empty;
+        }
+
+        public void Check()
+        {
+            if (all_methods?.Length == 0)
+            {
+                Methods = null;
+            }
+
+            if (Running < 0 || Running >= Length)
+            {
+                Running = Length < 1 ? -1 : 0;
+            }
+        }
+
+        public void SetRunningIndex(int index)
+        {
+            if (index < 0 || index >= Length)
+                throw new ArgumentOutOfRangeException(nameof(index));
+
+            Running = index;
+        }
+    }
+
+    public struct SearchingMethod
     {
         public string Title { get; set; }
 
         public string Url { get; set; }
+
+        public bool? Enabled { get; set; }
+
+        public static SearchingMethod Empty { get; } = new()
+        {
+            Title = string.Empty,
+            Url = string.Empty,
+            Enabled = false,
+        };
     }
 }

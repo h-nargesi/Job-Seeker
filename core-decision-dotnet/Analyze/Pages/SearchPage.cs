@@ -1,12 +1,10 @@
 ﻿namespace Photon.JobSeeker.Pages;
 
-abstract class SearchPage : PageBase
+abstract class SearchPage(Agency parent) : PageBase(parent)
 {
     public override int Order => 20;
 
     public override TrendState TrendState => TrendState.Seeking;
-
-    protected SearchPage(Agency parent) : base(parent) { }
 
     public override Command[]? IssueCommand(string url, string content)
     {
@@ -25,14 +23,14 @@ abstract class SearchPage : PageBase
             database.Job.Save(new
             {
                 AgencyID = Parent.ID,
-                Country = Parent.CurrentMethodTitle,
+                Country = Parent.CurrentMethod.Title,
                 Url = link,
                 Code = code,
                 State = JobState.Saved
             });
         }
 
-        return CheckNextButton(url, content) ?? Array.Empty<Command>();
+        return CheckNextButton(url, content) ?? [];
     }
 
     protected abstract bool CheckInvalidSearchTitle(string url, string content, out Command[]? commands);
