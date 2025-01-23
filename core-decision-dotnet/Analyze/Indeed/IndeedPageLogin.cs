@@ -2,10 +2,8 @@
 
 namespace Photon.JobSeeker.Indeed;
 
-class IndeedPageLogin : LoginPage, IndeedPage
+class IndeedPageLogin(Indeed parent) : LoginPage(parent), IndeedPage
 {
-    public IndeedPageLogin(Indeed parent) : base(parent) { }
-
     protected override bool CheckInvalidUrl(string url, string content)
     {
         return !IndeedPage.reg_login_url.IsMatch(url);
@@ -15,11 +13,11 @@ class IndeedPageLogin : LoginPage, IndeedPage
     {
         var (user, pass) = GetUserPass();
 
-        return new Command[] {
+        return [
             Command.Fill(@"#ifl-InputFormField-3", user),
             Command.Click(@"#auth-page-google-password-fallback"),
             Command.Fill(@"#ifl-InputFormField-16", pass),
             Command.Click(@"button[type=""submit""]")
-        };
+        ];
     }
 }

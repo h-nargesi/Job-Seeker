@@ -4,10 +4,8 @@ using System.Web;
 
 namespace Photon.JobSeeker.LinkedIn;
 
-class LinkedInPageJob : JobPage, LinkedInPage
+class LinkedInPageJob(LinkedIn parent) : JobPage(parent), LinkedInPage
 {
-    public LinkedInPageJob(LinkedIn parent) : base(parent) { }
-
     protected override bool CheckInvalidUrl(string url, string content)
     {
         return !LinkedInPage.reg_job_url.IsMatch(url);
@@ -22,10 +20,10 @@ class LinkedInPageJob : JobPage, LinkedInPage
     protected override Command[]? JobFallow(string content)
     {
         if (!LinkedInPage.reg_job_adding.IsMatch(content)) return null;
-        return new Command[] {
+        return [
             Command.Click(@"button.jobs-save-button"),
             Command.Wait(3000),
-        };
+        ];
     }
 
     protected override void GetJobContent(string html, out string? code, out string? apply, out string? title)

@@ -2,17 +2,15 @@
 
 namespace Photon.JobSeeker.IamExpat;
 
-class IamExpatPageAuth : AuthPage, IamExpatPage
+class IamExpatPageAuth(IamExpat parent) : AuthPage(parent), IamExpatPage
 {
-    public IamExpatPageAuth(IamExpat parent) : base(parent) { }
-
     protected override bool CheckInvalidUrl(string url, string content)
     {
         return !IamExpatPage.reg_login_but.IsMatch(content);
     }
 
-    protected override Command[] LoginUrl() => new Command[]
-    {
+    protected override Command[] LoginUrl() =>
+    [
         Command.Click(@"a[href=""/login""]")
-    };
+    ];
 }

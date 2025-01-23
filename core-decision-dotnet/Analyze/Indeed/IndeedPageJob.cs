@@ -4,10 +4,8 @@ using System.Web;
 
 namespace Photon.JobSeeker.Indeed;
 
-class IndeedPageJob : JobPage, IndeedPage
+class IndeedPageJob(Indeed parent) : JobPage(parent), IndeedPage
 {
-    public IndeedPageJob(Indeed parent) : base(parent) { }
-
     protected override bool CheckInvalidUrl(string url, string content)
     {
         return !IndeedPage.reg_job_view.IsMatch(url);
@@ -24,11 +22,11 @@ class IndeedPageJob : JobPage, IndeedPage
     protected override Command[]? JobFallow(string content)
     {
         if (!IndeedPage.reg_job_adding.IsMatch(content)) return null;
-        return new Command[]
-        {
+        return
+        [
             Command.Click(@"button.jobs-save-button"),
             Command.Wait(3000),
-        };
+        ];
     }
 
     protected override void GetJobContent(string html, out string? code, out string? apply, out string? title)

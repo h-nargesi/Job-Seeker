@@ -3,10 +3,8 @@ using System.Text.RegularExpressions;
 
 namespace Photon.JobSeeker.LinkedIn;
 
-class LinkedInPageSearch : SearchPage, LinkedInPage
+class LinkedInPageSearch(LinkedIn parent) : SearchPage(parent), LinkedInPage
 {
-    public LinkedInPageSearch(LinkedIn parent) : base(parent) { }
-
     protected override bool CheckInvalidUrl(string url, string content)
     {
         return !LinkedInPage.reg_search_url.IsMatch(url);
@@ -19,10 +17,10 @@ class LinkedInPageSearch : SearchPage, LinkedInPage
             !LinkedInPage.reg_search_options_url.IsMatch(url))
         {
             var parent = Parent as LinkedIn;
-            commands = new Command[]
-            {
+            commands =
+            [
                 Command.Go(@$"/jobs/search/?f_E=3%2C4&keywords={Agency.SearchTitle}&location={parent?.RunningUrl}&refresh=true"),
-            };
+            ];
             return true;
         }
         else
@@ -50,24 +48,24 @@ class LinkedInPageSearch : SearchPage, LinkedInPage
     protected override Command[] CheckNextButton(string url, string content)
     {
         var match = LinkedInPage.reg_search_page_panel.Match(content);
-        if (!match.Success) return Array.Empty<Command>();
+        if (!match.Success) return [];
         content = content[(match.Index + match.Length)..];
 
         match = LinkedInPage.reg_search_page_panel_end.Match(content);
-        if (!match.Success) return Array.Empty<Command>();
+        if (!match.Success) return [];
         content = content[..match.Index];
 
         match = LinkedInPage.reg_search_current_page.Match(content);
-        if (!match.Success) return Array.Empty<Command>();
+        if (!match.Success) return [];
         content = content[(match.Index + match.Length)..];
 
         match = LinkedInPage.reg_search_other_page.Match(content);
-        if (!match.Success) return Array.Empty<Command>();
+        if (!match.Success) return [];
 
-        return new Command[]
-        {
+        return
+        [
             Command.Click(@$"button[aria-label=""{match.Groups[1].Value}""]"),
             Command.Recheck(),
-        };
+        ];
     }
 }
