@@ -22,7 +22,7 @@ values
 												'{ "resume": { "key": "DOTNET", "include_matched": false } }')
 	,	(80,	'field',	'Java',				'\b(java|spring boot|kotlin)\b',
 												null)
-	,	(30,	'field',	'GO-Lang',			'\b(go[- ]?lang|(?-i)G[Oo])\b',
+	,	(80,	'field',	'GO-Lang',			'\b(go[- ]?lang|(?-i)G[Oo])\b',
 												'{ "resume": { "key": "GOLANG", "include_matched": false } }')
 	,	(60,	'field',	'Front-End',		'\b(angular)\b',
 												'{ "resume": { "include_matched": false } }')
@@ -81,7 +81,7 @@ values
 
 	--	Rejection
 
-	--,	(01,	'reject',	'react',			'\b(react)\b', null)
+	--,	(0,		'reject',	'react',			'\b(react)\b', null)
 
 	--	Resume
 
