@@ -19,9 +19,11 @@
 
 <div class="container py-4">
   <header class="pb-3 mb-3 border-bottom">
-    <a href="/" class="d-flex align-items-center text-body-emphasis text-decoration-none">
-      <span class="fs-4">@Model.Agency?.Name</span>
+    <a href="/" class="align-items-center text-body-emphasis text-decoration-none">
+        <span class="fs-4">@Model.Agency?.Name</span>
     </a>
+    <span class="ms-3 me-3" style="font-size: 1.4rem;">|</span>
+    <span class="fs-4">@Model.Job.Country</span>
   </header>
 
   <div class="p-5 mb-2 bg-body-tertiary rounded-3">
