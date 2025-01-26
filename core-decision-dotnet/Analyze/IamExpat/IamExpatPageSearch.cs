@@ -27,13 +27,12 @@ class IamExpatPageSearch(IamExpat parent) : SearchPage(parent), IamExpatPage
     protected override IEnumerable<(string url, string code)> GetJobUrls(string content)
     {
         var result = new List<(string url, string code)>();
-        var base_link = Parent.Link.Trim().EndsWith("/") ? Parent.Link[..^1] : Parent.Link;
         var job_matches = IamExpatPage.reg_job_url.Matches(content).Cast<Match>();
 
         foreach (Match job_match in job_matches)
         {
             var code = IamExpatPage.GetJobCode(job_match);
-            var url = string.Join("", base_link, job_match.Value);
+            var url = string.Join("", Parent.BaseUrl, job_match.Value);
             result.Add((url, code));
         }
 

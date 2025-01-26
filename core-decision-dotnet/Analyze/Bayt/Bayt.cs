@@ -6,16 +6,7 @@ class Bayt : Agency
 {
     public override string Name => "Bayt";
 
-    public override string BaseUrl
-    {
-        get
-        {
-            var base_link = Link.Trim();
-            return base_link.EndsWith('/') ? base_link[..^1] : base_link;
-        }
-    }
-
-    public override string SearchLink => $"https://www.bayt.com/en/{CurrentMethod.Url}/jobs/{SearchTitle}-jobs/";
+    public override string SearchLink => $"{BaseUrl}/en/{CurrentMethod.Url}/jobs/{SearchTitle}-jobs/";
 
     public override Regex? JobAcceptabilityChecker => null;
 

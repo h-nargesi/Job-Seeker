@@ -55,7 +55,7 @@ public abstract class Agency
 
     public SearchingMethod[]? EnabledSearchingMethod => settings.EnabledMethods;
 
-    public abstract string BaseUrl { get; }
+    public virtual string BaseUrl => Link;
 
     public abstract string SearchLink { get; }
 
@@ -116,7 +116,8 @@ public abstract class Agency
 
         ID = agency_info.AgencyID;
         Domain = agency_info.Domain;
-        Link = agency_info.Link;
+        Link = agency_info.Link.Trim();
+        Link = Link.EndsWith('/') ? Link[..^1] : Link;
 
         LoadSettings(agency_info.Settings);
 
@@ -213,12 +214,15 @@ public abstract class Agency
 
         public string Url { get; set; }
 
+        public object? Params { get; set; }
+
         public bool? Enabled { get; set; }
 
         public static SearchingMethod Empty { get; } = new()
         {
             Title = string.Empty,
             Url = string.Empty,
+            Params = null,
             Enabled = false,
         };
     }
