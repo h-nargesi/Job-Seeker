@@ -32,7 +32,7 @@ class IndeedPageSearch(Indeed parent) : SearchPage(parent), IndeedPage
         foreach (Match job_match in job_matches)
         {
             var code = job_match.Groups[1].Value;
-            var url = string.Join("", Parent.Link, "/viewjob?jk=", code);
+            var url = string.Join("", Parent.BaseUrl, "/viewjob?jk=", code);
             result.Add((url, code));
         }
 

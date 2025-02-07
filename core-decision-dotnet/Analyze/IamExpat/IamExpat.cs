@@ -4,11 +4,13 @@ namespace Photon.JobSeeker.IamExpat;
 
 class IamExpat : Agency
 {
+    private string base_link = string.Empty;
+    
     public override string Name => "IamExpat";
 
-    public override string BaseUrl => "https://iamexpat." + CurrentMethod.Url[0..2];
+    public override string BaseUrl => base_link + CurrentMethod.Url[0..2];
 
-    public override string SearchLink => "https://iamexpat." + CurrentMethod.Url;
+    public override string SearchLink => base_link + CurrentMethod.Url;
 
     public override Regex? JobAcceptabilityChecker => null;
 
@@ -18,6 +20,12 @@ class IamExpat : Agency
 
         IamExpatPage.reg_search_url = new Regex(
             @$"://[^/]*iamexpat\.{location}", RegexOptions.IgnoreCase);
+
+        if (string.IsNullOrEmpty(base_link))
+        {
+            var index = Link.LastIndexOf('.');
+            base_link = index < 0 ? Link : Link[..(index + 1)];
+        }
     }
 
     protected override IEnumerable<Type> GetSubPages()
