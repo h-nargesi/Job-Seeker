@@ -111,6 +111,8 @@ public partial class ResumeContext
         public bool SKYPE { get; set; } = false;
         public bool LINKEDIN { get; set; } = true;
         public bool FOOTER { get; set; } = true;
+        public string IMAGE_URL { get; set; } = "/images/portrate.png";
+        public string GetImageURL() => !string.IsNullOrWhiteSpace(IMAGE_URL) ? IMAGE_URL : "/images/portrate.png";
     }
 
     public string FileName(string extnesion)
@@ -154,23 +156,44 @@ public partial class ResumeContext
     public string SimlpeSerialize()
     {
         var json =  JsonConvert.SerializeObject(this, Formatting.Indented);
-        return Serializer().Replace(json, "$1");
+        return SerializeChecktSyntaxt(json);
     }
 
     public static ResumeContext? SimlpeDeserialize(string text)
     {
         if (text == null) return null;
 
-        text = Deserializer().Replace(text, "\"$0\"");
+        text = DeserializeChecktSyntaxt(text);
 
         return JsonConvert.DeserializeObject<ResumeContext>(text);
     }
 
+    private static string DeserializeChecktSyntaxt(string text)
+    {
+        var is_qouted = false;
+        var parts = text.Split("\"")
+            .Select(part =>
+            {
+                if (!is_qouted)
+                    part = QouteDeserializer().Replace(part, "\"$0\"");
+
+                is_qouted = !is_qouted;
+                return part;
+            });
+
+        return string.Join("\"", parts);
+    }
+
+    private static string SerializeChecktSyntaxt(string json)
+    {
+        return QouteSerializer().Replace(json, "$1");
+    }
+
     [GeneratedRegex(@"\w+(?=\s*:)")]
-    private static partial Regex Deserializer();
+    private static partial Regex QouteDeserializer();
 
     [GeneratedRegex(@"""(\w+)""(?=\s*:)")]
-    private static partial Regex Serializer();
+    private static partial Regex QouteSerializer();
 }
 
 public static class ResumeContextExtentions
@@ -178,5 +201,10 @@ public static class ResumeContextExtentions
     public static string JS(this bool value)
     {
         return value.ToString().ToLower();
+    }
+
+    public static string JS(this string value)
+    {
+        return $"'{value}'";
     }
 }
