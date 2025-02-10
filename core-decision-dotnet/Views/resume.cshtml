@@ -541,7 +541,6 @@
         for (const id in INPUT_DATA) {
             const value = INPUT_DATA[id];
             const class_name = id.replaceAll('_', '-').toLowerCase();
-            console.log(class_name, value);
             document.querySelectorAll('.' + class_name)
                     .forEach((element) => { element.innerText = value; });
         }
