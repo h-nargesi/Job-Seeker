@@ -87,7 +87,7 @@
         flex-direction: row-reverse;
     }
         .header.cls-image {
-            background-image: url('https://i.postimg.cc/t44Zp9kz/portrate.png');
+            background-image: url('/images/portrate.png');
             background-repeat: no-repeat;
             background-size: contain;
             background-position-x: right;
@@ -429,44 +429,69 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        for (const not_included of NOT_INCLUDED)
-            document.querySelectorAll(not_included)
-                    .forEach((element) => element.style.display = 'none');
 
-        const reg_legth = new RegExp('key-(not-)?extra-(\\d+)');
-        document.querySelectorAll('[class*="key-extra-"]').forEach((element) => {
-            let length = Number(reg_legth.exec(element.className)[2]);
-            if (length > LENGTH) {
-                element.style.display = 'none';
-            }
-        });
-        document.querySelectorAll('[class*="key-not-extra-"]').forEach((element) => {
-            let length = Number(reg_legth.exec(element.className)[2]);
-            if (length <= LENGTH) {
-                element.style.display = 'none';
-            }
-        });
+        const reg_legth = new RegExp(/^key-(not-)?extra-(\d+)$/);
+        const reg_key = new RegExp(/^key-(not-)?([\w-]+)$/);
 
         const letters = new Set();
         const words = new Set();
+        const keys = new Set();
 
         for (const k in KEYS) {
-            const class_name = k.replaceAll('_', '-').toLowerCase();
-            let selector = '.key-';
+            if (!KEYS[k]) continue;
 
-            if (KEYS[k]) {
-                selector += 'not-';
-                const parts = class_name.split('-');
-                if (!letters.has(parts[0][0])) letters.add(parts[0][0]);
-                else {
-                    const p = parts.slice(1).join('-');
-                    if (!words.has(p)) words.add(p);
+            const class_name = k.replaceAll('_', '-').toLowerCase();
+            keys.add(class_name);
+
+            const parts = class_name.split('-');
+            if (!letters.has(parts[0][0])) letters.add(parts[0][0]);
+            else {
+                const p = parts.slice(1).join('-');
+                if (!words.has(p)) words.add(p);
+            }
+        }
+
+        console.log('keys', keys);
+
+        document.querySelectorAll('[class*="key-"]').forEach((element) => {
+            if (!element.className) return;
+            const id = element.getAttribute('id');
+            const classes = element.className.split(' ');
+            let display = "none";
+            const let_show = new Set();
+
+            for (const class_name of classes) {
+                const extra = reg_legth.exec(class_name);
+                if (extra) {
+                    const length = Number(extra[2]);
+                    const enabled = extra[1] !== "not-";
+                    if (enabled && LENGTH < length || !enabled && LENGTH >= length) {
+                        display = "none";
+                        console.log('block', id, class_name);
+                        break;
+                    }
+                    display = null;
+                    let_show.add(class_name);
+                    continue;
+                }
+
+                const key = reg_key.exec(class_name);
+                if (key) {
+                    const enabled = key[1] !== "not-";
+                    if (enabled && keys.has(key[2]) || !enabled && !keys.has(key[2])) {
+                        display = null;
+                        let_show.add(class_name);
+                    }
+                    continue;
                 }
             }
-
-            document.querySelectorAll(selector + class_name)
-                    .forEach((element) => element.style.display = 'none');
-        }
+            
+            if (display) {
+                element.style.display = display;
+            } else {
+                console.log('let show', id, let_show);
+            }
+        });
 
         for (const k in MORE) {
             const class_name = k.replaceAll('_', '-').toLowerCase();
@@ -485,6 +510,10 @@
             document.querySelectorAll(included)
                     .forEach((element) => element.style.display = null);
 
+        for (const not_included of NOT_INCLUDED)
+            document.querySelectorAll(not_included)
+                    .forEach((element) => element.style.display = 'none');
+        
         const data = [VERSION, Array.from(letters).join('')];
         if (words.size > 0)
             data.push(Array.from(words).join('-'));
@@ -523,13 +552,13 @@
     });
 
     function DateDiff(period) {
-        let parts = period.split('<br>');
+        const parts = period.split('<br>');
         const dates = SplitDates(parts[0]);
         return [parts[0], MonthDiff(dates)].join('<br>')
     }
 
     function SplitDates(period) {
-        let str_dates = period.split('-');
+        const str_dates = period.split('-');
         const end_date = GetDate(str_dates.pop());
         const start_date = GetDate(str_dates.pop());
         return [start_date, end_date];
@@ -551,10 +580,10 @@
         if (months < 0) return 'none';
         months += 1;
 
-        years = Math.floor(months / 12);
+        let years = Math.floor(months / 12);
         months %= 12;
 
-        let result = [];
+        const result = [];
         if (years > 0) result.push(`${years} year${years > 1 ? 's' : ''}`);
         if (months > 0) result.push(`${months} month${months > 1 ? 's' : ''}`);
 

@@ -8,7 +8,7 @@ public partial class ResumeContext
 {
     public int Version => 42;
     public int Length { get; set; } = 1;
-    public InputDataContext InputData = new()
+    public InputDataContext InputData { get; } = new()
     {
         { nameof(InputDataContext.BACK_END_EXP), InputDataContext.BACK_END_EXP_DEFAULT },
         { nameof(InputDataContext.FRONT_END_EXP), InputDataContext.FRONT_END_EXP_DEFAULT }
@@ -32,8 +32,8 @@ public partial class ResumeContext
     [Serializable]
     public class InputDataContext : Dictionary<string, object?>
     {
-        public const int BACK_END_EXP_DEFAULT = 12;
-        public const int FRONT_END_EXP_DEFAULT = 2;
+        public const int BACK_END_EXP_DEFAULT = 14;
+        public const int FRONT_END_EXP_DEFAULT = 3;
 
         public object BACK_END_EXP => TryGetValue(nameof(BACK_END_EXP), BACK_END_EXP_DEFAULT);
         public object FRONT_END_EXP => TryGetValue(nameof(FRONT_END_EXP), FRONT_END_EXP_DEFAULT);
