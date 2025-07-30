@@ -19,7 +19,7 @@ class LinkedInPageSearch(LinkedIn parent) : SearchPage(parent), LinkedInPage
             var parent = Parent as LinkedIn;
             commands =
             [
-                Command.Go(@$"/jobs/search/?f_E=3%2C4&keywords={Agency.SearchTitle}&location={parent?.RunningUrl}&refresh=true"),
+                Command.Go(@$"/jobs/search/?keywords={Agency.SearchTitle}&refresh=true{parent?.RunningUrl}"),
             ];
             return true;
         }

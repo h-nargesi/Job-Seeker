@@ -226,6 +226,11 @@ public class JobEligibilityHelper : IDisposable
         var resume = new ResumeContext();
         var logs = new List<string>();
 
+        if (!string.IsNullOrWhiteSpace(job.Title))
+        {
+            resume.JobTitle = job.Title;
+        }
+
         foreach (var category in option_scores)
         {
             logs.Add($"*{category.Key[0..1].ToUpper() + category.Key[1..]}:*");

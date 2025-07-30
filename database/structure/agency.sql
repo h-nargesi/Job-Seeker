@@ -33,14 +33,15 @@ values
 
 	('LinkedIn',	'(.+\.)?linkedin\.com$',			'https://linkedin.com',		'username', 'password',
 					'{ "running": 0, "methods": [
-						{ "Title": "NL", "Url": "Netherlands" },
-						{ "Title": "AU", "Url": "Australia" },
-						{ "Title": "DE", "Url": "Germany" },
-						{ "Title": "SE", "Url": "Sweden" },
-						{ "Title": "AM", "Url": "Armenia" },
-						{ "Title": "OM", "Url": "Oman" },
-						{ "Title": "QA", "Url": "Qatar" },
-						{ "Title": "UK", "Url": "United Kingdom" }]
+						{ "Title": "NL", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Netherlands" },
+						{ "Title": "AU", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Australia" },
+						{ "Title": "DE", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Germany" },
+						{ "Title": "SE", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Sweden" },
+						{ "Title": "AM", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Armenia" },
+						{ "Title": "OM", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Oman" },
+						{ "Title": "QA", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Qatar" },
+						{ "Title": "UK", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=United Kingdom" },
+						{ "Title": "EU", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&geoId=91000002" }]
 					}'),
 
 	('Bayt',		'(.+\.)?bayt\.com$',				'https://www.bayt.com/',	'username', 'password',

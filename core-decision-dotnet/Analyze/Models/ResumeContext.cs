@@ -8,6 +8,7 @@ public partial class ResumeContext
 {
     public int Version => 42;
     public int Length { get; set; } = 1;
+    public string JobTitle { get; set; } = "Senior Full Stack Software Developer";
     public InputDataContext InputData { get; } = new()
     {
         { nameof(InputDataContext.BACK_END_EXP), InputDataContext.BACK_END_EXP_DEFAULT },
@@ -25,9 +26,9 @@ public partial class ResumeContext
         { nameof(KeysContext.MACHINE_LEARNING), null },
         { nameof(KeysContext.NETWORK), null },
     };
-    public NotIncludedContext PageBreak { get; } = [];
-    public NotIncludedContext NotIncluded { get; } = [];
-    public NotIncludedContext Included { get; } = [];
+    public KeyWordContext PageBreak { get; } = [];
+    public KeyWordContext NotIncluded { get; } = [];
+    public KeyWordContext Included { get; } = [];
     public ElementsContext Elements { get; } = new();
 
     [Serializable]
@@ -93,7 +94,7 @@ public partial class ResumeContext
     }
 
     [Serializable]
-    public class NotIncludedContext : HashSet<string>
+    public class KeyWordContext : HashSet<string>
     {
         public const string ClearanceMonitoring = "#clearance-monitoring";
 
@@ -133,7 +134,7 @@ public partial class ResumeContext
 
         if (keywords.Contains('d') && keywords.Contains('j'))
         {
-            NotIncluded.Add(NotIncludedContext.ClearanceMonitoring);
+            NotIncluded.Add(KeyWordContext.ClearanceMonitoring);
         }
     }
 
