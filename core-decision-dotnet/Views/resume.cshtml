@@ -4,9 +4,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>hamed-nargesi-resume</title>
+<title>Hamed Nargesi | Senior Software Developer Resume</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<link rel="render" href="https://cloudconvert.com/html-to-pdf" />
 <script>
     const VERSION = @Model.Version;
     const LENGTH = @Model.Length;
@@ -28,6 +27,9 @@
     const MORE = {
         @Html.Raw(Model.Keys.ToSimpleJson())
     };
+    const PAGE_BREAK = [
+        @Html.Raw(Model.PageBreak.ToSimpleJson())
+    ];
     const NOT_INCLUDED = [
         @Html.Raw(Model.NotIncluded.ToSimpleJson())
     ];
@@ -40,7 +42,9 @@
         LINKEDIN: @Model.Elements.LINKEDIN.JS(),
         SKYPE: @Model.Elements.SKYPE.JS(),
         LOCATION: @Model.Elements.LOCATION.JS(),
+        LOCATION_TJ: @Model.Elements.LOCATION_TJ.JS(),
         FOOTER: @Model.Elements.FOOTER.JS(),
+        PARSI: false,
     };
 </script>
 <style>
@@ -53,6 +57,7 @@
     }
 </style>
 <style>
+    @@import url(http://cdn.font-store.ir/shahab.css);
     @@import url(http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,700italic,300,400,700);
     @@media print {
         .highligh {
@@ -60,13 +65,25 @@
             background-color: var(--high-ground) !important;
             print-color-adjust: exact;
         }
+        article {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        .page-break {
+            margin-top: 30pt;
+            break-after: page; 
+        }
+    }
+    .rtl {
+        direction: rtl;
+        font-family: shahab;
     }
     html, body {
         padding: 0;
         margin: 0;
         font-family: 'Open Sans', sans-serif;
         color: var(--main-color);
-        font-size: 10pt;
+        font-size: 1rem;
     }
     b {
         opacity: 0.8;
@@ -84,8 +101,11 @@
     }
     .header {
         display: flex;
-        flex-direction: row-reverse;
+        flex-direction: row;
     }
+        .header-fullname {
+            margin-top: 5pt;
+        }
         .header.cls-image {
             background-image: url(@Html.Raw(Model.Elements.GetImageURL().JS()));
             background-repeat: no-repeat;
@@ -112,22 +132,26 @@
             margin-right: 8pt;
         }
         .header h1 {
-            font-size: 3rem;
+            font-size: 2.1rem;
             font-weight: 100;
             margin-top: 1rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0.9rem;
         }
         .header h2 {
             font-weight: 100;
         }
         .header-column {
-            width: 50%;
+            flex: 2;
         }
         .header-right {
-            text-align: right;
+            flex: 1;
+            font-size: 0.9rem;
         }
         .header.cls-image .header-right {
-            text-align: left;
+            flex: 2;
+        }
+        .header.cls-image .header-column {
+            width: 50%;
         }
     main {
         padding-top: 5pt;
@@ -153,32 +177,40 @@
         padding: 3pt 8pt 5pt;
         margin-bottom: 3pt;
     }
-    @@media print {
-        article {
-            break-inside: avoid;
-            page-break-inside: avoid;
-        }
-    }
     .experience h2 {
         margin-bottom: 0;
     }
     article {
-        padding-top: 15pt;
+        padding-top: 10pt;
         padding-bottom: 5pt;
     }
         article h3 {
             margin: 0;
             margin-bottom: 5pt;
+        }
+        article.ltr h3 {
             margin-left: 20pt;
+        }
+        article.rtl h3 {
+            margin-right: 20pt;
         }
         article h4 {
             margin: 0;
             margin-bottom: 5pt;
+        }
+        article.ltr h4 {
             margin-left: 20pt;
         }
-        article .exp-date {
+        article.rtl h4 {
+            margin-right: 20pt;
+        }
+        article.ltr .exp-date {
             float: right;
             text-align: right;
+        }
+        article.rtl .exp-date {
+            float: left;
+            text-align: left;
         }
         article ul {
             margin: 0;
@@ -186,8 +218,13 @@
         article .bull {
             position: absolute;
             font-size: 15pt;
-            left: 30pt;
             color: var(--high-ground);
+        }
+        article.ltr .bull {
+            left: 30pt;
+        }
+        article.rtl .bull {
+            right: 30pt;
         }
     .version {
         opacity: 0.125;
@@ -204,154 +241,223 @@
 <body>
 
 <header class="header highligh cls-image">
-    <div class="header-column header-right">
-        <h1 class="header-fullname">Hamed Nargesi</h1>
-        <h2 class="header-job-title">Software Developer</h2>
-    </div>
     <div class="header-column">
+        <h2 class="header-fullname">Hamed <span class="lang-en">(Ryan)</span> Nargesi</h2>
+        <h1 class="header-job-title">Senior Full Stack Software Developer</h1>
+    </div>
+    <div class="header-column header-right">
         <ul>
             <li class="header-item elm-phone"><i class="fa fa-phone"></i><a href="callto://+989125157305">+98 912 5157 305</a></li>
             <li class="header-item"><i class="fa fa-envelope"></i><a href="mailto:hamed.nargesi.jar@@gmail.com">hamed.nargesi.jar@@gmail.com</a></li>
-            <li class="header-item elm-linkedin"><i class="fab fa-linkedin"></i><a href="https://www.linkedin.com/in/hamed-nargesi/">linkedin.com/in/hamed-nargesi</a></li>
-            <li class="header-item"><i class="fab fa-github"></i><a href="https://github.com/h-nargesi/">github.com/h-nargesi</a></li>
-            <li class="header-item elm-skype"><i class="fab fa-skype"></i><a href="skype:hamed.nargesi?call">hamed.nargesi</a></li>
+            <li class="header-item elm-linkedin"><i class="fab fa-linkedin"></i><a target="_blank" href="https://www.linkedin.com/in/hamed-nargesi/">linkedin.com/in/hamed-nargesi</a></li>
+            <li class="header-item"><i class="fab fa-github"></i><a target="_blank" href="https://github.com/h-nargesi/">github.com/h-nargesi</a></li>
+            <li class="header-item elm-skype"><i class="fab fa-skype"></i><a target="_blank" href="skype:hamed.nargesi?call">hamed.nargesi</a></li>
             <li class="header-item elm-location"><i class="fa fa-map-marker"></i><span>Tehran, Iran</span></li>
+            <li class="header-item elm-location-tj"><i class="fa fa-map-marker"></i><span>Dushanbe, Tajikistan</span></li>
         </ul>
     </div>
 </header>
 <main>
-    <section>
+    <section class="ltr">
         <h2>Summary</h2>
         <p>
-            As a person who works passionately and professionally in the field of software engineering and e-commerce, I would like to share my skills and motivation with other teams. With over <span class="back-end-exp">13</span> years of experience in back-end development and troubleshooting, and <span class="front-end-exp">2</span> years of experience in front-end development, I am eager to play an active role in creating complex and quality products.
+            Experienced software engineer with over 16 years of hands-on experience in backend and full-stack development. Specialized in .NET Core, Angular, SQL Server. Proven ability to deliver scalable enterprise-grade solutions. Passionate about clean architecture, performance optimization, microservice architectures, and working in agile teams. Actively seeking international remote.
         </p>
-        <p class="key-extra-3">
-            Some of my distinctive characteristics are <b>responsibility</b>, <b>teamwork spirit</b>, <b>purposefulness</b>, <b>flexibility</b>, <b>compatibility</b>, and a <b>curious mind</b>.
-        </p>
-        <p class="key-extra-2">
-            As a freelancer, I have done more than 15 small- and medium-scale projects to improve efficiency for clients.
-            <br/>
-            In the companies I have worked for, I used low-cost algorithms to develop complex business solutions and satisfied the needs of customers with over 5,000 employees in different branches.
+    </section>
+    <section class="rtl">
+        <h2>معرفی</h2>
+        <p>
+            بهره‌مندی از روحیه کار تیمی، تعهد در مقابل اهداف گروه، هدفمندی، مسئولیت پذیری و قابل اتکا بودن، انعطاف پذیری و سازگاری با گروه، راه‌حل گرایی و چاره‌اندیشی از مشخصه‌هایی است که به آن معتقد هستم و در جهت تبلور هرچه بیشتر این مشخصه‌ها، به سمت جلو گام برمی‌دارم. امید است در جهت افزایش رضایت گروه و رساندن آنان به اهدافشان اثر بخش باشم.
         </p>
     </section>
     <section>
         <h2>Skills</h2>
         <p>
-            <span class="skill highligh">Software Development</span>
-            <span class="skill highligh">Web Applications</span>
-            <span class="skill highligh">Design Patterns</span>
-            <span class="skill highligh">Clean Code</span>
-            <span class="skill highligh">Object-Oriented<small> (OOP)</small></span>
-            <span class="skill highligh">Algorithms</span>
-            <span class="skill highligh">Data Structures</span>
-            <span class="skill highligh key-dotnet">C#, ASP.NET Core</span>
-            <span class="skill highligh key-java">Core Java</span>
-            <!--
-            <span class="skill highligh key-java key-java-spring">Spring Boot</span>
-            <span class="skill highligh key-java key-java-kotlin">Kotlin</span>
-            -->
+            <span class="skill highligh key-dotnet">C#</span>
+            <span class="skill highligh key-java">Java</span>
             <span class="skill highligh key-python">Python</span>
             <span class="skill highligh key-golang">Go-lang</span>
             <span class="skill highligh key-sql key-dotnet">Transact-SQL (T-SQL)</span>
             <span class="skill highligh key-sql key-java">PL/SQL (Oracle)</span>
-            <!--
             <span class="skill highligh key-sql key-sql-postgre">PostgreSQL</span>
-            -->
+            <span class="skill highligh key-front-end">TypeScript</span>
+            <span class="skill highligh key-front-end">Javascript</span>
+            <br/>
+            <span class="skill highligh key-dotnet">ASP.NET Core</span>
+            <span class="skill highligh key-java key-java-spring">Spring Boot</span>
+            <span class="skill highligh key-java key-java-kotlin">Kotlin</span>
+            <span class="skill highligh key-dotnet key-java">Entity Framework</span>
+            <span class="skill highligh key-dotnet">.NET Framework</span>
+            <span class="skill highligh">AWS</span>
             <span class="skill highligh key-front-end">Angular</span>
-            <!--
-            <span class="skill highligh key-front-end">REST API</span>
-            <span class="skill highligh key-front-end">TypeScript, Javascript</span>
-            -->
-            <span class="skill highligh key-machine-learning">Machine Learning</span>
-            <span class="skill highligh" last-item>Unit Testing</span>
+            <span class="skill highligh key-front-end">Bootstrap</span>
+            <br/>
+            <span class="skill highligh key-web">RESTful APIs</span>
+            <span class="skill highligh key-web">Web API</span>
+            <span class="skill highligh key-microservices">Microservices</span>
+            <br/>
+            <span class="skill highligh">Docker</span>
+            <span class="skill highligh">Git</span>
+            <span class="skill highligh">TFS</span>
+            <span class="skill highligh">Agile/Scrum</span>
+            <span class="skill highligh">Unit Testing</span>
+            <span class="skill highligh">Design Patterns</span>
+            <span class="skill highligh">Clean Code</span>
+            <span class="skill highligh">Performance Tuning</span>
+            <span class="skill highligh">Debugging</span>
+            <br/>
+            <span class="skill highligh">Algorithms</span>
+            <span class="skill highligh">Data Structures</span>
+            <span class="skill highligh">Software Architecture</span>
+            <span class="skill highligh">Object-Oriented Programming (OOP)</span>
+            <span class="skill highligh">Web Applications</span>
+            <span class="skill highligh key-machine-learning" last-item>Machine Learning</span>
         </p>
     </section>
     <section class="experience">
-        <h2>Experiences</h2>
-        <article class="key-dotnet key-front-end key-not-extra-3" id="system-group-total">
+        <h2 class="ltr">Experiences</h2>
+        <h2 class="rtl">تجارب</h2>
+        <article class="ltr key-dotnet key-front-end key-not-extra-3" id="system-group-total">
             <span class="exp-date">Mar 2022 - Present<br/>(11 months +)</span>
             <h3><i class="bull fa fa-check-circle"></i>Full-stack Developer on The Rahkaran ERP Web Application</h3>
-            <h4><a href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
+            <h4><a target="_blank" href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
             <ul>
-                <li>Optimizing and Tuning T-sql queries by 60% using table statistics and execution plan.</li>
-                <li>Developed the traffic log project that sustainably and reliably works on different types of devices. Increased the efficiency of the software by 25% compared to the previous version.</li>
-                <li>Improved more than 10 different procedures via fixing algorithms' mistakes.</li>
-                <li>Fixed about 30 bugs in the application I am working on.</li>
-                <li>Powered by C#.Net, ASP.NET Core, T-SQL, Go-lang, Angular, TypeScript and Html.</li>
+                <li>Optimized T-SQL queries using advanced indexing, execution plans, and table statistics.</li>
+                <li>Developed a cross-device traffic logging module that improved performance and resource utilization over the previous implementation.</li>
+                <li>Enhanced performance of a large-scale Angular frontend (1.3M+ lines of TypeScript code).</li>
+                <li>Collaborated in an agile team to deliver high-impact modules to enterprise clients.</li>
+                <li>Resolved many critical bugs, increasing system stability and reliability.</li>
+                <li>Refactored and optimized 10+ business procedures by correcting algorithmic flaws.</li>
+                <li>Supported a production system used by 100+ large and medium-sized enterprise clients by resolving critical SQL issues.</li>
             </ul>
         </article>
-        <article class="key-dotnet key-front-end key-extra-3" id="system-group-2">
+        <article class="ltr key-dotnet key-front-end key-extra-3" id="system-group-2">
             <span class="exp-date">Sep 2022 - Present<br/>(5 months +)</span>
             <h3><i class="bull fa fa-check-circle"></i>Full-stack Developer on The Rahkaran ERP Web Application</h3>
-            <h4><a href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
+            <h4><a target="_blank" href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
             <ul>
-                <li>Optimizing and Tuning T-sql queries by 60% using table statistics and execution plan.</li>
-                <li>Developed the traffic log project that sustainably and reliably works on different types of devices. Increased the efficiency of the software by 25% compared to the previous version.</li>
-                <li>Accelerated by Angular on the Rahkaran app with more than 1.3 million lines of Typescript code.</li>
-                <li>Powered by C#.Net, ASP.NET Core, T-SQL, Go-lang, Angular, TypeScript and Html.</li>
+                <li>Optimized T-SQL queries using advanced indexing, execution plans, and table statistics.</li>
+                <li>Developed a cross-device traffic logging module that improved performance and resource utilization over the previous implementation.</li>
+                <li>Enhanced performance of a large-scale Angular frontend (1.3M+ lines of TypeScript code).</li>
+                <li>Collaborated in an agile team to deliver high-impact modules to enterprise clients.</li>
             </ul>
         </article>
-        <article class="key-dotnet key-front-end key-extra-3" id="system-group-1">
+        <article class="rtl key-dotnet key-front-end key-extra-3" id="system-group-2-pr">
+            <span class="exp-date">Sep 2022 - Present<br/>(5 months +)</span>
+            <h3><i class="bull fa fa-check-circle"></i>Full-stack Developer on The Rahkaran ERP Web Application</h3>
+            <h4><a target="_blank" href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
+            <ul>
+                <li>پیاده سازی و توسعه نرم‌افزار ERP.</li>
+            </ul>
+        </article>
+        <article class="ltr key-dotnet key-extra-3" id="system-group-1">
             <span class="exp-date">Mar 2022 - Aug 2022<br/>(6 months)</span>
             <h3><i class="bull fa fa-check-circle"></i>.NET Developer on The Rahkaran ERP Web Application</h3>
-            <h4><a href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
+            <h4><a target="_blank" href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
             <ul>
-                <li>Improved more than 10 different procedures via fixing algorithms' mistakes.</li>
-                <li>Fixed about 30 bugs in the application I am working on.</li>
-                <li>This software deals with +100 large and medium scale customers all over Iran.</li>
-                <li>Powered by C#.Net, ASP.NET Core and T-SQL.</li>
+                <li>Resolved many critical bugs, increasing system stability and reliability.</li>
+                <li>Refactored and optimized 10+ business procedures by correcting algorithmic flaws.</li>
+                <li>Supported a production system used by 100+ large and medium-sized enterprise clients by resolving critical SQL issues.</li>
             </ul>
         </article>
-        <article class="key-java" id="douran">
+        <article class="rtl key-dotnet key-extra-3" id="system-group-1-pr">
+            <span class="exp-date">Mar 2022 - Aug 2022<br/>(6 months)</span>
+            <h3><i class="bull fa fa-check-circle"></i>.NET Developer on The Rahkaran ERP Web Application</h3>
+            <h4><a target="_blank" href="https://en.systemgroup.net/">System Group | همکاران سیستم</a></h4>
+            <ul>
+                <li>پیاده سازی و توسعه نرم‌افزار ERP.</li>
+            </ul>
+        </article>
+        <article class="ltr key-java" id="douran">
             <span class="exp-date">Apr 2019 - Feb 2022<br/>(2 years 11 months)</span>
             <h3><i class="bull fa fa-check-circle"></i>Java Developer on The Douran ERP Web Application</h3>
-            <h4><a href="https://douran.com/en-US/Dourtal/1/page/Home">DOURAN GROUP | گروه دوران</a></h4>
+            <h4><a target="_blank" href="https://douran.com/en-US/Dourtal/1/page/Home">DOURAN GROUP | گروه دوران</a></h4>
             <ul>
-                <li>Boosted +15 business procedures in 5 HR modules via low-cost algorithms.</li>
-                <li>Optimized about 10 complicated queries by using indices, caching techniques and reforming queries by 5%.</li>
-                <li>Built about 7 new business procedures to fulfill new customer needs.</li>
-                <li>Reined queries in the software to deal with +5 large scale customers with more than 5000 employees in different
-                    branches.</li>
-                <li>Powered by Java and PL/SQL.</li>
+                <li>Improved many HR-related workflows using algorithmic optimizations, enhancing processing speed.</li>
+                <li>Optimized complex SQL queries via indexing and query refactoring, reducing DB load by 15%.</li>
+                <li>Implemented 7 new business processes in HR modules based on evolving customer requirements.</li>
+                <li>Handled high-load queries for enterprise clients with 5000+ employees across multiple locations.</li>
+            </ul>
+        </article>
+        <article class="rtl key-java" id="douran-pr">
+            <span class="exp-date">Apr 2019 - Feb 2022<br/>(2 years 11 months)</span>
+            <h3><i class="bull fa fa-check-circle"></i>Java Developer on The Douran ERP Web Application</h3>
+            <h4><a target="_blank" href="https://douran.com/en-US/Dourtal/1/page/Home">DOURAN GROUP | گروه دوران</a></h4>
+            <ul>
+                <li>پیاده سازی و توسعه نرم‌افزار ERP.</li>
             </ul>
         </article>
     </section>
     <section class="experience">
-        <h2>Projects</h2>
-        <article class="key-dotnet key-front-end key-extra-2" id="exportchance">
+        <h2 class="ltr">Projects</h2>
+        <h2 class="rtl">پروژه‌ها</h2>
+        <article class="ltr key-dotnet key-front-end key-extra-2" id="exportchance">
             <span class="exp-date">Oct 2018 - Apr 2019<br/>(7 months)</span>
             <h3><i class="bull fa fa-check-circle"></i>Full-stack Developer on The B2B E-Commerce Web Application</h3>
             <h4>Self-Employed</h4>
             <ul>
-                <li>Formed the modeling of this web application with almost 30 main entities.</li>
-                <li>Engineered monolithic architecture in 3 layers.</li>
-                <li>Implemented object-oriented codes based on design patterns principles.</li>
-                <li>Introduced and connected the companies from +10 counties on the new silk road to each other.</li>
-                <li>Powered by ASP.NET Core, T-SQL, Angular, TypeScript and Html.</li>
+                <li>Designed domain model with 30+ core entities.</li>
+                <li>Built a monolithic 3-layer architecture using ASP.NET Core and SQL Server.</li>
+                <li>Applied design pattern principles to implement maintainable and modular code.</li>
+                <li>Connected B2B companies across 10+ Asian countries.</li>
             </ul>
         </article>
-        <article class="key-web key-front-end" id="web-sites">
+        <article class="rtl key-dotnet key-front-end key-extra-2" id="exportchance-pr">
+            <span class="exp-date">Oct 2018 - Apr 2019<br/>(7 months)</span>
+            <h3><i class="bull fa fa-check-circle"></i>Full-stack Developer on The B2B E-Commerce Web Application</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>طراحی و پیاده سازی وب‌سایت معرفی صادرکنندگان ایرانی.</li>
+            </ul>
+        </article>
+        <article class="ltr key-web key-front-end key-extra-2" id="web-sites">
             <span class="exp-date">Apr 2018 - Sep 2018<br/>(6 months)</span>
             <h3><i class="bull fa fa-check-circle"></i>Web Developer</h3>
             <h4>Self-Employed</h4>
             <ul>
                 <li>Launched +10 web sites, like Behin Energy Co., Eehaam magazine, etc.</li>
                 <li>Created responsive and functional user interfaces.</li>
-                <li>Powered by Bootstrap, JQuery and Html.</li>
             </ul>
         </article>
-        <article class="key-dotnet" id="clearance-monitoring">
+        <article class="rtl key-web key-front-end key-extra-2" id="web-sites-pr">
+            <span class="exp-date">Apr 2018 - Sep 2018<br/>(6 months)</span>
+            <h3><i class="bull fa fa-check-circle"></i>Web Developer</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>راه‌اندازی و توسعه بیش از ۱۰ وبسایت مانند بهین انرژی، مجله ایهام و غیره.</li>
+            </ul>
+        </article>
+        <article class="ltr key-dotnet" id="clearance-monitoring">
             <span class="exp-date">Sep 2017 - Mar 2018<br/>(7 months)</span>
             <h3><i class="bull fa fa-check-circle"></i>Web Application Developer on The Clearance Monitoring Application</h3>
             <h4>Self-Employed</h4>
             <ul>
-                <li>Optimized the efficiency of monitoring products cleared from each customs up to 70%.</li>
-                <li>Delivered comprehensive report set like the graph of discharge delays. A significant difference compared to previous methods.</li>
-                <li>Cut down on paperwork by 90% and phone contacts by 60%.</li>
-                <li>Powered by ASP.NET, T-SQL and Html.</li>
+                <li>Boosted tracking efficiency for customs clearance by up to 70%.</li>
+                <li>Developed reporting dashboards (e.g. discharge delay charts) with actionable insights.</li>
+                <li>Reduced paperwork by 90% and cut down on phone communication by 60%.</li>
             </ul>
         </article>
-        <article class="key-network" id="behin">
+        <article class="rtl key-dotnet" id="clearance-monitoring-pr">
+            <span class="exp-date">Sep 2017 - Mar 2018<br/>(7 months)</span>
+            <h3><i class="bull fa fa-check-circle"></i>Web Application Developer on The Clearance Monitoring Application</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>طراحی و پیاده‌سازی نرم‌افزار تحت وب مدیریت و کنترل ترخیص کالا، این نرم‌افزار قابلیت نمایش آنلاین وضعیت کالاهای ترخیص شده برای مشتریان را دارد.</li>
+                <li>کارفرما فلات قاره یاس.</li>
+            </ul>
+        </article>
+        <article class="ltr key-other key-not-extra-2" id="other">
+            <span class="exp-date">2008 - 2017<br/>(9 years)</span>
+            <h3><i class="bull fa fa-check-circle"></i>Other Technical Projects</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>Developed a .NET-based image tagging tool that improved file search time by 40%.</li>
+                <li>Created an Android password manager using NoSQL and 3-layer architecture.</li>
+                <li>Designed and implemented databases for hospital resource planning and project control.</li>
+                <li>Built a project control system for managing turbine and generator components at Siah Bishe Dam.</li>
+            </ul>
+        </article>
+        <article class="ltr key-network" id="behin">
             <span class="exp-date">Oct 2012 - Sep 2016<br/>(4 years)</span>
             <h3><i class="bull fa fa-check-circle"></i>Network Technician</h3>
             <h4>Behin Energy Co. (BEC)</h4>
@@ -359,17 +465,32 @@
                 <li>Installed and managed about 30 end-points and routers for Behin Energy Co.</li>
             </ul>
         </article>
-        <article class="key-dotnet key-extra-2" id="image-tagging">
+        <article class="rtl key-network" id="behin-pr">
+            <span class="exp-date">Oct 2012 - Sep 2016<br/>(4 years)</span>
+            <h3><i class="bull fa fa-check-circle"></i>Network Technician</h3>
+            <h4>Behin Energy Co. (BEC)</h4>
+            <ul>
+                <li>نصب، راه‌اندازی و مدیریت سرور، روتر و دیگر سیستم‌های شرکت بهین انرژی.</li>
+            </ul>
+        </article>
+        <article class="ltr key-dotnet key-extra-2" id="image-tagging">
             <span class="exp-date">Mar 2012 - Jul 2012<br/>(5 months)</span>
             <h3><i class="bull fa fa-check-circle"></i>.NET Developer on The Image Tagging Tool</h3>
             <h4>Self-Employed</h4>
             <ul>
                 <li>Designed to manage the images' tags in files' meta-data.</li>
                 <li>Saved the time of searching for image files by 40%.</li>
-                <li>Powered by C#.Net.</li>
             </ul>
         </article>
-        <article class="key-java key-extra-2" id="android">
+        <article class="rtl key-dotnet key-extra-2" id="image-tagging-pr">
+            <span class="exp-date">Mar 2012 - Jul 2012<br/>(5 months)</span>
+            <h3><i class="bull fa fa-check-circle"></i>.NET Developer on The Image Tagging Tool</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>این نرم افزار به منظور ویرایش متا داده فایل‌های تصویری ساخته شده است.</li>
+            </ul>
+        </article>
+        <article class="ltr key-java key-extra-2" id="android">
             <span class="exp-date">Mar 2010 - Aug 2010<br/>(7 months)</span>
             <h3><i class="bull fa fa-check-circle"></i>Android Application Developer</h3>
             <h4>Self-Employed</h4>
@@ -377,29 +498,51 @@
                 <li>Built a password management application that uses NoSQL to store passwords.</li>
                 <li>Engineered in 3-layered architecture.</li>
                 <li>Implemented object-oriented codes based on design patterns principles.</li>
-                <li>Powered by Java and SQLite.</li>
             </ul>
         </article>
-        <article class="key-sql" id="database">
+        <article class="rtl key-java key-extra-2" id="android-pr">
+            <span class="exp-date">Mar 2010 - Aug 2010<br/>(7 months)</span>
+            <h3><i class="bull fa fa-check-circle"></i>Android Application Developer</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>پیاده‌اسازی نرم‌افزار نگهداری ایمن کلمات عبور در پلتفرم اندروید.</li>
+                <li>با استفاده از پایگاه داده NoSql.</li>
+            </ul>
+        </article>
+        <article class="ltr key-sql key-extra-2" id="database">
             <span class="exp-date">Aug 2009 - Feb 2010<br/>(7 months)</span>
             <h3><i class="bull fa fa-check-circle"></i>Database Developer</h3>
             <h4>Self-Employed</h4>
             <ul>
                 <li>Designed the models for databases of hospital resource planning and project control.</li>
-                <li>Powered by T-SQL.</li>
             </ul>
         </article>
-        <article class="key-dotnet key-extra-3" id="siah-bishe">
+        <article class="rtl key-sql" id="database-pr">
+            <span class="exp-date">Aug 2009 - Feb 2010<br/>(7 months)</span>
+            <h3><i class="bull fa fa-check-circle"></i>Database Developer</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>مدل‌سازی و پیاده‌سازی پایگاه‌داده نرم افزار کنترل پروژه و پایگاه‌داده نرم افزار کنترل پرونده‌های بیمارستانی.</li>
+            </ul>
+        </article>
+        <article class="ltr key-dotnet key-extra-3" id="siah-bishe">
             <span class="exp-date">Nov 2008 - Jul 2009<br/>(9 months)</span>
             <h3><i class="bull fa fa-check-circle"></i>.NET Developer on Project Control Software</h3>
             <h4>Self-Employed</h4>
             <ul>
-                <li>Formalized a project control software system that specialized for the turbines and generators of Siah Bishe Dam.</li>
+                <li>Built a project control system for managing turbine and generator components at Siah Bishe Dam.</li>
                 <li>This software helps the user to monitor the progress of building more than 100 pieces of the dam.</li>
-                <li>Powered by C#.Net.</li>
             </ul>
         </article>
-        <article class="key-web key-extra-3" id="epilepsy">
+        <article class="rtl key-dotnet key-extra-3" id="siah-bishe-pr">
+            <span class="exp-date">Nov 2008 - Jul 2009<br/>(9 months)</span>
+            <h3><i class="bull fa fa-check-circle"></i>.NET Developer on Project Control Software</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>نرم افزار مدیریتی برای کنترل پروژه ساخت توربین‌ها و ژنراتور‌های سد سیاه بیشه.</li>
+            </ul>
+        </article>
+        <article class="ltr key-web key-extra-3" id="epilepsy">
             <span class="exp-date">Apr 2008 - Oct 2008<br/>(7 months)</span>
             <h3><i class="bull fa fa-check-circle"></i>Web Developer</h3>
             <h4>Self-Employed</h4>
@@ -407,21 +550,61 @@
                 <li>Founded the Iranian Associations of Epilepsy website.</li>
             </ul>
         </article>
-        <article class="key-dotnet key-extra-3" id="phone-book">
+        <article class="rtl key-web key-extra-3" id="epilepsy-pr">
+            <span class="exp-date">Apr 2008 - Oct 2008<br/>(7 months)</span>
+            <h3><i class="bull fa fa-check-circle"></i>Web Developer</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>وب سایت انجمن صرع ایران.</li>
+            </ul>
+        </article>
+        <article class="ltr key-dotnet key-extra-3" id="phone-book">
             <span class="exp-date">Apr 2008<br/>(1 month)</span>
             <h3><i class="bull fa fa-check-circle"></i>.NET Developer</h3>
             <h4>Self-Employed</h4>
             <ul>
                 <li>Developed a phone-book application for desktop users.</li>
-                <li>Powered by C#.Net.</li>
+            </ul>
+        </article>
+        <article class="rtl key-dotnet key-extra-3" id="phone-book-pr">
+            <span class="exp-date">Apr 2008<br/>(1 month)</span>
+            <h3><i class="bull fa fa-check-circle"></i>.NET Developer</h3>
+            <h4>Self-Employed</h4>
+            <ul>
+                <li>توسعه نرم‌افزار دفترتلفن - شرکت طرح و نقش باران.</li>
             </ul>
         </article>
     </section>
     <section>
+        <h2>Infrastructure & Backend Automation Projects</h2>
+        <article class="ltr" id="photon-bypass">
+            <h3><i class="bull fa fa-check-circle"></i>Photon-Bypass - <a target="_blank" href="https://github.com/h-nargesi/Photon-Bypass">github.com/h-nargesi/Photon-Bypass</a></h3>
+            <h4>C# ASP.Net Core, Angular, Sqlite, MySQL, MikroTik</h4>
+            <p>
+                A VPN user portal enabling self-service access for subscription status and renewal. Integrated with FreeRADIUS and MikroTik via API to automatically generate and email client certificates upon subscription. Built with backend automation, RADIUS communication, and secure user flows.
+            </p>
+        </article>
+        <article class="ltr key-extra-2" id="radius-desk">
+            <h3><i class="bull fa fa-check-circle"></i>RADIUSdesk (forked) - <a target="_blank" href="https://github.com/h-nargesi/radius-desk">github.com/h-nargesi/radius-desk</a></h3>
+            <h4>Php, Sencha, MySQL, MikroTik</h4>
+            <p>
+                A customized fork of RADIUSdesk, tailored for VPN user management. Added feature enhancements and bug fixes to support custom workflows, including automated account provisioning and radius status extension, optimized for self-hosted VPN deployment.
+            </p>
+        </article>
+    </section>
+    <section class="ltr">
         <h2>Education</h2>
         <p>
             <h3>Bachelor of Science - BS, Information Technology (IT)</h3>
             <h4>Payame Noor University</h4>
+            <h4>Graduated: 2016</h4>
+        </p>
+    </section>
+    <section class="rtl">
+        <h2>تحصیلات</h2>
+        <p>
+            <h3>کارشناسی فناوری اطلاعات</h3>
+            <h4>دانشگاه پیام نور</h4>
         </p>
     </section>
 </main>
@@ -429,6 +612,16 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
+        const persian = ELEMENTS.PARSI;
+
+        if (ELEMENTS.PARSI) {
+            for (const i in NOT_INCLUDED) NOT_INCLUDED[i] += "-pr";
+            for (const i in INCLUDED) INCLUDED[i] += "-pr";
+        }
+
+        document.querySelectorAll('.' + (ELEMENTS.PARSI ? 'ltr' : 'rtl')).forEach((element) => {
+            element.style.display = 'none';
+        });
 
         const reg_legth = new RegExp(/^key-(not-)?extra-(\d+)$/);
         const reg_key = new RegExp(/^key-(not-)?([\w-]+)$/);
@@ -506,6 +699,10 @@
             }
         }
 
+        for (const page_break of PAGE_BREAK)
+            document.querySelectorAll(page_break)
+                    .forEach((element) => element.className += "page-break");
+
         for (const included of INCLUDED)
             document.querySelectorAll(included)
                     .forEach((element) => element.style.display = null);
@@ -548,7 +745,11 @@
         document.querySelectorAll('.exp-date')
                 .forEach((element) => {
                     element.innerHTML = DateDiff(element.innerHTML);
-                })
+                });
+
+        const lang_suffix_ignore = ELEMENTS.PARSI ? '-en' : '-pr';
+        document.querySelectorAll(`[class*="${lang_suffix_ignore}"]`)
+                .forEach((element) => element.style.display = 'none');
     });
 
     function DateDiff(period) {
@@ -566,7 +767,7 @@
 
     function GetDate(text) {
         if (!text) return null;
-        else if (text.trim().toLowerCase() == "present") return new Date();
+        else if (text.trim().toLowerCase() === "present") return new Date();
         else return new Date(Date.parse(text));
     }
 

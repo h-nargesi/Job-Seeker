@@ -25,6 +25,7 @@ public partial class ResumeContext
         { nameof(KeysContext.MACHINE_LEARNING), null },
         { nameof(KeysContext.NETWORK), null },
     };
+    public NotIncludedContext PageBreak { get; } = [];
     public NotIncludedContext NotIncluded { get; } = [];
     public NotIncludedContext Included { get; } = [];
     public ElementsContext Elements { get; } = new();
