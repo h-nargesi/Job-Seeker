@@ -9,6 +9,7 @@ public class DecisionController(Analyzer analyzer) : Controller
     private readonly Analyzer analyzer = analyzer;
 
     [HttpPost]
+    [RequestSizeLimit(5_000_000)]
     public IActionResult Take([FromBody] PageContext? context)
     {
         if (context == null) return BadRequest();
@@ -98,7 +99,7 @@ public class DecisionController(Analyzer analyzer) : Controller
         try
         {
             if (context.Agency == null) return BadRequest();
-            var agency = analyzer.Agencies[context.Agency];
+            if (!analyzer.Agencies.TryGetValue(context.Agency, out var agency)) return NotFound();
 
             using var database = Database.Open();
 

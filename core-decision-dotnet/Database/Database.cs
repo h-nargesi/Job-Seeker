@@ -41,6 +41,13 @@ namespace Photon.JobSeeker
 
             connection.Open();
 
+            executer.CommandText = "PRAGMA journal_mode=WAL";
+            executer.ExecuteNonQuery();
+            executer.CommandText = "PRAGMA busy_timeout=5000";
+            executer.ExecuteNonQuery();
+            executer.Parameters.Clear();
+            executer.CommandText = string.Empty;
+
             return new Database(connection, executer);
         }
 
@@ -68,6 +75,13 @@ namespace Photon.JobSeeker
         {
             executer.CommandText = "SELECT last_insert_rowid()";
             return (long)(executer.ExecuteScalar() ?? throw new Exception("No ID found!"));
+        }
+
+        public long Changes()
+        {
+            ClearParameter();
+            executer.CommandText = "SELECT changes()";
+            return (long)(executer.ExecuteScalar() ?? 0L);
         }
 
         public Database ClearParameter()

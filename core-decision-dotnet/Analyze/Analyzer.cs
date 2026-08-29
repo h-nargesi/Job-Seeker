@@ -16,7 +16,8 @@ public class Analyzer
             {
                 lock (@lock)
                 {
-                    LoadAgencies();
+                    if (agencies_by_name.Count == 0)
+                        LoadAgencies();
                 }
             }
 
@@ -32,7 +33,8 @@ public class Analyzer
             {
                 lock (@lock)
                 {
-                    LoadAgencies();
+                    if (agencies_by_id.Count == 0)
+                        LoadAgencies();
                 }
             }
 
@@ -50,8 +52,11 @@ public class Analyzer
 
     public void ClearAgencies()
     {
-        agencies_by_name.Clear();
-        agencies_by_id.Clear();
+        lock (@lock)
+        {
+            agencies_by_name.Clear();
+            agencies_by_id.Clear();
+        }
     }
 
     public void ReloadSettings()

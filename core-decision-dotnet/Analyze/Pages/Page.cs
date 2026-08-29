@@ -18,10 +18,7 @@ public abstract class Page : IComparable<Page>
     public int CompareTo(Page? other)
     {
         if (other == null) return 1;
-        else if (other == this) return 0;
-        else if (other.Order > Order) return -1;
-        else if (other.Order < Order) return 1;
-        else return 0;
+        else return Order.CompareTo(other.Order);
     }
 
     public override string ToString()

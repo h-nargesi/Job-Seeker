@@ -3,6 +3,7 @@ console.log("AGENT", "core-messaging");
 class CoreMessaging {
 
     static SERVER_URL;
+    static API_KEY;
     static SCOPES;
     static HEADERS = {
         'Accept': 'application/json',
@@ -18,12 +19,27 @@ class CoreMessaging {
         return CoreMessaging.SERVER_URL;
     }
 
+    async CheckApiKey() {
+        if (CoreMessaging.API_KEY === undefined) {
+            CoreMessaging.API_KEY = await StorageHandler.ApiKeyAsync();
+        }
+
+        return CoreMessaging.API_KEY;
+    }
+
+    async BuildHeaders() {
+        const api_key = await this.CheckApiKey();
+        const headers = Object.assign({}, CoreMessaging.HEADERS);
+        if (api_key) headers['X-API-Key'] = api_key;
+        return headers;
+    }
+
     async Send(params) {
         const server_url = await this.CheckServerUrl() + "decision/take";
 
         const data = {
             method: 'POST',
-            headers: CoreMessaging.HEADERS,
+            headers: await this.BuildHeaders(),
             body: JSON.stringify(params)
         };
 
@@ -45,7 +61,7 @@ class CoreMessaging {
 
                 const data = {
                     method: 'GET',
-                    headers: CoreMessaging.HEADERS
+                    headers: await this.BuildHeaders()
                 };
 
                 const response = await fetch(server_url, data);
@@ -67,7 +83,7 @@ class CoreMessaging {
 
             const data = {
                 method: 'GET',
-                headers: CoreMessaging.HEADERS
+                headers: await this.BuildHeaders()
             };
 
             let response = await fetch(server_url, data);

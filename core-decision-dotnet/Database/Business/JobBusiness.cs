@@ -10,17 +10,24 @@ namespace Photon.JobSeeker
         public List<object> Fetch(string[] agency_titles, string[] country_codes)
         {
             var where = string.Empty;
+            var parameters = new List<object>();
 
             if (agency_titles?.Length > 0)
-                where += $" AND Agency.Title IN ('{string.Join("','", agency_titles)}')";
+            {
+                where += $" AND Agency.Title IN ({string.Join(", ", agency_titles.Select((_, i) => $"$a{i}"))})";
+                parameters.AddRange(agency_titles);
+            }
 
             if (country_codes?.Length > 0)
-                where = $" AND Job.Country IN ('{string.Join("','", country_codes)}')";
+            {
+                where += $" AND Job.Country IN ({string.Join(", ", country_codes.Select((_, i) => $"$c{i}"))})";
+                parameters.AddRange(country_codes);
+            }
 
             if (!string.IsNullOrEmpty(where))
                 where = "WHERE" + where.Substring(4);
 
-            using var reader = database.Read(Q_INDEX.Replace("@where@", where));
+            using var reader = database.Read(Q_INDEX.Replace("@where@", where), parameters.ToArray());
             var list = new List<object>();
 
             while (reader.Read())
@@ -36,11 +43,14 @@ namespace Photon.JobSeeker
 
         public long FetchFromCount(DateTime time)
         {
-            database.Execute(Q_FETCH_UPDATE_REVAL);
-
             using var reader = database.Read(Q_FETCH_FROM_COUNT, time);
             if (!reader.Read()) return default;
             return (long)reader[0];
+        }
+
+        public void ResetRevaluations()
+        {
+            database.Execute(Q_FETCH_UPDATE_REVAL);
         }
 
         public Job? FetchFrom(DateTime time)
@@ -153,7 +163,9 @@ namespace Photon.JobSeeker
                     "ON CONFLICT(AgencyID, Code) DO NOTHING;");
 
                 if (job != null)
-                    job.JobID = database.LastInsertRowId();
+                    job.JobID = database.Changes() == 0
+                        ? database.Job.Fetch(job.AgencyID, job.Code!)?.JobID ?? 0
+                        : database.LastInsertRowId();
             }
             else database.Update(nameof(Job), model, id, filter);
         }
@@ -173,12 +185,12 @@ namespace Photon.JobSeeker
             Save(new { JobID = id, Options = options });
         }
 
-        public void Clean(int mounths)
+        public void Clean(int mounths, bool vacuum = false)
         {
             database.Execute(Q_CLEAN, DateTime.Now.AddMonths(-mounths));
             database.Execute(Q_CLEAN_ATTENTION, DateTime.Now.AddDays(-mounths * 7));
             database.Execute(Q_CLEAN_NOT_APPROVED, DateTime.Now.AddDays(-7));
-            database.Execute(Q_VACUUM);
+            if (vacuum) database.Execute(Q_VACUUM);
         }
 
         protected override string[]? GetUniqueColumns { get; } = [
@@ -306,6 +318,8 @@ ORDER BY Tries IS NULL DESC, Tries DESC, JobID LIMIT 1";
         private const string Q_CLEAN = @$"
 DELETE FROM Job WHERE RegTime < $date AND (State != '{nameof(JobState.Applied)}' OR Tries LIKE '%4: %')";
 
+        // Current behavior: keeps Html for the global top-100 Attention jobs by Score
+        // (the subquery is not scoped by the same RegTime window as the outer query).
         private const string Q_CLEAN_ATTENTION = @$"
 UPDATE Job SET Html = null
 WHERE RegTime < $date AND State IN ('{nameof(JobState.Attention)}') AND JobID NOT IN (

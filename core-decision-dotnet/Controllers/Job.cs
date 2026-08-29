@@ -133,12 +133,12 @@ public class JobController(Analyzer analyzer) : Controller
     }
 
     [HttpPost]
-    public IActionResult Clean()
+    public IActionResult Clean([FromQuery] bool vacuum = false)
     {
         try
         {
             using var database = Database.Open();
-            database.Job.Clean(3);
+            database.Job.Clean(3, vacuum);
             return Ok();
         }
         catch (Exception ex)
@@ -173,6 +173,7 @@ public class JobController(Analyzer analyzer) : Controller
             if (options.Query == "reload")
             {
                 analyzer.ReloadSettings();
+                JobEligibilityHelper.InvalidateOptionsCache();
                 return Ok("Setting were reloaded");
             }
             else
@@ -181,6 +182,7 @@ public class JobController(Analyzer analyzer) : Controller
                 if (options.Type == "E")
                 {
                     database.Execute(options.Query);
+                    JobEligibilityHelper.InvalidateOptionsCache();
                     return Ok("Done");
                 }
                 else if (options.Type == "Q")

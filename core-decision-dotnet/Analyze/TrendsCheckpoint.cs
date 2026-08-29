@@ -74,8 +74,14 @@ namespace Photon.JobSeeker
                             return;
                         }
                     }
+
+                    database.Rollback();
                 }
-                finally { database.Rollback(); }
+                catch
+                {
+                    database.Rollback();
+                    throw;
+                }
 
             Log.Debug("Trend (unknown) Agency({0}) {1}, {2}",
                 result.AgencyID, result.Type, result.State);
@@ -309,7 +315,7 @@ namespace Photon.JobSeeker
 
         private static string FillSpace(string text, int max = 6)
         {
-            return string.Join("", text, new string(' ', max - text.Length));
+            return string.Join("", text, new string(' ', Math.Max(0, max - text.Length)));
         }
     }
 }

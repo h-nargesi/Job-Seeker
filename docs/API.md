@@ -8,13 +8,33 @@ under `/job/*` and `/report/*` (human + extension). All routes use the
 
 Controllers: `Controllers/Decision.cs`, `Controllers/Job.cs`, `Controllers/Report.cs`.
 
+## Authentication
+
+Single-user, shared-secret auth (`Auth:ApiKey` in configuration). When the key
+is configured, every endpoint requires it; without it (Development only) the
+server runs auth-free and logs a warning.
+
+- **Extension / API clients**: send header `X-API-Key: <key>` with every
+  request. Missing/wrong key → `401` JSON (for `Accept: application/json`
+  requests) or a redirect to the login page.
+- **Dashboard / browser**: `GET /auth/login`, enter the same secret as the
+  password → signed HttpOnly cookie (`js_auth`, DataProtection-protected,
+  SameSite=Lax, 30 days). `GET /auth/logout` clears it.
+- `/auth/*` and static files (`wwwroot`) are exempt from auth.
+- Production startup **fails fast** when `Auth:ApiKey` / `Auth:CredentialKey`
+  are missing; Development degrades with warnings.
+- Agency credentials (`Agency.Password`) are stored AES-GCM encrypted
+  (`enc:` prefix) and migrated automatically on startup when
+  `Auth:CredentialKey` (32-byte base64) is set.
+
 ## Automation API — `DecisionController`
 
 These are what the Chrome extension calls.
 
 ### `POST /decision/take`
 The heart of the loop. The extension posts the current page's full HTML; the
-server analyzes it and returns the next browser commands.
+server analyzes it and returns the next browser commands. Request body is
+capped at 5 MB (`[RequestSizeLimit]`).
 
 - **Request body** (`PageContext`):
   ```json
@@ -92,7 +112,8 @@ available, against the current `JobOption` rules. Progress is surfaced via
 
 ### `POST /job/clean`
 Run the retention queries (`JobBusiness.Clean`): delete old jobs (keeping
-`Applied`), trim HTML for old `Attention`/`NotApproved` jobs, `VACUUM`.
+`Applied`), trim HTML for old `Attention`/`NotApproved` jobs. Pass
+`?vacuum=true` to also `VACUUM` (rewrites the whole DB file — slow).
 
 ### `GET /job/options`
 Render the `job-options` view (the scoring-rules editor).
@@ -137,3 +158,8 @@ Factory helpers exist for all of them: `Command.Go/Open/Fill/Click/Recheck/Reloa
 Controllers catch exceptions, log via Serilog (`Log.Error`), and either return
 `BadRequest()` (for `BadJobRequest`) or rethrow (500). Scoring/analysis failures
 are non-fatal to the loop — they surface as logs, not crashes.
+
+Unhandled exceptions are caught by a global handler (`UseExceptionHandler`)
+that logs and returns a bare 500 without stack-trace details. The detailed
+developer error page remains active only in Development (the ASP.NET Core
+default).

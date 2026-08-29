@@ -69,9 +69,34 @@ This runs the `.sql` files in `database/structure/` against `data.sqlite3`.
 `passwords.sql` is gitignored (contains real agency credentials) — create it if
 absent, otherwise `installation.sh` will error on the last line.
 
+**Auth secrets** — two secrets configure single-user auth + credential
+encryption (`appsettings.json` ships them empty; never commit real values):
+
+- `Auth:ApiKey` — shared secret. Extension sends it as `X-API-Key`; the
+  dashboard login (`/auth/login`) uses it as the password. In **production the
+  server refuses to start without it**; in Development it may be omitted (auth
+  disabled, warning logged).
+- `Auth:CredentialKey` — 32-byte base64 key (AES-GCM) encrypting agency
+  passwords at rest (`enc:` prefix, auto-migrated on startup). Generate with
+  `openssl rand -base64 32`. Same fail-fast rule in production.
+
+```bash
+# Development (user-secrets, run inside core-decision-dotnet/)
+dotnet user-secrets set "Auth:ApiKey" "some-random-secret"
+dotnet user-secrets set "Auth:CredentialKey" "$(openssl rand -base64 32)"
+
+# Production (environment variables)
+export Auth__ApiKey="some-random-secret"
+export Auth__CredentialKey="<openssl rand -base64 32>"
+```
+
+SQLite runs in WAL mode: `data.sqlite3-wal` / `data.sqlite3-shm` files appear
+next to the DB and are normal — include them in backups/restores.
+
 **Load the extension** — `chrome://extensions` → Developer mode → Load unpacked
-→ select `agent-extension/`. Set the server URL in the popup menu (default
-`http://localhost:8081/`).
+→ select `agent-extension/`. Set the server URL (default
+`http://localhost:8081/`) and, when `Auth:ApiKey` is configured, the matching
+API Key in the popup menu (press Enter in each field to save).
 
 ## 3. Lint / typecheck / test
 

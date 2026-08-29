@@ -20,7 +20,8 @@
 
 ## بخش ۱ — 🔴 بحرانی (امنیت و از دست رفتن داده)
 
-### ۱.۱ تزریق SQL در `JobBusiness.Fetch`
+### ۱.۱ تزریق SQL در `JobBusiness.Fetch` — ✅ رفع شد
+پارامترهای داینامیک (`$a0, $c0, ...`) جایگزین الحاق رشته شد؛ باگ `where =` (حذف بی‌صدای فیلتر آژانس‌ها) نیز اصلاح شد.
 **فایل:** `core-decision-dotnet/Database/Business/JobBusiness.cs` (خطوط ۱۴–۱۸)
 
 ورودی کاربر (از Query String در `ReportController.Jobs`) مستقیماً در کوئری الحاق می‌شود:
@@ -35,7 +36,7 @@ where =  $" AND Job.Country IN ('{string.Join("','", country_codes)}')";
 
 ---
 
-### ۱.۲ اجرای SQL دلخواه در `JobController.Setting`
+### ۱.۲ اجرای SQL دلخواه در `JobController.Setting` — ✅ حفظ شد زیر احراز هویت
 **فایل:** `core-decision-dotnet/Controllers/Job.cs` (خطوط ۱۶۵–۲۰۰)
 
 اندپوینت POST کوئری خام را از بدنه درخواست گرفته و اجرا می‌کند:
@@ -50,7 +51,8 @@ var result = database.ReadAll(options.Query); // Type == "Q"
 
 ---
 
-### ۱.۳ نبود احراز هویت/مجوزدهی
+### ۱.۳ نبود احراز هویت/مجوزدهی — ✅ رفع شد
+احراز هویت تک‌کاربره: هدر `X-API-Key` برای اکستنشن + کوکی امضاشده (DataProtection) از طریق `/auth/login` برای داشبورد.
 **فایل:** `Program.cs` — هیچ `UseAuthentication`/`UseAuthorization`/فیلتری وجود ندارد.
 
 تمام عملیات حساس (Clean، Reset، Setting، خواندن شغل‌ها و رزومه) بدون لاگین در دسترس است.
@@ -58,7 +60,8 @@ var result = database.ReadAll(options.Query); // Type == "Q"
 
 ---
 
-### ۱.۴ ذخیره اعتبارنامه به‌صورت Plain-text
+### ۱.۴ ذخیره اعتبارنامه به‌صورت Plain-text — ✅ رفع شد (at-rest)
+رمزنگاری AES-GCM با پیشوند `enc:` + مهاجرت خودکار در startup (`SecretProtector`). ⚠️ باقی‌مانده: گذر plaintext از HTTP هنگام fill فرم لاگین — نیازمند TLS.
 **فایل:** `database/structure/agency.sql` (ستون‌های `UserName`, `Password`)
 
 نام کاربری و رمز عبور سایت‌های کاریابی متن‌ساده است و با `AgencyBusiness.GetUserPass` خوانده می‌شود.
@@ -66,7 +69,8 @@ var result = database.ReadAll(options.Query); // Type == "Q"
 
 ---
 
-### ۱.۵ `LastInsertRowId` نادرست هنگام Conflict
+### ۱.۵ `LastInsertRowId` نادرست هنگام Conflict — ✅ رفع شد
+پس از insert، با `SELECT changes()` تشخیص conflict و در صورت تکراری بودن، ID رکورد موجود از طریق `Fetch(agency, code)` خوانده می‌شود.
 **فایل:** `Database/Database.cs` (۶۷–۷۱) و `Database/Business/JobBusiness.cs` (۱۵۲–۱۵۷)
 
 با `ON CONFLICT(...) DO NOTHING` اگر رکورد تکراری باشد، INSERT ای رخ نمی‌دهد ولی
@@ -78,7 +82,8 @@ var result = database.ReadAll(options.Query); // Type == "Q"
 
 ---
 
-### ۱.۶ مدیریت استثناء ناقص → نشت Stack Trace
+### ۱.۶ مدیریت استثناء ناقص → نشت Stack Trace — ✅ رفع شد
+`UseExceptionHandler` سراسری اضافه شد: لاگ کامل + پاسخ 500 بدون جزئیات. DeveloperExceptionPage طبق پیش‌فرض فقط در Development فعال است.
 **فایل:** همه Controller‌ها (مثلاً `DecisionController.Take` خط ۳۶ `throw;`)
 
 هیچ `UseExceptionHandler` یا `UseDeveloperExceptionPage` در `Program.cs` پیکربندی نشده؛
@@ -86,7 +91,8 @@ var result = database.ReadAll(options.Query); // Type == "Q"
 
 ---
 
-### ۱.۷ نبود محدودیت حجم درخواست
+### ۱.۷ نبود محدودیت حجم درخواست — ✅ رفع شد
+`[RequestSizeLimit(5_000_000)]` روی `DecisionController.Take`.
 `DecisionController.Take` کل HTML صفحه (`document.documentElement.outerHTML`) را
 می‌پذیرد بدون محدودیت حجم. قابل سوءاستفاده برای اشغال منابع.
 
@@ -94,7 +100,7 @@ var result = database.ReadAll(options.Query); // Type == "Q"
 
 ## بخش ۲ — 🟠 مهم (باگ‌های منطقی و درستی)
 
-### ۲.۱ باگ تشخیص دوره حقوق (`EvaluateSalaryScore`)
+### ۲.۱ باگ تشخیص دوره حقوق (`EvaluateSalaryScore`) — ✅ رفع شد
 **فایل:** `Analyze/JobEligibilityHelper.cs` (خطوط ۳۳۷–۳۴۱)
 
 ```csharp
@@ -107,7 +113,7 @@ if (period_index < 0 && ...)
 
 ---
 
-### ۲.۲ `IndeedPageJob.JobFallow` سلکتور اشتباه
+### ۲.۲ `IndeedPageJob.JobFallow` سلکتور اشتباه — ⚠️ فیکس به‌نیت (کلیک روی `a[title*='Add to favourites']`)؛ نیازمند تأیید با DOM زندهٔ این‌دیس
 **فایل:** `Analyze/Indeed/IndeedPageJob.cs` (۲۷)
 
 این‌دیس روی `reg_job_adding` («Add to favourites») چک می‌شود ولی `button.jobs-save-button`
@@ -115,7 +121,7 @@ if (period_index < 0 && ...)
 
 ---
 
-### ۲.۳ `check-page.js` هندلر اشتباه
+### ۲.۳ `check-page.js` هندلر اشتباه — ✅ رفع شد
 **فایل:** `agent-extension/controllers/check-page.js` (۲۰)
 
 ```js
@@ -127,7 +133,7 @@ if (period_index < 0 && ...)
 
 ---
 
-### ۲.۴ `keyboard.js` باگ ارجاع پیش از تعریف و مرده بودن
+### ۲.۴ `keyboard.js` باگ ارجاع پیش از تعریف و مرده بودن — ✅ فایل حذف شد
 **فایل:** `agent-extension/controllers/keyboard.js` (۹)
 
 ```js
@@ -139,7 +145,7 @@ APIهای `createEvent`/`initEvent` نیز منسوخ‌اند.
 
 ---
 
-### ۲.۵ `Glassdoor` ناقص و مستعد کرش
+### ۲.۵ `Glassdoor` ناقص و مستعد کرش — ✅ رفع شد (`GetSubPages` آرایهٔ خالی برمی‌گرداند؛ کامنت‌های کپی‌پیست حذف شدند)
 **فایل:** `Analyze/Glassdoor/Glassdoor.cs`
 
 `GetSubPages()` مقدار `null` برمی‌گرداند و `LoadPages` با
@@ -149,7 +155,7 @@ APIهای `createEvent`/`initEvent` نیز منسوخ‌اند.
 
 ---
 
-### ۲.۶ `TrendsCheckpoint.LoadAndUpdateCurrentTrend` همیشه Rollback می‌زند
+### ۲.۶ `TrendsCheckpoint.LoadAndUpdateCurrentTrend` همیشه Rollback می‌زند — ✅ رفع شد (الگوی استاندارد try/Commit/catch-Rollback)
 **فایل:** `Analyze/TrendsCheckpoint.cs` (۵۲–۸۴)
 
 بلاک `try/finally` در `finally` همیشه `database.Rollback()` می‌زند. اگر `Commit()` موفق
@@ -158,7 +164,7 @@ APIهای `createEvent`/`initEvent` نیز منسوخ‌اند.
 
 ---
 
-### ۲.۷ SQLite و همزمانی (احتمال database is locked)
+### ۲.۷ SQLite و همزمانی (احتمال database is locked) — ✅ رفع شد (`PRAGMA journal_mode=WAL` + `busy_timeout=5000` در هر `Open`)
 
 برای هر درخواست یک اتصال جدید باز می‌شود (`Database.Open()` در ده‌ها نقطه)، بدون WAL mode
 و بدون `BusyTimeout`. تب‌های همزمان مرورگر که به `/decision/take` می‌زنند و می‌نویسند →
@@ -169,7 +175,7 @@ APIهای `createEvent`/`initEvent` نیز منسوخ‌اند.
 
 ---
 
-### ۲.۸ `JobEligibilityHelper` در هر شغل ۳ اتصال DB باز می‌کند
+### ۲.۸ `JobEligibilityHelper` در هر شغل ۳ اتصال DB باز می‌کند — ✅ کش static برای `JobOption[]` (ابطال در `ReloadSettings` و بعد از Execute کنسول Setting)؛ بازسازی اتصال‌ها به DI خارج از دامنهٔ این مرحله باقی می‌ماند
 **فایل:** `Analyze/Pages/JobPage.cs` (۱۸)
 
 `new JobEligibilityHelper()` در سازنده `database`, `dictionaries`, `options` را باز/بارگذاری
@@ -178,7 +184,7 @@ APIهای `createEvent`/`initEvent` نیز منسوخ‌اند.
 
 ---
 
-### ۲.۹ اثر جانبی در متد شمارش (`FetchFromCount`)
+### ۲.۹ اثر جانبی در متد شمارش (`FetchFromCount`) — ✅ رفع شد (UPDATE ریست Revaluationها به `RunRevaluateProcess` منتقل شد؛ رفتار حفظ شد)
 **فایل:** `Database/Business/JobBusiness.cs` (۳۷–۴۴)
 
 `FetchFromCount` ابتدا `Q_FETCH_UPDATE_REVAL` (یک UPDATE سنگین) اجرا می‌کند. شمارش
@@ -192,7 +198,7 @@ APIهای `createEvent`/`initEvent` نیز منسوخ‌اند.
 
 ---
 
-### ۲.۱۱ `VACUUM` در هر Clean
+### ۲.۱۱ `VACUUM` در هر Clean — ✅ رفع شد (`?vacuum=true`؛ پیش‌فرض خاموش)
 **فایل:** `JobBusiness.cs` (۱۸۱)
 
 `Clean` همیشه `VACUUM` می‌زند که کل فایل را بازنویسی و دیتابیس را قفل می‌کند. باید
@@ -200,7 +206,7 @@ APIهای `createEvent`/`initEvent` نیز منسوخ‌اند.
 
 ---
 
-### ۲.۱۲ `FillSpace` احتمال استثنای منفی
+### ۲.۱۲ `FillSpace` احتمال استثنای منفی — ✅ رفع شد (`Math.Max(0, ...)`)
 **فایل:** `Analyze/TrendsCheckpoint.cs` (۳۱۰–۳۱۳)
 
 `new string(' ', max - text.Length)` اگر `text.Length > max` شود →
@@ -215,7 +221,7 @@ APIهای `createEvent`/`initEvent` نیز منسوخ‌اند.
 
 ---
 
-### ۲.۱۴ `DecisionController.Running` کلید نامعتبر → ۵۰۰
+### ۲.۱۴ `DecisionController.Running` کلید نامعتبر → ۵۰۰ — ✅ رفع شد (`TryGetValue` + `NotFound()`)
 **فایل:** `Controllers/Decision.cs` (۱۰۱)
 
 `analyzer.Agencies[context.Agency]` با نام اشتباه `KeyNotFoundException` می‌دهد.
@@ -228,27 +234,27 @@ APIهای `createEvent`/`initEvent` نیز منسوخ‌اند.
 
 ---
 
-### ۲.۱۶ `IndeedPageSearch` از `reg_job_url` (`/rc/clk?jk=`) استفاده می‌کند
+### ۲.۱۶ `IndeedPageSearch` از `reg_job_url` (`/rc/clk?jk=`) استفاده می‌کند — ⚠️ فقط TODO ثبت شد؛ نیازمند تأیید با DOM زندهٔ این‌دیس (regex دست‌نخورده)
 
 احتمالاً در DOM جدید این‌دیس وجود ندارد (URL بازنمایی `/viewjob?jk=` است) → استخراج
 شغل این‌دیس ممکن است خالی بماند.
 
 ---
 
-### ۲.۱۷ `IndeedPageJob.ChceckJob` استثنا برای کنترل جریان
+### ۲.۱۷ `IndeedPageJob.ChceckJob` استثنا برای کنترل جریان — ✅ رفع شد (`State = NotApproved` + Log؛ skip ارزیابی در `JobPage.IssueCommand`)
 **فایل:** `Indeed/IndeedPageJob.cs` (۴۱–۴۵)
 
 پرتاب `Exception` روی «region not supported» به‌جای تنظیم State مناسب.
 
 ---
 
-### ۲.۱۸ `Q_CLEAN_ATTENTION` زیرکوئری مبهم
+### ۲.۱۸ `Q_CLEAN_ATTENTION` زیرکوئری مبهم — ✅ کامنت شفاف‌ساز اضافه شد (رفتار فعلی: top-100 سراسری)
 **فایل:** `JobBusiness.cs` (۳۰۹–۳۱۳) — نگه‌داشتن HTML برای ۱۰۰ رکورد برتر بر اساس Score
 بدون فیلتر RegTime یکسان در زیرکوئری.
 
 ---
 
-### ۲.۱۹ `Analyze.Agencies` lazy-load الگوی قفل شکسته
+### ۲.۱۹ `Analyze.Agencies` lazy-load الگوی قفل شکسته — ✅ رفع شد (بررسی داخل lock برای هر دو property؛ `ClearAgencies` زیر همان lock)
 **فایل:** `Analyze/Analyzer.cs` (۱۱–۴۱)
 
 بررسی `Count == 0` بیرون قفل سپس قفل؛ `Agencies` و `AgenciesByID` مستقل چک می‌کنند.
@@ -303,13 +309,13 @@ APIهای `createEvent`/`initEvent` نیز منسوخ‌اند.
 
 ---
 
-### ۳.۷ `Extensions.Shift` مرده و باگ‌دار
+### ۳.۷ `Extensions.Shift` مرده و باگ‌دار — ✅ حذف شد
 **فایل:** `Basics/Extensions.cs` (۳۳–۳۸) — `Insert(1, ...)` همیشه در اندیس ۱ درج می‌کند
 (به‌جای shift واقعی). استفاده‌ای هم ندارد.
 
 ---
 
-### ۳.۸ `Page.CompareTo` بیش‌حد پیچیده
+### ۳.۸ `Page.CompareTo` بیش‌حد پیچیده — ✅ ساده شد (`Order.CompareTo`)
 **فایل:** `Analyze/Pages/Page.cs` (۱۸–۲۵) — می‌تواند `Order.CompareTo(other.Order)` باشد.
 
 ---
@@ -329,19 +335,19 @@ APIهای `createEvent`/`initEvent` نیز منسوخ‌اند.
 
 ---
 
-### ۳.۱۱ Serilog با ASP.NET Logging ادغام نشده
+### ۳.۱۱ Serilog با ASP.NET Logging ادغام نشده — ✅ رفع شد (`builder.Logging.AddSerilog()`)
 **فایل:** `Program.cs` — `builder.Logging.AddSerilog()` فراموش شده؛ دو سیستم لاگ جدا.
 
 ---
 
-### ۳.۱۲ مسیر لاگ ممکن است نباشد
+### ۳.۱۲ مسیر لاگ ممکن است نباشد — ✅ رفع شد (`Directory.CreateDirectory` در startup)
 
 `logs/E.log` — اگر پوشه موجود نباشد Serilog File sink استثنا می‌دهد. ایجاد پوشه در
 startup لازم است.
 
 ---
 
-### ۳.۱۳ `appsettings.json` در برابر Development فقط در casing (`Logs`/`logs`)
+### ۳.۱۳ `appsettings.json` در برابر Development فقط در casing (`Logs`/`logs`) — ✅ یکسان شد (`logs/E.log`)
 
 روی فایل‌سیستم حساس به حروف (لینوکس) مشکل‌ساز.
 

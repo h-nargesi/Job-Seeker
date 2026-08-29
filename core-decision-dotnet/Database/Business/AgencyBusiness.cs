@@ -78,8 +78,34 @@ class AgencyBusiness
         if (!reader.Read()) return default;
         else
         {
-            return ((string)reader["UserName"], (string)reader["Password"]);
+            var password = (string)reader["Password"];
+            if (SecretProtector.LooksEncrypted(password)) password = SecretProtector.Decrypt(password);
+
+            return ((string)reader["UserName"], password);
         }
+    }
+
+    public static void MigratePlaintextPasswords(Database database)
+    {
+        if (!SecretProtector.IsReady) return;
+
+        var plaintext_agencies = new List<(long id, string password)>();
+
+        using (var reader = database.Read(Q_GET_ALL_PASSWORDS))
+        {
+            while (reader.Read())
+            {
+                var password = reader["Password"] as string;
+                if (string.IsNullOrEmpty(password) || SecretProtector.LooksEncrypted(password)) continue;
+                plaintext_agencies.Add(((long)reader["AgencyID"], password));
+            }
+        }
+
+        foreach (var (id, password) in plaintext_agencies)
+            database.Execute(Q_UPDATE_PASSWORD, SecretProtector.Encrypt(password), id);
+
+        if (plaintext_agencies.Count > 0)
+            Serilog.Log.Information("Encrypted {0} plaintext agency password(s).", plaintext_agencies.Count);
     }
 
     private const string Q_JOB_RATE_REPORT = @$"
@@ -114,4 +140,10 @@ SELECT AgencyID, Domain, Link, Active, Settings FROM Agency WHERE Title = $title
 
     private const string Q_GET_USER_PASS = @"
 SELECT UserName, Password FROM Agency WHERE Title = $title";
+
+    private const string Q_GET_ALL_PASSWORDS = @"
+SELECT AgencyID, Password FROM Agency";
+
+    private const string Q_UPDATE_PASSWORD = @"
+UPDATE Agency SET Password = $pass WHERE AgencyID = $agency";
 }

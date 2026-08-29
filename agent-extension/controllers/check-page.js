@@ -17,7 +17,7 @@ ActionHandler.OnPageLoad = function () {
 
     if (document.getElementById('job-seeker-trend-list') != null) {
 
-        document.getElementById('reset-trends').addEventListener("click", BackgroundMessaging.Scopes(true), false);
+        document.getElementById('reset-trends').addEventListener("click", function () { BackgroundMessaging.Scopes(true); }, false);
 
         const millisecnod = 1000;
         let ordering_interval = null;

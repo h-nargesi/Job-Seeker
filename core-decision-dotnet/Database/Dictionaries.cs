@@ -32,6 +32,9 @@ namespace Photon.JobSeeker
 
             connection.Open();
 
+            executer.CommandText = "PRAGMA busy_timeout=5000";
+            executer.ExecuteNonQuery();
+
             return new Dictionaries(connection, executer);
         }
 

@@ -20,17 +20,11 @@ class Glassdoor : Agency
 
     public override Regex? JobAcceptabilityChecker => null;
 
-    protected override void RunningSearchingMethodChanged(int value)
-    {
-        //var location = Uri.EscapeDataString(CurrentMethod.Url);
-
-        //BaytPage.reg_search_location_url = new Regex(@$"/en/{location}/jobs", RegexOptions.IgnoreCase);
-    }
+    protected override void RunningSearchingMethodChanged(int value) { }
 
     protected override IEnumerable<Type> GetSubPages()
     {
-        //return TypeHelper.GetSubTypes(typeof(BaytPage));
-        return null;
+        return [];
     }
 }
 

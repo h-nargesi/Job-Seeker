@@ -4,6 +4,8 @@ class StorageHandler {
 
     static SERVER_URL = "SERVER_URL";
     static SERVER_URL_DEFAULT = "http://localhost:8081/";
+    static API_KEY = "API_KEY";
+    static API_KEY_DEFAULT = "";
 
     static async Get(key, default_value) {
         return new Promise(function (resolve, reject) {
@@ -30,5 +32,13 @@ class StorageHandler {
 
     static set ServerUrl(value) {
         StorageHandler.Set(StorageHandler.SERVER_URL, value);
+    }
+
+    static async ApiKeyAsync() {
+        return (async () => String(await StorageHandler.Get(StorageHandler.API_KEY, StorageHandler.API_KEY_DEFAULT)))();
+    }
+
+    static set ApiKey(value) {
+        StorageHandler.Set(StorageHandler.API_KEY, value);
     }
 }

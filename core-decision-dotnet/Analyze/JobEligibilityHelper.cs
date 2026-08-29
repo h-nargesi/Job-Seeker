@@ -20,13 +20,34 @@ public class JobEligibilityHelper : IDisposable
     private readonly JobOption[] options;
 
     private static readonly object revaluation_lock = new();
+    private static readonly object options_lock = new();
+    private static JobOption[]? cached_options;
     public static RevaluationProcess? CurrentRevaluationProcess { get; private set; }
 
     public JobEligibilityHelper()
     {
         dictionaries = Dictionaries.Open();
         database = Database.Open();
-        options = database.JobOption.FetchAll();
+        options = GetOptions();
+    }
+
+    private static JobOption[] GetOptions()
+    {
+        lock (options_lock)
+        {
+            if (cached_options == null)
+            {
+                using var database = Database.Open();
+                cached_options = database.JobOption.FetchAll();
+            }
+
+            return cached_options;
+        }
+    }
+
+    public static void InvalidateOptionsCache()
+    {
+        lock (options_lock) cached_options = null;
     }
 
     public static Task RunRevaluateProcess(Analyzer analyzer)
@@ -36,6 +57,7 @@ public class JobEligibilityHelper : IDisposable
             if (CurrentRevaluationProcess == null)
             {
                 using var database = Database.Open();
+                database.Job.ResetRevaluations();
                 var start_time = DateTime.Now.AddSeconds(-1);
                 var total_count = (int)database.Job.FetchFromCount(start_time);
                 CurrentRevaluationProcess = new RevaluationProcess(start_time, total_count);
@@ -334,7 +356,7 @@ public class JobEligibilityHelper : IDisposable
 
         string? period = null;
 
-        if (period_index < 0 &&
+        if (period_index > 0 && matched.Groups[period_index].Success &&
             matched.Groups[period_index].Index - (matched.Index + matched.Length) <= 24)
         {
             period = matched.Groups[period_index].Value;

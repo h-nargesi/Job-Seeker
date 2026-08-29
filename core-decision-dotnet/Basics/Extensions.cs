@@ -30,13 +30,6 @@ static class Extensions
         return $"{{{string.Join(spliter, list)}}}";
     }
 
-    public static Command[] Shift(this Command[] commands, Command @new)
-    {
-        var list = new List<Command>(commands);
-        list.Insert(1, @new);
-        return list.ToArray();
-    }
-
     public static TrendType GetTrendType(this TrendState state)
     {
         if (state >= TrendState.Analyzing) return TrendType.Job;

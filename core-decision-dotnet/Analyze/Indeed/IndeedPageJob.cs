@@ -1,5 +1,6 @@
 ﻿using HtmlAgilityPack;
 using Photon.JobSeeker.Pages;
+using Serilog;
 using System.Web;
 
 namespace Photon.JobSeeker.Indeed;
@@ -24,7 +25,8 @@ class IndeedPageJob(Indeed parent) : JobPage(parent), IndeedPage
         if (!IndeedPage.reg_job_adding.IsMatch(content)) return null;
         return
         [
-            Command.Click(@"button.jobs-save-button"),
+            // TODO: verify the anchor selector against the live Indeed DOM
+            Command.Click(@"a[title*='Add to favourites']"),
             Command.Wait(3000),
         ];
     }
@@ -41,7 +43,10 @@ class IndeedPageJob(Indeed parent) : JobPage(parent), IndeedPage
     protected override void ChceckJob(Job job)
     {
         if (job.Content?.Contains("Indeed does not provide services in your region") == true)
-            throw new Exception("Indeed does not provide services in your region.");
+        {
+            Log.Warning("Indeed does not provide services in your region ({0}).", job.Code);
+            job.State = JobState.NotApproved;
+        }
     }
 
     public override string GetHtmlContent(string html)
