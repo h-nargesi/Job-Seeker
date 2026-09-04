@@ -156,6 +156,8 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **C# 12 / file-scoped namespaces / primary constructors** are in use.
   Match the surrounding style.
 - **Nullable enabled.** Don't silence nullability with `!` unless necessary.
+- **Technical docs (`docs/`, `AGENTS.md`) are English-only.** Personal working
+  logs (`REVIEW*.md`) may be Persian; anything an agent reads must be English.
 
 ## 6. Common tasks (pointers)
 
