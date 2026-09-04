@@ -3,6 +3,9 @@
 > مواردی از گزارش مرور که در تاریخ ۱۴۰۵/۰۶/۰۹ (2026-08-31) با کد فعلی تطبیق داده شدند
 > و رفع آن‌ها **در کد تأیید شد**. شواهد (فایل:خط) مربوط به همین بررسی است.
 > موارد باز و ناقص در [`REVIEW.md`](REVIEW.md) باقی مانده‌اند.
+>
+> مورد ۱.۴ (گذر plaintext از HTTP هنگام fill فرم لاگین) در ۱۴۰۵/۰۶/۱۳ (2026-09-04)
+> با فعال‌سازی HTTPS روی سرور رفع و به همین فایل اضافه شد.
 
 ---
 
@@ -23,7 +26,7 @@
 ### ۱.۴ ذخیره اعتبارنامه به‌صورت Plain-text (at-rest)
 رمزنگاری AES-GCM با پیشوند `enc:` + مهاجرت خودکار plaintext در startup.
 **تأیید:** `Program.cs:43-58` — `SecretProtector.SetKey` + `AgencyBusiness.MigratePlaintextPasswords`.
-⚠️ باقی‌مانده (در REVIEW.md): گذر plaintext از HTTP هنگام fill فرم لاگین — نیازمند TLS.
+**رفع باقی‌مانده (۱۴۰۵/۰۶/۱۳ — 2026-09-04):** گذر plaintext از HTTP هنگام fill فرم لاگین، با فعال‌سازی HTTPS روی سرور (سطح استقرار، خارج از کد اپ) رفع شد و از REVIEW.md آرشیو گردید.
 
 ### ۱.۵ `LastInsertRowId` نادرست هنگام Conflict
 **تأیید:** `JobBusiness.cs:166-168` — `database.Changes() == 0` → `Fetch(agency, code)`؛ در غیر این صورت `LastInsertRowId()`. متد `Changes()` در `Database.cs:80-85`.
