@@ -1,9 +1,11 @@
-# AI integration (local LLM)
+# AI integration
 
-> **Status: design proposal — not implemented.** This document records the
-> agreed design for adding a locally hosted LLM (llama.cpp `llama-server` with a
-> GGUF model such as `Qwen3-30B-A3B-Q5_K_M`) to the analysis pipeline. No code
-> exists yet; nothing here describes current behavior.
+> **Status: design proposal + recorded decisions — not implemented.** This
+> document consolidates everything about using AI in this system: the agreed
+> design for adding an LLM (locally hosted by default: llama.cpp `llama-server`
+> with a GGUF model such as `Qwen3-30B-A3B-Q5_K_M`), the integration points by
+> priority, and the decisions taken so far (§7). No AI code exists yet; nothing
+> here describes current behavior.
 
 Related: [`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) (phase 3 detail).
 
@@ -31,6 +33,13 @@ jobs from the DB one by one and processes them with progress tracking. An
 AI enrichment worker is the same shape: a `Channel<Job>` with a single
 consumer hosted service, calling the model and writing results back.
 
+**One bounded exception — the apply stage.** When the loop is parked on a
+single job page and the next step is producing the tailored resume for that
+one job, a synchronous LLM call of a few seconds paces nothing: no scanning
+loop is waiting, and a human reviews the result anyway. The golden rule
+protects search-result processing (dozens of pages back to back); it does not
+forbid a deliberate pause at the point of delivery.
+
 ## 2. Runtime setup
 
 - llama.cpp's `llama-server` exposes an OpenAI-compatible endpoint
@@ -49,6 +58,13 @@ consumer hosted service, calling the model and writing results back.
 
 - Concurrency: **one** in-flight request. `llama-server` processes requests
   sequentially; a single-consumer queue also keeps ordering debuggable.
+- **Provider-agnostic by construction.** Because the client is a plain
+  `HttpClient` speaking the OpenAI chat-completions protocol, any compatible
+  endpoint works and switching is a config change only:
+  - *Local:* `llama-server`, Ollama, LM Studio.
+  - *Hosted:* OpenRouter, Groq, DeepSeek, OpenAI, Anthropic, Gemini.
+  - Hosted endpoints need an `"ApiKey"` entry in the `Llm` config — supplied
+    via user-secrets / environment variables, never committed.
 
 ## 3. Integration points, by priority
 
@@ -88,10 +104,21 @@ work model / salary reality instead of approximate score.
 > "Things that bite" in [`AGENTS.md`](../AGENTS.md)). Additive columns are
 > safe; edits to the query are not.
 
-### 3.3 Resume tailoring
+### 3.3 Resume tailoring (decided end-to-end flow)
 
 The strongest free-text use case — see the companion doc
-[`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md).
+[`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md). The decided flow:
+
+1. The browser reaches the job page; the server scrapes the job description
+   and scores it. The existing regex path already builds the initial
+   `ResumeContext` (`Job.Options`) from the JD's keywords.
+2. The LLM refines that context into a reviewable delta stored in
+   `Job.AiOptions`. Bulk scanning uses the background lane; a synchronous
+   call is acceptable at the apply stage (§1 exception).
+3. The user opens `/job/resume?jobid=...` (or downloads the rendered HTML via
+   `/job/resume64`) and **prints from the browser** (Brave). The view already
+   carries `@media print` CSS, so it is print-ready as served. No server-side
+   PDF conversion and no new `print` browser command are planned.
 
 ### 3.4 Cross-platform deduplication
 
@@ -140,3 +167,13 @@ matches the "leave the system running" usage pattern.
 | 2 | Structured extraction columns + dashboard filters | Additive schema only; `Q_INDEX` untouched |
 | 3 | Resume tailoring delta (`Job.AiOptions`) | Human review gate before `Applied` |
 | 4 | Cross-platform dedup + daily digest | Read-only over existing data |
+
+## 7. Decision log
+
+| Date | Decision |
+|------|----------|
+| 2026-09 | **CloudConvert retired.** The HTML→PDF conversion path in `wwwroot/scripts/resume-pdf.js` is no longer used and its `API_KEY` was removed from the repo. Final delivery of the resume is a manual print from the browser (Brave) against `/job/resume`, which is print-ready via its `@media print` rules. The file remains loaded by `Views/layout.cshtml` as dead code pending cleanup. |
+| 2026-09 | **No `print` PageAction.** The extension command vocabulary (`go/open/fill/click/recheck/close/wait/reload`) stays as is; turning the resume into PDF/paper is a human step, not a browser command. |
+| 2026-09 | **Resume-from-JD at the job stage is the target flow** (§3.3): regex `ResumeContext` first, LLM delta on top, human review, then print from `/job/resume`. |
+| 2026-09 | **Apply-stage exception to the golden rule** (§1): a synchronous LLM call is acceptable when a single job page is in flight and a human reviews the output before printing. |
+| 2026-09 | **Provider-agnostic client** (§2): plain `HttpClient` + OpenAI-compatible endpoint; local (`llama-server`, Ollama, LM Studio) or hosted (OpenRouter, Groq, DeepSeek, OpenAI, Anthropic, Gemini) chosen by config only. |

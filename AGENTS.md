@@ -156,6 +156,8 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **C# 12 / file-scoped namespaces / primary constructors** are in use.
   Match the surrounding style.
 - **Nullable enabled.** Don't silence nullability with `!` unless necessary.
+- **Technical docs (`docs/`, `AGENTS.md`) are English-only.** Personal working
+  logs (`REVIEW*.md`) may be Persian; anything an agent reads must be English.
 
 ## 6. Common tasks (pointers)
 
@@ -165,8 +167,8 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | Change scoring rules / keywords / weights | `database/structure/job-option.sql` (re-seed) + `JobEligibilityHelper.EvaluateEligibility` |
 | Change what the browser does (new command) | `Result/Command.cs` + `PageAction` enum + `action-handler.js` |
 | Add a country/locale to a platform | `agency.sql` → that platform's `Settings.methods[]` |
-| Resume generation | `Views/resume.cshtml` + `ResumeContext` + `JobController.Resume` / `Resume64` |
-| Add an AI-assisted (local LLM) stage | [`docs/AI_INTEGRATION.md`](docs/AI_INTEGRATION.md) + [`docs/AI_RESUME_TAILORING.md`](docs/AI_RESUME_TAILORING.md) (design proposals, not implemented) |
+| Resume generation | `Views/resume.cshtml` + `ResumeContext` + `JobController.Resume` / `Resume64`; printing is manual from the browser (CloudConvert retired) |
+| Add an AI-assisted (local LLM) stage | [`docs/AI_INTEGRATION.md`](docs/AI_INTEGRATION.md) + [`docs/AI_RESUME_TAILORING.md`](docs/AI_RESUME_TAILORING.md) (design + decision log, not implemented) |
 | API surface | [`docs/API.md`](docs/API.md) |
 | Scoring & state machines | [`docs/SCORING.md`](docs/SCORING.md) |
 

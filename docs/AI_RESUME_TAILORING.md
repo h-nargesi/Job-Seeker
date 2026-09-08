@@ -2,7 +2,9 @@
 
 > **Status: design proposal — not implemented.** Companion to
 > [`AI_INTEGRATION.md`](AI_INTEGRATION.md) (phase 3). Records the design for
-> LLM-driven, per-job resume customization. No code exists yet.
+> LLM-driven, per-job resume customization, including the decided delivery
+> step (§6): the tailored resume is printed manually from the browser. No AI
+> code exists yet.
 
 ## 1. How the resume works today (the part that matters)
 
@@ -118,7 +120,8 @@ Job (State = Attention)
    │
    ▼
 background AI worker (see AI_INTEGRATION.md §1)
-   prompt: JD + block inventory + profile
+    prompt: JD + block inventory + profile
+    (synchronous call acceptable at the apply stage — AI_INTEGRATION.md §1)
    │
    ▼
 delta JSON  (keys / removals / summary / title)
@@ -130,5 +133,17 @@ Job.AiOptions  (new column; Options kept as fallback)
 dashboard: preview + human approval
    │
    ▼
-resume view renders AiOptions ?? Options
+resume view renders AiOptions ?? Options   →   /job/resume?jobid=...
+   │
+   ▼
+user prints from the browser (Brave print dialog) — @media print CSS is in the template
 ```
+
+### Delivery (decided)
+
+The CloudConvert HTML→PDF path (`wwwroot/scripts/resume-pdf.js`) is retired —
+its API key was removed and the service is no longer used. The print surface
+is `/job/resume` in any browser: the template's `@media print` rules make the
+served page print-ready, so printing to paper/PDF is a manual browser step.
+No server-side PDF conversion and no new `print` browser command are planned
+(see the decision log in [`AI_INTEGRATION.md`](AI_INTEGRATION.md) §7).
