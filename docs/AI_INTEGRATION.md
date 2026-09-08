@@ -68,6 +68,16 @@ forbid a deliberate pause at the point of delivery.
 
 ## 3. Integration points, by priority
 
+At a glance (details in the subsections below):
+
+| # | Point | Lane | Impact | Risk |
+|---|-------|------|--------|------|
+| 3.1 | Semantic verdict / re-ranking | background | **High** — fixes the sharpest weakness: lexical scoring treats one ".NET" mention like a .NET-centric role | Minimal — touches only `Log`; no schema, no loop changes |
+| 3.2 | Structured extraction | background | **High** — replaces guesswork heuristics (`EvaluateSalaryScore`); enables dashboard filters on salary/work-model reality | Low — additive columns only; `Q_INDEX` untouched |
+| 3.3 | Resume tailoring delta | background + sync at apply (§1) | **Highest end value** — per-job customization with no fabrication risk (selection only) | Medium — new `Job.AiOptions` column + human review gate |
+| 3.4 | Cross-platform deduplication | background | **Medium** — one posting listed on two agencies stops being scored twice | Low |
+| 3.5 | Daily digest | overnight batch | **Low–medium** — closes the notification gap with no external service | Low — read-only over existing data |
+
 ### 3.1 Semantic verdict / re-ranking on `Attention` jobs
 
 Today `EvaluateEligibility` is exact regex matching: a job that mentions
@@ -167,6 +177,12 @@ matches the "leave the system running" usage pattern.
 | 2 | Structured extraction columns + dashboard filters | Additive schema only; `Q_INDEX` untouched |
 | 3 | Resume tailoring delta (`Job.AiOptions`) | Human review gate before `Applied` |
 | 4 | Cross-platform dedup + daily digest | Read-only over existing data |
+
+Best ratio of value to risk is **phase 1**: it corrects the most precise
+weakness of the current pipeline — lexical regex scoring — with the smallest
+possible code change. The highest end value sits in **phase 3**: the delta
+pattern means the model can only *select* among pre-written blocks, which on a
+factual document is the line between tailoring and fabrication.
 
 ## 7. Decision log
 
