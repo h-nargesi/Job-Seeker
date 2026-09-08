@@ -115,12 +115,38 @@ but it stays in `AgenciesByID` for reporting. `1` = actively searching new jobs;
 
 1. Buckets each job by `State` into a `Category` weight
    (`Attention=1, NotApproved=2, Applied/Rejected=4, else=12`).
-2. Computes a **time-decay curve** around the registration date vs. the newest
-   job (Gaussian boost `A*exp(YF)` minus a recency penalty `exp(UF)`, where the
-   spread `C = DaysPriod*6/7`, `DaysPriod=10`, `MaxScore=30`).
+2. Computes `EffectiveScore = Score × W(age)` where `W` is a piecewise-linear
+   **trapezoid** time-weight. Source of truth: `Analyze/JobRanking.cs`.
+
+   | Age (days) | Weight |
+   |------------|--------|
+   | 0 – 2      | `0.85` (fresh penalty — too-new postings) |
+   | 2 – 4      | ramps `0.85 → 1.0` |
+   | 4 – 10     | `1.0` (the sweet spot) |
+   | 10 – 14    | ramps `1.0 → 0.75` |
+   | 14 – 28    | ramps `0.75 → 0.25` |
+   | > 28       | `0.15` floor — old jobs sink but never vanish |
+
+   The multiplicative form makes the time term a real modifier of the score
+   scale (100–300), not a ±30 tie-breaker, and no job's rank depends on the
+   global `MAX(Score)`. `age = JulianDay(MAX(RegTime)) − JulianDay(RegTime)`
+   — the clock is the **newest scrape in the table**, so ages don't advance
+   while the system is idle. `NULL` Score → NULL EffectiveScore → sorts last
+   under `DESC` (unchanged).
 3. Flags `Relocation` jobs by matching the log marker `%) Relocation**%`.
-4. Partitions by `(AgencyID, State)`, keeps the top `12/Category` per bucket,
-   and assigns a final global `Ordering`.
+4. Partitions by `(AgencyID, State)`, keeps the top N per bucket via an
+   explicit CASE cap (`Attention→12, NotApproved→6, Applied/Rejected→3,
+   else→1`; the Category 4 bucket orders by `ModifiedOn DESC` first), and
+   assigns a final global `Ordering`.
+
+> The SQL `CASE` inside `Q_INDEX` is a **mirror** of `JobRanking.Weight`,
+> marked by a keep-in-sync comment. Change the curve in `JobRanking.cs`, the
+> SQL mirror, and the breakpoint tests (`core-decision-dotnet.Tests`) together.
+
+Ranking only demotes — real expiry (deleting old jobs) stays exclusively in
+`Q_CLEAN`. `GetFirstJob` records the apply-age in `Tries`
+(``{n}: {date} (age {N}d)``), which keeps the `'%4: %'` tries-cap pattern
+intact and makes the early-application hypothesis measurable later.
 
 Treat this query with care: it references enum names as string literals and the
 `Relocation` log format. If you change scoring log output or enum names, the

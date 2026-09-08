@@ -31,6 +31,7 @@ Job-Seeker/
 │   ├── Basics/                # helpers (Extensions, TypeHelper, BadJobRequest)
 │   ├── Views/                 # Razor views (index, jobs, trends, resume, ...)
 │   └── wwwroot/               # static assets
+├── core-decision-dotnet.Tests/  # xUnit tests (e.g. JobRanking breakpoint tests)
 ├── agent-extension/           # Chrome MV3 extension (vanilla JS, no build)
 │   ├── manifest.json
 │   ├── controllers/           # check-page, background, messaging, action-handler
@@ -45,7 +46,8 @@ Job-Seeker/
 
 ## 2. Build & run
 
-The server is .NET 8. There is **no test project** and **no JS build step**.
+The server is .NET 8. There is **no JS build step**. Tests live in
+`core-decision-dotnet.Tests` (xUnit).
 
 ```bash
 # Build (from repo root)
@@ -102,9 +104,9 @@ API Key in the popup menu (press Enter in each field to save).
 
 | Check        | Command | Notes |
 |--------------|---------|-------|
-| Compile      | `dotnet build core-decision.sln` | This is the only validation gate. Warnings are treated seriously (`<Nullable>enable</Nullable>`). |
+| Compile      | `dotnet build core-decision.sln` | Primary validation gate. Warnings are treated seriously (`<Nullable>enable</Nullable>`). |
 | Extension JS | none    | Plain JS loaded directly by Chrome. Verify by loading the unpacked extension and watching the `AGENT` console logs. |
-| Tests        | none    | No test framework is set up. If you add tests, record the runner here. |
+| Tests        | `dotnet test core-decision.sln` | xUnit project `core-decision-dotnet.Tests` (first in repo). |
 
 After editing C#, **always run `dotnet build core-decision.sln`** before declaring done.
 

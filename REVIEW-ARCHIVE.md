@@ -11,6 +11,8 @@
 > رفع و به همین فایل اضافه شد.
 > مورد ۲.۱۳ (فیلدهای استاتیک چینش لاگ در `TrendsCheckpoint`) در ۱۴۰۵/۰۶/۱۷ (2026-09-08)
 > با انتقال به سطح نمونه و محاسبهٔ یک‌بارهٔ عرض‌ها در شروع پاس رفع و به همین فایل اضافه شد.
+> مورد ۲.۱۵ (منطق مرتب‌سازی جبری و مستندنشده) در ۱۴۰۵/۰۶/۱۷ (2026-09-08)
+> با وزن ذوزنقه‌ای ضرب‌شوندهٔ `JobRanking` و تست xUnit رفع و به همین فایل اضافه شد.
 
 ---
 
@@ -91,6 +93,21 @@
 
 ### ۲.۱۴ `DecisionController.Running` کلید نامعتبر → ۵۰۰
 **تأیید:** `Controllers/Decision.cs:102` — `TryGetValue` + `NotFound()`.
+
+### ۲.۱۵ منطق مرتب‌سازی جبری و مستندنشده
+فرمول گاوسی/نمایی سرباز (`Score + A·e^YF − e^UF` با جریمهٔ بی‌سقف برای شغل‌های قدیمی) حذف و با
+`EffectiveScore = Score × W(age)` جایگزین شد که `W` وزن ذوزنقه‌ای مقید است (۰.۸۵ در ۰–۲ روز، شیب تا ۱.۰
+در روز ۴، فلات ۴–۱۰ روز، ۰.۷۵ در روز ۱۴، ۰.۲۵ در روز ۲۸ و کف ۰.۱۵). شغل‌های قدیمی دیگر نابود نمی‌شوند و
+رتبهٔ هیچ شغلی به `MAX(Score)` سراسری وابسته نیست. `WHERE Ranking <= (12 / Category)` با سقف‌های CASE
+صریح (Attention→12، NotApproved→6، Applied/Rejected→3، سایر→1) جایگزین شد؛ ثابت‌های `MaxScore`/`DaysPriod`
+و کامنت LaTeX حذف شدند (ردیف املایی `DaysPriod` در بخش ۴ REVIEW.md نیز حذف شد) و سنِ اقدام در `Tries`
+ثبت می‌شود (`«n: date (age Nd)»` — الگوی کپ `'%4: %'` دست‌نخورده مانده). منبع حقیقت منحنی
+`Analyze/JobRanking.cs` است، SQL در `Q_INDEX` آینهٔ آن با کامنت همگام‌سازی، و مستندات در SCORING.md
+بازنویسی شد.
+**تأیید:** `core-decision-dotnet/Analyze/JobRanking.cs` — منحنی و ثابت‌ها؛ تست‌های نقطهٔ شکست/کران‌ها/یکنوایی
+در `core-decision-dotnet.Tests/JobRankingTests.cs`؛ `core-decision-dotnet/Database/Business/JobBusiness.cs` —
+`EffectiveScore` و CASE صریح سقف‌ها در `Q_INDEX`، افزودن `RegTime` به `Q_FETCH_FIRST`؛
+`docs/SCORING.md` بخش Ranking.
 
 ### ۲.۱۷ `IndeedPageJob.ChceckJob` استثنا برای کنترل جریان
 **تأیید:** `Analyze/Indeed/IndeedPageJob.cs:45-48` — `State = JobState.NotApproved` + `Log.Warning`.

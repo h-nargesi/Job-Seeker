@@ -122,14 +122,17 @@ namespace Photon.JobSeeker
                     JobID = (long)reader[nameof(Job.JobID)],
                     Url = (string)reader[nameof(Job.Url)],
                     Tries = reader[nameof(Job.Tries)] as string,
+                    RegTime = (DateTime)reader[nameof(Job.RegTime)],
                 };
 
                 reader.Close();
 
+                var now = DateTime.Now;
                 var prv_tries = data.Tries?.Split("\n");
                 var this_time = 1 + (prv_tries?.Length ?? 0);
 
-                var this_tries = string.Join(": ", this_time, DateTime.Now) + (this_time > 1 ? "\n" + data.Tries : "");
+                var this_tries = $"{this_time}: {now} (age {(int)(now - data.RegTime).TotalDays}d)"
+                    + (this_time > 1 ? "\n" + data.Tries : "");
 
                 Save(new { data.JobID, Tries = this_tries }, JobFilter.Tries);
                 database.Commit();
@@ -225,24 +228,10 @@ namespace Photon.JobSeeker
             return job;
         }
 
-        /*
-         * Sorting Algorithm:
-
-            c=\frac{b\cdot6}{7}
-            X=x-b
-            Y=ae^{-\frac{X^{2}}{2c^{2}}}
-            U=-e^{\left(\frac{2\cdot X}{c}\right)}
-            Y+U
-        */
-        private const int MaxScore = 30;
-        private const int DaysPriod = 10;
-
         private readonly static string Q_INDEX = @$"
 WITH date_diff AS (
     SELECT job.*
-         , JulianDay(latest.LatestTime) - JulianDay(job.RegTime) - {DaysPriod} AS X
-         , MIN({MaxScore}, latest.TopScore) AS A
-         , {DaysPriod} * 6 / 7 AS C
+         , MAX(0, JulianDay(latest.LatestTime) - JulianDay(job.RegTime)) AS AgeDays
     FROM (
         SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
              , Job.State, Job.Score, job.Country, Job.Url, Job.Link
@@ -260,36 +249,39 @@ WITH date_diff AS (
         @where@
     ) job
     CROSS JOIN (
-        SELECT MAX(RegTime) AS LatestTime, MAX(Score) / 13 AS TopScore FROM Job
+        SELECT MAX(RegTime) AS LatestTime FROM Job
     ) latest
 
 ), ranking AS (
     SELECT job.JobID, job.RegTime, job.ModifiedOn, job.AgencyID, job.Code, job.Title
          , job.State, job.Score, job.Country, job.Url, job.Link, job.Relocation
          , job.AgencyName, job.Category, job.RegDate
-         , Score + A * EXP(YF) - EXP(UF) AS RankScore
-    FROM (
-        SELECT *
-             , POWER(X, 2) / (-2 * POWER(C, 2)) AS YF
-             , 2 * X / C AS UF
-        FROM date_diff
-    ) job
+         -- Mirror of JobRanking.Weight (Analyze/JobRanking.cs). Keep in sync.
+         , Score * CASE
+               WHEN AgeDays <= 2  THEN 0.85
+               WHEN AgeDays <= 4  THEN 0.85 + 0.15 * (AgeDays - 2) / 2
+               WHEN AgeDays <= 10 THEN 1.0
+               WHEN AgeDays <= 14 THEN 1.0 - 0.25 * (AgeDays - 10) / 4
+               WHEN AgeDays <= 28 THEN 0.75 - 0.50 * (AgeDays - 14) / 14
+               ELSE 0.15
+             END AS EffectiveScore
+    FROM date_diff job
 )
 
 SELECT *
      , CASE Category
-       WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, RankScore DESC, RegTime DESC)
-       ELSE ROW_NUMBER() OVER(PARTITION BY Category ORDER BY RankScore DESC, RegTime DESC)
+       WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, EffectiveScore DESC, RegTime DESC)
+       ELSE ROW_NUMBER() OVER(PARTITION BY Category ORDER BY EffectiveScore DESC, RegTime DESC)
        END AS Ordering
 FROM (
     SELECT *
         , CASE Category
-          WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY ModifiedOn DESC, RankScore DESC, RegTime DESC)
-          ELSE ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY RankScore DESC, RegTime DESC)
+          WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY ModifiedOn DESC, EffectiveScore DESC, RegTime DESC)
+          ELSE ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY EffectiveScore DESC, RegTime DESC)
           END AS Ranking
     FROM ranking
 ) job
-WHERE Ranking <= (12 / Category)
+WHERE Ranking <= CASE Category WHEN 1 THEN 12 WHEN 2 THEN 6 WHEN 4 THEN 3 ELSE 1 END
 ORDER BY Category, Ordering";
 
         private const string Q_FETCH_ID = @"
@@ -311,7 +303,7 @@ UPDATE Job SET State = '{nameof(JobState.Saved)}' WHERE State = '{nameof(JobStat
 SELECT Options FROM Job WHERE JobID = $job";
 
         private const string Q_FETCH_FIRST = @$"
-SELECT JobID, Url, Tries FROM Job
+SELECT JobID, Url, Tries, RegTime FROM Job
 WHERE AgencyID = $agency AND State = '{nameof(JobState.Saved)}' AND (Tries IS NULL OR Tries NOT LIKE '%4: %')
 ORDER BY Tries IS NULL DESC, Tries DESC, JobID LIMIT 1";
 

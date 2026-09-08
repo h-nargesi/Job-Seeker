@@ -109,6 +109,7 @@ public partial class ResumeContext
     {
         public bool IMAGE { get; set; } = true;
         public bool LOCATION { get; set; } = true;
+        public bool LOCATION_TJ { get; set; } = true;
         public bool PHONE { get; set; } = true;
         public bool SKYPE { get; set; } = false;
         public bool LINKEDIN { get; set; } = true;

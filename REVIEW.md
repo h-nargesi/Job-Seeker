@@ -31,10 +31,6 @@
 > fav کردن شغل روی سایت لازم نیست (کاتالوگ شغل‌ها در خود سیستم موجود است)؛ ارسال رزومه در
 > صورت نیاز به‌صورت دستی انجام می‌شود. (کد `JobFallow` دست‌نخورده و فعال مانده است.)
 
-### ۲.۱۵ منطق مرتب‌سازی جبری و مستندنشده
-**فایل:** `JobBusiness.cs` (`Q_INDEX`) — استفاده از `WHERE Ranking <= (12 / Category)`
-با تقسیم صحیح و فرمول امتیاز نمایی (در کامنت LaTeX). بدون تست، درک/نگهداری سخت است.
-
 ### ۲.۱۶ `IndeedPageSearch` از `reg_job_url` (`/rc/clk?jk=`) استفاده می‌کند
 احتمالاً در DOM جدید این‌دیس وجود ندارد (URL بازنمایی `/viewjob?jk=` است) → استخراج
 شغل این‌دیس ممکن است خالی بماند. regex دست‌نخورده؛ نیازمند تأیید با DOM زندهٔ این‌دیس.
@@ -131,7 +127,6 @@ CI/CD تعریف‌شده‌ای وجود ندارد.
 | `Efective` | **Effective** (ستون JobOption، در SQL و کوئری) |
 | `reumse` | **resume** (دسته‌بندی در `job-option.sql`) |
 | `mounths` | **months** |
-| `DaysPriod` | **DaysPeriod** |
 | `spliter` | **splitter** |
 | `miliseconds` | **milliseconds** |
 | `SimlpeSerialize`/`SimlpeDeserialize` | **Simple…** |
