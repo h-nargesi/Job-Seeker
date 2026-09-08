@@ -28,10 +28,6 @@
 
 ## بخش ۲ — 🟠 مهم (باگ‌های منطقی و درستی)
 
-### ۲.۲ تأیید فیکس `JobFallow` این‌دیس با DOM زنده
-فیکس کد انجام شده (`a[title*='Add to favourites']` در `Analyze/Indeed/IndeedPageJob.cs:29`)
-ولی نیازمند تأیید روی DOM زندهٔ این‌دیس است.
-
 ### ۲.۱۰ اثر جانبی DELETE در GET صفحه اصلی
 **فایل:** `Controllers/Report.cs` (`GetTrends` خط ۹۴) که از `Index` (GET `/`) صدا زده
 می‌شود و `DeleteExpired` را فرامی‌خواند → نوشتن در درخواست GET.

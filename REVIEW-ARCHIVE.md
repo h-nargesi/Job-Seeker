@@ -45,7 +45,7 @@
 ### ۲.۲ `IndeedPageJob.JobFallow` سلکتور اشتباه
 فیکس به‌نیت: کلیک روی `a[title*='Add to favourites']`.
 **تأیید:** `Analyze/Indeed/IndeedPageJob.cs:29`.
-⚠️ یادداشت: همچنان نیازمند تأیید با DOM زندهٔ این‌دیس (در REVIEW.md).
+⚠️ یادداشت: تأیید سلکتور با DOM زندهٔ این‌دیس به تصمیم کاربر فعلاً اولویت ندارد و در تاریخ 2026-09-08 از فهرست موارد باز حذف شد. کد موجود (`Analyze/Indeed/IndeedPageJob.cs:29`) دست‌نخورده باقی مانده است.
 
 ### ۲.۳ `check-page.js` هندلر اشتباه
 **تأیید:** `agent-extension/controllers/check-page.js:20` — `function () { BackgroundMessaging.Scopes(true); }`.
