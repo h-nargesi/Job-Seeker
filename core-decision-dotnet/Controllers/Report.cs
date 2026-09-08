@@ -91,7 +91,6 @@ public class ReportController(Analyzer analyzer) : Controller
 
     private static List<dynamic> GetTrends(Database database)
     {
-        database.Trend.DeleteExpired();
         var result = database.Trend.Report();
 
         if (JobEligibilityHelper.CurrentRevaluationProcess != null)

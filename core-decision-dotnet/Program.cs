@@ -62,6 +62,7 @@ builder.Services.AddScoped<TrendsCheckpoint>();
 builder.Services.AddSingleton<Analyzer>();
 builder.Services.AddScoped<IViewRenderService, ViewRenderService>();
 builder.Services.AddDataProtection();
+builder.Services.AddHostedService<TrendsCleanupService>();
 
 var app = builder.Build();
 

@@ -6,6 +6,9 @@
 >
 > مورد ۱.۴ (گذر plaintext از HTTP هنگام fill فرم لاگین) در ۱۴۰۵/۰۶/۱۳ (2026-09-04)
 > با فعال‌سازی HTTPS روی سرور رفع و به همین فایل اضافه شد.
+> مورد ۲.۱۰ (اثر جانبی DELETE در GET صفحه اصلی) در ۱۴۰۵/۰۶/۱۷ (2026-09-08)
+> با انتقال پاک‌سازی trend‌های منقضی به سرویس پس‌زمینه‌ای (`TrendsCleanupService`)
+> رفع و به همین فایل اضافه شد.
 
 ---
 
@@ -66,6 +69,10 @@
 
 ### ۲.۹ اثر جانبی در متد شمارش (`FetchFromCount`)
 **تأیید:** `JobBusiness.cs:44-54` — `FetchFromCount` فقط می‌خواند؛ UPDATE ریست به `ResetRevaluations` منتقل شد.
+
+### ۲.۱۰ اثر جانبی DELETE در GET صفحه اصلی
+حذف فراخوانی `DeleteExpired` از `GetTrends` و انتقال پاک‌سازی trend‌های منقضی به سرویس پس‌زمینه‌ای دوره‌ای `TrendsCleanupService` (اجرای بلافاصله در startup و سپس هر ۱ دقیقه).
+**تأیید:** `Controllers/Report.cs:92-100` — `GetTrends` فقط `Trend.Report()` را صدا می‌زند؛ `TrendsCleanupService.cs:5-36` و ثبت `AddHostedService<TrendsCleanupService>` در `Program.cs:65`.
 
 ### ۲.۱۱ `VACUUM` در هر Clean
 **تأیید:** `JobBusiness.cs:188-194` — `Clean(int mounths, bool vacuum = false)`؛ `?vacuum=true` برای اجرا.
