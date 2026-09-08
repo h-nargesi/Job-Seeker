@@ -14,10 +14,7 @@ interface IndeedPage
 
     protected static readonly Regex reg_search_end = new(@"<a[^>]+aria-label=[""']Next Page[""']", RegexOptions.IgnoreCase);
 
-    // TODO: verify against the live Indeed DOM whether /rc/clk?jk= links still appear in results
-    protected static readonly Regex reg_job_url = new(@"/rc/clk\?jk=(\w+)", RegexOptions.IgnoreCase);
-
-    protected static readonly Regex reg_job_view = new(@"/viewjob\?jk=(\w+)", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_job_view = new(@"/(?:m/)?viewjob\?jk=(\w+)", RegexOptions.IgnoreCase);
 
     protected static readonly Regex reg_job_title = new(@"<h1[^>]*>([^<]*<span[^>]*>)?([^<]*)(</span>[^<]*)?</h1>", RegexOptions.IgnoreCase);
 

@@ -1,5 +1,4 @@
 ﻿using Photon.JobSeeker.Pages;
-using System.Text.RegularExpressions;
 
 namespace Photon.JobSeeker.Indeed;
 
@@ -26,17 +25,8 @@ class IndeedPageSearch(Indeed parent) : SearchPage(parent), IndeedPage
 
     protected override IEnumerable<(string url, string code)> GetJobUrls(string content)
     {
-        var result = new List<(string url, string code)>();
-        var job_matches = IndeedPage.reg_job_url.Matches(content).Cast<Match>();
-
-        foreach (Match job_match in job_matches)
-        {
-            var code = job_match.Groups[1].Value;
-            var url = string.Join("", Parent.BaseUrl, "/viewjob?jk=", code);
-            result.Add((url, code));
-        }
-
-        return result;
+        foreach (var code in IndeedSerp.ExtractJobCodes(content))
+            yield return (string.Join("", Parent.BaseUrl, "/viewjob?jk=", code), code);
     }
 
     protected override Command[] CheckNextButton(string url, string text)

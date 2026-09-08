@@ -1,4 +1,6 @@
-﻿namespace Photon.JobSeeker.Pages;
+﻿using Serilog;
+
+namespace Photon.JobSeeker.Pages;
 
 abstract class SearchPage(Agency parent) : PageBase(parent)
 {
@@ -29,6 +31,9 @@ abstract class SearchPage(Agency parent) : PageBase(parent)
                 State = JobState.Saved
             });
         }
+
+        if (codes.Count == 0)
+            Log.Warning("No jobs extracted from search results page ({0}): {1}", Parent.Name, url);
 
         return CheckNextButton(url, content) ?? [];
     }

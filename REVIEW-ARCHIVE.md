@@ -13,6 +13,8 @@
 > با انتقال به سطح نمونه و محاسبهٔ یک‌بارهٔ عرض‌ها در شروع پاس رفع و به همین فایل اضافه شد.
 > مورد ۲.۱۵ (منطق مرتب‌سازی جبری و مستندنشده) در ۱۴۰۵/۰۶/۱۷ (2026-09-08)
 > با وزن ذوزنقه‌ای ضرب‌شوندهٔ `JobRanking` و تست xUnit رفع و به همین فایل اضافه شد.
+> مورد ۲.۱۶ (الگوی `/rc/clk?jk=` در استخراج شغل این‌دیس) در ۱۴۰۵/۰۶/۱۷ (2026-09-08)
+> با الگوی چندشکلی `IndeedSerp` رفع و به همین فایل اضافه شد.
 
 ---
 
@@ -108,6 +110,13 @@
 در `core-decision-dotnet.Tests/JobRankingTests.cs`؛ `core-decision-dotnet/Database/Business/JobBusiness.cs` —
 `EffectiveScore` و CASE صریح سقف‌ها در `Q_INDEX`، افزودن `RegTime` به `Q_FETCH_FIRST`؛
 `docs/SCORING.md` بخش Ranking.
+
+### ۲.۱۶ `IndeedPageSearch` از `reg_job_url` (`/rc/clk?jk=`) استفاده می‌کند
+**رفع:** الگوی چندشکلی در `IndeedSerp.reg_job_url` (rc/clk + viewjob + m/viewjob + data-jk)، هشدار استخراج صفر در `SearchPage`، تست snapshot (`IndeedSerpTests`). fixture سنتزی است؛ در نخستین اجرای زنده تأیید نهایی شود.
+**تأیید:** `core-decision-dotnet/Analyze/Indeed/IndeedSerp.cs` — الگو و `ExtractJobCodes`؛
+`core-decision-dotnet/Analyze/Indeed/IndeedPageSearch.cs` — `GetJobUrls` از `IndeedSerp`؛
+`core-decision-dotnet/Analyze/Pages/SearchPage.cs` — هشدار `codes.Count == 0`؛
+`core-decision-dotnet.Tests/IndeedSerpTests.cs` — سه تست استخراج/تکرار/خالی.
 
 ### ۲.۱۷ `IndeedPageJob.ChceckJob` استثنا برای کنترل جریان
 **تأیید:** `Analyze/Indeed/IndeedPageJob.cs:45-48` — `State = JobState.NotApproved` + `Log.Warning`.
