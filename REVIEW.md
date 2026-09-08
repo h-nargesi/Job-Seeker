@@ -31,11 +31,6 @@
 > fav کردن شغل روی سایت لازم نیست (کاتالوگ شغل‌ها در خود سیستم موجود است)؛ ارسال رزومه در
 > صورت نیاز به‌صورت دستی انجام می‌شود. (کد `JobFallow` دست‌نخورده و فعال مانده است.)
 
-### ۲.۱۳ فیلدهای استاتیک برای چینش لاگ ناامن در برابر همزمانی
-**فایل:** `TrendsCheckpoint.cs` (`AgencyNameLength`, `TrednTypeLength` خط ۳۱۳–۳۱۴)
-
-در چند درخواست همزمان تغییر می‌کنند (هرچند ظاهری).
-
 ### ۲.۱۵ منطق مرتب‌سازی جبری و مستندنشده
 **فایل:** `JobBusiness.cs` (`Q_INDEX`) — استفاده از `WHERE Ranking <= (12 / Category)`
 با تقسیم صحیح و فرمول امتیاز نمایی (در کامنت LaTeX). بدون تست، درک/نگهداری سخت است.
@@ -141,7 +136,6 @@ CI/CD تعریف‌شده‌ای وجود ندارد.
 | `miliseconds` | **milliseconds** |
 | `SimlpeSerialize`/`SimlpeDeserialize` | **Simple…** |
 | `SerializeChecktSyntaxt`/`DeserializeChecktSyntaxt` | **CheckedSyntax** |
-| `TrednTypeLength` | **TrendTypeLength** |
 | `ChceckJob` | **CheckJob** |
 | `portrate.png` | **portrait** |
 | `fallow` (در `JobFallow`) | **follow** |

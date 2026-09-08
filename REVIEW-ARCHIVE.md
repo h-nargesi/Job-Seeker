@@ -9,6 +9,8 @@
 > مورد ۲.۱۰ (اثر جانبی DELETE در GET صفحه اصلی) در ۱۴۰۵/۰۶/۱۷ (2026-09-08)
 > با انتقال پاک‌سازی trend‌های منقضی به سرویس پس‌زمینه‌ای (`TrendsCleanupService`)
 > رفع و به همین فایل اضافه شد.
+> مورد ۲.۱۳ (فیلدهای استاتیک چینش لاگ در `TrendsCheckpoint`) در ۱۴۰۵/۰۶/۱۷ (2026-09-08)
+> با انتقال به سطح نمونه و محاسبهٔ یک‌بارهٔ عرض‌ها در شروع پاس رفع و به همین فایل اضافه شد.
 
 ---
 
@@ -79,6 +81,13 @@
 
 ### ۲.۱۲ `FillSpace` احتمال استثنای منفی
 **تأیید:** `TrendsCheckpoint.cs:318` — `Math.Max(0, max - text.Length)`.
+
+### ۲.۱۳ فیلدهای استاتیک برای چینش لاگ ناامن در برابر همزمانی
+فیلدها به سطح نمونه منتقل شدند؛ عرض ستون‌ها یک‌بار در شروع `CheckingSleptTrends`
+محاسبه می‌شود و حین فرمت‌دهی لاگ دیگری چیزی تغییر نمی‌کند. غلط املایی `TrednTypeLength`
+نیز به `TrendTypeLength` اصلاح شد (ردیف مربوط در بخش ۴ REVIEW.md حذف شد).
+**تأیید:** `core-decision-dotnet/Analyze/TrendsCheckpoint.cs` — فیلدهای instance و
+محاسبهٔ عرض‌ها در `CheckingSleptTrends`.
 
 ### ۲.۱۴ `DecisionController.Running` کلید نامعتبر → ۵۰۰
 **تأیید:** `Controllers/Decision.cs:102` — `TryGetValue` + `NotFound()`.

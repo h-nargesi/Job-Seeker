@@ -94,7 +94,14 @@ namespace Photon.JobSeeker
             TrendType? new_trend;
             var new_trends = new List<(Agency agency, TrendType type)>();
 
-            foreach (var agency in analyzer.Agencies.Values.ToArray())
+            var agencies = analyzer.Agencies.Values.ToArray();
+
+            AgencyNameLength = agencies.Length == 0
+                ? 6
+                : Math.Max(6, agencies.Max(a => a.Name.Length));
+            TrendTypeLength = Math.Max(6, Enum.GetNames<TrendType>().Max(n => n.Length));
+
+            foreach (var agency in agencies)
             {
                 new_trend = CheckingSleptLoginTrends(agency, out var go);
                 if (new_trend != null)
@@ -294,15 +301,15 @@ namespace Photon.JobSeeker
             return trend;
         }
 
-        private static void LogCheckingSleptTrends(Agency agency, TrendType type, Trend? trend,
+        private void LogCheckingSleptTrends(Agency agency, TrendType type, Trend? trend,
             bool matched_analyzed_result, bool had_not_trend, TrendType? new_trend)
         {
             var active = type == TrendType.Search ? agency.IsActiveSeeking : agency.IsActiveAnalyzing;
             var type_str = type.ToString();
 
             Log.Debug("Trend ({0}-{1}) -self={2} -db-trend={3} -had-trend-id={4} -blocked={6} -order={5}",
-                FillSpace(agency.Name, AgencyNameLength = Math.Max(AgencyNameLength, agency.Name.Length)),
-                FillSpace(type_str, TrednTypeLength = Math.Max(TrednTypeLength, type_str.Length)),
+                FillSpace(agency.Name, AgencyNameLength),
+                FillSpace(type_str, TrendTypeLength),
                 matched_analyzed_result ? "*" : " ",
                 trend is null ? "no " : "yes",
                 had_not_trend ? "no " : "yes",
@@ -310,8 +317,8 @@ namespace Photon.JobSeeker
                 active ? "no " : "yes");
         }
 
-        private static int AgencyNameLength = 6;
-        private static int TrednTypeLength = 6;
+        private int AgencyNameLength;
+        private int TrendTypeLength;
 
         private static string FillSpace(string text, int max = 6)
         {
