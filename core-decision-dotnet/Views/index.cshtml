@@ -1,3 +1,6 @@
+@using Photon.JobSeeker
+@model DashboardViewModel
+
 @{
     Layout = "~/views/layout.cshtml";
 }
@@ -21,7 +24,7 @@
                 </tr>
             </thead>
             <tbody id="job-list">
-                @await Html.PartialAsync("~/views/jobs.cshtml", (List<dynamic>)Model.Jobs)
+                @await Html.PartialAsync("~/views/jobs.cshtml", Model.Jobs)
             </tbody>
         </table>
         <button id="show-logs" type="button" class="btn btn-link" style="visibility: hidden;"
@@ -56,7 +59,7 @@
                 </tr>
             </thead>
             <tbody id="job-seeker-trend-list">
-                @await Html.PartialAsync("~/views/trends.cshtml", (List<dynamic>)Model.Trends)
+                @await Html.PartialAsync("~/views/trends.cshtml", Model.Trends)
             </tbody>
         </table>
         <div class="d-flex flex-row">
@@ -67,7 +70,7 @@
             <button id="clean-jobs" onclick="clean()" type="button" class="btn btn-outline-danger m-1">Clean Database</button>
         </div>
         <div id="job-seeker-agency-list" class="agency-list mt-3 d-flex flex-column">
-            @await Html.PartialAsync("~/views/agencies.cshtml", (dynamic[])Model.Agencies)
+            @await Html.PartialAsync("~/views/agencies.cshtml", Model.Agencies)
         </div>
         <div class="job-filter mt-3 d-flex flex-column">
             <input id="job-agency-filter" type="text" class="form-control" onkeyup="filterChanged(event)" placeholder="Agency Filter" />

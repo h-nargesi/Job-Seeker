@@ -338,14 +338,13 @@ public class JobEligibilityHelper : IDisposable
 
     internal static long EvaluateSalaryScore(Match matched, JobOption option)
     {
-        if (option.Settings is null)
+        if (option.Settings?.Money is not { } money_index)
         {
             Log.Warning("Invalid salary options");
             return 0;
         }
 
-        var money_index = (int)option.Settings.money;
-        var period_index = (int)option.Settings.period;
+        var period_index = option.Settings.Period ?? 0;
 
         var money_matched = matched.Groups[money_index];
 
@@ -396,17 +395,15 @@ public class JobEligibilityHelper : IDisposable
 
         public int Passed { get; internal set; }
 
-        public object GetReportObject()
+        public TrendReportItem GetReportObject()
         {
-            return new
-            {
-                TrendID = -1,
-                Agency = $"Revaluation ({ProcessCount})",
-                Link = string.Empty,
-                Type = Passed.ToString(),
-                State = TotalCount.ToString(),
-                LastActivity = StartTimeTitle,
-            };
+            return new TrendReportItem(
+                -1,
+                $"Revaluation ({ProcessCount})",
+                string.Empty,
+                StartTimeTitle,
+                Passed.ToString(),
+                TotalCount.ToString());
         }
     }
 }

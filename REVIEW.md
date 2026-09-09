@@ -154,15 +154,16 @@ null برمی‌گرداند (محرک اصلی ۲.۱۸). در todo.txt هم ب�
 > [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شد — به همراه فیکس باگ upsert ترند؛ رفتارهای حفظ‌شده
 > (ترکیب UTC/local مهلت `ModifiedOn` و `Tries = NULL` در اسکرپ Stepstone) در همان مدخل آرشیو مستند شد.
 >
+> مورد ۳.۲ (استفادهٔ بیش از حد `dynamic` و anonymous types) در ۱۴۰۵/۰۶/۱۸ (2026-09-09) با مدل‌ها/record های
+> تایپ‌دار (`JobOptionSettings`، `AgencyRate`، `TrendReportItem`، `JobListItem`، `AgencyInfo`،
+> `AgencyDashboardItem`، `DashboardViewModel`) و view های `@model`دار رفع و به
+> [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شد — به همراه حذف کد مرده (`LoadSetting` و overload
+> داینامیک `Query`)؛ گزینهٔ حقوقی بدشکل اکنون هشدار + امتیاز ۰ می‌دهد به‌جای کرش binder.
+>
 > مورد ۳.۳ (`Database.Open()` دستی همه‌جا — نقض DI) در ۱۴۰۵/۰۶/۱۸ (2026-09-09) با حذف کامل
 > `Open`/`SetConfiguration` استاتیک و جایگزینی با `IDatabaseFactory` (Singleton) + `Database` اسکوپ‌شده
 > در DI رفع و به [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شد — به همراه فیکس اتصال مرده در
 > `Page.GetUserPass`؛ نیمهٔ باز ماندهٔ مورد ۲.۸ آرشیوشده نیز بسته شد.
-
-### ۳.۲ استفادهٔ بیش از حد `dynamic` و anonymous types
-
-در سراسر لایه‌ها (`List<dynamic>`, `JobOption.Settings` dynamic, خروجی
-`AgencyBusiness.LoadByName`). نوع‌ها گم می‌شوند، Intellisense/کامپایل ضعیف.
 
 ### ۳.۴ تکرار کد `LoadJob` در Stepstone
 **فایل:** `Analyze/Stepstone/StepstonePageJob.cs`

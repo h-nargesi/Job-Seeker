@@ -1,6 +1,5 @@
 using System.Data.SQLite;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
 
 namespace Photon.JobSeeker.Tests;
 
@@ -62,7 +61,7 @@ internal sealed class EligibilityFixture : IDisposable
     }
 
     public static JobOption Option(string category, long score, string pattern,
-                                   string? title = null, object? settings = null)
+                                   string? title = null, JobOptionSettings? settings = null)
     {
         return new JobOption
         {
@@ -82,8 +81,7 @@ internal sealed class EligibilityFixture : IDisposable
             Score = score,
             Title = "salary",
             Pattern = new Regex(pattern),
-            Settings = JsonConvert.DeserializeObject<dynamic>(
-                $"{{ \"money\": {moneyGroup}, \"period\": {periodGroup} }}"),
+            Settings = new JobOptionSettings { Money = moneyGroup, Period = periodGroup },
         };
     }
 

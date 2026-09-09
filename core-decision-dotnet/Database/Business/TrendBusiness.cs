@@ -15,18 +15,16 @@ namespace Photon.JobSeeker
             return database.Query<Trend>(Q_GET, new { agency = agency_id, type = type.ToString() }).FirstOrDefault();
         }
 
-        public List<dynamic> Report()
+        public List<TrendReportItem> Report()
         {
             return database.Query<ReportRow>(Q_REPORT)
-                .Select(r => (dynamic)new
-                {
-                    TrendID = r.TrendID,
-                    Agency = r.Agency ?? "None",
-                    Link = r.Link ?? "",
-                    LastActivity = r.LastActivity ?? "-",
-                    Type = r.Type,
-                    State = r.State,
-                })
+                .Select(r => new TrendReportItem(
+                    r.TrendID,
+                    r.Agency ?? "None",
+                    r.Link ?? "",
+                    r.LastActivity ?? "-",
+                    r.Type,
+                    r.State))
                 .ToList();
         }
 

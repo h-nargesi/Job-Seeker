@@ -17,6 +17,8 @@
 > با الگوی چندشکلی `IndeedSerp` رفع و به همین فایل اضافه شد.
 > مورد ۳.۳ (`Database.Open()` دستی همه‌جا — نقض DI) در ۱۴۰۵/۰۶/۱۸ (2026-09-09)
 > با `IDatabaseFactory` و حذف کامل متدهای استاتیک اتصال رفع و به همین فایل اضافه شد.
+> مورد ۳.۲ (استفادهٔ بیش از حد `dynamic` و anonymous types) در ۱۴۰۵/۰۶/۱۸ (2026-09-09)
+> با مدل‌ها و record های تایپ‌دار در کل مسیر داده→داشبورد رفع و به همین فایل اضافه شد.
 
 ---
 
@@ -162,6 +164,32 @@ Dapper به‌صورت عدد bind می‌شود) و `ResumeContext` با هما
 (`core-decision-dotnet.Tests/PhaseBNewApiTests.cs` — ۱۲ تست: conflict-backfill شغل/ترند، ماتریس پرچم‌های
 `UpdateScrapedJob`، `Tries` تهی Stepstone، `UpdateActivity` بدون دست‌زدن به AgencyID، round-trip
 TypeHandler ها، پروجکشن Report)؛ `dotnet build` بدون هشدار جدید؛ کل مجموعه ۸۰ تست سبز.
+
+### ۳.۲ استفادهٔ بیش از حد `dynamic` و anonymous types
+(۱۴۰۵/۰۶/۱۸ — 2026-09-09) حذف کامل `dynamic` و anonymous type ها از کل مسیر داده→داشبورد.
+`JobOption.Settings` از `dynamic` به مدل تایپ‌دار **`JobOptionSettings`** (+`ResumeSettings` با
+`[JsonProperty]` برای `resume/money/period` و `key/include_matched/parent` — Newtonsoft باقی ماند؛
+seed موجود در `database/structure/job-option.sql` بدون تغییر با مدل منطبق است) تغییر کرد و
+`JobOptionBusiness.FetchAll` با `DeserializeObject<JobOptionSettings>` می‌خواند؛ `ResumeKeyword` بدون
+try/catch های `RuntimeBinderException` بازنویسی شد با حفظ دقیق معنای قبلی (`"resume": null` →
+return false؛ نبودِ `key` → Title؛ نبودِ `include_matched` → true). خروجی‌های گزارش‌دهی به record های
+تایپ‌دار رسیدند: **`AgencyRate`** (ارتقای `RateRow` خصوصی + حذف projection ناشناس در `JobRateReport`)،
+**`TrendReportItem`** (`TrendBusiness.Report` — همان `?? "None"/""/"-"`)، **`JobListItem`**
+(`JobBusiness.Fetch`)، **`AgencyInfo`** (`AgencyBusiness.LoadByName`)، و **`AgencyDashboardItem`**/
+**`DashboardViewModel`** در `ReportController` (شامل `RevaluationProcess.GetReportObject` با
+`TrendID = -1`). view های `jobs/trends/agencies/index` هم `@model` تایپ‌دار گرفتند (حذف cast های
+`(List<dynamic>)`/`(dynamic[])` در index). کد مرده حذف شد: `AgencyBusiness.LoadSetting` (بدون caller)
+و overload بدون-نوع `Database.Query(string,…)` (بدون caller؛ `ReadAll` مستقیم از `connection.Query`
+می‌خواند). **تنها تغییر رفتاری (مصوب):** گزینهٔ حقوقیِ دارای `Settings` غیرتهی ولی بدون `money` — که
+قبلاً binder crash کنترل‌نشده داشت — اکنون `Log.Warning("Invalid salary options")` + امتیاز ۰ می‌دهد
+(قرینهٔ شاخهٔ Settings تهی)؛ نبودِ `period` مثل قبل ۰ تلقی می‌شود. JSON ریشهٔ غیرشیء (مثلاً آرایه) حالا
+در زمان بارگذاری گزینه fail-fast استثنا می‌دهد (پذیرفته‌شده؛ دادهٔ seed شیءهای سالم است). تست‌ها هم
+تابع شدند (`EligibilityFixture.Option/SalaryOption` با `JobOptionSettings`؛ دسترسی تایپ‌دار در تست
+پروجکشن داشبورد فاز A و تست projection گزارش فاز B). خارج از scope ماند: `Job.cs` →
+`database.ReadAll` (دیکشنری-محور، dynamic نیست).
+**تأیید:** `dotnet build core-decision.sln` بدون هشدار جدید (فقط ASP0014 پیش‌موجود — مورد ۳.۱۶)؛
+کل مجموعه **۸۰ تست سبز**؛ اجرای زندهٔ سرور و بازکردن `/`، `/report/jobs`، `/report/trends`،
+`/report/agencies` — ۵۶ سطر شغل، ۵ کارت آژانس با ۷ دکمهٔ method، ۵ سطر trend؛ رندر بدون تغییر.
 
 ### ۳.۳ `Database.Open()` دستی همه‌جا — نقض DI
 (۱۴۰۵/۰۶/۱۸ — 2026-09-09) حذف کامل الگوی service-locator: متدهای استاتیک `Database.Open()`/

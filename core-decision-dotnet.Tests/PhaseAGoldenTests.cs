@@ -375,9 +375,9 @@ public class PhaseAGoldenTests
         var list = db.Database.Job.Fetch([], []);
 
         Assert.Equal(2, list.Count);
-        dynamic top = list[0];
-        Assert.Equal("Golden", (string)top.AgencyName);
-        Assert.False((bool)top.Relocation);
-        Assert.NotNull((Job)top.Job);
+        var top = list[0];
+        Assert.Equal("Golden", top.AgencyName);
+        Assert.False(top.Relocation);
+        Assert.NotNull(top.Job);
     }
 }

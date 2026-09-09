@@ -59,11 +59,6 @@ namespace Photon.JobSeeker
             return connection.Query<T>(query, param, transaction: transaction);
         }
 
-        public IEnumerable<dynamic> Query(string query, object? param = null)
-        {
-            return connection.Query(query, param, transaction: transaction);
-        }
-
         public IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TReturn>(string query,
             Func<TFirst, TSecond, TThird, TReturn> map, object? param = null, string splitOn = "Id")
         {

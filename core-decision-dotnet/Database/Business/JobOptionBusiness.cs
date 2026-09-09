@@ -18,7 +18,7 @@ namespace Photon.JobSeeker
                     Score = r.Score,
                     Title = r.Title,
                     Pattern = new Regex(r.Pattern, RegexOptions.IgnoreCase),
-                    Settings = r.Settings == null ? null : JsonConvert.DeserializeObject<dynamic>(r.Settings),
+                    Settings = r.Settings == null ? null : JsonConvert.DeserializeObject<JobOptionSettings>(r.Settings),
                 })
                 .ToArray();
         }

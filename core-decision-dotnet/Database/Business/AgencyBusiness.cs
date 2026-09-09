@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using Dapper;
 using Newtonsoft.Json;
 
 namespace Photon.JobSeeker;
@@ -10,21 +9,9 @@ class AgencyBusiness
 
     public AgencyBusiness(Database database) => this.database = database;
 
-    public List<dynamic> JobRateReport()
+    public List<AgencyRate> JobRateReport()
     {
-        return database.Query<RateRow>(Q_JOB_RATE_REPORT)
-            .Select(r => (dynamic)new
-            {
-                AgencyID = r.AgencyID,
-                Title = r.Title,
-                JobCount = r.JobCount,
-                Analyzed = r.Analyzed,
-                Accepted = r.Accepted,
-                Applied = r.Applied,
-                AnalyzingRate = r.AnalyzingRate,
-                AcceptingRate = r.AcceptingRate,
-            })
-            .ToList();
+        return database.Query<AgencyRate>(Q_JOB_RATE_REPORT).ToList();
     }
 
     public void SaveState(Agency agency)
@@ -42,26 +29,17 @@ class AgencyBusiness
         database.Execute(Q_UPDATE_SETTINGS, new { settings, active, id });
     }
 
-    public dynamic? LoadSetting(long id)
-    {
-        var settings = database.ExecuteScalar<string?>(Q_LOAD_SETTING, new { agency = id });
-
-        return settings == null ? null : JsonConvert.DeserializeObject<Agency.AgencySetting>(settings);
-    }
-
-    public dynamic? LoadByName(string name)
+    public AgencyInfo? LoadByName(string name)
     {
         var row = database.Query<AgencyRow>(Q_LOAD_BY_NAME, new { title = name }).FirstOrDefault();
         if (row == null) return null;
 
-        return new
-        {
-            AgencyID = row.AgencyID,
-            Domain = row.Domain,
-            Link = row.Link,
-            Active = row.Active,
-            Settings = row.Settings == null ? null : JsonConvert.DeserializeObject<Agency.AgencySetting>(row.Settings),
-        };
+        return new AgencyInfo(
+            row.AgencyID,
+            row.Domain,
+            row.Link,
+            row.Active,
+            row.Settings == null ? null : JsonConvert.DeserializeObject<Agency.AgencySetting>(row.Settings));
     }
 
     public (string user, string pass) GetUserPass(string agency)
@@ -89,25 +67,6 @@ class AgencyBusiness
 
         if (plaintext_agencies.Count > 0)
             Serilog.Log.Information("Encrypted {0} plaintext agency password(s).", plaintext_agencies.Count);
-    }
-
-    private sealed class RateRow
-    {
-        public long AgencyID { get; set; }
-
-        public string Title { get; set; } = string.Empty;
-
-        public long JobCount { get; set; }
-
-        public long Analyzed { get; set; }
-
-        public long Accepted { get; set; }
-
-        public long Applied { get; set; }
-
-        public long AnalyzingRate { get; set; }
-
-        public long AcceptingRate { get; set; }
     }
 
     private sealed class AgencyRow

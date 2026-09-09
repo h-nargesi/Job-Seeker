@@ -9,7 +9,7 @@ namespace Photon.JobSeeker
 
         public JobBusiness(Database database) => this.database = database;
 
-        public List<object> Fetch(string[] agency_titles, string[] country_codes)
+        public List<JobListItem> Fetch(string[] agency_titles, string[] country_codes)
         {
             var where = string.Empty;
             var parameters = new DynamicParameters();
@@ -36,7 +36,7 @@ namespace Photon.JobSeeker
                 (job, relocation, agency) => (job, relocation != 0, agency),
                 parameters, splitOn: "Relocation,AgencyName");
 
-            return rows.Select(r => (object)new { r.Job, r.Relocation, r.AgencyName }).ToList();
+            return rows.Select(r => new JobListItem(r.Job, r.Relocation, r.AgencyName)).ToList();
         }
 
         public long FetchFromCount(DateTime time)

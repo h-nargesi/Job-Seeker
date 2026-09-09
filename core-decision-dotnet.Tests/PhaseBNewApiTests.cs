@@ -225,19 +225,19 @@ public class PhaseBNewApiTests
         var report = db.Database.Trend.Report();
 
         Assert.Equal(2, report.Count);
-        var by_agency = report.ToDictionary(r => (string)r.Agency);
-        Assert.True((bool)by_agency.ContainsKey("Golden"));
-        Assert.True((bool)by_agency.ContainsKey("Idle"));
+        var by_agency = report.ToDictionary(r => r.Agency);
+        Assert.True(by_agency.ContainsKey("Golden"));
+        Assert.True(by_agency.ContainsKey("Idle"));
 
         var golden = by_agency["Golden"];
-        Assert.NotNull((long?)golden.TrendID);
-        Assert.Equal("Search", (string?)golden.Type);
-        Assert.Equal("Seeking", (string?)golden.State);
+        Assert.NotNull(golden.TrendID);
+        Assert.Equal("Search", golden.Type);
+        Assert.Equal("Seeking", golden.State);
 
         var idle = by_agency["Idle"];
-        Assert.Null((long?)idle.TrendID);
-        Assert.Equal("Blocked", (string?)idle.State);
-        Assert.Equal("-", (string?)idle.LastActivity);
+        Assert.Null(idle.TrendID);
+        Assert.Equal("Blocked", idle.State);
+        Assert.Equal("-", idle.LastActivity);
     }
 
     [Fact]

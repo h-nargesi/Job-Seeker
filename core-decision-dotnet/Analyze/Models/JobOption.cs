@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using Microsoft.CSharp.RuntimeBinder;
 
 namespace Photon.JobSeeker
 {
@@ -13,7 +12,7 @@ namespace Photon.JobSeeker
 
         public Regex Pattern { get; set; }
 
-        public dynamic? Settings { get; set; }
+        public JobOptionSettings? Settings { get; set; }
 
         public override readonly string ToString()
         {
@@ -63,34 +62,18 @@ namespace Photon.JobSeeker
             include_matched = true;
 
             if (Settings == null) main = Title;
-            else try
+            else if (Settings.Resume == null) return false;
+            else
+            {
+                main = Settings.Resume.Key ?? Title;
+                include_matched = Settings.Resume.IncludeMatched ?? true;
+
+                if (Settings.Resume.Parent is { } parent)
                 {
-                    dynamic resume = Settings.resume;
-
-                    if (resume == null) return false;
-
-                    try
-                    {
-                        main = (string)resume.key;
-                        main ??= Title;
-                    }
-                    catch (RuntimeBinderException) { main = Title; }
-
-                    try { include_matched = (bool)resume.include_matched; }
-                    catch (RuntimeBinderException) { }
-
-                    try
-                    {
-                        var temp = (string)resume.parent;
-                        if (temp != null)
-                        {
-                            keyword = main;
-                            main = temp;
-                        }
-                    }
-                    catch (RuntimeBinderException) { }
+                    keyword = main;
+                    main = parent;
                 }
-                catch (RuntimeBinderException) { main = Title; }
+            }
 
             var MAIN = main.MainOption();
 

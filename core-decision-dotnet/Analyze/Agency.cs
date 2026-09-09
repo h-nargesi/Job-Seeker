@@ -113,7 +113,7 @@ public abstract class Agency
         var agency_info = database.Agency.LoadByName(Name);
         if (agency_info == null) return;
 
-        Status = (AgencyStatus)(long)agency_info.Active;
+        Status = (AgencyStatus)agency_info.Active;
         if (Status == AgencyStatus.None) return;
 
         ID = agency_info.AgencyID;
@@ -126,7 +126,7 @@ public abstract class Agency
         LoadPages();
     }
 
-    private void LoadSettings(AgencySetting settings)
+    private void LoadSettings(AgencySetting? settings)
     {
         if (settings == null) return;
 

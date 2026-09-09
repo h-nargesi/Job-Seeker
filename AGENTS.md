@@ -118,7 +118,7 @@ closed loop:
 ```
 extension (check-page.js)                server (DecisionController.Take)
   on page load ─────────────────────────────►  POST /decision/take
-  body: { agency, url, content:<fullHTML> }   │
+  body: { agency, url, content:<fullHTML> }    │
                                                ▼  Analyzer.Analyze(context)
                                           1. find Agency by name
                                           2. Agency.AnalyzeContent(url, content)

@@ -64,7 +64,7 @@ public class ReportController(Analyzer analyzer, Database database) : Controller
             var trends = GetTrends(database);
             var agencies = GetAgencies(database);
 
-            return View("~/views/index.cshtml", new { Trends = trends, Jobs = jobs, Agencies = agencies });
+            return View("~/views/index.cshtml", new DashboardViewModel(trends, jobs, agencies));
         }
         catch (Exception ex)
         {
@@ -73,7 +73,7 @@ public class ReportController(Analyzer analyzer, Database database) : Controller
         }
     }
 
-    private static List<dynamic> GetJobs(Database database, string? agencies, string? countries)
+    private static List<JobListItem> GetJobs(Database database, string? agencies, string? countries)
     {
         var agency_titles = agencies?.Split(',')
             .Where(id => !string.IsNullOrEmpty(id))
@@ -86,7 +86,7 @@ public class ReportController(Analyzer analyzer, Database database) : Controller
         return database.Job.Fetch(agency_titles, country_codes);
     }
 
-    private static List<dynamic> GetTrends(Database database)
+    private static List<TrendReportItem> GetTrends(Database database)
     {
         var result = database.Trend.Report();
 
@@ -96,28 +96,26 @@ public class ReportController(Analyzer analyzer, Database database) : Controller
         return result;
     }
 
-    private dynamic[] GetAgencies(Database database)
+    private AgencyDashboardItem[] GetAgencies(Database database)
     {
         var report = database.Agency.JobRateReport();
         var agencies = analyzer.Agencies;
 
         return report.Select(r =>
             {
-                agencies.TryGetValue(r.Title, out Agency agency);
-                return new
-                {
+                agencies.TryGetValue(r.Title, out Agency? agency);
+                return new AgencyDashboardItem(
                     r.AgencyID,
-                    Name = r.Title,
-                    agency?.SearchLink,
+                    Name: r.Title,
+                    SearchLink: agency?.SearchLink,
                     r.JobCount,
                     r.Analyzed,
                     r.Accepted,
                     r.Applied,
                     r.AnalyzingRate,
                     r.AcceptingRate,
-                    Running = agency == null ? null : agency.Status.HasFlag(AgencyStatus.ActiveSeeking) ? agency.CurrentMethodIndex : (int?)-1,
-                    Methods = agency?.EnabledSearchingMethod ?? []
-                };
+                    Running: agency == null ? null : agency.Status.HasFlag(AgencyStatus.ActiveSeeking) ? agency.CurrentMethodIndex : (int?)-1,
+                    Methods: agency?.EnabledSearchingMethod ?? []);
             })
             .OrderBy(r => r.AgencyID)
             .ToArray();
