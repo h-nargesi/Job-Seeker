@@ -25,9 +25,16 @@ chrome.runtime.onMessage.addListener(
 );
 
 async function Respond(tab, id, promise) {
-    let response = await promise;
+    let response;
 
-    if (response.trend !== undefined) {
+    try {
+        response = await promise;
+    } catch (e) {
+        console.error("AGENT", "Respond", e);
+        response = { error: "background", status: 0 };
+    }
+
+    if (response && response.error === undefined && response.trend !== undefined) {
         if (response.trend) {
             // console.log("AGENT", "Background", tab.windowId, tab.id);
             trends.set(tab.windowId, tab.id, response.trend);

@@ -11,10 +11,10 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
     private readonly TrendsCheckpoint trends_checkpoint = trends_checkpoint;
 
     [HttpPost]
-    [RequestSizeLimit(5_000_000)]
+    [RequestSizeLimit(20_000_000)]
     public IActionResult Take([FromBody] PageContext? context)
     {
-        if (context == null) return BadRequest();
+        if (context == null) return BadRequest(new { error = "missing-context" });
 
         try
         {
@@ -31,7 +31,7 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
         catch (BadJobRequest bd)
         {
             Log.Error(bd.Message);
-            return BadRequest();
+            return BadRequest(new { error = "bad-job-request", message = bd.Message });
         }
         catch (Exception ex)
         {

@@ -6,6 +6,11 @@ class ActionHandler {
     static OnPageLoad = null;
 
     static async Handle(commands, dontclose) {
+        if (!commands) {
+            console.error("AGENT", 'ActionHandler', 'no commands', commands);
+            return;
+        }
+
         let command_count = 0;
         for (let c in commands)
             if (commands[c]) {

@@ -5,6 +5,7 @@ class CoreMessaging {
     static SERVER_URL;
     static API_KEY;
     static SCOPES;
+    static REQUEST_TIMEOUT = 30000;
     static HEADERS = {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
@@ -34,19 +35,50 @@ class CoreMessaging {
         return headers;
     }
 
+    async FetchJson(url, data) {
+        const controller = new AbortController();
+        const timer = setTimeout(function () { controller.abort(); }, CoreMessaging.REQUEST_TIMEOUT);
+
+        data.signal = controller.signal;
+
+        try {
+            const response = await fetch(url, data);
+            const body = await response.text();
+
+            if (!response.ok) {
+                let error = "http";
+                try { error = JSON.parse(body).error ?? error; } catch { }
+                console.error("AGENT", "CoreMessaging", "FetchJson", "error", response.status, error);
+                return { error: error, status: response.status };
+            }
+
+            try {
+                return JSON.parse(body);
+            } catch (e) {
+                console.error("AGENT", "CoreMessaging", "FetchJson", "invalid json", e);
+                return { error: "invalid-json", status: response.status };
+            }
+
+        } catch (e) {
+            const error = e && e.name === 'AbortError' ? "timeout" : "network";
+            console.error("AGENT", "CoreMessaging", "FetchJson", error, e);
+            return { error: error, status: 0 };
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
     async Send(params) {
         const server_url = await this.CheckServerUrl() + "decision/take";
 
-        const data = {
+        const result = await this.FetchJson(server_url, {
             method: 'POST',
             headers: await this.BuildHeaders(),
             body: JSON.stringify(params)
-        };
+        });
 
-        let response = await fetch(server_url, data);
-        response = await response.json();
-        console.log("AGENT", "CoreMessaging", "Send", response);
-        return response;
+        console.log("AGENT", "CoreMessaging", "Send", result);
+        return result;
     }
 
     async Scopes(reset) {
@@ -59,21 +91,22 @@ class CoreMessaging {
 
                 const server_url = await this.CheckServerUrl() + "decision/scopes";
 
-                const data = {
+                const result = await this.FetchJson(server_url, {
                     method: 'GET',
                     headers: await this.BuildHeaders()
-                };
+                });
 
-                const response = await fetch(server_url, data);
-                CoreMessaging.SCOPES = await response.json();
+                if (result.error !== undefined) return result;
+
+                CoreMessaging.SCOPES = result;
                 console.log("AGENT", "CoreMessaging", "Scopes", CoreMessaging.SCOPES);
             }
 
             return CoreMessaging.SCOPES;
 
         } catch (e) {
-            console.log("AGENT", e);
-            return {};
+            console.error("AGENT", "CoreMessaging", "Scopes", e);
+            return { error: "client", status: 0 };
         }
     }
 
@@ -81,19 +114,17 @@ class CoreMessaging {
         try {
             const server_url = await this.CheckServerUrl() + "decision/orders";
 
-            const data = {
+            const result = await this.FetchJson(server_url, {
                 method: 'GET',
                 headers: await this.BuildHeaders()
-            };
+            });
 
-            let response = await fetch(server_url, data);
-            response = await response.json();
-            console.log("AGENT", "CoreMessaging", "Orders", response);
-            return response;
+            console.log("AGENT", "CoreMessaging", "Orders", result);
+            return result;
 
         } catch (e) {
-            console.log("AGENT", e);
-            return {};
+            console.error("AGENT", "CoreMessaging", "Orders", e);
+            return { error: "client", status: 0 };
         }
     }
 }

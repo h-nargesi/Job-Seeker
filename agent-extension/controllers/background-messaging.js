@@ -4,6 +4,7 @@ class BackgroundMessaging {
 
     static MESSAGE_ID = 0;
     static CURRENT_REQUESTS;
+    static RESPONSE_TIMEOUT = 45000;
 
     static RunListener() {
         if (BackgroundMessaging.CURRENT_REQUESTS) return;
@@ -36,8 +37,14 @@ class BackgroundMessaging {
             try {
                 BackgroundMessaging.CURRENT_REQUESTS[message.id] = resolve;
                 chrome.runtime.sendMessage(message);
-            } catch {
+
+                setTimeout(function () {
+                    BackgroundMessaging.CheckRequests(message.id, { error: "no-response", status: 0 });
+                }, BackgroundMessaging.RESPONSE_TIMEOUT);
+            } catch (e) {
                 delete BackgroundMessaging.CURRENT_REQUESTS[message.id];
+                console.error("AGENT", "BackgroundMessaging", e);
+                resolve({ error: "no-response", status: 0 });
             }
         });
     }

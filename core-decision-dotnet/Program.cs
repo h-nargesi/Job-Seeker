@@ -88,7 +88,7 @@ app.UseExceptionHandler(error_app => error_app.Run(async ctx =>
     if (ctx.Request.Headers.Accept.ToString().Contains("application/json"))
     {
         ctx.Response.ContentType = "application/json";
-        await ctx.Response.WriteAsync("{\"error\":\"Internal server error\"}");
+        await ctx.Response.WriteAsync("{\"error\":\"internal-server-error\"}");
     }
     else
     {

@@ -21,6 +21,8 @@
 > با مدل‌ها و record های تایپ‌دار در کل مسیر داده→داشبورد رفع و به همین فایل اضافه شد.
 > مورد ۱.۵ (مسیریابی پاسخ پس‌زمینه بر اساس `tab.index` به‌جای `tab.id`) در ۱۴۰۵/۰۶/۱۸
 > (2026-09-09) با ارسال مستقیم `chrome.tabs.sendMessage(sender.tab.id, …)` رفع و به همین فایل اضافه شد.
+> مورد ۱.۶ (زنجیرهٔ پیام‌رسانی بدون timeout/چک ok/catch) در ۱۴۰۵/۰۶/۱۸ (2026-09-09)
+> با `FetchJson` مقاوم‌شده + retry محدود در content script رفع و به همین فایل اضافه شد.
 
 ---
 
@@ -66,6 +68,40 @@
 بدون تغییر مانیفست؛ مورد ۱.۶ (چک ok/timeout/catch در زنجیرهٔ پیام) عمداً باز ماند.
 **تأیید:** `agent-extension/controllers/background.js:38-41` — ارسال مستقیم به `tab.id` +
 مصرف `chrome.runtime.lastError` در callback؛ تأیید نهایی با نخستین اجرای زنده.
+
+### ۱.۶ (مرور ۱۴۰۵/۰۶/۱۸) زنجیرهٔ پیام‌رسانی بدون timeout/retry و بدون چک `response.ok`
+(شماره‌گذاری این مدخل از مرور ۱۴۰۵/۰۶/۱۸ است؛ ۱.۶ آرشیوشدهٔ نگارش ۲۰۲۶-۰۸-۳۱ — مدیریت استثناء — مدخل جداگانهٔ فوق است.)
+`Send` در `core-messaging.js` برخلاف `Scopes`/`Orders` نه `response.ok` را چک می‌کرد نه خطا را
+catch می‌کرد؛ `Respond` در `background.js` نیز بدون try/catch بود. با شکست fetch یا JSON
+نامعتبر (خاموشی سرور، 413، پاسخ HTML به‌جای JSON) promise داخل content script هرگز resolve
+نمی‌شد و تب بی‌صدا تا ناوبری بعدی از حلقه خارج می‌ماند؛ مدخل درخواست هم در
+`CURRENT_REQUESTS` نشت می‌کرد. نکتهٔ ظریف تأییدشده: 401 با `Accept: application/json`
+بدنهٔ JSON معتبر داشت و به‌جای هنگ، no-op بی‌صدا می‌داد (و پاسخ خطا در `SCOPES` کش می‌شد)؛
+`BadRequest` های بدنهٔ تهی هم به هنگ منجر می‌شدند. اصلاحات:
+- **`CoreMessaging.FetchJson` جدید** (`Send`/`Scopes`/`Orders` هر سه از آن استفاده می‌کنند):
+  چک `response.ok` + پارس امن (`text()` → `JSON.parse` داخل try) + timeout ۳۰ثانیه‌ای با
+  `AbortController` + بازگرداندن ساختار خطای `{error, status}` به‌جای throw. کد خطای بدنهٔ
+  JSON سرور (مثل `unauthorized`) منتقل می‌شود و پاسخ خطادار دیگر در `SCOPES` کش نمی‌شود.
+- **`Respond`:** try/catch و در خطا forward همان ساختار خطا به content script؛ نقشهٔ trend
+  در خطا دست‌نخورده می‌ماند (تب اتصال خود را حفظ می‌کند).
+- **`BackgroundMessaging.Message`:** تایمر ۴۵ثانیه‌ای `no-response` (پوشش مرگ/ری‌استارت
+  سرویس‌ورکر در میانهٔ درخواست — هم‌افین با مورد باز ۱.۷) و resolve در catch سنکرون؛ دیگر
+  هیچ promise ای معلق نمی‌ماند و مدخل درخواست نشت نمی‌کند.
+- **`check-page.js`:** `SendingPageInfo` حداکثر ۳ تلاش با backoff (۵/۱۰ ثانیه) فقط برای
+  خطاهای گذرا (`network`/`timeout`/`no-response`/5xx)؛ خطاهای پیکربندی (401/413/…) فقط
+  لاگ می‌شوند. `OnPageLoad` و `CheckNewOrders` نتیجهٔ خطادار را لاگ و متوقف می‌شوند؛
+  `ActionHandler.Handle` روی ورودی فاقد فرمان لاگ خطا می‌دهد.
+- **سرور:** سقف `RequestSizeLimit` در `Decision.Take` از ۵ به **۲۰MB** (زیر سقف پیش‌فرض
+  ~۲۸.۶MB کسترل)؛ `BadRequest` ها بدنهٔ JSON با کد خطا گرفتند (`missing-context`/
+  `bad-job-request`)؛ بدنهٔ JSON خطای 500 به `internal-server-error` تغییر کرد.
+رفتار مسیر موفق بدون تغییر: همان `{trend, commands}` قبلی. تأیید نهایی با نخستین اجرای زنده.
+**تأیید:** `agent-extension/controllers/core-messaging.js:38-69` (`FetchJson`)،
+`agent-extension/controllers/background.js:27-49` (`Respond`)،
+`agent-extension/controllers/background-messaging.js:33-50` (`Message`)،
+`agent-extension/controllers/check-page.js:5-22,56-100` (گارد اسکوپ/retry/Orders)؛
+`agent-extension/controllers/action-handler.js:8-12`؛
+`core-decision-dotnet/Controllers/Decision.cs:13-34`؛ `core-decision-dotnet/Program.cs:91`؛
+`dotnet build` بدون هشدار جدید، ۸۰ تست سبز، `node --check` روی هر پنج فایل JS اکستنشن.
 
 ---
 

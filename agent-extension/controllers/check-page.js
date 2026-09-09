@@ -4,6 +4,12 @@ ActionHandler.OnPageLoad = function () {
     console.log("AGENT", 'Page', 'loaded');
     setTimeout(async function () {
         const scopes = await BackgroundMessaging.Scopes();
+
+        if (!scopes || scopes.error !== undefined) {
+            console.error("AGENT", 'Page', "scopes failed", scopes);
+            return;
+        }
+
         const host = window.location.hostname;
         console.log("AGENT", 'Page', "hostname:", host);
         for (let s in scopes) {
@@ -52,19 +58,44 @@ async function SendingPageInfo(scope) {
 
     console.log("AGENT", 'Page', "sending", window.location.hostname, scope);
 
-    const commands = await BackgroundMessaging.Send({
+    const params = {
         agency: scope.name,
         url: window.location.href,
         content: document.documentElement.outerHTML,
-    });
+    };
 
-    console.log("AGENT", 'Page', "commands", commands);
-    ActionHandler.Handle(commands, false);
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        const commands = await BackgroundMessaging.Send(params);
+
+        if (!commands || commands.error === undefined) {
+            console.log("AGENT", 'Page', "commands", commands);
+            ActionHandler.Handle(commands, false);
+            return;
+        }
+
+        console.error("AGENT", 'Page', "send failed", attempt, commands.error, commands.status);
+
+        if (!RetryableError(commands)) break;
+
+        if (attempt < 3) await ActionHandler.OnWait({ miliseconds: attempt * 5000 });
+    }
+}
+
+function RetryableError(result) {
+    if (result.error === "network" || result.error === "timeout" || result.error === "no-response") return true;
+    if (result.error === "http" && result.status >= 500) return true;
+    return false;
 }
 
 async function CheckNewOrders() {
     console.log("AGENT", 'Page', 'Taking Orders ...');
     const result = await BackgroundMessaging.Orders();
+
+    if (!result || result.error !== undefined) {
+        console.error("AGENT", 'Page', "orders failed", result);
+        return;
+    }
+
     ActionHandler.Handle(result.commands, true);
 }
 
