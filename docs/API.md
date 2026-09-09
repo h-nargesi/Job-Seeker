@@ -46,10 +46,35 @@ capped at 5 MB (`[RequestSizeLimit]`).
   - `content` — `document.documentElement.outerHTML` from the extension.
 - **Response**:
   ```json
-  { "trend": 124, "commands": [ { "action": "go", "params": { "url": "..." } } ] }
+  {
+    "trend": 124,
+    "commands": [ { "action": "go", "params": { "url": "..." } } ],
+    "close_timeout_ms": 90000
+  }
   ```
   `commands` is an array of `Command` (see [Commands](#commands)).
+  `close_timeout_ms` — the tab auto-close timeout the extension should arm
+  for this tab: `90000` (90 s) by default, `600000` (10 min) while the trend
+  state is `Auth` (human 2FA/login wait).
 - Returns `400` on a `BadJobRequest` (unknown agency, empty url/content).
+
+### `POST /decision/heartbeat`
+Keeps a tab's trend row alive during human pauses (2FA/CAPTCHA). The
+extension's content script calls it every 30 s while its tab is visible; no
+HTML analysis, no state mutation — just refreshes `LastActivity`.
+
+- **Request body** (`HeartbeatContext`):
+  ```json
+  { "trend": 123 }
+  ```
+  `trend` — the tab's bound trend id; may be `null` when the tab has no
+  binding yet (nothing is touched).
+- **Response**:
+  ```json
+  { "trend": 123 }
+  ```
+  `{ "trend": null }` when the id is unknown/expired — the tab's next `take`
+  re-adopts or regenerates the workflow.
 
 ### `GET /decision/scopes`
 Returns the active agencies the extension should react to. Cached on the client
@@ -68,11 +93,15 @@ The polling path. Asks "what should open next?" with no page HTML. Runs
 `TrendsCheckpoint.CheckCurrentTrends()` and returns commands to start idle
 trends (e.g. open the search page, go to the next saved job).
 
-- **Response**: same shape as `take` (`{ trend, commands }`).
+- **Response**: commands to start idle trends (same `Command` array as `take`;
+  no `trend`/`close_timeout_ms` wrapper — the dashboard handles the body as-is).
+  `CheckCurrentTrends` also sweeps expired trends and reservations older than
+  30 s, so each poll is the fast re-open path for abandoned `Open`s.
 
 ### `POST /decision/reset`
-Clears expired trends (`DeleteExpired(0)`) and clears the in-memory agency cache
-so it reloads from the DB on next access.
+Wipes all trend rows instantly — expired and reserved alike
+(`DeleteExpired(0)` + `DeleteExpiredReservations(0)`) — and clears the
+in-memory agency cache so it reloads from the DB on next access.
 
 ### `POST /decision/running`
 Start/stop an agency's active seeking, or set its current locale index.
@@ -143,11 +172,11 @@ The `Command` struct (`Result/Command.cs`) → serialized JSON consumed by
 | `action` | params / object | Extension behavior |
 |----------|-----------------|--------------------|
 | `go` | `params.url` | `window.location = url` (navigate current tab) |
-| `open` | `params.url` | `window.open(url)` (new tab/window) |
+| `open` | `params.url` | New background tab via the service worker (`chrome.tabs.create`) |
 | `fill` | `object` = selector, `params.value` | Set `value`/`innerText` on matched elements |
 | `click` | `object` = selector | `.click()` matched elements |
 | `recheck` | — | Re-run the page-load handler in-place (no navigation) |
-| `close` | — | Close the current tab (skipped on the `/orders` polling path) |
+| `close` | — | Close the current tab via the service worker (`chrome.tabs.remove`; skipped on the `/orders` polling path) |
 | `wait` | `params.miliseconds` | `setTimeout` delay |
 | `reload` | — | `location.reload()` |
 

@@ -23,6 +23,9 @@
 > (2026-09-09) با ارسال مستقیم `chrome.tabs.sendMessage(sender.tab.id, …)` رفع و به همین فایل اضافه شد.
 > مورد ۱.۶ (زنجیرهٔ پیام‌رسانی بدون timeout/چک ok/catch) در ۱۴۰۵/۰۶/۱۸ (2026-09-09)
 > با `FetchJson` مقاوم‌شده + retry محدود در content script رفع و به همین فایل اضافه شد.
+> موارد ۲.۱۷ (TTL دودقیقه‌ای بدون heartbeat)، ۲.۱۸ (فلگ Reserved بدون مهلت lease) و
+> ۲.۲۲ (اجرای open با `window.open` از content script) در ۱۴۰۵/۰۶/۱۸ (2026-09-09)
+> با کامیت `8503003` رفع و به همین فایل اضافه شدند.
 
 ---
 
@@ -193,6 +196,78 @@ catch می‌کرد؛ `Respond` در `background.js` نیز بدون try/catch �
 
 ### ۲.۱۹ `Analyze.Agencies` lazy-load الگوی قفل شکسته
 **تأیید:** `Analyze/Analyzer.cs:11-43,53-60` — بررسی داخل lock (double-check) برای هر دو property؛ `ClearAgencies` و `ReloadSettings` زیر همان lock.
+
+### ۲.۱۷ (مرور ۱۴۰۵/۰۶/۱۸) TTL دودقیقه‌ای trend + تایمر ۹۰ ثانیه‌ای بستن، بدون ضربان قلب
+
+(شماره‌گذاری این مدخل از مرور ۱۴۰۵/۰۶/۱۸ است؛ ۲.۱۷ آرشیوشدهٔ نگارش ۲۰۲۶-۰۸-۳۱ — استثنای `IndeedPageJob` — مدخل جداگانهٔ فوق است.)
+
+رفع با کامیت `8503003` (۱۴۰۵/۰۶/۱۸ — 2026-09-09)، سه جزء هماهنگ:
+- **TTL آگاه از حالت:** `TREND_EXPIRATION_MINUTES` از ۲ به ۵ دقیقه و برای حالت `Auth`
+  (انتظار انسانی 2FA/لاگین) ۱۰ دقیقه (`AUTH_EXPIRATION_MINUTES`)؛ `DeleteExpired` دو دستور
+  جداگانه دارد که سطرهای `Reserved` را مستثنا می‌کنند (مالِ sweep رزروها هستند) و
+  آرگومان `minutes` هر دو cutoff را مقیاس می‌دهد تا `DeleteExpired(0)` در Reset همه‌چیز را
+  فوری پاک کند.
+- **ضربان قلب:** اندپوینت سبک `POST /decision/heartbeat` (بدنهٔ `{trend}`؛ بدون تحلیل و
+  بدون تغییر حالت — فقط تازه‌کردن `LastActivity` با `Touch`)؛ content script هر تب
+  آژانسِ visible هر ۳۰ ثانیه می‌زند (تب hidden رد می‌شود؛ خطا فقط warn؛ پاک‌سازی در
+  `unload`). مکث‌های انسانی دیگر سطر trend را حذف و صفحات Job را hijack نمی‌کنند.
+- **بستنِ سرور-محور:** پاسخ Take فیلد `close_timeout_ms` دارد (۹۰ ثانیه پیش‌فرض، ۶۰۰
+  ثانیه در `Auth`) و `SetCloseTimer(ms)` آن را اعمال می‌کند؛ فرمان `close` و callback
+  تایمر هر دو از SW با `chrome.tabs.remove` اجرا می‌شوند → تب‌های باز‌شدهٔ کاربر هم
+  واقعاً بسته می‌شوند (بند زومبی ۲.۱۷).
+
+نکتهٔ ظریف پروتکل: شاخهٔ take در `Respond` سخت‌گیرانه‌تر شد —
+`trend !== undefined && commands !== undefined` — چون پاسخ heartbeat فقط `trend` دارد و
+Orders فقط `commands`؛ بدنهٔ take پس از نگاشت trend به `{commands, close_timeout_ms}`
+تقلیل می‌یابد و بقیهٔ پاسخ‌ها دست‌نخورده forward می‌شوند (وگرنه بدنهٔ heartbeat به
+`undefined` جایگزین می‌شد و listener محتوایی هرگز resolve نمی‌کرد → `no-response` پس از
+۴۵ ثانیه).
+**تأیید:** `core-decision-dotnet/Database/Business/TrendBusiness.cs:7-9,67-84,147-157`،
+`core-decision-dotnet/Controllers/Decision.cs:9-10,28-33,47-67`،
+`core-decision-dotnet/Controllers/Context/HeartbeatContext.cs`،
+`agent-extension/controllers/core-messaging.js:84-94`،
+`agent-extension/controllers/background-messaging.js:64-74`،
+`agent-extension/controllers/background.js:28-36,46-66,78-83`،
+`agent-extension/controllers/check-page.js:19,68-83,92-106,120-125`،
+`agent-extension/controllers/action-handler.js:90-94`؛ `dotnet build` بدون هشدار جدید،
+۸۰ تست سبز، `node --check` روی همهٔ فایل‌های JS تغییریافته — تأیید نهایی با نخستین اجرای زنده.
+
+### ۲.۱۸ (مرور ۱۴۰۵/۰۶/۱۸) فلگ Reserved بدون مهلت → وقفهٔ دودقیقه‌ای پس از Openِ بلاک‌شده
+
+(شماره‌گذاری این مدخل از مرور ۱۴۰۵/۰۶/۱۸ است؛ ۲.۱۸ آرشیوشدهٔ نگارش ۲۰۲۶-۰۸-۳۱ — زیرکوئری مبهم `Q_CLEAN_ATTENTION` — مدخل جداگانهٔ فوق است.)
+
+رفع با کامیت `8503003` (۱۴۰۵/۰۶/۱۸ — 2026-09-09): رزرو به lease مهلت‌دار تبدیل شد —
+`DeleteExpiredReservations(RESERVATION_LEASE_SECONDS = 30)` سطرهای `Reserved = 1` با
+سن `LastActivity` > ۳۰ ثانیه را پاک می‌کند (بدون تغییر اسکیما؛ ساعتِ lease همان
+`LastActivity` است که `CreateTrend` در ساخت رزرو مهر می‌زند). sweep در دو نقطه اجرا
+می‌شود: بالای هر `CheckCurrentTrends` (poll داشبورد ≤ ۲۰ ثانیه → مسیر سریع بازگشایی
+Open رهاشده) و در `TrendsCleanupService` (هر ۱ دقیقه؛ تنها sweeper وقتی داشبورد بسته
+است — وگرنه رزروهای رهاشده جاودانه می‌شدند). Reset داشبورد هم حالا
+`DeleteExpiredReservations(0)` را صدا می‌زند و همه‌چیز از جمله رزروها را فوری پاک
+می‌کند. مسابقهٔ sweep با claim دیرهنگام در مرز ۳۰ ثانیه خودترمیم است: اگر sweep
+ببرد، take بدون-trend تبِ دیررس از مسیر post-1.7 دوباره trend می‌سازد و `Go` می‌زند؛
+با open از SW (۲.۲۲) claim عموماً فوری است.
+**تأیید:** `core-decision-dotnet/Database/Business/TrendBusiness.cs:9,75-78,153-155`،
+`core-decision-dotnet/Analyze/TrendsCheckpoint.cs:32-33`،
+`core-decision-dotnet/TrendsCleanupService.cs:29-30`،
+`core-decision-dotnet/Controllers/Decision.cs:70-85`؛ `dotnet build` بدون هشدار جدید،
+۸۰ تست سبز — تأیید نهایی با نخستین اجرای زنده.
+
+### ۲.۲۲ (مرور ۱۴۰۵/۰۶/۱۸) اجرای `open` با `window.open` از content script → وابستگی به popup-blocker
+
+رفع با کامیت `8503003` (۱۴۰۵/۰۶/۱۸ — 2026-09-09): فرمان‌های `open` و `close` هر دو به
+SW مسیریابی شدند — content script پیام `open-tab`/`close-tab` می‌فرستد و SW با
+`chrome.tabs.create({url, active: false})` (بدون محدودیت popup-block؛ مجوز اضافه لازم
+نداشت) تب می‌سازد و با `chrome.tabs.remove(sender.tab.id)` می‌بندد؛ هر دو در try/catch با
+پاسخ `{ok: true}` یا `{error: "open-failed"/"close-failed"}`. متدهای `OnOpen`/`OnClose`
+حذف شدند (تایمر بستن هم از همین مسیر SW می‌بندد — ر.ک. مدخل ۲.۱۷ همین فایل). **بدون
+pre-binding عمداً:** trend نگاشت‌شدهٔ تبِ فرستنده معمولاً غلط است (تب آژانس A صفحهٔ
+آژانس B را باز می‌کند؛ داشبوردِ Orders اصلاً نگاشت ندارد)؛ اولین take بدون-id تبِ جدید
+توسط adoption بی‌قید post-1.7 (`-adopted-id-less`) سمت سرور جواب داده می‌شود.
+**تأیید:** `agent-extension/controllers/action-handler.js:29-31,45-48`،
+`agent-extension/controllers/background-messaging.js:68-74`،
+`agent-extension/controllers/background.js:32-36,46-66`؛ `node --check` روی فایل‌های
+تغییریافته — تأیید نهایی با نخستین اجرای زنده.
 
 ---
 
