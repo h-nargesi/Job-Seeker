@@ -32,14 +32,8 @@ class StepstonePageSearch(Stepstone parent) : StepstonePage(parent)
             if (codes.Contains(code)) continue;
             codes.Add(code);
 
-            database.Job.Save(new
-            {
-                AgencyID = parent.ID,
-                Url = string.Join("", parent.BaseUrl, job_match.Value),
-                Country = parent.CurrentMethod.Title,
-                Code = code,
-                State = JobState.Saved
-            });
+            database.Job.InsertFromSearch(parent.ID, parent.CurrentMethod.Title,
+                string.Join("", parent.BaseUrl, job_match.Value), code);
         }
 
         if (reg_search_end.IsMatch(content)) return Array.Empty<Command>();

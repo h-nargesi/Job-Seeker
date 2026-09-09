@@ -24,7 +24,7 @@ Job-Seeker/
 │   │   ├── TrendsCheckpoint.cs       # workflow state machine
 │   │   ├── Models/            # Job, JobOption, Trend, ResumeContext, enums
 │   │   └── Result/            # Command / Result / PageAction (browser protocol)
-│   ├── Database/              # SQLite access (reflection-based, NO EF Core)
+│   ├── Database/              # SQLite access (Dapper, NO EF Core)
 │   │   ├── Database.cs        # connection + generic Insert/Update/Read
 │   │   ├── Dictionaries.cs    # English-word DB for language detection
 │   │   └── Business/          # per-entity repos (Job/Agency/Trend/JobOption)
@@ -146,12 +146,17 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
   sub-namespace is `Photon.JobSeeker.Pages`.
 - **No comments** unless requested (matches existing style). Do not add XML doc
   comments gratuitously.
-- **Raw SQLite, no ORM/EF Core.** `Database.cs` does reflection-based
-  Insert/Update. Column write scope is controlled by a `[Flags] enum` filter
-  (`JobFilter`, `TrendFilter`) — **the filter member name must exactly match the
-  property name** for the column to be written.
-- **Anonymous types are insert payloads.** e.g. `database.Job.Save(new { AgencyID, Code, ... })`.
-  Properties must match table columns.
+- **Raw SQLite via Dapper (no EF Core).** `Database.cs` wraps a `SQLiteConnection`
+  and exposes Dapper `Execute`/`Query<T>`/`ExecuteScalar` plus transactions and
+  `LastInsertRowId()`/`Changes()`. Business classes in `Database/Business/` own
+  explicit typed write methods (`InsertJob`, `UpdateScrapedJob`, `CreateTrend`,
+  `SaveSettings`, ...) — one per call-site shape; there is no reflection-based
+  Insert/Update and no column filter enums.
+- **Enum columns store the enum *name* as text** (`'Attention'`, `'Seeking'`),
+  never the int. Reads go through `SqliteTypeHandlers` (registered in the
+  `Database` static ctor); SQL parameters must pass enums as
+  `someState.ToString()` — Dapper binds raw enum parameters as integers.
+  `ResumeContext` columns round-trip as JSON via the same handler file.
 - **Reflection-discovered plugins.** `TypeHelper.GetSubTypes(typeof(Agency))`
   finds every platform class automatically. Adding a platform = adding a class;
   no registration list to edit. Same for `Page` subclasses per platform.

@@ -6,24 +6,34 @@ namespace Photon.JobSeeker
     class JobOptionBusiness
     {
         private readonly Database database;
+
         public JobOptionBusiness(Database database) => this.database = database;
 
         public JobOption[] FetchAll()
         {
-            using var reader = database.Read(Q_FETCH_ALL);
-
-            var option_list = new List<JobOption>();
-            while (reader.Read())
-                option_list.Add(new JobOption()
+            return database.Query<OptionRow>(Q_FETCH_ALL)
+                .Select(r => new JobOption()
                 {
-                    Category = (string)reader[nameof(JobOption.Category)],
-                    Score = (long)reader[nameof(JobOption.Score)],
-                    Title = (string)reader[nameof(JobOption.Title)],
-                    Pattern = new Regex((string)reader[nameof(JobOption.Pattern)], RegexOptions.IgnoreCase),
-                    Settings = reader[nameof(JobOption.Settings)] is not string settings ? null : JsonConvert.DeserializeObject<dynamic>(settings),
-                });
+                    Category = r.Category,
+                    Score = r.Score,
+                    Title = r.Title,
+                    Pattern = new Regex(r.Pattern, RegexOptions.IgnoreCase),
+                    Settings = r.Settings == null ? null : JsonConvert.DeserializeObject<dynamic>(r.Settings),
+                })
+                .ToArray();
+        }
 
-            return option_list.ToArray();
+        private sealed class OptionRow
+        {
+            public string Category { get; set; } = string.Empty;
+
+            public long Score { get; set; }
+
+            public string Title { get; set; } = string.Empty;
+
+            public string Pattern { get; set; } = string.Empty;
+
+            public string? Settings { get; set; }
         }
 
         private const string Q_FETCH_ALL = @"

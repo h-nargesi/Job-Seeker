@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Dapper;
 using Newtonsoft.Json;
 
 namespace Photon.JobSeeker;
@@ -6,109 +7,139 @@ namespace Photon.JobSeeker;
 class AgencyBusiness
 {
     private readonly Database database;
+
     public AgencyBusiness(Database database) => this.database = database;
 
     public List<dynamic> JobRateReport()
     {
-        using var reader = database.Read(Q_JOB_RATE_REPORT);
-        var list = new List<dynamic>();
-
-        while (reader.Read())
-            list.Add(new
+        return database.Query<RateRow>(Q_JOB_RATE_REPORT)
+            .Select(r => (dynamic)new
             {
-                AgencyID = (long)reader["AgencyID"],
-                Title = (string)reader["Title"],
-                JobCount = (long)reader["JobCount"],
-                Analyzed = (long)reader["Analyzed"],
-                Accepted = (long)reader["Accepted"],
-                Applied = (long)reader["Applied"],
-                AnalyzingRate = (long)reader["AnalyzingRate"],
-                AcceptingRate = (long)reader["AcceptingRate"],
-            });
-
-        return list;
+                AgencyID = r.AgencyID,
+                Title = r.Title,
+                JobCount = r.JobCount,
+                Analyzed = r.Analyzed,
+                Accepted = r.Accepted,
+                Applied = r.Applied,
+                AnalyzingRate = r.AnalyzingRate,
+                AcceptingRate = r.AcceptingRate,
+            })
+            .ToList();
     }
 
     public void SaveState(Agency agency)
     {
-        string? settings;
-        using (var reader = database.Read(Q_LOAD_SETTING, agency.ID))
-        {
-            if (!reader.Read()) return;
-            settings = reader["Settings"] as string;
-            if (settings == null) return;
-        }
+        var settings = database.ExecuteScalar<string?>(Q_LOAD_SETTING, new { agency = agency.ID });
+        if (settings == null) return;
 
         settings = Regex.Replace(settings, @"(""running"":)\s*\d+,", @$"$1 {agency.CurrentMethodIndex},");
 
-        database.Update(
-            nameof(Agency),
-            new { Settings = settings, Active = (long)agency.Status },
-            agency.ID);
+        SaveSettings(agency.ID, settings, (long)agency.Status);
+    }
+
+    public void SaveSettings(long id, string settings, long active)
+    {
+        database.Execute(Q_UPDATE_SETTINGS, new { settings, active, id });
     }
 
     public dynamic? LoadSetting(long id)
     {
-        using var reader = database.Read(Q_LOAD_SETTING, id);
-        if (!reader.Read()) return null;
+        var settings = database.ExecuteScalar<string?>(Q_LOAD_SETTING, new { agency = id });
 
-        return reader["Settings"] is not string settings ? null : JsonConvert.DeserializeObject<Agency.AgencySetting>(settings);
+        return settings == null ? null : JsonConvert.DeserializeObject<Agency.AgencySetting>(settings);
     }
 
     public dynamic? LoadByName(string name)
     {
-        using var reader = database.Read(Q_LOAD_BY_NAME, name);
-        if (!reader.Read()) return null;
+        var row = database.Query<AgencyRow>(Q_LOAD_BY_NAME, new { title = name }).FirstOrDefault();
+        if (row == null) return null;
 
         return new
         {
-            AgencyID = (long)reader["AgencyID"],
-            Domain = (string)reader["Domain"],
-            Link = (string)reader["Link"],
-            Active = (long)reader["Active"],
-            Settings = reader["Settings"] is not string settings ? null : JsonConvert.DeserializeObject<Agency.AgencySetting>(settings)
+            AgencyID = row.AgencyID,
+            Domain = row.Domain,
+            Link = row.Link,
+            Active = row.Active,
+            Settings = row.Settings == null ? null : JsonConvert.DeserializeObject<Agency.AgencySetting>(row.Settings),
         };
     }
 
     public static (string user, string pass) GetUserPass(string agency)
     {
         using var database = Database.Open();
-        using var reader = database.Read(Q_GET_USER_PASS, agency);
 
-        if (!reader.Read()) return default;
-        else
-        {
-            var password = (string)reader["Password"];
-            if (SecretProtector.LooksEncrypted(password)) password = SecretProtector.Decrypt(password);
+        var row = database.Query<CredentialRow>(Q_GET_USER_PASS, new { title = agency }).FirstOrDefault();
+        if (row == null) return default;
 
-            return ((string)reader["UserName"], password);
-        }
+        var password = row.Password;
+        if (SecretProtector.LooksEncrypted(password)) password = SecretProtector.Decrypt(password);
+
+        return (row.UserName, password);
     }
 
     public static void MigratePlaintextPasswords(Database database)
     {
         if (!SecretProtector.IsReady) return;
 
-        var plaintext_agencies = new List<(long id, string password)>();
-
-        using (var reader = database.Read(Q_GET_ALL_PASSWORDS))
-        {
-            while (reader.Read())
-            {
-                var password = reader["Password"] as string;
-                if (string.IsNullOrEmpty(password) || SecretProtector.LooksEncrypted(password)) continue;
-                plaintext_agencies.Add(((long)reader["AgencyID"], password));
-            }
-        }
+        var plaintext_agencies = database.Query<PasswordRow>(Q_GET_ALL_PASSWORDS)
+            .Where(r => !string.IsNullOrEmpty(r.Password) && !SecretProtector.LooksEncrypted(r.Password))
+            .Select(r => (r.AgencyID, Password: r.Password!))
+            .ToList();
 
         foreach (var (id, password) in plaintext_agencies)
-            database.Execute(Q_UPDATE_PASSWORD, SecretProtector.Encrypt(password), id);
+            database.Execute(Q_UPDATE_PASSWORD, new { pass = SecretProtector.Encrypt(password), agency = id });
 
         if (plaintext_agencies.Count > 0)
             Serilog.Log.Information("Encrypted {0} plaintext agency password(s).", plaintext_agencies.Count);
     }
 
-    private const string Q_JOB_RATE_REPORT = @$"
+    private sealed class RateRow
+    {
+        public long AgencyID { get; set; }
+
+        public string Title { get; set; } = string.Empty;
+
+        public long JobCount { get; set; }
+
+        public long Analyzed { get; set; }
+
+        public long Accepted { get; set; }
+
+        public long Applied { get; set; }
+
+        public long AnalyzingRate { get; set; }
+
+        public long AcceptingRate { get; set; }
+    }
+
+    private sealed class AgencyRow
+    {
+        public long AgencyID { get; set; }
+
+        public string Domain { get; set; } = string.Empty;
+
+        public string Link { get; set; } = string.Empty;
+
+        public long Active { get; set; }
+
+        public string? Settings { get; set; }
+    }
+
+    private sealed class CredentialRow
+    {
+        public string UserName { get; set; } = string.Empty;
+
+        public string Password { get; set; } = string.Empty;
+    }
+
+    private sealed class PasswordRow
+    {
+        public long AgencyID { get; set; }
+
+        public string? Password { get; set; }
+    }
+
+    private readonly static string Q_JOB_RATE_REPORT = @$"
 SELECT rate.*
 	, CASE JobCount WHEN 0 THEN 0 ELSE CAST(100 * CAST(Analyzed AS REAL) / JobCount AS INTEGER) END AS AnalyzingRate
 	, CASE Analyzed WHEN 0 THEN 0 ELSE CAST(100 * CAST(Accepted AS REAL) / Analyzed AS INTEGER) END AS AcceptingRate
@@ -133,17 +164,20 @@ FROM (
 ) rate";
 
     private const string Q_LOAD_SETTING = @"
-SELECT Settings FROM Agency WHERE AgencyID = $agency";
+SELECT Settings FROM Agency WHERE AgencyID = @agency";
 
     private const string Q_LOAD_BY_NAME = @"
-SELECT AgencyID, Domain, Link, Active, Settings FROM Agency WHERE Title = $title";
+SELECT AgencyID, Domain, Link, Active, Settings FROM Agency WHERE Title = @title";
 
     private const string Q_GET_USER_PASS = @"
-SELECT UserName, Password FROM Agency WHERE Title = $title";
+SELECT UserName, Password FROM Agency WHERE Title = @title";
 
     private const string Q_GET_ALL_PASSWORDS = @"
 SELECT AgencyID, Password FROM Agency";
 
     private const string Q_UPDATE_PASSWORD = @"
-UPDATE Agency SET Password = $pass WHERE AgencyID = $agency";
+UPDATE Agency SET Password = @pass WHERE AgencyID = @agency";
+
+    private const string Q_UPDATE_SETTINGS = @"
+UPDATE Agency SET Settings = @settings, Active = @active WHERE AgencyID = @id";
 }

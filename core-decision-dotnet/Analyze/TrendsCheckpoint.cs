@@ -67,7 +67,7 @@ namespace Photon.JobSeeker
                             trend.LastActivity = DateTime.Now;
                             trend.State = result.State;
                             trend.Reserved = false;
-                            database.Trend.Save(trend, TrendFilter.All & ~TrendFilter.AgencyID);
+                            database.Trend.UpdateActivity(trend);
                             database.Commit();
 
                             result.TrendID = trend.TrendID;
@@ -297,7 +297,7 @@ namespace Photon.JobSeeker
                 State = state,
                 Reserved = reserved,
             };
-            database.Trend.Save(trend);
+            database.Trend.CreateTrend(trend);
             return trend;
         }
 

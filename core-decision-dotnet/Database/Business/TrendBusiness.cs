@@ -1,138 +1,151 @@
-﻿using System.Data.SQLite;
+﻿using Dapper;
 
 namespace Photon.JobSeeker
 {
-    class TrendBusiness : BaseBusiness<Trend>
+    class TrendBusiness
     {
         public const int TREND_EXPIRATION_MINUTES = 2;
-        public TrendBusiness(Database database) : base(database) { }
 
-        protected override string[]? GetUniqueColumns { get; } = new string[] {
-            nameof(TrendFilter.AgencyID), nameof(TrendFilter.Type)
-        };
+        private readonly Database database;
+
+        public TrendBusiness(Database database) => this.database = database;
 
         public Trend? Get(long agency_id, TrendType type)
         {
-            using var reader = database.Read(Q_GET, agency_id, type);
-
-            if (!reader.Read()) return null;
-
-            return ReadTrend(reader);
+            return database.Query<Trend>(Q_GET, new { agency = agency_id, type = type.ToString() }).FirstOrDefault();
         }
 
         public List<dynamic> Report()
         {
-            using var reader = database.Read(Q_REPORT);
-            var list = new List<dynamic>();
-
-            while (reader.Read())
-                list.Add(new
+            return database.Query<ReportRow>(Q_REPORT)
+                .Select(r => (dynamic)new
                 {
-                    TrendID = reader["TrendID"] as long?,
-                    Agency = reader["Agency"] as string ?? "None",
-                    Link = reader["Link"] as string ?? "",
-                    LastActivity = reader["LastActivity"] as string ?? "-",
-                    Type = reader["Type"] as string,
-                    State = reader["State"] as string,
-                });
-
-            return list;
+                    TrendID = r.TrendID,
+                    Agency = r.Agency ?? "None",
+                    Link = r.Link ?? "",
+                    LastActivity = r.LastActivity ?? "-",
+                    Type = r.Type,
+                    State = r.State,
+                })
+                .ToList();
         }
 
         public List<Trend> FetchAll()
         {
-            using var reader = database.Read(Q_INDEX);
-            var list = new List<Trend>();
-
-            while (reader.Read())
-                list.Add(ReadTrend(reader));
-
-            return list;
+            return database.Query<Trend>(Q_INDEX).ToList();
         }
 
-        public void Save(object model, TrendFilter filter = TrendFilter.All)
+        public void CreateTrend(Trend trend)
         {
-            long id;
+            database.Execute(Q_INSERT, new
+            {
+                agencyId = trend.AgencyID,
+                type = trend.Type.ToString(),
+                state = trend.State.ToString(),
+                lastActivity = trend.LastActivity,
+                reserved = trend.Reserved,
+            });
 
-            var trend = model as Trend;
-            if (trend != null) id = trend.TrendID;
+            if (database.Changes() == 1)
+                trend.TrendID = database.LastInsertRowId();
             else
-            {
-                var id_property = model.GetType().GetProperty(nameof(Trend.TrendID));
-                if (id_property != null)
-                    id = (long?)id_property.GetValue(model) ?? default;
-                else id = default;
-            }
+                trend.TrendID = Get(trend.AgencyID, trend.Type)?.TrendID ?? 0;
+        }
 
-            if (id == default)
+        public void UpdateActivity(Trend trend)
+        {
+            database.Execute(Q_UPDATE_ACTIVITY, new
             {
-                database.Insert(nameof(Trend), model, filter,
-                    "ON CONFLICT(AgencyID, Type) DO NOTHING;");
-
-                if (trend != null)
-                    trend.TrendID = database.LastInsertRowId();
-            }
-            else database.Update(nameof(Trend), model, id, filter);
+                trendId = trend.TrendID,
+                state = trend.State.ToString(),
+                type = trend.Type.ToString(),
+                lastActivity = trend.LastActivity,
+                reserved = trend.Reserved,
+            });
         }
 
         public void DeleteExpired(double minutes = TREND_EXPIRATION_MINUTES)
         {
-            database.Execute(Q_DELETE_EXPIRED, DateTime.Now.AddMinutes(-minutes));
+            database.Execute(Q_DELETE_EXPIRED, new { expiration = DateTime.Now.AddMinutes(-minutes) });
         }
 
-        public void Block(long agency_id, TrendType type)
+        public long Block(long agency_id, TrendType type)
         {
-            Save(new
-            {
-                AgencyID = agency_id,
-                Type = type,
-                State = TrendState.Blocked,
-            });
+            database.Execute(Q_BLOCK, new { agencyId = agency_id, type = type.ToString() });
+
+            if (database.Changes() == 1)
+                return database.LastInsertRowId();
+
+            return Get(agency_id, type)?.TrendID ?? 0;
         }
 
         public void Block(long trend_id)
         {
-            Save(new
-            {
-                TrendID = trend_id,
-                State = TrendState.Blocked,
-            });
+            database.Execute(Q_BLOCK_BY_ID, new { trendId = trend_id });
         }
 
         public void ClearSearching(long agency_id)
         {
-            database.Execute(Q_DELETE_AGENCY, agency_id);
+            database.Execute(Q_DELETE_AGENCY, new { agencyid = agency_id });
         }
 
-        private static Trend ReadTrend(SQLiteDataReader reader)
+        public void Delete(long id)
         {
-            return new Trend
-            {
-                TrendID = (long)reader[nameof(Trend.TrendID)],
-                AgencyID = (long)reader[nameof(Trend.AgencyID)],
-                LastActivity = (DateTime)reader[nameof(Trend.LastActivity)],
-                State = Enum.Parse<TrendState>((string)reader[nameof(Trend.State)]),
-                Reserved = (bool)reader[nameof(Trend.Reserved)],
-            };
+            database.Execute(Q_DELETE, new { trendId = id });
+        }
+
+        private sealed class ReportRow
+        {
+            public long? TrendID { get; set; }
+
+            public string? Agency { get; set; }
+
+            public string? Link { get; set; }
+
+            public string? LastActivity { get; set; }
+
+            public string? Type { get; set; }
+
+            public string? State { get; set; }
         }
 
         private const string Q_INDEX = @"
 SELECT * FROM Trend";
 
-        private const string Q_REPORT = @$"
+        private readonly static string Q_REPORT = @$"
 SELECT a.Title AS Agency, a.Link, t.TrendID, t.Type
     , CASE a.Active WHEN 0 THEN '{nameof(TrendState.Blocked)}' ELSE t.State END AS State
     , STRFTIME('%Y-%m-%d %H:%M:%S', t.LastActivity) AS LastActivity
 FROM Agency a LEFT JOIN Trend t ON t.AgencyID = a.AgencyID";
 
         private const string Q_GET = Q_INDEX + @"
-WHERE AgencyID = $agency AND Type = $type";
+WHERE AgencyID = @agency AND Type = @type";
+
+        private const string Q_INSERT = @"
+INSERT INTO Trend (AgencyID, Type, State, LastActivity, Reserved)
+VALUES (@agencyId, @type, @state, @lastActivity, @reserved)
+ON CONFLICT(AgencyID, Type) DO NOTHING;";
+
+        private const string Q_UPDATE_ACTIVITY = @"
+UPDATE Trend SET State = @state, Type = @type, LastActivity = @lastActivity, Reserved = @reserved
+WHERE TrendID = @trendId";
 
         private const string Q_DELETE_EXPIRED = @"
-DELETE FROM Trend WHERE DATETIME(LastActivity) <= $expiration";
+DELETE FROM Trend WHERE DATETIME(LastActivity) <= @expiration";
 
-        private const string Q_DELETE_AGENCY = @$"
-DELETE FROM Trend WHERE AgencyID = $agencyid AND Type = '{nameof(TrendType.Search)}'";
+        private readonly static string Q_DELETE_AGENCY = @$"
+DELETE FROM Trend WHERE AgencyID = @agencyid AND Type = '{nameof(TrendType.Search)}'";
 
+        private readonly static string Q_BLOCK = $@"
+INSERT INTO Trend (AgencyID, Type, State)
+VALUES (@agencyId, @type, '{nameof(TrendState.Blocked)}')
+ON CONFLICT(AgencyID, Type) DO NOTHING;";
+
+        private readonly static string Q_BLOCK_BY_ID = $@"
+UPDATE Trend SET State = '{nameof(TrendState.Blocked)}'
+WHERE TrendID = @trendId";
+
+        private const string Q_DELETE = @"
+DELETE FROM Trend WHERE TrendID = @trendId";
     }
 }

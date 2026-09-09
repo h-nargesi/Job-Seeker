@@ -37,42 +37,42 @@ namespace Photon.JobSeeker.Stepstone
             return commands.ToArray();
         }
 
-        private Job LoadJob(string url, string html)
+    private Job LoadJob(string url, string html)
+    {
+        using var database = Database.Open();
+
+        var url_matched = reg_job_url.Match(url);
+        if (!url_matched.Success) throw new Exception($"Invalid job url ({parent.Name}).");
+
+        var code = url_matched.Groups[1].Value;
+        var job = database.Job.Fetch(parent.ID, code);
+        var new_job = job == null;
+
+        if (new_job)
         {
-            using var database = Database.Open();
-
-            var url_matched = reg_job_url.Match(url);
-            if (!url_matched.Success) throw new Exception($"Invalid job url ({parent.Name}).");
-
-            var code = url_matched.Groups[1].Value;
-            var job = database.Job.Fetch(parent.ID, code);
-            var filter = JobFilter.Title | JobFilter.Html | JobFilter.Content | JobFilter.Tries;
-
-            if (job == null)
+            job = new Job
             {
-                job = new Job
-                {
-                    AgencyID = parent.ID,
-                    Code = code,
-                    State = JobState.Saved,
-                    Url = string.Join("", parent.BaseUrl, url_matched.Value),
-                };
-
-                filter = JobFilter.All;
-            }
-
-            var title_match = reg_job_title.Match(html);
-            if (!title_match.Success)
-                Log.Warning("Title not found ({0}, {1})", parent.Name, code);
-            else job.Title = HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim();
-
-            job.SetHtml(GetHtmlContent(html));
-
-            Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
-            database.Job.Save(job, filter);
-
-            return job;
+                AgencyID = parent.ID,
+                Code = code,
+                State = JobState.Saved,
+                Url = string.Join("", parent.BaseUrl, url_matched.Value),
+            };
         }
+
+        var title_match = reg_job_title.Match(html);
+        if (!title_match.Success)
+            Log.Warning("Title not found ({0}, {1})", parent.Name, code);
+        else job!.Title = HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim();
+
+        job!.SetHtml(GetHtmlContent(html));
+
+        Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
+
+        if (new_job) database.Job.InsertJob(job);
+        else database.Job.UpdateStepstoneJob(job);
+
+        return job;
+    }
 
         public static string GetHtmlContent(string html)
         {

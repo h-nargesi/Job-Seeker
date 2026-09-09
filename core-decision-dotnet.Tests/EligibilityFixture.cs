@@ -58,7 +58,7 @@ internal sealed class EligibilityFixture : IDisposable
     {
         var connection = new SQLiteConnection("Data Source=:memory:");
         connection.Open();
-        return new Database(connection, connection.CreateCommand());
+        return new Database(connection);
     }
 
     public static JobOption Option(string category, long score, string pattern,

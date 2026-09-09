@@ -54,7 +54,7 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
         if (string.IsNullOrEmpty(code)) throw new Exception($"Invalid job url ({Parent.Name}).");
 
         var job = database.Job.Fetch(Parent.ID, code);
-        var filter = JobFilter.Title | JobFilter.Country | JobFilter.Html | JobFilter.Content;
+        var code_changed = false;
 
         GetJobContent(html, out var real_code, out var apply_link, out var title);
 
@@ -71,7 +71,7 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
                 if (temp_job == null)
                 {
                     job.Code = code;
-                    filter |= JobFilter.Code;
+                    code_changed = true;
                 }
                 else
                 {
@@ -80,6 +80,8 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
                 }
             }
         }
+
+        var new_job = false;
 
         if (job == null)
         {
@@ -95,15 +97,17 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
                     Url = url,
                 };
 
-                filter = JobFilter.All;
+                new_job = true;
             }
         }
 
         job.Country = Parent.CurrentMethod.Title;
 
+        var link_found = false;
+
         if (!string.IsNullOrEmpty(apply_link))
         {
-            filter |= JobFilter.Link;
+            link_found = true;
             job.Link = apply_link;
         }
 
@@ -115,10 +119,12 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
 
         ChceckJob(job);
 
-        if (job.State == JobState.NotApproved) filter |= JobFilter.State;
+        var include_state = job.State == JobState.NotApproved;
 
         Log.Information("{0} Job: {1} ({2})", Parent.Name, job.Title, job.Code);
-        database.Job.Save(job, filter);
+
+        if (new_job) database.Job.InsertJob(job);
+        else database.Job.UpdateScrapedJob(job, code_changed, link_found, include_state);
 
         return job;
     }

@@ -1,26 +1,24 @@
-﻿using System.Reflection;
-using System.Text.RegularExpressions;
-using System.Data.SQLite;
+﻿using System.Data.SQLite;
+using Dapper;
 
 namespace Photon.JobSeeker
 {
     public class Database : IDisposable
     {
         private readonly SQLiteConnection connection;
-        private readonly SQLiteCommand executer;
         private SQLiteTransaction? transaction;
         private static string? connection_string;
-        private static readonly Regex reg_parameter = new(@"\$[\w_]+");
 
         private TrendBusiness? trend_business;
         private JobBusiness? job_business;
         private AgencyBusiness? agency_business;
         private JobOptionBusiness? job_option_business;
 
-        public Database(SQLiteConnection connection, SQLiteCommand executer)
+        static Database() => SqliteTypeHandlers.Register();
+
+        public Database(SQLiteConnection connection)
         {
             this.connection = connection;
-            this.executer = executer;
         }
 
         public static void SetConfiguration(string path, string? version = null, string? password = null, bool? foreign_keys = true)
@@ -37,112 +35,76 @@ namespace Photon.JobSeeker
                 throw new Exception("The configuration is not set.");
 
             var connection = new SQLiteConnection(connection_string);
-            var executer = connection.CreateCommand();
-
             connection.Open();
 
-            executer.CommandText = "PRAGMA journal_mode=WAL";
-            executer.ExecuteNonQuery();
-            executer.CommandText = "PRAGMA busy_timeout=5000";
-            executer.ExecuteNonQuery();
-            executer.Parameters.Clear();
-            executer.CommandText = string.Empty;
+            connection.Execute("PRAGMA journal_mode=WAL");
+            connection.Execute("PRAGMA busy_timeout=5000");
 
-            return new Database(connection, executer);
+            return new Database(connection);
         }
 
         public void BeginTransaction()
         {
             transaction = connection.BeginTransaction();
-            executer.Transaction = transaction;
         }
 
         public void Commit()
         {
             transaction?.Commit();
+            transaction?.Dispose();
             transaction = null;
-            executer.Transaction = null;
         }
 
         public void Rollback()
         {
             transaction?.Rollback();
+            transaction?.Dispose();
             transaction = null;
-            executer.Transaction = null;
         }
 
         public long LastInsertRowId()
         {
-            executer.CommandText = "SELECT last_insert_rowid()";
-            return (long)(executer.ExecuteScalar() ?? throw new Exception("No ID found!"));
+            return connection.ExecuteScalar<long>("SELECT last_insert_rowid()", transaction: transaction);
         }
 
         public long Changes()
         {
-            ClearParameter();
-            executer.CommandText = "SELECT changes()";
-            return (long)(executer.ExecuteScalar() ?? 0L);
+            return connection.ExecuteScalar<long>("SELECT changes()", transaction: transaction);
         }
 
-        public Database ClearParameter()
+        public int Execute(string command, object? param = null)
         {
-            executer.Parameters.Clear();
-            return this;
+            return connection.Execute(command, param, transaction: transaction);
         }
 
-        public Database Parameter(string name, object value)
+        public IEnumerable<T> Query<T>(string query, object? param = null)
         {
-            System.Data.DbType type;
-
-            (type, value) = DbType.GetSqliteType(value);
-
-            if (!name.StartsWith("$")) name = "$" + name;
-
-            SQLiteParameter parameter;
-            if (executer.Parameters.Contains(name))
-            {
-                parameter = executer.Parameters[name];
-                parameter.DbType = type;
-                parameter.Value = value;
-            }
-            else
-            {
-                executer.Parameters.Add(new SQLiteParameter()
-                {
-                    ParameterName = name,
-                    DbType = type,
-                    Value = value,
-                });
-            }
-
-            return this;
+            return connection.Query<T>(query, param, transaction: transaction);
         }
 
-        public int Execute(string command, params object[] parameters)
+        public IEnumerable<dynamic> Query(string query, object? param = null)
         {
-            executer.CommandText = command;
-            AddParameters(command, parameters);
-            return executer.ExecuteNonQuery();
+            return connection.Query(query, param, transaction: transaction);
         }
 
-        public SQLiteDataReader Read(string query, params object[] parameters)
+        public IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TReturn>(string query,
+            Func<TFirst, TSecond, TThird, TReturn> map, object? param = null, string splitOn = "Id")
         {
-            executer.CommandText = query;
-            AddParameters(query, parameters);
-            return executer.ExecuteReader();
+            return connection.Query(query, map, param, transaction: transaction, splitOn: splitOn);
+        }
+
+        public T? ExecuteScalar<T>(string query, object? param = null)
+        {
+            return connection.ExecuteScalar<T>(query, param, transaction: transaction);
         }
 
         public List<Dictionary<string, object>> ReadAll(string query)
         {
-            using var reader = Read(query);
             var list = new List<Dictionary<string, object>>();
-            var columns = GetColumns(reader);
 
-            while (reader.Read())
+            foreach (var row in connection.Query(query, transaction: transaction))
             {
-                var record = new Dictionary<string, object>();
-                foreach (var column in columns)
-                    record[column] = reader[column];
+                var record = new Dictionary<string, object>((IDictionary<string, object>)row);
                 list.Add(record);
             }
 
@@ -153,7 +115,6 @@ namespace Photon.JobSeeker
         {
             transaction?.Dispose();
             connection.Dispose();
-            executer.Dispose();
             GC.SuppressFinalize(this);
         }
 
@@ -164,111 +125,5 @@ namespace Photon.JobSeeker
         internal AgencyBusiness Agency => agency_business ??= new AgencyBusiness(this);
 
         internal JobOptionBusiness JobOption => job_option_business ??= new JobOptionBusiness(this);
-
-        internal void Insert(string name, object job, Enum filter, string? conflict = null)
-        {
-            var columns = new List<string>();
-            var parameters = new List<string>();
-            var values = new List<object>();
-
-            foreach (var property in job.GetType().GetProperties())
-            {
-                if (!IsPropertyAllowed(filter, property.Name)) continue;
-
-                columns.Add(property.Name);
-                parameters.Add("$" + property.Name);
-
-                values.Add(ValueFromProperty(property, job));
-            }
-
-            if (values.Count == 0)
-                throw new Exception("No column found for insert");
-
-            var query = string.Format(Q_INSERT, name, string.Join(", ", columns), string.Join(", ", parameters), conflict);
-            Execute(query, values.ToArray());
-        }
-
-        internal void Update(string name, object job, long id, Enum filter)
-        {
-            var parameters = new List<string>();
-            var values = new List<object>();
-
-            foreach (var property in job.GetType().GetProperties())
-            {
-                if (!IsPropertyAllowed(filter, property.Name)) continue;
-
-                parameters.Add($"{property.Name} = ${property.Name}");
-
-                values.Add(ValueFromProperty(property, job));
-            }
-
-            if (values.Count == 0)
-                throw new Exception("No column found for update");
-
-            if (Enum.TryParse(filter.GetType(), "ModifiedOn", true, out var _))
-            {
-                parameters.Add($"ModifiedOn = $ModifiedOn");
-                values.Add(DateTime.Now);
-            }
-
-            values.Add(id);
-
-            var query = string.Format(Q_UPDATE, name, string.Join(", ", parameters), $"{name}ID = ${name}ID");
-            Execute(query, values.ToArray());
-        }
-
-        internal void Update(string name, object job, long id)
-        {
-            var parameters = new List<string>();
-            var values = new List<object>();
-
-            foreach (var property in job.GetType().GetProperties())
-            {
-                parameters.Add($"{property.Name} = ${property.Name}");
-
-                values.Add(ValueFromProperty(property, job));
-            }
-
-            if (values.Count == 0)
-                throw new Exception("No column found for update");
-
-            values.Add(id);
-
-            var query = string.Format(Q_UPDATE, name, string.Join(", ", parameters), $"{name}ID = ${name}ID");
-            Execute(query, values.ToArray());
-        }
-
-        private static bool IsPropertyAllowed(Enum filter, string name)
-        {
-            if (!Enum.TryParse(filter.GetType(), name, true, out var flag)) return false;
-            if (flag == null) return false;
-            return filter.HasFlag((Enum)flag);
-        }
-
-        private static object ValueFromProperty(PropertyInfo property, object obj)
-        {
-            return property.GetValue(obj) ?? property.PropertyType;
-        }
-
-        private void AddParameters(string query, object[] parameters)
-        {
-            var index = 0;
-            foreach (var param in reg_parameter.Matches(query).Cast<Match>())
-                Parameter(param.Value, parameters[index++]);
-        }
-
-        private static string[] GetColumns(SQLiteDataReader reader)
-        {
-            var result = new string[reader.FieldCount];
-            for (var i = 0; i < result.Length; i++)
-                result[i] = reader.GetName(i);
-            return result;
-        }
-
-        private const string Q_INSERT = @"
-INSERT INTO {0} ({1}) VALUES ({2}) {3}";
-
-        private const string Q_UPDATE = @"
-UPDATE {0} SET {1} WHERE {2}";
     }
 }

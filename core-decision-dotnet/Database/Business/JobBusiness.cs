@@ -1,51 +1,47 @@
-﻿using System.Data.SQLite;
+﻿using Dapper;
 using Newtonsoft.Json;
 
 namespace Photon.JobSeeker
 {
-    class JobBusiness : BaseBusiness<Job>
+    class JobBusiness
     {
-        public JobBusiness(Database database) : base(database) { }
+        private readonly Database database;
+
+        public JobBusiness(Database database) => this.database = database;
 
         public List<object> Fetch(string[] agency_titles, string[] country_codes)
         {
             var where = string.Empty;
-            var parameters = new List<object>();
+            var parameters = new DynamicParameters();
 
             if (agency_titles?.Length > 0)
             {
-                where += $" AND Agency.Title IN ({string.Join(", ", agency_titles.Select((_, i) => $"$a{i}"))})";
-                parameters.AddRange(agency_titles);
+                where += $" AND Agency.Title IN ({string.Join(", ", agency_titles.Select((_, i) => $"@a{i}"))})";
+                for (var i = 0; i < agency_titles.Length; i++)
+                    parameters.Add($"a{i}", agency_titles[i]);
             }
 
             if (country_codes?.Length > 0)
             {
-                where += $" AND Job.Country IN ({string.Join(", ", country_codes.Select((_, i) => $"$c{i}"))})";
-                parameters.AddRange(country_codes);
+                where += $" AND Job.Country IN ({string.Join(", ", country_codes.Select((_, i) => $"@c{i}"))})";
+                for (var i = 0; i < country_codes.Length; i++)
+                    parameters.Add($"c{i}", country_codes[i]);
             }
 
             if (!string.IsNullOrEmpty(where))
                 where = "WHERE" + where.Substring(4);
 
-            using var reader = database.Read(Q_INDEX.Replace("@where@", where), parameters.ToArray());
-            var list = new List<object>();
+            var rows = database.Query<Job, long, string, (Job Job, bool Relocation, string AgencyName)>(
+                Q_INDEX.Replace("@where@", where),
+                (job, relocation, agency) => (job, relocation != 0, agency),
+                parameters, splitOn: "Relocation,AgencyName");
 
-            while (reader.Read())
-                list.Add(new
-                {
-                    Job = ReadJob(reader),
-                    Relocation = (long)reader["Relocation"] != 0,
-                    AgencyName = (string)reader["AgencyName"],
-                });
-
-            return list;
+            return rows.Select(r => (object)new { r.Job, r.Relocation, r.AgencyName }).ToList();
         }
 
         public long FetchFromCount(DateTime time)
         {
-            using var reader = database.Read(Q_FETCH_FROM_COUNT, time);
-            if (!reader.Read()) return default;
-            return (long)reader[0];
+            return database.ExecuteScalar<long>(Q_FETCH_FROM_COUNT, new { date = time });
         }
 
         public void ResetRevaluations()
@@ -55,17 +51,13 @@ namespace Photon.JobSeeker
 
         public Job? FetchFrom(DateTime time)
         {
-            Job result;
             database.BeginTransaction();
             try
             {
-                using (var reader = database.Read(Q_FETCH_FROM, time))
-                {
-                    if (!reader.Read()) return default;
-                    result = ReadJob(reader, true);
-                }
+                var result = database.Query<Job>(Q_FETCH_FROM, new { date = time }).FirstOrDefault();
+                if (result == null) return default;
 
-                Save(new { result.JobID, State = JobState.Revaluation });
+                ChangeState(result.JobID, JobState.Revaluation);
                 database.Commit();
 
                 return result;
@@ -79,32 +71,19 @@ namespace Photon.JobSeeker
 
         public Job? Fetch(long agency_id, string code)
         {
-            using var reader = database.Read(Q_FETCH_BY_CODE, agency_id, code);
-
-            if (!reader.Read()) return default;
-
-            return ReadJob(reader, true);
+            return database.Query<Job>(Q_FETCH_BY_CODE, new { agency = agency_id, code }).FirstOrDefault();
         }
 
         public Job? Fetch(long job_id)
         {
-            using var reader = database.Read(Q_FETCH_ID, job_id);
-
-            if (!reader.Read()) return default;
-
-            return ReadJob(reader, true);
+            return database.Query<Job>(Q_FETCH_ID, new { job = job_id }).FirstOrDefault();
         }
 
         public ResumeContext? FetchOptions(long job_id)
         {
-            using var reader = database.Read(Q_FETCH_OPTIONS, job_id);
+            var options = database.ExecuteScalar<string?>(Q_FETCH_OPTIONS, new { job = job_id });
 
-            if (!reader.Read() || reader[nameof(Job.Options)] is not string options)
-            {
-                return default;
-            }
-
-            return JsonConvert.DeserializeObject<ResumeContext>(options);
+            return options == null ? default : JsonConvert.DeserializeObject<ResumeContext>(options);
         }
 
         public string? GetFirstJob(long agency_id)
@@ -113,19 +92,8 @@ namespace Photon.JobSeeker
             {
                 database.BeginTransaction();
 
-                using var reader = database.Read(Q_FETCH_FIRST, agency_id);
-
-                if (!reader.Read()) return default;
-
-                var data = new
-                {
-                    JobID = (long)reader[nameof(Job.JobID)],
-                    Url = (string)reader[nameof(Job.Url)],
-                    Tries = reader[nameof(Job.Tries)] as string,
-                    RegTime = (DateTime)reader[nameof(Job.RegTime)],
-                };
-
-                reader.Close();
+                var data = database.Query<FirstJobRow>(Q_FETCH_FIRST, new { agency = agency_id }).FirstOrDefault();
+                if (data == null) return default;
 
                 var now = DateTime.Now;
                 var prv_tries = data.Tries?.Split("\n");
@@ -134,7 +102,7 @@ namespace Photon.JobSeeker
                 var this_tries = $"{this_time}: {now} (age {(int)(now - data.RegTime).TotalDays}d)"
                     + (this_time > 1 ? "\n" + data.Tries : "");
 
-                Save(new { data.JobID, Tries = this_tries }, JobFilter.Tries);
+                UpdateTries(data.JobID, this_tries);
                 database.Commit();
 
                 return data.Url;
@@ -146,87 +114,186 @@ namespace Photon.JobSeeker
             }
         }
 
-        public void Save(object model, JobFilter filter = JobFilter.All)
+        public void InsertFromSearch(long agencyId, string country, string url, string code)
         {
-            long id;
+            database.Execute(Q_INSERT_FROM_SEARCH, new { agencyId, country, url, code });
+        }
 
-            var job = model as Job;
-            if (job != null) id = job.JobID;
+        public void InsertJob(Job job)
+        {
+            database.Execute(Q_INSERT_JOB, new
+            {
+                agencyId = job.AgencyID,
+                country = job.Country,
+                code = job.Code,
+                title = job.Title,
+                state = job.State.ToString(),
+                score = job.Score,
+                url = job.Url,
+                html = job.Html,
+                content = job.Content,
+                link = job.Link,
+                log = job.Log,
+                options = job.Options,
+                tries = job.Tries,
+            });
+
+            if (database.Changes() == 1)
+                job.JobID = database.LastInsertRowId();
             else
-            {
-                var id_property = model.GetType().GetProperty(nameof(Job.JobID));
-                if (id_property != null)
-                    id = (long?)id_property.GetValue(model) ?? default;
-                else id = default;
-            }
+                job.JobID = Fetch(job.AgencyID, job.Code!)?.JobID ?? 0;
+        }
 
-            if (id == default)
+        public void UpdateScrapedJob(Job job, bool codeChanged, bool linkFound, bool includeState)
+        {
+            var sets = new List<string>
             {
-                database.Insert(nameof(Job), model, filter,
-                    "ON CONFLICT(AgencyID, Code) DO NOTHING;");
+                "Title = @title",
+                "Country = @country",
+                "Html = @html",
+                "Content = @content",
+            };
 
-                if (job != null)
-                    job.JobID = database.Changes() == 0
-                        ? database.Job.Fetch(job.AgencyID, job.Code!)?.JobID ?? 0
-                        : database.LastInsertRowId();
-            }
-            else database.Update(nameof(Job), model, id, filter);
+            if (codeChanged) sets.Add("Code = @code");
+            if (linkFound) sets.Add("Link = @link");
+            if (includeState) sets.Add("State = @state");
+
+            database.Execute($@"
+UPDATE Job SET {string.Join(", ", sets)}, ModifiedOn = @now
+WHERE JobID = @jobId", new
+            {
+                title = job.Title,
+                country = job.Country,
+                html = job.Html,
+                content = job.Content,
+                code = job.Code,
+                link = job.Link,
+                state = job.State.ToString(),
+                now = DateTime.Now,
+                jobId = job.JobID,
+            });
+        }
+
+        public void UpdateStepstoneJob(Job job)
+        {
+            database.Execute(Q_UPDATE_STEPSTONE, new
+            {
+                title = job.Title,
+                html = job.Html,
+                content = job.Content,
+                now = DateTime.Now,
+                jobId = job.JobID,
+            });
+        }
+
+        public void UpdateJobContent(Job job)
+        {
+            database.Execute(Q_UPDATE_CONTENT, new
+            {
+                html = job.Html,
+                content = job.Content,
+                now = DateTime.Now,
+                jobId = job.JobID,
+            });
+        }
+
+        public void UpdateEvaluation(Job job, bool clearContent)
+        {
+            var clear = clearContent ? ", Html = null, Content = null" : "";
+
+            database.Execute($@"
+UPDATE Job SET State = @state, Log = @log, Options = @options, Score = @score{clear}, ModifiedOn = @now
+WHERE JobID = @jobId", new
+            {
+                state = job.State.ToString(),
+                log = job.Log,
+                options = job.Options,
+                score = job.Score,
+                now = DateTime.Now,
+                jobId = job.JobID,
+            });
+        }
+
+        public void UpdateTries(long id, string tries)
+        {
+            database.Execute(Q_UPDATE_TRIES, new { tries, now = DateTime.Now, jobId = id });
         }
 
         public void ChangeState(long id, JobState state)
         {
-            Save(new { JobID = id, State = state });
+            database.Execute(Q_CHANGE_STATE, new { state = state.ToString(), now = DateTime.Now, jobId = id });
         }
 
         public void RemoveHtmlContent(long id)
         {
-            Save(new { JobID = id, Html = (string?)null, Content = (string?)null });
+            database.Execute(Q_REMOVE_HTML, new { now = DateTime.Now, jobId = id });
         }
 
         public void ChangeOptions(long id, ResumeContext? options)
         {
-            Save(new { JobID = id, Options = options });
+            database.Execute(Q_CHANGE_OPTIONS, new { options, now = DateTime.Now, jobId = id });
+        }
+
+        public void Delete(long id)
+        {
+            database.Execute(Q_DELETE, new { jobId = id });
         }
 
         public void Clean(int mounths, bool vacuum = false)
         {
-            database.Execute(Q_CLEAN, DateTime.Now.AddMonths(-mounths));
-            database.Execute(Q_CLEAN_ATTENTION, DateTime.Now.AddDays(-mounths * 7));
-            database.Execute(Q_CLEAN_NOT_APPROVED, DateTime.Now.AddDays(-7));
+            database.Execute(Q_CLEAN, new { date = DateTime.Now.AddMonths(-mounths) });
+            database.Execute(Q_CLEAN_ATTENTION, new { date = DateTime.Now.AddDays(-mounths * 7) });
+            database.Execute(Q_CLEAN_NOT_APPROVED, new { date = DateTime.Now.AddDays(-7) });
             if (vacuum) database.Execute(Q_VACUUM);
         }
 
-        protected override string[]? GetUniqueColumns { get; } = [
-            nameof(JobFilter.AgencyID), nameof(JobFilter.Code)
-        ];
-
-        private static Job ReadJob(SQLiteDataReader reader, bool full = false)
+        private sealed class FirstJobRow
         {
-            var job = new Job
-            {
-                JobID = (long)reader[nameof(Job.JobID)],
-                RegTime = (DateTime)reader[nameof(Job.RegTime)],
-                AgencyID = (long)reader[nameof(Job.AgencyID)],
-                Code = (string)reader[nameof(Job.Code)],
-                Title = reader[nameof(Job.Title)] as string,
-                State = Enum.Parse<JobState>((string)reader[nameof(Job.State)]),
-                Score = reader[nameof(Job.Score)] as long?,
-                Country = reader[nameof(Job.Country)] as string,
-                Url = (string)reader[nameof(Job.Url)],
-                Html = full ? reader[nameof(Job.Html)] as string : null,
-                Content = full ? reader[nameof(Job.Content)] as string : null,
-                Link = reader[nameof(Job.Link)] as string,
-                Log = full ? reader[nameof(Job.Log)] as string : null,
-            };
+            public long JobID { get; set; }
 
-            if (full && reader[nameof(Job.Options)] is string json)
-            {
-                try { job.Options = JsonConvert.DeserializeObject<ResumeContext>(json); }
-                catch { }
-            }
+            public string Url { get; set; } = string.Empty;
 
-            return job;
+            public string? Tries { get; set; }
+
+            public DateTime RegTime { get; set; }
         }
+
+        private readonly static string Q_INSERT_FROM_SEARCH = $@"
+INSERT INTO Job (AgencyID, Country, Url, Code, State)
+VALUES (@agencyId, @country, @url, @code, '{nameof(JobState.Saved)}')
+ON CONFLICT(AgencyID, Code) DO NOTHING;";
+
+        private readonly static string Q_INSERT_JOB = @"
+INSERT INTO Job (AgencyID, Country, Code, Title, State, Score, Url, Html, Content, Link, Log, Options, Tries)
+VALUES (@agencyId, @country, @code, @title, @state, @score, @url, @html, @content, @link, @log, @options, @tries)
+ON CONFLICT(AgencyID, Code) DO NOTHING;";
+
+        private readonly static string Q_UPDATE_STEPSTONE = @"
+UPDATE Job SET Title = @title, Html = @html, Content = @content, Tries = NULL, ModifiedOn = @now
+WHERE JobID = @jobId";
+
+        private readonly static string Q_UPDATE_CONTENT = @"
+UPDATE Job SET Html = @html, Content = @content, ModifiedOn = @now
+WHERE JobID = @jobId";
+
+        private readonly static string Q_UPDATE_TRIES = @"
+UPDATE Job SET Tries = @tries, ModifiedOn = @now
+WHERE JobID = @jobId";
+
+        private readonly static string Q_CHANGE_STATE = $@"
+UPDATE Job SET State = @state, ModifiedOn = @now
+WHERE JobID = @jobId";
+
+        private readonly static string Q_REMOVE_HTML = @"
+UPDATE Job SET Html = null, Content = null, ModifiedOn = @now
+WHERE JobID = @jobId";
+
+        private readonly static string Q_CHANGE_OPTIONS = @"
+UPDATE Job SET Options = @options, ModifiedOn = @now
+WHERE JobID = @jobId";
+
+        private const string Q_DELETE = @"
+DELETE FROM Job WHERE JobID = @jobId";
 
         private readonly static string Q_INDEX = @$"
 WITH date_diff AS (
@@ -285,43 +352,42 @@ WHERE Ranking <= CASE Category WHEN 1 THEN 12 WHEN 2 THEN 6 WHEN 4 THEN 3 ELSE 1
 ORDER BY Category, Ordering";
 
         private const string Q_FETCH_ID = @"
-SELECT * FROM Job WHERE JobID = $job";
+SELECT * FROM Job WHERE JobID = @job";
 
         private const string Q_FETCH_BY_CODE = @"
-SELECT * FROM Job WHERE AgencyID = $agency and Code = $code";
+SELECT * FROM Job WHERE AgencyID = @agency and Code = @code";
 
-        private const string Q_FETCH_FROM = @$"
-SELECT * FROM Job WHERE State != '{nameof(JobState.Revaluation)}' AND Content IS NOT NULL AND ModifiedOn <= $date";
+        private readonly static string Q_FETCH_FROM = @$"
+SELECT * FROM Job WHERE State != '{nameof(JobState.Revaluation)}' AND Content IS NOT NULL AND ModifiedOn <= @date";
 
-        private const string Q_FETCH_FROM_COUNT = @$"
-SELECT COUNT(*) FROM Job WHERE Content IS NOT NULL AND ModifiedOn <= $date";
+        private readonly static string Q_FETCH_FROM_COUNT = @"
+SELECT COUNT(*) FROM Job WHERE Content IS NOT NULL AND ModifiedOn <= @date";
 
-        private const string Q_FETCH_UPDATE_REVAL = @$"
+        private readonly static string Q_FETCH_UPDATE_REVAL = @$"
 UPDATE Job SET State = '{nameof(JobState.Saved)}' WHERE State = '{nameof(JobState.Revaluation)}'";
 
         private const string Q_FETCH_OPTIONS = @"
-SELECT Options FROM Job WHERE JobID = $job";
+SELECT Options FROM Job WHERE JobID = @job";
 
-        private const string Q_FETCH_FIRST = @$"
+        private readonly static string Q_FETCH_FIRST = @$"
 SELECT JobID, Url, Tries, RegTime FROM Job
-WHERE AgencyID = $agency AND State = '{nameof(JobState.Saved)}' AND (Tries IS NULL OR Tries NOT LIKE '%4: %')
+WHERE AgencyID = @agency AND State = '{nameof(JobState.Saved)}' AND (Tries IS NULL OR Tries NOT LIKE '%4: %')
 ORDER BY Tries IS NULL DESC, Tries DESC, JobID LIMIT 1";
 
-        private const string Q_CLEAN = @$"
-DELETE FROM Job WHERE RegTime < $date AND (State != '{nameof(JobState.Applied)}' OR Tries LIKE '%4: %')";
+        private readonly static string Q_CLEAN = @$"
+DELETE FROM Job WHERE RegTime < @date AND (State != '{nameof(JobState.Applied)}' OR Tries LIKE '%4: %')";
 
         // Current behavior: keeps Html for the global top-100 Attention jobs by Score
         // (the subquery is not scoped by the same RegTime window as the outer query).
-        private const string Q_CLEAN_ATTENTION = @$"
+        private readonly static string Q_CLEAN_ATTENTION = @$"
 UPDATE Job SET Html = null
-WHERE RegTime < $date AND State IN ('{nameof(JobState.Attention)}') AND JobID NOT IN (
+WHERE RegTime < @date AND State IN ('{nameof(JobState.Attention)}') AND JobID NOT IN (
     SELECT JobID FROM Job WHERE State IN ('{nameof(JobState.Attention)}')
     ORDER BY Score DESC LIMIT 0, 100)";
 
-        private const string Q_CLEAN_NOT_APPROVED = @$"
-UPDATE Job SET Html = null, Content = null WHERE RegTime < $date AND State IN ('{nameof(JobState.NotApproved)}')";
+        private readonly static string Q_CLEAN_NOT_APPROVED = @$"
+UPDATE Job SET Html = null, Content = null WHERE RegTime < @date AND State IN ('{nameof(JobState.NotApproved)}')";
 
         private const string Q_VACUUM = "vacuum;";
-
     }
 }

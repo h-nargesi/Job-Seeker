@@ -131,6 +131,35 @@
 
 ## بخش ۳ — 🟡 متوسط (رفع‌شده‌ها)
 
+### ۳.۱ ORM بازتابی (Reflection) شکننده
+(۱۴۰۵/۰۶/۱۸ — 2026-09-09) مهاجرت کامل لایهٔ داده به **Dapper 2.1.35**: حذف `Database.Insert/Update` بازتابی،
+`BaseBusiness.cs`، `DbType.cs` و enum‌های `JobFilter`/`TrendFilter` (خود منبع شکنندگی — تطابق اجباری نام
+پراپرتی با عضو enum). جایشان متدهای صریح و تایپ‌دار در `JobBusiness`/`TrendBusiness`:
+`InsertFromSearch`، `InsertJob`، `UpdateScrapedJob(codeChanged, linkFound, includeState)`،
+`UpdateStepstoneJob`، `UpdateJobContent`، `UpdateEvaluation(clearContent)`، `UpdateTries`، `ChangeState`،
+`RemoveHtmlContent`، `ChangeOptions`، `Delete`؛ و `CreateTrend`، `UpdateActivity`، `Block` در ترند؛
+`SaveSettings` در آژانس. همهٔ خواندن‌ها هم `Query<T>`/`ExecuteScalar` شدند (حذف حلقه‌های دستی
+`SQLiteDataReader`)؛ شکل خروجی dynamic ها (`Report`/`JobRateReport`/`LoadByName`/داشبورد `Fetch`)
+دست‌نخورده ماند. enum ها همچنان با نام عضو به‌صورت متن ذخیره می‌شوند (TypeHandler در
+`Database/SqliteTypeHandlers.cs` برای خواندن + `ToString()` صریح در پارامترهای SQL — پارامتر enum در
+Dapper به‌صورت عدد bind می‌شود) و `ResumeContext` با همان `JsonConvert` قبلی round-trip می‌کند.
+توکن‌های `$x` به `@x` تغییر کردند؛ متن سایر SQL ها (از جمله `Q_INDEX`) بیت‌به‌بیت حفظ شد. سطح HTTP،
+امضای `Database.Open()` و accessors (`Trend/Job/Agency/JobOption`) بدون تغییر ماند (DI — مورد ۳.۳ — باز است).
+**رفع همراه (تنها تغییر رفتاری):** باگ upsert ترند — در `ON CONFLICT(AgencyID, Type) DO NOTHING` وقتی
+`changes()==0` است، `TrendID` از ردیف موجود خوانده می‌شود نه از `last_insert_rowid()` کهنه (آینهٔ الگوی
+درست `InsertJob` از مورد آرشیوشدهٔ ۱.۵).
+**رفتارهای عمداً حفظ‌شده (bug-for-bug):**
+- `ModifiedOn`: INSERT آن را به default دیتابیس (`current_timestamp` — UTC) واگذار می‌کند ولی هر UPDATE
+  مقدار `DateTime.Now` (local) می‌نویسد — ترکیب UTC/محلی دست‌نخورده ماند.
+- اسکرپ شغل Stepstone هر بار `Tries = NULL` می‌نویسد (`UpdateStepstoneJob` — خواندن قدیمی هرگز `Tries`
+  را روی model پر نمی‌کرد).
+- غلط املایی ستون `Efective` حفظ شد (مورد ۴).
+**تأیید:** تست‌های طلایی فاز A (`core-decision-dotnet.Tests/PhaseAGoldenTests.cs` — ۱۵ تست، قبل از مهاجرت
+نوشته و سبز، بعد از آن بدون تغییر دوباره سبز)؛ تست‌های API جدید فاز B
+(`core-decision-dotnet.Tests/PhaseBNewApiTests.cs` — ۱۲ تست: conflict-backfill شغل/ترند، ماتریس پرچم‌های
+`UpdateScrapedJob`، `Tries` تهی Stepstone، `UpdateActivity` بدون دست‌زدن به AgencyID، round-trip
+TypeHandler ها، پروجکشن Report)؛ `dotnet build` بدون هشدار جدید؛ کل مجموعه ۸۰ تست سبز.
+
 ### ۳.۷ `Extensions.Shift` مرده و باگ‌دار
 **تأیید:** `Basics/Extensions.cs` — متد `Shift` حذف شده است.
 

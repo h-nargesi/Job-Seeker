@@ -98,7 +98,7 @@ public class JobEligibilityHelper : IDisposable
                     (job.Html.StartsWith("<html") || job.Html.StartsWith("<rerender/>")))
                 {
                     job.Html = agency.GetMainHtml(job.Html);
-                    database.Job.Save(job, JobFilter.Content | JobFilter.Html);
+                    database.Job.UpdateJobContent(job);
                 }
 
                 EvaluateJobEligibility(job, agency?.JobAcceptabilityChecker);
@@ -124,14 +124,11 @@ public class JobEligibilityHelper : IDisposable
     public JobState EvaluateJobEligibility(Job job, Regex? job_acceptability_check)
     {
         // The state of the current job always should be set because it was converted to 'Revaluation'
-        var filter = JobFilter.State;
-
         if (job.Content != null)
         {
             job.Log = string.Empty;
             job.Score = null;
 
-            filter |= JobFilter.Log | JobFilter.Options | JobFilter.Score;
             var user_changes = job.State > JobState.Attention;
 
             var job_expired = job_acceptability_check?.IsMatch(job.Content);
@@ -150,9 +147,9 @@ public class JobEligibilityHelper : IDisposable
                 else job.State = JobState.Attention;
             }
 
-            if (rejected || job.Score < MinEligibilityScore)
+            var clear_content = rejected || job.Score < MinEligibilityScore;
+            if (clear_content)
             {
-                filter |= JobFilter.Html | JobFilter.Content;
                 job.Html = null;
                 job.Content = null;
             }
@@ -162,9 +159,10 @@ public class JobEligibilityHelper : IDisposable
                 correct_language?.ToString() ?? "?",
                 job_expired?.ToString() ?? "?");
             Log.Debug("Job ({0}): log={1}", job.Code, job.Log);
-        }
 
-        database.Job.Save(job, filter);
+            database.Job.UpdateEvaluation(job, clear_content);
+        }
+        else database.Job.ChangeState(job.JobID, job.State);
 
         return job.State;
     }

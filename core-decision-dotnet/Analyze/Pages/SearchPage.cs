@@ -22,14 +22,7 @@ abstract class SearchPage(Agency parent) : PageBase(parent)
             if (string.IsNullOrEmpty(code) || codes.Contains(code)) continue;
             codes.Add(code);
 
-            database.Job.Save(new
-            {
-                AgencyID = Parent.ID,
-                Country = Parent.CurrentMethod.Title,
-                Url = link,
-                Code = code,
-                State = JobState.Saved
-            });
+            database.Job.InsertFromSearch(Parent.ID, Parent.CurrentMethod.Title, link, code);
         }
 
         if (codes.Count == 0)
