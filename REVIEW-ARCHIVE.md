@@ -103,6 +103,17 @@ catch می‌کرد؛ `Respond` در `background.js` نیز بدون try/catch �
 `core-decision-dotnet/Controllers/Decision.cs:13-34`؛ `core-decision-dotnet/Program.cs:91`؛
 `dotnet build` بدون هشدار جدید، ۸۰ تست سبز، `node --check` روی هر پنج فایل JS اکستنشن.
 
+### ۱.۷ (مرور ۱۴۰۵/۰۶/۱۸) هویت تب فقط در حافظهٔ سرویس‌ورکر MV3 → با ری‌استارت SW درخواست‌ها بی‌trend می‌رفت و تبِ سالم Blocked می‌شد
+
+(شماره‌گذاری این مدخل از مرور ۱۴۰۵/۰۶/۱۸ است؛ ۱.۷ آرشیوشدهٔ نگارش ۲۰۲۶-۰۸-۳۱ — نبود محدودیت حجم درخواست — مدخل جداگانهٔ فوق است.)
+
+رفع با کامیت `d2861ff` (۱۴۰۵/۰۶/۱۸ — 2026-09-09)، هر دو سطح اقدام:
+- **اکستنشن (اقدام ریشه):** نقشهٔ `tabId→trendId` در `chrome.storage.session` ماندگار شد (write-through در `TrendCollection.set/remove`)، بازگردانی در بوت SW (`restore()` + گارد `ready` در همهٔ عملیات)، پاک‌سازی مدخل تب بسته‌شده با `chrome.tabs.onRemoved` در `background.js`، و fallback حافظه‌ای در خطای storage. چرخهٔ مصرف: پاسخ سرور → `trends.set/remove`؛ درخواست بعدی → `trends.get(sender.tab.id)`.
+- **سرور (اقدام بلندمدت):** `LoadAndUpdateCurrentTrend` سطر `(AgencyID, TrendType)` را بدون قید Reserved و درون تراکنش adopt می‌کند؛ درخواست id-less یا stale-id از تبِ سالم دوباره به جریان ملحق می‌شود (تمایز لاگ: id-match/`-adopted-id-less`/`-adopted-stale-id`) به‌جای مسیر `Blocked`→`Close`.
+
+موارد وابستهٔ هنوز باز در REVIEW.md: ۲.۱۷ (TTL بدون heartbeat)، ۲.۱۸ (رزرو بدون lease)، ۲.۲۲ (اجرای open با `window.open`).
+**تأیید:** `agent-extension/controllers/trend-collection.js:3-63`، `agent-extension/controllers/background.js:6,19,32-34,46-48`، `core-decision-dotnet/Analyze/TrendsCheckpoint.cs:46-86` — تأیید نهایی با نخستین اجرای زنده.
+
 ---
 
 ## بخش ۲ — 🟠 مهم (رفع‌شده‌ها)
