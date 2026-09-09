@@ -148,6 +148,13 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
   sub-namespace is `Photon.JobSeeker.Pages`.
 - **No comments** unless requested (matches existing style). Do not add XML doc
   comments gratuitously.
+- **File-size budget (~400 lines).** No file may grow unbounded — every line is
+  token cost each time an agent reads the file. When a file exceeds the budget,
+  split it by content, never mechanically by line count: move documentation
+  prose into `docs/` (or an archive doc there for historical material), or
+  break an oversized class into multiple cohesive classes/files while respecting
+  clean-code and design-pattern rules (single responsibility first). This
+  applies to `AGENTS.md` itself — prune or archive instead of appending.
 - **Raw SQLite via Dapper (no EF Core).** `Database.cs` wraps a `SQLiteConnection`
   and exposes Dapper `Execute`/`Query<T>`/`ExecuteScalar` plus transactions and
   `LastInsertRowId()`/`Changes()`. Business classes in `Database/Business/` own
