@@ -121,7 +121,8 @@ Job (State = Attention)
    ▼
 background AI worker (see AI_INTEGRATION.md §1)
     prompt: JD + block inventory + profile
-    (synchronous call acceptable at the apply stage — AI_INTEGRATION.md §1)
+    (apply-stage jobs are priority-claimed so the delta
+     arrives within seconds — AI_INTEGRATION.md §1, §2.1)
    │
    ▼
 delta JSON  (keys / removals / summary / title)
