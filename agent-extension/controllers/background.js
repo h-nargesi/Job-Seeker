@@ -35,8 +35,8 @@ async function Respond(tab, id, promise) {
         response = response.commands;
     }
 
-    chrome.tabs.query({ windowId: tab.windowId, index: tab.index }, function (tabs) {
-        if (!tabs || !tabs[0]) return;
-        chrome.tabs.sendMessage(tabs[0].id, { id, body: response });
+    chrome.tabs.sendMessage(tab.id, { id, body: response }, function () {
+        if (chrome.runtime.lastError)
+            console.log("AGENT", "Respond", chrome.runtime.lastError);
     });
 }
