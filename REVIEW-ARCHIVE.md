@@ -145,3 +145,26 @@
 
 ### ۳.۱۳ ناهماهنگی casing مسیر لاگ
 **تأیید:** `Program.cs:12` — پیش‌فرض یکسان `logs/E.log`.
+
+### ۳.۹ نبود تست واحد
+(۱۴۰۵/۰۶/۱۸ — 2026-09-09) پنج متد از منطق اصلی امتیازدهی/تحلیل زیر تست xUnit قرار گرفت:
+`EvaluateEligibility`, `EvaluateSalaryScore`, `LanguageIsMatch`, `CheckOptionIn`, `GetTextContent`.
+مسیر تست: seam حداقلی — تغییر visibility چهار متد به `internal` + سازندهٔ internal برای تزریق
+`Dictionaries`/`Database`/`JobOption[]` روی SQLite درون‌حافظه‌ای؛ بدون تغییر رفتار و بدون
+DI کامل (مورد ۳.۳ باز ماند). نکتهٔ فنی: `Settings` حقوق باید مثل تولید از طریق
+`JsonConvert.DeserializeObject<dynamic>` ساخته شود — anonymous type در اسمبلی تست از اسمبلی
+اصلی با dynamic bind نمی‌شود (RuntimeBinderException). رفتار فعلی `GetTextContent` برای
+شکاف ۳.۱۵ (نشت متن `<noscript>` تو در تو) عمداً pin شد
+(`Includes_nested_noscript_text_today_3_15_pinned`) تا اصلاح آتی ۳.۱۵ آن را آگاهانه
+به‌روز کند. تست‌های JS اکستنشن (`agent-extension/`) عمداً به تسک جداگانهٔ فاز ۲ موکول شد.
+**تأیید:** `core-decision-dotnet.Tests/JobEligibilityHelperTests.cs:6-75` (زبان: distinct/مرز ۵۰٪/batching)،
+`:80-175` (eligibility: گیت field/reject/نمرهٔ دقیق/کلید تکراری/نیم‌شدن دومین کلید)؛
+`core-decision-dotnet.Tests/SalaryScoreTests.cs:17-87` (دوره‌ها/k/حد ۳۵۰۰۰/پیشوند >۲۴ کاراکتر/
+غیرقابل‌پارس/Settings تهی + الگوی واقعی production)؛
+`core-decision-dotnet.Tests/CheckOptionInTests.cs:6-73` (dedupe/حساس به حروف/فاصلهٔ خالی/
+برندهٔ اولین match حقوق/نمرهٔ تخت/محتوای تهی)؛
+`core-decision-dotnet.Tests/GetTextContentTests.cs:6-40` (استخراج متن/فروپاشی خطوط خالی/
+جدا کردن script-head-style + pin مورد ۳.۱۵)؛
+fixture مشترک `core-decision-dotnet.Tests/EligibilityFixture.cs:7-112`؛
+seam: `core-decision-dotnet/Analyze/JobEligibilityHelper.cs:34-39` (سازندهٔ internal) و
+`:198,225,317,341` (internal شدن)، `core-decision-dotnet/core-decision.csproj:11-13` (`InternalsVisibleTo`).

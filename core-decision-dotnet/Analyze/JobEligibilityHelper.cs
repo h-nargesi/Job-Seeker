@@ -31,6 +31,13 @@ public class JobEligibilityHelper : IDisposable
         options = GetOptions();
     }
 
+    internal JobEligibilityHelper(Dictionaries dictionaries, Database database, JobOption[] options)
+    {
+        this.dictionaries = dictionaries;
+        this.database = database;
+        this.options = options;
+    }
+
     private static JobOption[] GetOptions()
     {
         lock (options_lock)
@@ -188,7 +195,7 @@ public class JobEligibilityHelper : IDisposable
         return remove_new_lines.Replace(buffer.ToString(), "\n");
     }
 
-    private bool LanguageIsMatch(Job job)
+    internal bool LanguageIsMatch(Job job)
     {
         if (job.Content == null) return false;
 
@@ -215,7 +222,7 @@ public class JobEligibilityHelper : IDisposable
         return 50 <= point;
     }
 
-    private bool EvaluateEligibility(Job job, out bool rejected)
+    internal bool EvaluateEligibility(Job job, out bool rejected)
     {
         job.Score = 0L;
         var option_scores = new Dictionary<string, List<(JobOption option, int score, string matched)>>();
@@ -307,7 +314,7 @@ public class JobEligibilityHelper : IDisposable
         else return job.Score >= MinEligibilityScore;
     }
 
-    private static long CheckOptionIn(Job job, JobOption option, out string matched)
+    internal static long CheckOptionIn(Job job, JobOption option, out string matched)
     {
         var score = 0L;
         var matches = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -331,7 +338,7 @@ public class JobEligibilityHelper : IDisposable
         return score;
     }
 
-    private static long EvaluateSalaryScore(Match matched, JobOption option)
+    internal static long EvaluateSalaryScore(Match matched, JobOption option)
     {
         if (option.Settings is null)
         {
