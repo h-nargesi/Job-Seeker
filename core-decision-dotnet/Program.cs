@@ -24,7 +24,7 @@ builder.Logging.AddSerilog();
 
 Log.Information("Starting up ...");
 
-Database.SetConfiguration(path: builder.Configuration["Database:Path"] ?? string.Empty);
+var database_factory = new DatabaseFactory(builder.Configuration);
 Dictionaries.SetConfiguration(path: builder.Configuration["Database:Dictionaries"] ?? string.Empty);
 
 var api_key = builder.Configuration["Auth:ApiKey"];
@@ -51,13 +51,15 @@ else
 {
     SecretProtector.SetKey(credential_key);
 
-    using (var database = Database.Open())
+    using (var database = database_factory.Open())
     {
         AgencyBusiness.MigratePlaintextPasswords(database);
     }
 }
 
 builder.Services.AddRazorPages();
+builder.Services.AddSingleton<IDatabaseFactory>(database_factory);
+builder.Services.AddScoped(sp => sp.GetRequiredService<IDatabaseFactory>().Open());
 builder.Services.AddScoped<TrendsCheckpoint>();
 builder.Services.AddSingleton<Analyzer>();
 builder.Services.AddScoped<IViewRenderService, ViewRenderService>();

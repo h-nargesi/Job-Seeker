@@ -64,10 +64,8 @@ class AgencyBusiness
         };
     }
 
-    public static (string user, string pass) GetUserPass(string agency)
+    public (string user, string pass) GetUserPass(string agency)
     {
-        using var database = Database.Open();
-
         var row = database.Query<CredentialRow>(Q_GET_USER_PASS, new { title = agency }).FirstOrDefault();
         if (row == null) return default;
 

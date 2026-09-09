@@ -15,7 +15,7 @@ abstract class SearchPage(Agency parent) : PageBase(parent)
         if (CheckInvalidSearchTitle(url, content, out var commands)) return commands;
 
         var codes = new HashSet<string>();
-        using var database = Database.Open();
+        using var database = Parent.DatabaseFactory.Open();
 
         foreach (var (link, code) in GetJobUrls(content))
         {

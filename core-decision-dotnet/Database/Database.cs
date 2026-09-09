@@ -5,45 +5,22 @@ namespace Photon.JobSeeker
 {
     public class Database : IDisposable
     {
-        private readonly SQLiteConnection connection;
-        private SQLiteTransaction? transaction;
-        private static string? connection_string;
+    private readonly SQLiteConnection connection;
+    private SQLiteTransaction? transaction;
 
-        private TrendBusiness? trend_business;
-        private JobBusiness? job_business;
-        private AgencyBusiness? agency_business;
-        private JobOptionBusiness? job_option_business;
+    private TrendBusiness? trend_business;
+    private JobBusiness? job_business;
+    private AgencyBusiness? agency_business;
+    private JobOptionBusiness? job_option_business;
 
-        static Database() => SqliteTypeHandlers.Register();
+    static Database() => SqliteTypeHandlers.Register();
 
-        public Database(SQLiteConnection connection)
-        {
-            this.connection = connection;
-        }
+    public Database(SQLiteConnection connection)
+    {
+        this.connection = connection;
+    }
 
-        public static void SetConfiguration(string path, string? version = null, string? password = null, bool? foreign_keys = true)
-        {
-            connection_string = $"Data Source={path}";
-            if (version != null) connection_string += $";Version={version}";
-            if (password != null) connection_string += $";Password={password}";
-            if (foreign_keys != null) connection_string += $";Foreign Keys={foreign_keys}";
-        }
-
-        public static Database Open()
-        {
-            if (connection_string == null)
-                throw new Exception("The configuration is not set.");
-
-            var connection = new SQLiteConnection(connection_string);
-            connection.Open();
-
-            connection.Execute("PRAGMA journal_mode=WAL");
-            connection.Execute("PRAGMA busy_timeout=5000");
-
-            return new Database(connection);
-        }
-
-        public void BeginTransaction()
+    public void BeginTransaction()
         {
             transaction = connection.BeginTransaction();
         }

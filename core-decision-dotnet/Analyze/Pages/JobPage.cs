@@ -17,7 +17,7 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
 
         if (job.State == JobState.NotApproved) return [];
 
-        using var evaluator = new JobEligibilityHelper();
+        using var evaluator = new JobEligibilityHelper(Parent.DatabaseFactory);
         var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
 
         var commands = new List<Command>();
@@ -48,7 +48,7 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
 
     private Job LoadJob(string url, string html)
     {
-        using var database = Database.Open();
+        using var database = Parent.DatabaseFactory.Open();
 
         var code = GetJobCode(url);
         if (string.IsNullOrEmpty(code)) throw new Exception($"Invalid job url ({Parent.Name}).");

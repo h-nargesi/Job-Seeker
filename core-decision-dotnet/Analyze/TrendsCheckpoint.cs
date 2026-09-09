@@ -2,26 +2,26 @@ using Serilog;
 
 namespace Photon.JobSeeker
 {
-    public class TrendsCheckpoint : IDisposable
+    public class TrendsCheckpoint
     {
         private readonly Database database;
         private readonly Analyzer analyzer;
         private readonly Result result;
         private Dictionary<(long, TrendType), Trend> AllCurrentTrends;
 
-        public TrendsCheckpoint(Analyzer analyzer)
+        public TrendsCheckpoint(Analyzer analyzer, Database database)
         {
             this.analyzer = analyzer;
+            this.database = database;
             result = new Result();
-            database = Database.Open();
             AllCurrentTrends = new Dictionary<(long, TrendType), Trend>();
         }
 
-        public TrendsCheckpoint(Analyzer analyzer, Result result)
+        public TrendsCheckpoint(Analyzer analyzer, Database database, Result result)
         {
             this.analyzer = analyzer;
+            this.database = database;
             this.result = result;
-            database = Database.Open();
             AllCurrentTrends = new Dictionary<(long, TrendType), Trend>();
         }
 
@@ -41,12 +41,6 @@ namespace Photon.JobSeeker
             Log.Information("Trend final commands: {0}", result.Commands.StringJoin());
 
             return result;
-        }
-
-        public void Dispose()
-        {
-            database.Dispose();
-            GC.SuppressFinalize(this);
         }
 
         private void LoadAndUpdateCurrentTrend()

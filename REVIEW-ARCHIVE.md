@@ -15,6 +15,8 @@
 > با وزن ذوزنقه‌ای ضرب‌شوندهٔ `JobRanking` و تست xUnit رفع و به همین فایل اضافه شد.
 > مورد ۲.۱۶ (الگوی `/rc/clk?jk=` در استخراج شغل این‌دیس) در ۱۴۰۵/۰۶/۱۷ (2026-09-08)
 > با الگوی چندشکلی `IndeedSerp` رفع و به همین فایل اضافه شد.
+> مورد ۳.۳ (`Database.Open()` دستی همه‌جا — نقض DI) در ۱۴۰۵/۰۶/۱۸ (2026-09-09)
+> با `IDatabaseFactory` و حذف کامل متدهای استاتیک اتصال رفع و به همین فایل اضافه شد.
 
 ---
 
@@ -71,7 +73,7 @@
 
 ### ۲.۸ `JobEligibilityHelper` و اتصال‌های تکراری
 **تأیید:** `JobEligibilityHelper.cs:22-50` — کش static برای `JobOption[]` (`cached_options` + `InvalidateOptionsCache`).
-⚠️ بازسازی اتصال‌ها به DI (نیمهٔ دوم این مورد = مورد ۳.۳) در REVIEW.md باقی مانده است.
+⚠️ بازسازی اتصال‌ها به DI (نیمهٔ دوم این مورد = مورد ۳.۳) در ۱۴۰۵/۰۶/۱۸ (2026-09-09) بسته شد — بنگرید به مدخل ۳.۳ همین فایل.
 
 ### ۲.۹ اثر جانبی در متد شمارش (`FetchFromCount`)
 **تأیید:** `JobBusiness.cs:44-54` — `FetchFromCount` فقط می‌خواند؛ UPDATE ریست به `ResetRevaluations` منتقل شد.
@@ -144,7 +146,8 @@
 `Database/SqliteTypeHandlers.cs` برای خواندن + `ToString()` صریح در پارامترهای SQL — پارامتر enum در
 Dapper به‌صورت عدد bind می‌شود) و `ResumeContext` با همان `JsonConvert` قبلی round-trip می‌کند.
 توکن‌های `$x` به `@x` تغییر کردند؛ متن سایر SQL ها (از جمله `Q_INDEX`) بیت‌به‌بیت حفظ شد. سطح HTTP،
-امضای `Database.Open()` و accessors (`Trend/Job/Agency/JobOption`) بدون تغییر ماند (DI — مورد ۳.۳ — باز است).
+امضای `Database.Open()` و accessors (`Trend/Job/Agency/JobOption`) بدون تغییر ماند (DI — مورد ۳.۳ —
+در همان تاریخ ۱۴۰۵/۰۶/۱۸ رفع شد؛ رجوع کنید به مدخل ۳.۳).
 **رفع همراه (تنها تغییر رفتاری):** باگ upsert ترند — در `ON CONFLICT(AgencyID, Type) DO NOTHING` وقتی
 `changes()==0` است، `TrendID` از ردیف موجود خوانده می‌شود نه از `last_insert_rowid()` کهنه (آینهٔ الگوی
 درست `InsertJob` از مورد آرشیوشدهٔ ۱.۵).
@@ -159,6 +162,47 @@ Dapper به‌صورت عدد bind می‌شود) و `ResumeContext` با هما
 (`core-decision-dotnet.Tests/PhaseBNewApiTests.cs` — ۱۲ تست: conflict-backfill شغل/ترند، ماتریس پرچم‌های
 `UpdateScrapedJob`، `Tries` تهی Stepstone، `UpdateActivity` بدون دست‌زدن به AgencyID، round-trip
 TypeHandler ها، پروجکشن Report)؛ `dotnet build` بدون هشدار جدید؛ کل مجموعه ۸۰ تست سبز.
+
+### ۳.۳ `Database.Open()` دستی همه‌جا — نقض DI
+(۱۴۰۵/۰۶/۱۸ — 2026-09-09) حذف کامل الگوی service-locator: متدهای استاتیک `Database.Open()`/
+`SetConfiguration` و فیلد استاتیک `connection_string` از `Database.cs` برداشته شدند تا کامپایلر
+تضمین کند هیچ فراخوانی جامانده نیست (`rg "Database\.Open|Database\.SetConfiguration"` → صفر).
+جایگزین: `IDatabaseFactory` با پیاده‌سازی `DatabaseFactory(IConfiguration)` — ثبت **Singleton**
+(مصرف‌کننده‌های singleton: `Analyzer`، `TrendsCleanupService`) که همان connection string قبلی
+(`Data Source={path};Foreign Keys=True`) را می‌سازد، PRAGMA های `journal_mode=WAL` و
+`busy_timeout=5000` را مثل قبل اجرا می‌کند و هنگام نبودن `Database:Path` (به‌جای سکوت با
+path تهی) fail-fast می‌شود؛ `Database` از طریق فکتوری به‌صورت **Scoped** ثبت و توسط کانتینر
+به‌ازای هر درخواست dispose می‌شود. `Analyzer` فکتوری را در سازنده تزریق می‌کند و
+`Agency.DatabaseFactory` بلافاصله پس از `Activator.CreateInstance` و پیش از `LoadFromDatabase`
+(ساخت صفحات در `LoadPages`) ست می‌شود؛ صفحات از `Parent.DatabaseFactory.Open()` می‌خوانند.
+`TrendsCheckpoint` اتصال را به‌صورت پارامتر می‌گیرد — سازنده‌های `(Analyzer, Database)` و
+`(Analyzer, Database, Result)` — و دیگر `IDisposable` نیست (مالک اتصال نیست)؛ ثبتِ
+`AddScoped<TrendsCheckpoint>` که تا امروز مرده بود فعال شد و `DecisionController.Orders` به‌جای
+ساخت دستی از همان تزریق استفاده می‌کند. کنترلرهای `Decision`/`Job`/`Report` `Database`
+اسکوپ‌شده را در سازنده تزریق می‌کنند (حذف همهٔ `using var database = Database.Open()` در اکشن‌ها)؛
+`JobEligibilityHelper` با `IDatabaseFactory` ساخته می‌شود، `GetOptions(factory)` از همان فکتوری
+می‌خواند و `RunRevaluateProcess(Analyzer, IDatabaseFactory)` هر دو پارامتر را صریح می‌گیرد
+(سازندهٔ internal تست دست‌نخورده ماند).
+**فیکس همراه:** اتصال مرده در `Page.GetUserPass` حذف شد — `AgencyBusiness.GetUserPass` متد نمونه
+شد و از همان اتصالی که `Page` باز کرده می‌خواند (قبلاً `Page` یک اتصال بی‌استفاده باز می‌کرد و
+متد استاتیک اتصال دومی باز می‌کرد)؛ نیمهٔ باز ماندهٔ مورد ۲.۸ نیز بسته شد.
+**عمداً خارج از scope:** `Dictionaries.Open()/SetConfiguration` (لیست واژهٔ فقط‌خواندنی) با الگوی
+استاتیک قبلی ماند. تغییر رفتاری مشاهده‌پذیر: اتصال کنترلرها به‌جای هر اکشن، یک‌بار در هر درخواست
+باز و بسته می‌شود (هر درخواست یک اکشن؛ PRAGMA ها و رفتار همزمانی یکسان).
+**تأیید:** `core-decision-dotnet/Database/IDatabaseFactory.cs` و
+`core-decision-dotnet/Database/DatabaseFactory.cs:9-19` (فکتوری + PRAGMA ها + fail-fast)؛
+`core-decision-dotnet/Database/Database.cs` — بدون هیچ عضو استاتیکِ اتصال؛
+`core-decision-dotnet/Program.cs:27` (نمونهٔ واحد فکتوری)، `:54` (مهاجرت plaintext با همان
+نمونه)، `:61-62` (ثبت Singleton/Scoped)؛ `core-decision-dotnet/Analyze/Analyzer.cs:5,11` و
+`Analyze/Agency.cs:23`؛ `core-decision-dotnet/Analyze/TrendsCheckpoint.cs:5-27` (حذف IDisposable)؛
+`core-decision-dotnet/Controllers/Decision.cs:7-11,86`؛ `Controllers/Job.cs:8-11`؛
+`Controllers/Report.cs:7-9`؛ `core-decision-dotnet/Analyze/JobEligibilityHelper.cs:27-33,60-82`؛
+`core-decision-dotnet/Analyze/Pages/Page.cs:29-33`؛ `Analyze/Pages/SearchPage.cs:18`؛
+`Analyze/Pages/JobPage.cs:20,51`؛ `Analyze/Stepstone/StepstonePageSearch.cs:26`؛
+`Analyze/Stepstone/StepstonePageJob.cs:21,42`؛
+`core-decision-dotnet/Database/Business/AgencyBusiness.cs:67-77` (متد نمونه)؛
+`core-decision-dotnet/TrendsCleanupService.cs:5,24-34`؛ `dotnet build` بدون هشدار جدید؛
+کل مجموعه ۸۰ تست سبز (سازندهٔ عمومی `Database(SQLiteConnection)` و سازندهٔ internal تست دست‌نخورده).
 
 ### ۳.۷ `Extensions.Shift` مرده و باگ‌دار
 **تأیید:** `Basics/Extensions.cs` — متد `Shift` حذف شده است.

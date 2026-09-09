@@ -5,16 +5,17 @@ using System.Text;
 namespace Photon.JobSeeker;
 
 [Route("[controller]/[action]")]
-public class JobController(Analyzer analyzer) : Controller
+public class JobController(Analyzer analyzer, Database database, IDatabaseFactory database_factory) : Controller
 {
     private readonly Analyzer analyzer = analyzer;
+    private readonly Database database = database;
+    private readonly IDatabaseFactory database_factory = database_factory;
 
     [HttpGet("{jobid:int}")]
     public IActionResult Get([FromRoute] long jobid)
     {
         try
         {
-            using var database = Database.Open();
             var job = database.Job.Fetch(jobid);
             if (job == null) return NotFound();
             analyzer.AgenciesByID.TryGetValue(job.AgencyID, out var agency);
@@ -32,7 +33,6 @@ public class JobController(Analyzer analyzer) : Controller
     {
         try
         {
-            using var database = Database.Open();
             database.Job.ChangeState(jobid, JobState.Applied);
             return Ok();
         }
@@ -48,7 +48,6 @@ public class JobController(Analyzer analyzer) : Controller
     {
         try
         {
-            using var database = Database.Open();
             database.Job.RemoveHtmlContent(jobid);
             database.Job.ChangeState(jobid, JobState.Rejected);
             return Ok();
@@ -66,7 +65,6 @@ public class JobController(Analyzer analyzer) : Controller
         try
         {
             var resume = ResumeContext.SimlpeDeserialize(options);
-            using var database = Database.Open();
             database.Job.ChangeOptions(jobid, resume);
             return Ok(resume?.SimlpeSerialize());
         }
@@ -85,7 +83,6 @@ public class JobController(Analyzer analyzer) : Controller
             var resume_generator = HttpContext.RequestServices.GetService<IViewRenderService>() ??
                 throw new Exception("The 'IViewRenderService' is not initialized.");
 
-            using var database = Database.Open();
             var context = database.Job.FetchOptions(jobid) ?? new ResumeContext();
 
             var result = await resume_generator.RenderToStringAsync(HttpContext, "~/views/resume.cshtml", context);
@@ -105,7 +102,6 @@ public class JobController(Analyzer analyzer) : Controller
     {
         try
         {
-            using var database = Database.Open();
             var context = database.Job.FetchOptions(jobid) ?? new ResumeContext();
 
             return View("~/views/resume.cshtml", context);
@@ -122,7 +118,7 @@ public class JobController(Analyzer analyzer) : Controller
     {
         try
         {
-            JobEligibilityHelper.RunRevaluateProcess(analyzer);
+            JobEligibilityHelper.RunRevaluateProcess(analyzer, database_factory);
             return Ok();
         }
         catch (Exception ex)
@@ -137,7 +133,6 @@ public class JobController(Analyzer analyzer) : Controller
     {
         try
         {
-            using var database = Database.Open();
             database.Job.Clean(3, vacuum);
             return Ok();
         }
@@ -178,7 +173,6 @@ public class JobController(Analyzer analyzer) : Controller
             }
             else
             {
-                using var database = Database.Open();
                 if (options.Type == "E")
                 {
                     database.Execute(options.Query);

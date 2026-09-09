@@ -20,6 +20,8 @@ public abstract class Agency
 
     public long ID { get; private set; }
 
+    internal IDatabaseFactory DatabaseFactory { get; set; } = null!;
+
     public abstract string Name { get; }
 
     public string Domain { get; private set; } = string.Empty;
@@ -91,7 +93,7 @@ public abstract class Agency
                         Status &= ~AgencyStatus.ActiveSeeking;
                     }
 
-                    using var database = Database.Open();
+                    using var database = DatabaseFactory.Open();
                     database.Agency.SaveState(this);
                 }
 

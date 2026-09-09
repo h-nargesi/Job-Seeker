@@ -23,7 +23,7 @@ class StepstonePageSearch(Stepstone parent) : StepstonePage(parent)
         }
 
         var codes = new HashSet<string>();
-        using var database = Database.Open();
+        using var database = parent.DatabaseFactory.Open();
 
         foreach (Match job_match in reg_job_url.Matches(content).Cast<Match>())
         {

@@ -18,7 +18,7 @@ namespace Photon.JobSeeker.Stepstone
 
             var job = LoadJob(url, content);
 
-            using var evaluator = new JobEligibilityHelper();
+            using var evaluator = new JobEligibilityHelper(Parent.DatabaseFactory);
             var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
 
             var commands = new List<Command>();
@@ -39,7 +39,7 @@ namespace Photon.JobSeeker.Stepstone
 
     private Job LoadJob(string url, string html)
     {
-        using var database = Database.Open();
+        using var database = parent.DatabaseFactory.Open();
 
         var url_matched = reg_job_url.Match(url);
         if (!url_matched.Success) throw new Exception($"Invalid job url ({parent.Name}).");

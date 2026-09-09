@@ -42,17 +42,16 @@
 > مورد ۳.۱ (ORM بازتابی شکننده) در ۱۴۰۵/۰۶/۱۸ (2026-09-09) با مهاجرت کامل لایهٔ داده به Dapper رفع و به
 > [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شد — به همراه فیکس باگ upsert ترند؛ رفتارهای حفظ‌شده
 > (ترکیب UTC/local مهلت `ModifiedOn` و `Tries = NULL` در اسکرپ Stepstone) در همان مدخل آرشیو مستند شد.
+>
+> مورد ۳.۳ (`Database.Open()` دستی همه‌جا — نقض DI) در ۱۴۰۵/۰۶/۱۸ (2026-09-09) با حذف کامل
+> `Open`/`SetConfiguration` استاتیک و جایگزینی با `IDatabaseFactory` (Singleton) + `Database` اسکوپ‌شده
+> در DI رفع و به [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شد — به همراه فیکس اتصال مرده در
+> `Page.GetUserPass`؛ نیمهٔ باز ماندهٔ مورد ۲.۸ آرشیوشده نیز بسته شد.
 
 ### ۳.۲ استفادهٔ بیش از حد `dynamic` و anonymous types
 
 در سراسر لایه‌ها (`List<dynamic>`, `JobOption.Settings` dynamic, خروجی
 `AgencyBusiness.LoadByName`). نوع‌ها گم می‌شوند، Intellisense/کامپایل ضعیف.
-
-### ۳.۳ `Database.Open()` دستی همه‌جا — نقض DI
-
-به‌جای تزریق، اتصال استاتیک/دستی باز می‌شود. تست‌پذیری سخت.
-پیشنهاد: `IDatabaseFactory` به‌صورت Scoped در DI.
-(این مورد نیمهٔ دوم مورد ۲.۸ آرشیوشده نیز هست.)
 
 ### ۳.۴ تکرار کد `LoadJob` در Stepstone
 **فایل:** `Analyze/Stepstone/StepstonePageJob.cs`
@@ -145,7 +144,7 @@ CI/CD تعریف‌شده‌ای وجود ندارد.
 1. **معماری:** لایه‌بندی Clean (Controllers → Services → Repositories) با interface‌ها و تزریق وابستگی کامل.
 2. **دسترسی داده:** ~~مهاجرت به **Dapper** یا EF Core~~ (Dapper انجام شد — ۱۴۰۵/۰۶/۱۸؛ مورد ۳.۱ آرشیو شد).
 3. **امنیت:** فعال‌سازی HSTS برای تحکیم HTTPS (گذر plaintext اعتبارنامه با HTTPS روی سرور رفع شد — مورد ۱.۴ آرشیو شد).
-4. **همزمانی SQLite:** اتصال از طریق DI (Scoped) — WAL و BusyTimeout انجام شد.
+4. **همزمانی SQLite:** ~~اتصال از طریق DI (Scoped)~~ (انجام شد — ۱۴۰۵/۰۶/۱۸؛ مورد ۳.۳ آرشیو شد) — WAL و BusyTimeout انجام شد.
 5. **پایداری scraper:** متریک شمارش شغل + هشدار هنگام افت + تست snapshot برای هر آژانس.
 6. **تست:** پروژه xUnit با پوشش برای امتیازدهی/حقوق/زبان/مرتب‌سازی.
 7. **مشاهده‌پذیری:** داشبورد وضعیت آژانس‌ها، هشدار خطا (Serilog + Seq/Email).

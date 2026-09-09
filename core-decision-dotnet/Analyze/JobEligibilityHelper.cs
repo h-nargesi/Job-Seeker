@@ -24,11 +24,11 @@ public class JobEligibilityHelper : IDisposable
     private static JobOption[]? cached_options;
     public static RevaluationProcess? CurrentRevaluationProcess { get; private set; }
 
-    public JobEligibilityHelper()
+    public JobEligibilityHelper(IDatabaseFactory database_factory)
     {
         dictionaries = Dictionaries.Open();
-        database = Database.Open();
-        options = GetOptions();
+        database = database_factory.Open();
+        options = GetOptions(database_factory);
     }
 
     internal JobEligibilityHelper(Dictionaries dictionaries, Database database, JobOption[] options)
@@ -38,13 +38,13 @@ public class JobEligibilityHelper : IDisposable
         this.options = options;
     }
 
-    private static JobOption[] GetOptions()
+    private static JobOption[] GetOptions(IDatabaseFactory database_factory)
     {
         lock (options_lock)
         {
             if (cached_options == null)
             {
-                using var database = Database.Open();
+                using var database = database_factory.Open();
                 cached_options = database.JobOption.FetchAll();
             }
 
@@ -57,13 +57,13 @@ public class JobEligibilityHelper : IDisposable
         lock (options_lock) cached_options = null;
     }
 
-    public static Task RunRevaluateProcess(Analyzer analyzer)
+    public static Task RunRevaluateProcess(Analyzer analyzer, IDatabaseFactory database_factory)
     {
         lock (revaluation_lock)
         {
             if (CurrentRevaluationProcess == null)
             {
-                using var database = Database.Open();
+                using var database = database_factory.Open();
                 database.Job.ResetRevaluations();
                 var start_time = DateTime.Now.AddSeconds(-1);
                 var total_count = (int)database.Job.FetchFromCount(start_time);
@@ -75,7 +75,7 @@ public class JobEligibilityHelper : IDisposable
 
         return Task.Run(() =>
         {
-            using var evaluator = new JobEligibilityHelper();
+            using var evaluator = new JobEligibilityHelper(database_factory);
             evaluator.Revaluate(analyzer);
         });
     }

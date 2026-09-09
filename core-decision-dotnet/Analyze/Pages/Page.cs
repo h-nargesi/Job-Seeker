@@ -28,7 +28,7 @@ public abstract class Page : IComparable<Page>
 
     protected (string user, string pass) GetUserPass()
     {
-        using var database = Database.Open();
-        return AgencyBusiness.GetUserPass(Parent.Name);
+        using var database = Parent.DatabaseFactory.Open();
+        return database.Agency.GetUserPass(Parent.Name);
     }
 }

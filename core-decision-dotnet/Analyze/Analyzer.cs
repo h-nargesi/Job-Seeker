@@ -2,11 +2,13 @@ using Serilog;
 
 namespace Photon.JobSeeker;
 
-public class Analyzer
+public class Analyzer(IDatabaseFactory database_factory)
 {
     private readonly object @lock = new();
     private readonly Dictionary<string, Agency> agencies_by_name = [];
     private readonly Dictionary<long, Agency> agencies_by_id = [];
+
+    internal IDatabaseFactory DatabaseFactory => database_factory;
 
     public IReadOnlyDictionary<string, Agency> Agencies
     {
@@ -46,7 +48,8 @@ public class Analyzer
     {
         var result = AnalyzeContent(context);
         result.TrendID = context.Trend;
-        using var trends_checkpoint = new TrendsCheckpoint(this, result);
+        using var database = database_factory.Open();
+        var trends_checkpoint = new TrendsCheckpoint(this, database, result);
         return trends_checkpoint.CheckCurrentTrends();
     }
 
@@ -61,7 +64,7 @@ public class Analyzer
 
     public void ReloadSettings()
     {
-        using var database = Database.Open();
+        using var database = database_factory.Open();
         lock (@lock)
         {
             foreach (var agency in agencies_by_id.Values)
@@ -110,13 +113,14 @@ public class Analyzer
 
         var types = TypeHelper.GetSubTypes(typeof(Agency));
 
-        using var database = Database.Open();
+        using var database = database_factory.Open();
         foreach (var type in types)
         {
             if (Activator.CreateInstance(type) is not Agency agency) continue;
 
             if (agency.Name is null) continue;
 
+            agency.DatabaseFactory = database_factory;
             agency.LoadFromDatabase(database);
 
             if (agency.ID == default) continue;

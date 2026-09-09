@@ -147,9 +147,10 @@ full score, then 0.5× for duplicates in the same key), and sets the job's
 
 ### Database layer (`Database/`)
 
-- `Database.cs` — single shared `SQLiteConnection` factory (`Database.Open()`),
-  generic `Insert`/`Update` driven by reflection + a `[Flags] enum` filter.
-  Parameter binding is positional by `$name` tokens found via regex.
+- `Database.cs` — Dapper wrapper over one `SQLiteConnection`; instances come
+  from `IDatabaseFactory`/`DatabaseFactory` (singleton in DI, also runs the WAL
+  and busy-timeout PRAGMAs) — scoped `Database` for controllers, factory
+  openings for the singleton `Analyzer`/pages.
 - `Dictionaries.cs` — separate read-only `dictionaries.sqlite3` (English words)
   for language detection.
 - `Business/<Entity>Business.cs` — per-entity repos (`Job`, `Agency`, `Trend`,

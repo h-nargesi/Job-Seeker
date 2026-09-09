@@ -4,16 +4,16 @@ using Serilog;
 namespace Photon.JobSeeker;
 
 [Route("[controller]/[action]")]
-public class ReportController(Analyzer analyzer) : Controller
+public class ReportController(Analyzer analyzer, Database database) : Controller
 {
     private readonly Analyzer analyzer = analyzer;
+    private readonly Database database = database;
 
     [HttpGet]
     public IActionResult Trends()
     {
         try
         {
-            using var database = Database.Open();
             var result = GetTrends(database);
 
             return View("~/views/trends.cshtml", result);
@@ -30,7 +30,6 @@ public class ReportController(Analyzer analyzer) : Controller
     {
         try
         {
-            using var database = Database.Open();
             var list = GetJobs(database, agencies, countries);
 
             return View("~/views/jobs.cshtml", list);
@@ -47,7 +46,6 @@ public class ReportController(Analyzer analyzer) : Controller
     {
         try
         {
-            using var database = Database.Open();
             return View("~/views/agencies.cshtml", GetAgencies(database));
         }
         catch (Exception ex)
@@ -62,7 +60,6 @@ public class ReportController(Analyzer analyzer) : Controller
     {
         try
         {
-            using var database = Database.Open();
             var jobs = GetJobs(database, null, null);
             var trends = GetTrends(database);
             var agencies = GetAgencies(database);

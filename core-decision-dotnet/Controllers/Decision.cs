@@ -4,9 +4,11 @@ using Serilog;
 namespace Photon.JobSeeker;
 
 [Route("[controller]/[action]")]
-public class DecisionController(Analyzer analyzer) : Controller
+public class DecisionController(Analyzer analyzer, Database database, TrendsCheckpoint trends_checkpoint) : Controller
 {
     private readonly Analyzer analyzer = analyzer;
+    private readonly Database database = database;
+    private readonly TrendsCheckpoint trends_checkpoint = trends_checkpoint;
 
     [HttpPost]
     [RequestSizeLimit(5_000_000)]
@@ -43,7 +45,6 @@ public class DecisionController(Analyzer analyzer) : Controller
     {
         try
         {
-            using var database = Database.Open();
             database.Trend.DeleteExpired(0);
             analyzer.ClearAgencies();
 
@@ -82,7 +83,6 @@ public class DecisionController(Analyzer analyzer) : Controller
     {
         try
         {
-            using var trends_checkpoint = new TrendsCheckpoint(analyzer);
             var result = trends_checkpoint.CheckCurrentTrends();
             return Ok(result);
         }
@@ -100,8 +100,6 @@ public class DecisionController(Analyzer analyzer) : Controller
         {
             if (context.Agency == null) return BadRequest();
             if (!analyzer.Agencies.TryGetValue(context.Agency, out var agency)) return NotFound();
-
-            using var database = Database.Open();
 
             if (context.Running.HasValue)
             {

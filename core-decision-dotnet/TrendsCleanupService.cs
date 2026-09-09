@@ -2,7 +2,7 @@ using Serilog;
 
 namespace Photon.JobSeeker;
 
-class TrendsCleanupService : BackgroundService
+class TrendsCleanupService(IDatabaseFactory database_factory) : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
 
@@ -21,11 +21,11 @@ class TrendsCleanupService : BackgroundService
         }
     }
 
-    private static void Cleanup()
+    private void Cleanup()
     {
         try
         {
-            using var database = Database.Open();
+            using var database = database_factory.Open();
             database.Trend.DeleteExpired();
         }
         catch (Exception ex)
