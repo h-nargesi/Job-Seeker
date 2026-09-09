@@ -30,6 +30,7 @@ namespace Photon.JobSeeker
             LoadAndUpdateCurrentTrend();
 
             database.Trend.DeleteExpired();
+            database.Trend.DeleteExpiredReservations();
 
             AllCurrentTrends = database.Trend.FetchAll()
                                              .ToDictionary(k => (k.AgencyID, k.Type));

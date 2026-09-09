@@ -4,7 +4,9 @@ namespace Photon.JobSeeker
 {
     class TrendBusiness
     {
-        public const int TREND_EXPIRATION_MINUTES = 2;
+        public const int TREND_EXPIRATION_MINUTES = 5;
+        public const int AUTH_EXPIRATION_MINUTES = 10;
+        public const int RESERVATION_LEASE_SECONDS = 30;
 
         private readonly Database database;
 
@@ -64,7 +66,21 @@ namespace Photon.JobSeeker
 
         public void DeleteExpired(double minutes = TREND_EXPIRATION_MINUTES)
         {
-            database.Execute(Q_DELETE_EXPIRED, new { expiration = DateTime.Now.AddMinutes(-minutes) });
+            var auth_minutes = minutes * AUTH_EXPIRATION_MINUTES / TREND_EXPIRATION_MINUTES;
+
+            database.Execute(Q_DELETE_EXPIRED, new { cutoff = DateTime.Now.AddMinutes(-minutes) });
+            database.Execute(Q_DELETE_EXPIRED_AUTH, new { cutoff = DateTime.Now.AddMinutes(-auth_minutes) });
+        }
+
+        public void DeleteExpiredReservations(double seconds = RESERVATION_LEASE_SECONDS)
+        {
+            database.Execute(Q_DELETE_EXPIRED_RESERVATIONS, new { cutoff = DateTime.Now.AddSeconds(-seconds) });
+        }
+
+        public bool Touch(long trendId)
+        {
+            database.Execute(Q_TOUCH, new { trendId, now = DateTime.Now });
+            return database.Changes() == 1;
         }
 
         public long Block(long agency_id, TrendType type)
@@ -128,8 +144,17 @@ ON CONFLICT(AgencyID, Type) DO NOTHING;";
 UPDATE Trend SET State = @state, Type = @type, LastActivity = @lastActivity, Reserved = @reserved
 WHERE TrendID = @trendId";
 
-        private const string Q_DELETE_EXPIRED = @"
-DELETE FROM Trend WHERE DATETIME(LastActivity) <= @expiration";
+        private readonly static string Q_DELETE_EXPIRED = $@"
+DELETE FROM Trend WHERE Reserved = 0 AND State != '{nameof(TrendState.Auth)}' AND DATETIME(LastActivity) <= @cutoff";
+
+        private readonly static string Q_DELETE_EXPIRED_AUTH = $@"
+DELETE FROM Trend WHERE Reserved = 0 AND State = '{nameof(TrendState.Auth)}' AND DATETIME(LastActivity) <= @cutoff";
+
+        private const string Q_DELETE_EXPIRED_RESERVATIONS = @"
+DELETE FROM Trend WHERE Reserved = 1 AND DATETIME(LastActivity) <= @cutoff";
+
+        private const string Q_TOUCH = @"
+UPDATE Trend SET LastActivity = @now WHERE TrendID = @trendId";
 
         private readonly static string Q_DELETE_AGENCY = @$"
 DELETE FROM Trend WHERE AgencyID = @agencyid AND Type = '{nameof(TrendType.Search)}'";

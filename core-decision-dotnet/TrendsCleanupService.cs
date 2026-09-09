@@ -27,6 +27,7 @@ class TrendsCleanupService(IDatabaseFactory database_factory) : BackgroundServic
         {
             using var database = database_factory.Open();
             database.Trend.DeleteExpired();
+            database.Trend.DeleteExpiredReservations();
         }
         catch (Exception ex)
         {

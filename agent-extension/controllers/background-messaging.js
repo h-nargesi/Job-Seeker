@@ -60,4 +60,16 @@ class BackgroundMessaging {
     static async Orders() {
         return BackgroundMessaging.Message({ title: "orders" });
     }
+
+    static async Heartbeat() {
+        return BackgroundMessaging.Message({ title: "heartbeat" });
+    }
+
+    static async OpenTab(url) {
+        return BackgroundMessaging.Message({ title: "open-tab", params: { url } });
+    }
+
+    static async CloseTab() {
+        return BackgroundMessaging.Message({ title: "close-tab" });
+    }
 }

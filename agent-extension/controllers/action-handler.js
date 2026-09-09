@@ -27,7 +27,7 @@ class ActionHandler {
                 ActionHandler.OnGo(command.params);
                 break;
             case "open":
-                ActionHandler.OnOpen(command.params);
+                await BackgroundMessaging.OpenTab(command.params.url);
                 break;
             case "fill":
                 ActionHandler.OnFill(command.object, command.params);
@@ -44,7 +44,7 @@ class ActionHandler {
                 break;
             case "close":
                 if (!dontclose)
-                    ActionHandler.OnClose();
+                    await BackgroundMessaging.CloseTab();
                 break;
             case "reload":
                 ActionHandler.OnReload();
@@ -60,10 +60,6 @@ class ActionHandler {
 
     static OnGo(params) {
         window.location = params.url;
-    }
-
-    static OnOpen(params) {
-        window.open(params.url);
     }
 
     static OnFill(object, params) {
@@ -87,18 +83,13 @@ class ActionHandler {
         location.reload();
     }
 
-    static OnClose() {
-        window.open('', '_self', '');
-        window.close();
-    }
-
     static async OnWait(params) {
         await new Promise(r => setTimeout(r, params.miliseconds));
     }
 
-    static SetCloseTimer() {
+    static SetCloseTimer(ms = 90000) {
         if (ActionHandler.CloseTimer)
             clearTimeout(ActionHandler.CloseTimer);
-        ActionHandler.CloseTimer = setTimeout(ActionHandler.OnClose, 90000);
+        ActionHandler.CloseTimer = setTimeout(BackgroundMessaging.CloseTab, ms);
     }
 }

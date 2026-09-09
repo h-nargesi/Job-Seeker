@@ -6,6 +6,9 @@ namespace Photon.JobSeeker;
 [Route("[controller]/[action]")]
 public class DecisionController(Analyzer analyzer, Database database, TrendsCheckpoint trends_checkpoint) : Controller
 {
+    private const int CLOSE_TIMEOUT_MS = 90_000;
+    private const int AUTH_CLOSE_TIMEOUT_MS = 600_000;
+
     private readonly Analyzer analyzer = analyzer;
     private readonly Database database = database;
     private readonly TrendsCheckpoint trends_checkpoint = trends_checkpoint;
@@ -26,6 +29,7 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
             {
                 trend = result.TrendID,
                 commands = result.Commands,
+                close_timeout_ms = result.State == TrendState.Auth ? AUTH_CLOSE_TIMEOUT_MS : CLOSE_TIMEOUT_MS,
             });
         }
         catch (BadJobRequest bd)
@@ -41,11 +45,34 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
     }
 
     [HttpPost]
+    public IActionResult Heartbeat([FromBody] HeartbeatContext? context)
+    {
+        try
+        {
+            if (context?.Trend != null && database.Trend.Touch(context.Trend.Value))
+            {
+                Log.Debug("Heartbeat touched trend {0}", context.Trend.Value);
+                return Ok(new { trend = context.Trend });
+            }
+
+            Log.Debug("Heartbeat missed trend {0}", context?.Trend);
+
+            return Ok(new { trend = (long?)null });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
+    [HttpPost]
     public IActionResult Reset()
     {
         try
         {
             database.Trend.DeleteExpired(0);
+            database.Trend.DeleteExpiredReservations(0);
             analyzer.ClearAgencies();
 
             return Ok();

@@ -81,6 +81,18 @@ class CoreMessaging {
         return result;
     }
 
+    async Heartbeat(params) {
+        const server_url = await this.CheckServerUrl() + "decision/heartbeat";
+
+        const result = await this.FetchJson(server_url, {
+            method: 'POST',
+            headers: await this.BuildHeaders(),
+            body: JSON.stringify(params)
+        });
+
+        return result;
+    }
+
     async Scopes(reset) {
         try {
             if (reset === true) {
