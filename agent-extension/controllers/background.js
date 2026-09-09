@@ -6,12 +6,17 @@ const messaging = new CoreMessaging();
 const trends = new TrendCollection();
 
 chrome.runtime.onMessage.addListener(
-    function (request, sender) {
+    async function (request, sender) {
         // console.log("AGENT", "Background", request, sender.tab.windowId, sender.tab.id);
+
+        if (!sender.tab) {
+            console.error("AGENT", "Background", "no tab in sender", request);
+            return;
+        }
 
         switch (request.title.toLowerCase()) {
             case "send":
-                request.params["trend"] = trends.get(sender.tab.windowId, sender.tab.id);
+                request.params["trend"] = await trends.get(sender.tab.id);
                 Respond(sender.tab, request.id, messaging.Send(request.params));
                 break;
             case "scopes":
@@ -24,6 +29,10 @@ chrome.runtime.onMessage.addListener(
     }
 );
 
+chrome.tabs.onRemoved.addListener(function (tabId) {
+    trends.remove(tabId);
+});
+
 async function Respond(tab, id, promise) {
     let response;
 
@@ -35,10 +44,9 @@ async function Respond(tab, id, promise) {
     }
 
     if (response && response.error === undefined && response.trend !== undefined) {
-        if (response.trend) {
-            // console.log("AGENT", "Background", tab.windowId, tab.id);
-            trends.set(tab.windowId, tab.id, response.trend);
-        }
+        if (response.trend) await trends.set(tab.id, response.trend);
+        else await trends.remove(tab.id);
+
         response = response.commands;
     }
 

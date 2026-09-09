@@ -52,21 +52,23 @@ namespace Photon.JobSeeker
                     var trend = database.Trend.Get(result.AgencyID.Value, result.State.GetTrendType());
                     if (trend != null)
                     {
+                        string binding;
+                        if (result.TrendID.HasValue)
+                            binding = result.TrendID == trend.TrendID ? string.Empty : "-adopted-stale-id";
+                        else
+                            binding = "-adopted-id-less";
+
                         Log.Debug("Trend (id:{0}{4}) Agency({1}) {2}, {3}",
-                            trend.TrendID, trend.AgencyID, trend.Type, trend.State,
-                            result.TrendID.HasValue ? "" : "-reserved");
+                            trend.TrendID, trend.AgencyID, trend.Type, trend.State, binding);
 
-                        if (result.TrendID == trend.TrendID || !result.TrendID.HasValue && trend.Reserved)
-                        {
-                            trend.LastActivity = DateTime.Now;
-                            trend.State = result.State;
-                            trend.Reserved = false;
-                            database.Trend.UpdateActivity(trend);
-                            database.Commit();
+                        trend.LastActivity = DateTime.Now;
+                        trend.State = result.State;
+                        trend.Reserved = false;
+                        database.Trend.UpdateActivity(trend);
+                        database.Commit();
 
-                            result.TrendID = trend.TrendID;
-                            return;
-                        }
+                        result.TrendID = trend.TrendID;
+                        return;
                     }
 
                     database.Rollback();

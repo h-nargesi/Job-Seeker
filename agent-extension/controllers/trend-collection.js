@@ -2,34 +2,62 @@ console.log("AGENT", "trend-collection");
 
 class TrendCollection {
 
+    static STORAGE_KEY = "tab-trends";
+
     TRENDS = {}
+    ready = null
 
-    get(window, tab) {
-        if (window == undefined || tab == undefined)
-            throw "window or tab are undefined";
-
-        if (this.TRENDS.hasOwnProperty(window)) {
-            const tabs = this.TRENDS[window];
-            if (tabs.hasOwnProperty(tab)) {
-                return tabs[tab];
-            }
-        }
-
-        return null;
+    constructor() {
+        this.ready = this.restore();
     }
 
-    set(window, tab, trend) {
-        if (window == undefined || tab == undefined)
-            throw "window or tab are undefined";
+    async restore() {
+        try {
+            const items = await chrome.storage.session.get(TrendCollection.STORAGE_KEY);
+            const stored = items && items[TrendCollection.STORAGE_KEY];
 
-        let tabs = null;
-
-        if (!this.TRENDS.hasOwnProperty(window)) {
-            this.TRENDS[window] = tabs = {};
-        } else {
-            tabs = this.TRENDS[window];
+            if (stored && typeof stored === "object") {
+                this.TRENDS = stored;
+                console.log("AGENT", "TrendCollection", "restored", stored);
+            }
+        } catch (e) {
+            console.error("AGENT", "TrendCollection", "restore", e);
         }
+    }
 
-        tabs[tab] = trend;
+    async persist() {
+        try {
+            await chrome.storage.session.set({ [TrendCollection.STORAGE_KEY]: this.TRENDS });
+        } catch (e) {
+            console.error("AGENT", "TrendCollection", "persist", e);
+        }
+    }
+
+    async get(tab) {
+        if (tab == undefined) throw "tab is undefined";
+
+        await this.ready;
+
+        return this.TRENDS.hasOwnProperty(tab) ? this.TRENDS[tab] : null;
+    }
+
+    async set(tab, trend) {
+        if (tab == undefined) throw "tab is undefined";
+
+        await this.ready;
+
+        this.TRENDS[tab] = trend;
+        await this.persist();
+    }
+
+    async remove(tab) {
+        if (tab == undefined) throw "tab is undefined";
+
+        await this.ready;
+
+        if (this.TRENDS.hasOwnProperty(tab)) {
+            delete this.TRENDS[tab];
+            await this.persist();
+        }
     }
 }
