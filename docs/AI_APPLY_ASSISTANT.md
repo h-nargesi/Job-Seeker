@@ -29,6 +29,11 @@ The assistant connects outbound only:
   proxy — Phase 0 rule — and the AI station never receives core
   credentials).
 
+Decided (2026-09-10): the assistant is **local-only** — it may carry
+sensitive data, so hosted LLM endpoints are never used by the assistant,
+and remote operation without LAN reachability to the AI station is out of
+scope (no hosted fallback).
+
 ## 2. The decided flow (human-triggered)
 
 ```
@@ -118,7 +123,12 @@ Two learning channels:
 Privacy: rows hold PII, on the user-owned core, plaintext in v1
 (documented); future hardening can reuse the existing AES-GCM
 `CredentialKey` infrastructure. No memory-management dashboard in v1 — API
-CRUD only.
+CRUD only. (Encryption decision deferred to the final phase — 2026-09-10.)
+
+Related (round 2): the ranking stage gets its own human-feedback loop —
+user overrides of AI verdicts recorded and injected into future ranking
+prompts ([`AI_INTEGRATION.md`](AI_INTEGRATION.md) §4.1); whether it shares
+this `apply_memory` table or gets its own is undecided.
 
 ## 5. Personal data: resume text + memory
 
@@ -142,9 +152,10 @@ form.
 | `GET /decision/scopes` | both roles | domain list (the assistant matches narrowly) |
 
 `X-Client` role rules: `assistant` is rejected on `/decision/take`; `search`
-is rejected on `/assistant/*` writes; **absent header = legacy search**
-(current extension versions send none); the search extension will be
-updated to send `X-Client: search`.
+is rejected on `/assistant/*` writes; `worker` (`ai-worker`) is restricted
+to `/ai/*`; **absent header = legacy search** (current extension versions
+send none); the search extension will be updated to send `X-Client: search`
+(timing open — round 2).
 
 ## 7. Out of scope v1
 

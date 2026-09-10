@@ -3,8 +3,8 @@
 > **Status: design proposal — not implemented.** Companion to
 > [`AI_INTEGRATION.md`](AI_INTEGRATION.md) (phase 3). Records the design for
 > LLM-driven, per-job resume customization, including the decided delivery
-> step (§6): the tailored resume is printed manually from the browser. No AI
-> code exists yet.
+> step (§6): the tailored resume is printed manually from the browser, and
+> the decided selection-only summary (§3). No AI code exists yet.
 
 ## 1. How the resume works today (the part that matters)
 
@@ -26,6 +26,12 @@ possible resume variant, and the delivered resume is produced by pruning it:
 So customization today = **selection over a fixed superset**, never text
 generation. That is exactly the hook the LLM plugs into.
 
+Decided (2026-09-10): this mechanism does not change. The AI delta reuses
+the same `ResumeContext` structure in `Job.AiOptions` (a second
+ResumeContext — no new inventory table), the view resolves
+`AiOptions ?? Options`, and the block inventory for the prompt is derived
+from the template automatically at runtime.
+
 ## 2. The pattern: the LLM produces a ResumeContext *delta*, not HTML
 
 Do not put the model on the raw template (a large single file with inline
@@ -35,18 +41,17 @@ available blocks, and emits a small, reviewable JSON delta:
 
 ```
 job description (plain text)
-+ block inventory (element ids + key-* classes)
++ block inventory (auto-derived from the template)
 + current ResumeContext
 + candidate profile (fixed system prompt)
                 ▼  Qwen3, JSON-schema-constrained
 {
-  "keys":        ["JAVA", "SQL"],
-  "notIncluded": ["#system-group-total", ".key-front-end",
-                   "#web-sites li:nth-child(2)"],
-  "length":      2,
-  "summary":     "Backend-focused Java developer with 14 years ...
-                  (rewritten to mirror the JD's vocabulary)",
-  "jobTitle":    "Senior Java Backend Developer"
+  "keys":         ["JAVA", "SQL"],
+  "notIncluded":  ["#system-group-total", ".key-front-end",
+                    "#web-sites li:nth-child(2)"],
+  "length":       2,
+  "summaryOn":    ["java-backend", "14-years", "distributed"],
+  "titleVariant": "java-backend"
 }
 ```
 
@@ -76,24 +81,24 @@ Why this beats HTML editing:
 | `INPUT_DATA` | Numeric overrides applied to elements carrying the matching class (e.g. years of experience) |
 | `Elements` | Header items (phone, location, image, footer) |
 
-## 3. The only free-text slots worth generating
+## 3. No generated text — the summary becomes segmented
 
-Structure should stay deterministic; two slots are legitimately free text:
+Decided (2026-09-10): the model never writes free text. The two former
+free-text slots become selection problems:
 
-- **Summary** — currently a hardcoded paragraph that always leads with
-  ".NET Core, Angular, SQL Server", which is the wrong emphasis for a Java
-  role. The template needs a one-line change to render a
-  `Model.Summary` override. Hard constraint: the generated summary may only
-  name stacks enabled in the delta's `keys`.
-- **JobTitle** — `EvaluateEligibility` currently copies the raw
-  `job.Title` ("Senior Java Developer (m/f/d) – Hybrid Berlin!"). The model
-  normalizes it to a clean headline.
+- **Summary** — becomes a multi-variant segmented paragraph: pre-written,
+  `key-*`-tagged sentences the model (or the user) turns on/off, exactly
+  like blocks. The hardcoded ".NET Core, Angular, SQL Server" lead
+  disappears behind variants aligned with the enabled `keys`. The template
+  renders the enabled segments from the ResumeContext.
+- **JobTitle** — same treatment intended (fixed headline variants instead of
+  copying the raw `job.Title`); final call open (round 2).
 
 ## 4. Guardrails (non-negotiable)
 
-1. **Selection only.** The model chooses among pre-written blocks and rewrites
-   the two free-text slots. It never adds experience entries, employers,
-   dates, or metrics.
+1. **Selection only.** The model chooses among pre-written blocks and
+   summary/title variants. It never writes free text, and never adds
+   experience entries, employers, dates, or metrics.
 2. **Human in the loop.** The delta is previewed on the dashboard and must be
    approved before a job moves to `Applied`.
 3. **Versioned and reversible.** `Job.AiOptions` is stored separately from
@@ -119,13 +124,12 @@ and the template's own show/hide logic — so treat it as a last resort.
 Job (State = Attention)
    │
    ▼
-background AI worker (see AI_INTEGRATION.md §1)
+background AI worker (see AI_INTEGRATION.md §2.1)
     prompt: JD + block inventory + profile
-    (apply-stage jobs are priority-claimed so the delta
-     arrives within seconds — AI_INTEGRATION.md §1, §2.1)
+    (produced during manual ai-worker runs)
    │
    ▼
-delta JSON  (keys / removals / summary / title)
+delta JSON  (keys / removals / summary segments / title variant)
    │
    ▼
 Job.AiOptions  (new column; Options kept as fallback)
@@ -140,6 +144,11 @@ resume view renders AiOptions ?? Options   →   /job/resume?jobid=...
 user prints from the browser (Brave print dialog) — @media print CSS is in the template
 ```
 
+Open (round 2): how AI deltas and human edits coexist
+(`ResumeContext.Version` interplay), and whether `jobTitle` gets fixed
+variants like the summary. `Applied` remains a manual user action;
+phase-5 integration is revisited in the final phase.
+
 ### Delivery (decided)
 
 The CloudConvert HTML→PDF path (`wwwroot/scripts/resume-pdf.js`) is retired —
@@ -147,4 +156,4 @@ its API key was removed and the service is no longer used. The print surface
 is `/job/resume` in any browser: the template's `@media print` rules make the
 served page print-ready, so printing to paper/PDF is a manual browser step.
 No server-side PDF conversion and no new `print` browser command are planned
-(see the decision log in [`AI_INTEGRATION.md`](AI_INTEGRATION.md) §7).
+(see the decision log in [`AI_INTEGRATION.md`](AI_INTEGRATION.md) §8).

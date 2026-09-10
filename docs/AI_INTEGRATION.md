@@ -2,8 +2,8 @@
 
 > **Status: design proposal + recorded decisions — not implemented.** This
 > document consolidates everything about using AI in this system: the decided
-> deployment topology (§2), the agreed design for adding an LLM (locally
-> hosted by default: llama.cpp `llama-server` with a GGUF model such as
+> deployment topology (§2), the agreed design for adding an LLM (local-only:
+> llama.cpp `llama-server` with a GGUF model such as
 > `Qwen3-30B-A3B-Q5_K_M`), the integration points by priority, and the
 > decisions taken so far (§8). No AI code exists yet; nothing here describes
 > current behavior.
@@ -30,21 +30,17 @@ The regex gate stays first and cheap — it rejects most jobs and costs nothing.
 The LLM only sees the survivors. This alone cuts the number of model calls by
 roughly an order of magnitude versus scoring every scraped job.
 
-The queue lives on the core (DB-backed claim/lease — §2); the consumer is
+The queue lives on the core (DB-backed claim — §2); the consumer is
 `ai-worker`, a separate program on the AI station. The in-core precedent for
 a one-by-one background pass with progress tracking is
 `JobEligibilityHelper.RunRevaluateProcess`.
 
-**One bounded exception — the apply stage.** When the loop is parked on a
-single job page and the next step is producing the tailored resume for that
-one job, a delay of a few seconds paces nothing: no scanning loop is waiting,
-and a human reviews the result anyway. Because the core cannot reach the AI
-station (§2), the earlier "synchronous LLM call" mechanism becomes a
-**priority claim**: apply-stage jobs jump the queue and the worker polls at
-its shortest interval while any are pending — near-synchronous, same
-guarantees. The golden rule protects search-result processing (dozens of
-pages back to back); it does not forbid a deliberate pause at the point of
-delivery.
+**No exception (decided 2026-09-10).** An earlier draft allowed a
+"priority claim" so an apply-stage job's resume delta would arrive within
+seconds. That mechanism is removed: the core never tracks apply stage (the
+human applies manually — see §8), and `ai-worker` runs manually (§2.1), so
+deltas are produced before a human ever reviews a job. Nothing in the
+browser loop ever waits on the model.
 
 ## 2. Deployment topology (Phase 0 — decided)
 
@@ -87,25 +83,29 @@ Four stations, three of them outbound-only (the fourth is planned):
   `llama-server`. Never the search extension and the assistant in one
   browser — the search extension matches `*://*/*` and would fight over the
   apply tabs.
+- **Clients & roles.** Four clients reach the core: the search extension
+  (`X-Client: search`), the dashboard user (existing login/API-key — no
+  role header), `ai-worker` (`X-Client: worker`, restricted to `/ai/*`),
+  and the assistant (`X-Client: assistant`). An absent header is treated as
+  legacy search.
 
-### 2.1 The ai-worker loop
+### 2.1 The ai-worker run — manual, no polling
 
-```
-ai-worker (AI station)                      core (job-seeker)
-────────────────────────────                ────────────────────────────────
-loop:                                       jobs pending verdict, apply-stage
-  POST /ai/claim   ──────────────────────►  first, oldest first; response
-  (X-API-Key)                                carries the job text; marks the
-                                             job in-flight with a lease
-  run local llama-server (localhost)
-  POST /ai/verdict ──────────────────────►  validates, writes verdict /
-  (X-API-Key, job id, JSON)                 extraction / delta, clears lease
-  sleep: seconds while apply-stage
-  jobs pending, minutes otherwise           lease expiry re-queues the job
-```
+Decided (2026-09-10): `ai-worker` has **no polling loop and no scheduler** —
+the user runs it manually whenever unranked jobs should be processed. One
+run:
 
-- Claim/lease (not a plain list read) so an AI-station crash or network drop
-  re-queues work automatically; verdict posts are idempotent by job id.
+1. Startup sweep: reset stale in-flight jobs back to pending (crash
+   recovery). With a single manually-run consumer there is nothing else to
+   protect against, so the timed lease is dropped *(pending round-2
+   confirmation)*.
+2. `POST /ai/claim` (`X-Client: worker`) repeatedly, oldest first: each
+   response carries one job's text and marks it in-flight; the worker stops
+   when the core answers "empty".
+3. For each job: run the local `llama-server` call, then
+   `POST /ai/verdict` (idempotent by job id). The core validates, writes the
+   verdict, and runs the stage-2 purge (§6).
+
 - The worker **never touches SQLite directly** — only the two endpoints.
 - **Rejected alternative: tunnels** (Tailscale, cloudflared, SSH reverse)
   would restore core→AI reachability and allow an in-core worker calling
@@ -139,7 +139,10 @@ loop:                                       jobs pending verdict, apply-stage
   - *Local:* `llama-server`, Ollama, LM Studio.
   - *Hosted:* OpenRouter, Groq, DeepSeek, OpenAI, Anthropic, Gemini.
   - Hosted endpoints need an `"ApiKey"` entry in the `Llm` config — supplied
-    via environment variables / secrets, never committed.
+    via environment variables / secrets, never committed. **Policy
+    (2026-09-10): local-only** — the lanes carry the resume (PII), so hosted
+    endpoints are not used; they stay possible by config only if this
+    policy ever changes (§8).
 
 ## 4. Integration points, by priority
 
@@ -147,25 +150,33 @@ At a glance (details in the subsections below):
 
 | # | Point | Lane | Impact | Risk |
 |---|-------|------|--------|------|
-| 4.1 | Semantic verdict / re-ranking | background | **High** — fixes the sharpest weakness: lexical scoring treats one ".NET" mention like a .NET-centric role | Minimal — touches only `Log`; no schema, no loop changes |
+| 4.1 | Semantic verdict / re-ranking | background | **High** — fixes the sharpest weakness: lexical scoring treats one ".NET" mention like a .NET-centric role; near-misses get a second chance | Low–medium — additive verdict columns + careful `Q_INDEX` v2 |
 | 4.2 | Structured extraction | background | **High** — replaces guesswork heuristics (`EvaluateSalaryScore`); enables dashboard filters on salary/work-model reality | Low — additive columns only; `Q_INDEX` untouched |
-| 4.3 | Resume tailoring delta | background + priority claim at apply (§1) | **Highest end value** — per-job customization with no fabrication risk (selection only) | Medium — new `Job.AiOptions` column + human review gate |
+| 4.3 | Resume tailoring delta | background (manual worker runs) | **Highest end value** — per-job customization with no fabrication risk (selection only) | Medium — new `Job.AiOptions` column + human review gate |
 | 4.4 | Cross-platform deduplication | background | **Medium** — one posting listed on two agencies stops being scored twice | Low |
-| 4.5 | Daily digest | overnight batch | **Low–medium** — closes the notification gap with no external service | Low — read-only over existing data |
+| 4.5 | Dashboard digest stats | dashboard | **Low–medium** — closes the notification gap with no external service | Low — read-only over existing data |
 
-### 4.1 Semantic verdict / re-ranking on `Attention` jobs
+### 4.1 Semantic verdict / re-ranking on `Attention` + near-miss jobs
 
 Today `EvaluateEligibility` is exact regex matching: a job that mentions
-".NET" once scores like a genuinely .NET-centric role. The LLM judges only
-jobs that already passed the regex gate (`State = Attention`):
+".NET" once scores like a genuinely .NET-centric role. The LLM judges two
+bands: jobs that passed the regex gate (`State = Attention`) and near-misses
+(score 50–99) given a second chance (§6):
 
 > Is this genuinely a senior full-stack role? Real seniority? Direct hire or
 > staffing agency? Is relocation supported?
 
-Output is a small JSON verdict — `{ relevance: 0-100, seniority, verdict,
-reason }` — with `reason` appended to `job.Log` (already markdown-rendered on
-the dashboard). Highest value, lowest risk: no schema changes, no loop
-changes.
+The prompt carries the job description **and the candidate's resume text**,
+so the verdict ranks against the actual background. Output is a small JSON
+verdict — `{ relevance: 0-100, seniority, verdict, reason }` — stored in
+**separate additive columns** (e.g. `AiScore`, verdict, reason); the regex
+`Score` is never overwritten, and `reason` is also appended to `job.Log`
+(markdown-rendered on the dashboard).
+
+Decided (2026-09-10): the verdict is **effective** — `AiScore` participates
+in ranking. This deliberately overrides the earlier "don't touch `Q_INDEX`"
+note: the ranking query must gain a careful v2 (enum-name literals, the
+`Relocation` marker — see §4.2). Exact formula open (round 2).
 
 ### 4.2 Structured extraction
 
@@ -184,10 +195,11 @@ parseable JSON:
 Stored as **new additive columns** on `Job`, enabling dashboard filters by
 work model / salary reality instead of approximate score.
 
-> **Do not touch `JobBusiness.Q_INDEX`.** The ranking SQL silently depends on
-> enum-name string literals and the `Relocation` log marker (see
-> "Things that bite" in [`AGENTS.md`](../AGENTS.md)). Additive columns are
-> safe; edits to the query are not.
+> **`JobBusiness.Q_INDEX` is fragile — edit only as a deliberate v2.** The
+> ranking SQL silently depends on enum-name string literals and the
+> `Relocation` log marker (see "Things that bite" in
+> [`AGENTS.md`](../AGENTS.md)). Phase 1's ranking integration (§4.1) is the
+> one sanctioned reason to touch it; additive columns remain safe.
 
 ### 4.3 Resume tailoring (decided end-to-end flow)
 
@@ -198,9 +210,8 @@ The strongest free-text use case — see the companion doc
    and scores it. The existing regex path already builds the initial
    `ResumeContext` (`Job.Options`) from the JD's keywords.
 2. The LLM refines that context into a reviewable delta stored in
-   `Job.AiOptions`. Bulk scanning uses the background lane; at the apply
-   stage the job is priority-claimed so the delta arrives within seconds
-   (§1).
+   `Job.AiOptions` — produced during manual `ai-worker` runs (§2.1), before
+   a human ever reviews the job.
 3. The user opens `/job/resume?jobid=...` (or downloads the rendered HTML via
    `/job/resume64`) and **prints from the browser** (Brave). The view already
    carries `@media print` CSS, so it is print-ready as served. No server-side
@@ -209,15 +220,18 @@ The strongest free-text use case — see the companion doc
 ### 4.4 Cross-platform deduplication
 
 A cheap prefilter (same normalized title + company across agencies) produces
-candidate pairs; the LLM judges whether two postings are the same job; the
-dashboard merges them. Closes the known gap that one posting listed on both
-Indeed and LinkedIn gets scored twice.
+candidate pairs; the LLM judges whether two postings are the same job.
+Decided (2026-09-10): the result is **advisory** — a dashboard warning the
+user can clear; on confirmation the second posting moves to a new
+`Duplicated` state (excluded from ranking). Closes the known gap that one
+posting listed on both Indeed and LinkedIn gets scored twice.
 
-### 4.5 Daily digest / notification
+### 4.5 Daily digest / dashboard stats
 
-An overnight batch summary ("24 new jobs today, 3 strong matches: ...") served
-on the dashboard. Closes the notification gap with no external service — and
-matches the "leave the system running" usage pattern.
+Decided (2026-09-10): the digest is **dashboard-only statistics** — no
+external notification channel. The dashboard reflects counts of new jobs,
+good jobs (found by the regex gate) and strong jobs (found by the AI
+verdict), matching the "leave the system running" usage pattern.
 
 ## 5. Where NOT to use the LLM
 
@@ -238,32 +252,36 @@ matches the "leave the system running" usage pattern.
   only the job description differs per call.
 - **Structured output.** Use `response_format` (JSON schema / GBNF grammar)
   so verdicts and extractions always parse. Never regex-scrape model output.
-- **Context length.** Cap job content sent to the model (~8–12k tokens) to
-  keep inference fast; truncate from the top, requirements live early.
-- **Purge interaction.** `EvaluateJobEligibility` purges `Html`/`Content`
-  when a job is rejected or scores below `MinEligibilityScore` (100). If the
-  LLM should give near-misses (score 50–99) a second chance, either run the
-  LLM before the purge decision or retain content for that band. The
-  `/ai/claim` response must carry the job text, so content retention for
-  AI-pending jobs is a hard prerequisite either way.
+- **Two-stage purge (decided 2026-09-10).** Stage 1: jobs scoring
+  **below 50** purge immediately (today's behavior, re-thresholded).
+  Stage 2: the AI queue covers **Attention + near-miss (50–99)**; their
+  `Html`/`Content` is retained until the verdict lands, and `/ai/verdict`
+  processing purges the jobs whose AI rank is inadequate. A per-job AI
+  status (pending / processed) makes retention and stage-2 purge decidable —
+  exact encoding open (round 2). `/ai/claim` must carry the job text and,
+  per the ranking decision (§4.1), the candidate's resume text.
+- **Context length.** Configurable cap, **16k tokens to start** (32k
+  acceptable), tuned by trial and error; truncate from the top, requirements
+  live early. The ranking prompt also carries the resume text (§4.1).
 
 ## 7. Phasing
 
 | Phase | Deliverable | Risk |
 |-------|-------------|------|
-| 0 | Topology (§2): `ai-worker` skeleton + `/ai/claim` & `/ai/verdict` with claim/lease | Small new console project; core change is two authenticated endpoints |
-| 1 | LLM verdict + reason on `Attention` jobs | Minimal: touches only `Log` |
-| 2 | Structured extraction columns + dashboard filters | Additive schema only; `Q_INDEX` untouched |
+| 0 | Topology (§2) — documentation only | Decided 2026-09-10: no standalone deliverable |
+| 1 | Verdict + ranking: `ai-worker` + `/ai/claim` & `/ai/verdict` (built here) + additive verdict columns + `Q_INDEX` v2 | Worker infra absorbed into phase 1; the ranking edit is the delicate part |
+| 2 | Structured extraction columns + dashboard filters | Additive schema only |
 | 3 | Resume tailoring delta (`Job.AiOptions`) | Human review gate before `Applied` |
 | 4 | Cross-platform dedup + daily digest | Read-only over existing data |
 | 5 | Apply assistant on a personal terminal ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)) | New extension + `/assistant/*` endpoints; the human presses every submit |
 
-Best ratio of value to risk is **phase 1**: it corrects the most precise
-weakness of the current pipeline — lexical regex scoring — with the smallest
-possible code change. The highest end value sits in **phase 3**: the delta
-pattern means the model can only *select* among pre-written blocks, which on a
-factual document is the line between tailoring and fabrication. Phase 0 is the
-enabling infrastructure both sit on.
+Best ratio of value to risk is still **phase 1**: it corrects the most
+precise weakness of the current pipeline — lexical regex scoring — and now
+also carries the worker infrastructure and the `Q_INDEX` v2 edit. The
+highest end value sits in **phase 3**: the delta pattern means the model can
+only *select* among pre-written blocks (now including the summary — see
+[`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) §3), which on a factual
+document is the line between tailoring and fabrication.
 
 ## 8. Decision log
 
@@ -278,3 +296,16 @@ enabling infrastructure both sit on.
 | 2026-09 | **Apply-stage mechanism amended** (§1): since the core cannot call the AI station, the apply-stage "synchronous LLM call" becomes a **priority claim** — apply-stage jobs jump the queue and `ai-worker` polls at its shortest interval while any are pending. Principle unchanged (a deliberate pause at delivery is acceptable); mechanism now matches the topology. |
 | 2026-09 | **Apply assistant planned (phase 5)** ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)): a fourth station — the personal terminal — runs a second MV3 extension that fills apply forms through an agentic tool loop (`memory_query` / `memory_write` / `fill`) against the AI station's `llama-server` reached over the LAN; the learning memory lives on the core behind new `/assistant/*` endpoints. Apply stays human-triggered (no new `JobState` in v1) and the human presses every submit. **Never both extensions in one browser** — the search extension matches `*://*/*` and would fight over the apply tabs. |
 | 2026-09 | **Assistant guardrails and data sources** ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) §3–§5): the model sees a form inventory only (never raw HTML, never emits selectors); there is no submit tool; core keys stay in the extension; personal data comes from the job's resume text in the Fill prompt plus memory — deliberately no structured profile table; submit-time diffs and chat tips are the two learning channels. An `X-Client` role header distinguishes the two extensions (absent header = legacy search). |
+| 2026-09-10 | **Phase 0 is documentation-only; implementation starts at phase 1**, which absorbs `ai-worker` + `/ai/claim` + `/ai/verdict` (no separate milestone). |
+| 2026-09-10 | **Four clients, three role headers.** `search`, `worker` (new — `ai-worker`, restricted to `/ai/*`), `assistant`; the dashboard user authenticates via the existing login/API-key and sends no role header. Absent header = legacy search. |
+| 2026-09-10 | **`ai-worker` runs manually; no polling loop** (§2.1). The timed lease is dropped in favor of a startup sweep that resets stale in-flight jobs *(pending round-2 confirmation)*. |
+| 2026-09-10 | **Apply-stage priority claim removed** (§1). The core never tracks apply stage: the user opens `job-detail`, applies on the external site, and presses the manual Apply button (`server-operations.js` `apply(jobid)`). No exception to the golden rule remains. |
+| 2026-09-10 | **Two-stage purge** (§6). Score < 50 purges immediately; Attention + near-miss (50–99) keep `Html`/`Content` until the verdict; `/ai/verdict` processing purges inadequate AI ranks. Per-job AI-status encoding open (round 2). |
+| 2026-09-10 | **Verdict is effective** (§4.1). `AiScore` lives in separate additive columns (regex `Score` untouched) and participates in ranking — a deliberate, careful `Q_INDEX` v2 edit; the earlier "don't touch" note is overridden. Exact formula open (round 2). |
+| 2026-09-10 | **Local-only across all lanes** (§3). The resume is PII and the full resume text is sent for ranking too, so hosted LLM endpoints are unused; the provider-agnostic client remains for the future. |
+| 2026-09-10 | **Quality by trial and error; feedback loop agreed in principle.** No golden set. User overrides of AI rankings will be recorded and injected into future ranking prompts (design round 2). |
+| 2026-09-10 | **Context cap 16k tokens, configurable** (32k acceptable); tuned by trial and error. |
+| 2026-09-10 | **No backfill.** Old jobs are expired; reprocessing is manual: change the job's state, run `ai-worker`. |
+| 2026-09-10 | **Duplicates are advisory** (§4.4). Dashboard warning, user-clearable; on confirmation the second posting moves to a new `Duplicated` state, which ranking must exclude. Mechanics open (round 2). |
+| 2026-09-10 | **Digest is dashboard-only statistics** (§4.5) — counts of new jobs, good jobs (regex) and strong jobs (AI verdict); no external notification channel. |
+| 2026-09-10 | **Resume tailoring is selection-only end to end** (§4.3 / [`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) §3). The summary becomes segmented pre-written variants; free-text summary/jobTitle generation is dropped. The user's text-box selection mechanism and `AiOptions ?? Options` fallback are unchanged. |
