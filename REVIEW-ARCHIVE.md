@@ -29,6 +29,8 @@
 > موارد ۲.۱۹ (همزمانی داخلی Orders×Take — خواندن-تصمیم-نوشتن غیراتمیک) و ۲.۲۱
 > (مرتب‌سازی لغوی‌نگارشی `Tries` در `Q_FETCH_FIRST`) در ۱۴۰۵/۰۶/۲۰ (2026-09-11)
 > رفع و به همین فایل اضافه شدند.
+> مورد ۲.۲۰ (قفل per-agency روی `AnalyzeContent`) در ۱۴۰۵/۰۶/۲۰ (2026-09-11)
+> رفع و به همین فایل اضافه شد.
 
 ---
 
@@ -310,6 +312,28 @@ trend جاری، حذف trendها و رزروهای منقضی، `FetchAll`، ب
 `GetFirstJobTests` (ترتیب، رگرسیون ردیف‌های دو رقمی ۹/۱۰/۱۳، سقف دقیق ۴ و ۱۴،
 ریست Stepstone) + اجرای مهاجرت روی کپیِ DB زنده (۱۹۳ ردیف backfill، صفر
 ناهمخوانی شمارش) — تأیید نهایی با نخستین اجرای زنده.
+
+### ۲.۲۰ (مرور ۱۴۰۵/۰۶/۱۸) وضعیت mutable سینگلتون Analyzer بدون همگام‌سازی
+
+چند request همزمان (تب‌های موازی آژانس + poller داشبورد) روی یک شیء Agency جهش
+می‌کردند؛ تنها قفل موجود static و فقط دور `LoadSettings` بود. نویسنده‌های
+شناسایی‌شده: `AnalyzeContent` (پیشروی `CurrentMethodIndex`، خاموش‌کردن
+`ActiveSeeking`، `SaveState`)، `DecisionController.Running` (جهش مستقیم از
+داشبورد) و `LoadSettings` (تعویض شیء تنظیمات). نتیجه: پرش method جستجو،
+گم‌شدن flip خاموش‌کردن `ActiveSeeking` (حلقهٔ زامبیِ بازکردن تب) و torn
+`SaveState` (last-writer-wins روی سطر JSON تنظیمات).
+
+**رفع (۱۴۰۵/۰۶/۲۰ — 2026-09-11):** قفل instance-level داخل Agency دور کل
+`AnalyzeContent` + متد جدید `ApplyRunning` برای endpoint `Running` + قفل instance
+در `LoadSettings` (جای قفل static)؛ آزمون رگرسیون همزمانی
+`AgencyConcurrencyTests`؛ تأیید نهایی با نخستین اجرای زنده.
+**تأیید:** `core-decision-dotnet/Analyze/Agency.cs` (`agency_lock`، `AnalyzeContent`،
+`ApplyRunning`، `LoadSettings`)، `core-decision-dotnet/Controllers/Decision.cs`
+(endpoint `Running` ← `ApplyRunning`)، قاعدهٔ ترتیب قفل‌ها در
+`docs/ARCHITECTURE.md` (بخش Agency)؛ تست‌های
+`core-decision-dotnet.Tests/AgencyConcurrencyTests.cs` (۵۰ تحلیل موازی → دقیقاً
+۵۰ پیشروی؛ ApplyRunning + ۵ تحلیل موازی → خطی‌شدن؛ تست بدون قفل قرمز می‌شود)؛
+`dotnet build` بدون هشدار جدید، کل مجموعه ۸۹ تست سبز.
 
 ---
 

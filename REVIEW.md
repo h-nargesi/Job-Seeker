@@ -49,17 +49,9 @@
 > چک‌پوینت) و ۲.۲۱ (مرتب‌سازی/سقف عددی با ستون `Attempts` + مهاجرت backfill در
 > `installation.sh`) در ۱۴۰۵/۰۶/۲۰ (2026-09-11) رفع و به
 > [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شدند — تأیید نهایی با نخستین اجرای زنده.
-> مورد باز این بخش: ۲.۲۰ (قفل per-agency روی `AnalyzeContent`).
-
-### ۲.۲۰ وضعیت mutable سینگلتون Analyzer بدون همگام‌سازی
-
-**فایل:** `Analyzer` (Singleton) + `Agency.AnalyzeContent` (پیشروی `CurrentMethodIndex`، خاموش‌کردن `ActiveSeeking`، `SaveState`)
-
-چند request همزمان (تب‌های موازی آژانس‌ها + Orders) روی یک شیء Agency جهش می‌کنند؛
-قفل موجود فقط دور `LoadSettings` است. نتیجه: پرش دو مرحله‌ای method جستجو یا
-گم‌شدن flip خاموش‌کردن `ActiveSeeking` (last-writer-wins در `SaveState`).
-**اقدام:** قفل per-agency (مثلاً `SemaphoreSlim(1,1)` به‌ازای آژانس) دور
-`AnalyzeContent`؛ یا صف‌کردن تحلیل هر آژانس.
+> مورد ۲.۲۰ (قفل per-agency روی `AnalyzeContent`) در ۱۴۰۵/۰۶/۲۰
+> (2026-09-11) رفع و به [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شد —
+> تأیید نهایی با نخستین اجرای زنده. مورد باز این بخش باقی نمانده است.
 
 ---
 
@@ -180,6 +172,32 @@ Stepstone آلمانی است؛ فرمت `50.000,00` با فرض آمریکای�
 و الگوی «بستن تب → شروع دوباره از لاگین» دقیقاً الگوی anti-bot سایت‌ها را تحریک می‌کند.
 **اقدام:** تأخیر تصادفی کوتاه بین recheckها + سقف نرخ per-agency (فاصلهٔ حداقلی
 بین دو `Take` یک آژانس).
+
+### ۳.۲۶ نقض تصمیم استقلال پیشخان از حلقهٔ جستجو
+
+**فایل:** `Controllers/Decision.cs` (Running/Reset)، `Controllers/Job.cs` (Setting)، `agent-extension/controllers/check-page.js`
+
+تصمیم کاربر: کل فرایند جستجو (افزونهٔ جستجوگر + هستهٔ تصمیم) باید کاملاً از
+پیشخان جدا و مستقل باشد؛ اجرا نشده و در هر دو جهت نقض شده است:
+
+۱. **پیشخان به وضعیت زندهٔ حلقه می‌نویسد:** `POST /decision/running` تنها از
+`wwwroot/scripts/server-operations.js` صدا می‌خورَد و مستقیم روی شیء سینگلتون
+آژانس جهش می‌کند (`CurrentMethodIndex`، بیت `ActiveSeeking`، `ClearSearching`،
+`SaveState`)؛ `POST /decision/reset` روندها را می‌کشد و با `ClearAgencies`
+شیءهای زنده را زیر تحلیل‌های در جریان تعویض می‌کند؛ `POST /job/setting` با
+`reload` همان‌جا سینگلتون‌ها را بازبارگذاری می‌کند و کنسول SQL همان endpoint
+نوشتن خام روی سطر تنظیمات را ممکن می‌کند.
+۲. **حلقه به پیشخان وابسته است:** پمپ سفارش‌ها (`CheckNewOrders` — فعال‌ساز
+روندهای بی‌کار مثل «تب جستجو را باز کن») فقط روی تب پیشخان اجرا می‌شود
+(`check-page.js:25-52`، دکمهٔ `stop-start-ordering`، تایمر ۲۰ ثانیه)؛ بدون تب
+پیشخان جستجو می‌ایستد.
+
+**اقدام:** اصل نویسندهٔ واحد (single-writer): مالکیت وضعیت آژانس فقط با حلقهٔ
+تصمیم (take/orders/checkpoint)؛ نیت پیشخان از طریق DB در نقطهٔ امن اعمال شود
+(چک‌پوینتِ تراکنشیِ موجود جای طبیعی است؛ جهت لانه‌شدن قفل‌ها:
+`checkpoint_lock` → قفل آژانس)؛ انتقال پمپ سفارش‌ها به service worker
+پس‌زمینهٔ افزونه (`chrome.alarms` به‌دلیل خواب MV3، هم‌نوا با ۲.۱۷). پس از
+استقرار، پوشش قفلی ۲.۲۰ برای endpoint `Running` حذف‌شدنی است.
 
 ---
 

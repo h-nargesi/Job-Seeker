@@ -128,18 +128,7 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
             if (context.Agency == null) return BadRequest();
             if (!analyzer.Agencies.TryGetValue(context.Agency, out var agency)) return NotFound();
 
-            if (context.Running.HasValue)
-            {
-                agency.CurrentMethodIndex = context.Running.Value;
-                agency.Status |= AgencyStatus.ActiveSeeking;
-                database.Trend.ClearSearching(agency.ID);
-            }
-            else
-            {
-                agency.Status &= ~AgencyStatus.ActiveSeeking;
-            }
-
-            database.Agency.SaveState(agency);
+            agency.ApplyRunning(context.Running, database);
             return Ok();
         }
         catch (Exception ex)

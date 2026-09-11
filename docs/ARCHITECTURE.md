@@ -98,6 +98,14 @@ class under `Analyze/<Platform>/`. Key members:
 `AnalyzeContent(url, content)` walks its pages in `Order`; the **first** page
 whose `IssueCommand` returns non-null wins and its commands become the result.
 
+Concurrency: `AnalyzeContent`, `ApplyRunning` and `LoadSettings` run under a
+per-instance lock (`agency_lock`) — analyses of one agency are serialized while
+different agencies stay parallel. Lock-order rule: the agency lock is
+leaf-level; never hold it while entering `TrendsCheckpoint.CheckCurrentTrends`.
+The only allowed nesting is Analyzer-wide lock → agency lock (the
+`ReloadSettings` path); future checkpoint-driven intent application (REVIEW
+3.26) must keep the direction `checkpoint_lock` → agency lock.
+
 ### Pages (`Analyze/Pages/`)
 
 Abstract roles, each with an `Order` (lower = checked first):

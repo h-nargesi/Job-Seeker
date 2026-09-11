@@ -7,7 +7,7 @@ namespace Photon.JobSeeker;
 
 public abstract class Agency
 {
-    private static readonly object @lock = new();
+    private readonly object agency_lock = new();
 
     private AgencySetting settings = new();
 
@@ -69,43 +69,65 @@ public abstract class Agency
 
     public Result AnalyzeContent(string url, string content)
     {
-        Log.Information("Agency ({0}): AnalyzeContent -running={1}", Name, CurrentMethodIndex);
-
-        foreach (var page in Pages)
+        lock (agency_lock)
         {
-            var commands = page.IssueCommand(url, content);
+            Log.Information("Agency ({0}): AnalyzeContent -running={1}", Name, CurrentMethodIndex);
 
-            if (commands != null)
+            foreach (var page in Pages)
             {
-                var trend_state = page.TrendState;
+                var commands = page.IssueCommand(url, content);
 
-                if (page.TrendState == TrendState.Seeking && commands.Length == 0)
+                if (commands != null)
                 {
-                    if (CurrentMethodIndex + 1 < settings.Length)
+                    var trend_state = page.TrendState;
+
+                    if (page.TrendState == TrendState.Seeking && commands.Length == 0)
                     {
-                        CurrentMethodIndex += 1;
-                        commands = [Command.Go(SearchLink)];
-                    }
-                    else
-                    {
-                        CurrentMethodIndex = 0;
-                        trend_state = TrendState.Finished;
-                        Status &= ~AgencyStatus.ActiveSeeking;
+                        if (CurrentMethodIndex + 1 < settings.Length)
+                        {
+                            CurrentMethodIndex += 1;
+                            commands = [Command.Go(SearchLink)];
+                        }
+                        else
+                        {
+                            CurrentMethodIndex = 0;
+                            trend_state = TrendState.Finished;
+                            Status &= ~AgencyStatus.ActiveSeeking;
+                        }
+
+                        using var database = DatabaseFactory.Open();
+                        database.Agency.SaveState(this);
                     }
 
-                    using var database = DatabaseFactory.Open();
-                    database.Agency.SaveState(this);
+                    Log.Information("Page checked: {0}, {1}", page.GetType().Name, trend_state);
+                    Log.Debug("Page commands: {0}", commands.StringJoin());
+
+                    return new Result { State = trend_state, Commands = commands };
                 }
-
-                Log.Information("Page checked: {0}, {1}", page.GetType().Name, trend_state);
-                Log.Debug("Page commands: {0}", commands.StringJoin());
-
-                return new Result { State = trend_state, Commands = commands };
             }
-        }
 
-        Log.Warning("Agency ({0}): Page not found", Name);
-        return new Result();
+            Log.Warning("Agency ({0}): Page not found", Name);
+            return new Result();
+        }
+    }
+
+    public void ApplyRunning(int? running, Database database)
+    {
+        lock (agency_lock)
+        {
+            if (running.HasValue)
+            {
+                CurrentMethodIndex = running.Value;
+                Status |= AgencyStatus.ActiveSeeking;
+                database.Trend.ClearSearching(ID);
+            }
+            else
+            {
+                Status &= ~AgencyStatus.ActiveSeeking;
+            }
+
+            database.Agency.SaveState(this);
+        }
     }
 
     public void LoadFromDatabase(Database database)
@@ -130,7 +152,7 @@ public abstract class Agency
     {
         if (settings == null) return;
 
-        lock (@lock)
+        lock (agency_lock)
         {
             this.settings = settings;
             this.settings.Check();
