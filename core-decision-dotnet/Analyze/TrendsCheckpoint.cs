@@ -4,6 +4,8 @@ namespace Photon.JobSeeker
 {
     public class TrendsCheckpoint
     {
+        private static readonly SemaphoreSlim checkpoint_lock = new(1, 1);
+
         private readonly Database database;
         private readonly Analyzer analyzer;
         private readonly Result result;
@@ -27,17 +29,36 @@ namespace Photon.JobSeeker
 
         public Result CheckCurrentTrends()
         {
-            LoadAndUpdateCurrentTrend();
+            checkpoint_lock.Wait();
+            try
+            {
+                database.BeginTransaction(immediate: true);
+                try
+                {
+                    LoadAndUpdateCurrentTrend();
 
-            database.Trend.DeleteExpired();
-            database.Trend.DeleteExpiredReservations();
+                    database.Trend.DeleteExpired();
+                    database.Trend.DeleteExpiredReservations();
 
-            AllCurrentTrends = database.Trend.FetchAll()
-                                             .ToDictionary(k => (k.AgencyID, k.Type));
+                    AllCurrentTrends = database.Trend.FetchAll()
+                                                     .ToDictionary(k => (k.AgencyID, k.Type));
 
-            var new_trends = CheckingSleptTrends();
+                    var new_trends = CheckingSleptTrends();
 
-            InjectOpenCommandForNewTrends(new_trends);
+                    InjectOpenCommandForNewTrends(new_trends);
+
+                    database.Commit();
+                }
+                catch
+                {
+                    database.Rollback();
+                    throw;
+                }
+            }
+            finally
+            {
+                checkpoint_lock.Release();
+            }
 
             Log.Information("Trend final commands: {0}", result.Commands.StringJoin());
 
@@ -47,38 +68,28 @@ namespace Photon.JobSeeker
         private void LoadAndUpdateCurrentTrend()
         {
             if (result.AgencyID.HasValue)
-                try
+            {
+                var trend = database.Trend.Get(result.AgencyID.Value, result.State.GetTrendType());
+                if (trend != null)
                 {
-                    database.BeginTransaction();
-                    var trend = database.Trend.Get(result.AgencyID.Value, result.State.GetTrendType());
-                    if (trend != null)
-                    {
-                        string binding;
-                        if (result.TrendID.HasValue)
-                            binding = result.TrendID == trend.TrendID ? string.Empty : "-adopted-stale-id";
-                        else
-                            binding = "-adopted-id-less";
+                    string binding;
+                    if (result.TrendID.HasValue)
+                        binding = result.TrendID == trend.TrendID ? string.Empty : "-adopted-stale-id";
+                    else
+                        binding = "-adopted-id-less";
 
-                        Log.Debug("Trend (id:{0}{4}) Agency({1}) {2}, {3}",
-                            trend.TrendID, trend.AgencyID, trend.Type, trend.State, binding);
+                    Log.Debug("Trend (id:{0}{4}) Agency({1}) {2}, {3}",
+                        trend.TrendID, trend.AgencyID, trend.Type, trend.State, binding);
 
-                        trend.LastActivity = DateTime.Now;
-                        trend.State = result.State;
-                        trend.Reserved = false;
-                        database.Trend.UpdateActivity(trend);
-                        database.Commit();
+                    trend.LastActivity = DateTime.Now;
+                    trend.State = result.State;
+                    trend.Reserved = false;
+                    database.Trend.UpdateActivity(trend);
 
-                        result.TrendID = trend.TrendID;
-                        return;
-                    }
-
-                    database.Rollback();
+                    result.TrendID = trend.TrendID;
+                    return;
                 }
-                catch
-                {
-                    database.Rollback();
-                    throw;
-                }
+            }
 
             Log.Debug("Trend (unknown) Agency({0}) {1}, {2}",
                 result.AgencyID, result.Type, result.State);

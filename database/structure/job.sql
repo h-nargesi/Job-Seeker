@@ -15,6 +15,7 @@ create table if not exists Job (
 	Log				text			null,
 	Options			text			null,
 	Tries			text			null,
+	Attempts		integer		not null	default 0,
 
 	unique			(AgencyID, Code),
 	foreign key		(AgencyID) references Agency (AgencyID) on delete no action

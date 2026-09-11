@@ -88,28 +88,30 @@ namespace Photon.JobSeeker
 
         public string? GetFirstJob(long agency_id)
         {
+            var owned = !database.InTransaction;
+            if (owned) database.BeginTransaction();
             try
             {
-                database.BeginTransaction();
-
                 var data = database.Query<FirstJobRow>(Q_FETCH_FIRST, new { agency = agency_id }).FirstOrDefault();
-                if (data == null) return default;
 
-                var now = DateTime.Now;
-                var prv_tries = data.Tries?.Split("\n");
-                var this_time = 1 + (prv_tries?.Length ?? 0);
+                if (data != null)
+                {
+                    var now = DateTime.Now;
+                    var this_time = data.Attempts + 1;
 
-                var this_tries = $"{this_time}: {now} (age {(int)(now - data.RegTime).TotalDays}d)"
-                    + (this_time > 1 ? "\n" + data.Tries : "");
+                    var this_tries = $"{this_time}: {now} (age {(int)(now - data.RegTime).TotalDays}d)"
+                        + (this_time > 1 ? "\n" + data.Tries : "");
 
-                UpdateTries(data.JobID, this_tries);
-                database.Commit();
+                    RegisterAttempt(data.JobID, this_time, this_tries);
+                }
 
-                return data.Url;
+                if (owned) database.Commit();
+
+                return data?.Url;
             }
             catch
             {
-                database.Rollback();
+                if (owned) database.Rollback();
                 throw;
             }
         }
@@ -214,9 +216,9 @@ WHERE JobID = @jobId", new
             });
         }
 
-        public void UpdateTries(long id, string tries)
+        public void RegisterAttempt(long id, int attempt, string tries)
         {
-            database.Execute(Q_UPDATE_TRIES, new { tries, now = DateTime.Now, jobId = id });
+            database.Execute(Q_REGISTER_ATTEMPT, new { tries, attempt, now = DateTime.Now, jobId = id });
         }
 
         public void ChangeState(long id, JobState state)
@@ -255,6 +257,8 @@ WHERE JobID = @jobId", new
 
             public string? Tries { get; set; }
 
+            public int Attempts { get; set; }
+
             public DateTime RegTime { get; set; }
         }
 
@@ -269,15 +273,15 @@ VALUES (@agencyId, @country, @code, @title, @state, @score, @url, @html, @conten
 ON CONFLICT(AgencyID, Code) DO NOTHING;";
 
         private readonly static string Q_UPDATE_STEPSTONE = @"
-UPDATE Job SET Title = @title, Html = @html, Content = @content, Tries = NULL, ModifiedOn = @now
+UPDATE Job SET Title = @title, Html = @html, Content = @content, Tries = NULL, Attempts = 0, ModifiedOn = @now
 WHERE JobID = @jobId";
 
         private readonly static string Q_UPDATE_CONTENT = @"
 UPDATE Job SET Html = @html, Content = @content, ModifiedOn = @now
 WHERE JobID = @jobId";
 
-        private readonly static string Q_UPDATE_TRIES = @"
-UPDATE Job SET Tries = @tries, ModifiedOn = @now
+        private readonly static string Q_REGISTER_ATTEMPT = @"
+UPDATE Job SET Tries = @tries, Attempts = @attempt, ModifiedOn = @now
 WHERE JobID = @jobId";
 
         private readonly static string Q_CHANGE_STATE = $@"
@@ -369,13 +373,13 @@ UPDATE Job SET State = '{nameof(JobState.Saved)}' WHERE State = '{nameof(JobStat
         private const string Q_FETCH_OPTIONS = @"
 SELECT Options FROM Job WHERE JobID = @job";
 
-        private readonly static string Q_FETCH_FIRST = @$"
-SELECT JobID, Url, Tries, RegTime FROM Job
-WHERE AgencyID = @agency AND State = '{nameof(JobState.Saved)}' AND (Tries IS NULL OR Tries NOT LIKE '%4: %')
-ORDER BY Tries IS NULL DESC, Tries DESC, JobID LIMIT 1";
+        private readonly static string Q_FETCH_FIRST = $@"
+SELECT JobID, Url, Tries, Attempts, RegTime FROM Job
+WHERE AgencyID = @agency AND State = '{nameof(JobState.Saved)}' AND Attempts < 4
+ORDER BY Attempts = 0 DESC, Attempts DESC, JobID LIMIT 1";
 
         private readonly static string Q_CLEAN = @$"
-DELETE FROM Job WHERE RegTime < @date AND (State != '{nameof(JobState.Applied)}' OR Tries LIKE '%4: %')";
+DELETE FROM Job WHERE RegTime < @date AND (State != '{nameof(JobState.Applied)}' OR Attempts >= 4)";
 
         // Current behavior: keeps Html for the global top-100 Attention jobs by Score
         // (the subquery is not scoped by the same RegTime window as the outer query).

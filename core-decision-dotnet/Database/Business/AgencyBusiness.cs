@@ -116,7 +116,7 @@ FROM (
         FROM Job
         GROUP BY AgencyID
 
-    ) job on agc.AgencyID = job.AgencyID
+    ) job ON agc.AgencyID = job.AgencyID
 
 ) rate";
 

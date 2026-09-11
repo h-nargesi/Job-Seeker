@@ -93,6 +93,7 @@ CREATE TABLE Job (
     Log         text            null,
     Options     text            null,
     Tries       text            null,
+    Attempts    integer     not null    default 0,
     unique (AgencyID, Code)
 )";
 

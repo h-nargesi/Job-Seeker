@@ -26,6 +26,9 @@
 > موارد ۲.۱۷ (TTL دودقیقه‌ای بدون heartbeat)، ۲.۱۸ (فلگ Reserved بدون مهلت lease) و
 > ۲.۲۲ (اجرای open با `window.open` از content script) در ۱۴۰۵/۰۶/۱۸ (2026-09-09)
 > با کامیت `8503003` رفع و به همین فایل اضافه شدند.
+> موارد ۲.۱۹ (همزمانی داخلی Orders×Take — خواندن-تصمیم-نوشتن غیراتمیک) و ۲.۲۱
+> (مرتب‌سازی لغوی‌نگارشی `Tries` در `Q_FETCH_FIRST`) در ۱۴۰۵/۰۶/۲۰ (2026-09-11)
+> رفع و به همین فایل اضافه شدند.
 
 ---
 
@@ -268,6 +271,45 @@ pre-binding عمداً:** trend نگاشت‌شدهٔ تبِ فرستنده مع
 `agent-extension/controllers/background-messaging.js:68-74`،
 `agent-extension/controllers/background.js:32-36,46-66`؛ `node --check` روی فایل‌های
 تغییریافته — تأیید نهایی با نخستین اجرای زنده.
+
+### ۲.۱۹ (مرور ۱۴۰۵/۰۶/۱۸) همزمانی داخلی Orders×Take: خواندن-تصمیم-نوشتن غیراتمیک → دو Open و تورم Tries
+
+رفع (۱۴۰۵/۰۶/۲۰ — 2026-09-11): کل پاس `CheckCurrentTrends` — بارگذاری/بروزرسانی
+trend جاری، حذف trendها و رزروهای منقضی، `FetchAll`، بررسی trendهای خوابیده و
+تزریق فرمان open (شامل `GetFirstJob`) — اکنون داخل یک قفل ایستا
+`SemaphoreSlim(1,1)` و یک تراکنش واحد `BEGIN IMMEDIATE` اجرا می‌شود؛
+`LoadAndUpdateCurrentTrend` تراکنش اختصاصی خود را از دست داد و در تراکنش ambient
+اجرا می‌شود؛ `GetFirstJob` نیز با `Database.InTransaction` به تراکنش ambient
+ملحق می‌شود (SELECT + نوشتن تلاش، اتمیک). نتیجه: poll داشبورد و Take دیگر روی
+«trend وجود ندارد» مسابقه نمی‌دهند — open تکراری و تورم Tries حذف شد. پس از
+`busy_timeout` (۵ ثانیه) خطای SQLite مثل قبل ۵۰۰ برمی‌گرداند (اکستنشن Take را
+۳× retry می‌کند). برای API استاندارد و غیرمنسوخ، `BeginTransaction(immediate)`
+از نگاشت `IsolationLevel.Serializable` ← `BEGIN IMMEDIATE` استفاده می‌کند
+(اپراتور بولی `deferredLock` در System.Data.SQLite 1.0.117 منسوخ است).
+**تأیید:** `core-decision-dotnet/Analyze/TrendsCheckpoint.cs:7,30-66` (قفل +
+تراکنش)، `core-decision-dotnet/Database/Database.cs:24-36`،
+`core-decision-dotnet/Database/Business/JobBusiness.cs:89-119`؛ تست
+`GetFirstJobTests.GetFirstJob_joins_ambient_immediate_transaction` — تأیید نهایی با
+نخستین اجرای زنده (لاگ: تک `open` به‌ازای trend جدید؛ `Attempts` دقیقاً +۱ در هر
+چرخه).
+
+### ۲.۲۱ (مرور ۱۴۰۵/۰۶/۱۸) `Q_FETCH_FIRST`: مرتب‌سازی لغوی‌نگارشی `Tries` و `LIKE '%4: %'`
+
+رفع (۱۴۰۵/۰۶/۲۰ — 2026-09-11): ستون عددی `Attempts integer not null default 0`
+به Job اضافه شد (`database/structure/job.sql`) + مهاجرت idempotent در
+`database/installation.sh` (ALTER + backfill از تعداد خطوط `Tries`؛ تصمیم کاربر:
+شمارش‌های تاریخی متورم عمداً حفظ می‌شوند و کپ‌شده باقی می‌مانند). سقف و ترتیب
+عددی شدند: `Attempts < 4` و `ORDER BY Attempts = 0 DESC, Attempts DESC, JobID`
+(ابتدا هرگز-امتحان‌نشده، سپس بیشترین تلاش؛ همان قصد قبلی)؛ `Q_CLEAN` ←
+`Attempts >= 4`؛ ری‌اسکرپ Stepstone علاوه بر `Tries = NULL` ← `Attempts = 0`.
+لاگ متنی `Tries` برای تاریخ دست‌نخورده ماند (خط تازه در `GetFirstJob` از
+`Attempts` شمارش می‌کند، نه از تعداد خطوط). `UpdateTries` با
+`RegisterAttempt(id, attempt, tries)` جایگزین شد (تک call-site).
+**تأیید:** `core-decision-dotnet/Database/Business/JobBusiness.cs:219-222,275-286,376-382`،
+`database/structure/job.sql`، `database/installation.sh`؛ تست‌های
+`GetFirstJobTests` (ترتیب، رگرسیون ردیف‌های دو رقمی ۹/۱۰/۱۳، سقف دقیق ۴ و ۱۴،
+ریست Stepstone) + اجرای مهاجرت روی کپیِ DB زنده (۱۹۳ ردیف backfill، صفر
+ناهمخوانی شمارش) — تأیید نهایی با نخستین اجرای زنده.
 
 ---
 

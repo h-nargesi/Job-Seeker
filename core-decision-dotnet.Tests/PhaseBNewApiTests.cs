@@ -180,7 +180,7 @@ public class PhaseBNewApiTests
             Title = "Old",
         };
         db.Database.Job.InsertJob(job);
-        db.ExecuteRaw("UPDATE Job SET Tries = '1: prev', Html = '<html>old</html>', Content = 'old' WHERE Code = 'ss1'");
+        db.ExecuteRaw("UPDATE Job SET Tries = '1: prev', Attempts = 2, Html = '<html>old</html>', Content = 'old' WHERE Code = 'ss1'");
 
         job.Title = "Stepstone Title";
         job.Html = "<div>stepstone html</div>";
@@ -193,6 +193,7 @@ public class PhaseBNewApiTests
         Assert.Equal("<div>stepstone html</div>", db.Scalar("SELECT Html FROM Job"));
         Assert.Equal("stepstone content", db.Scalar("SELECT Content FROM Job"));
         Assert.Equal(DBNull.Value, db.Scalar("SELECT Tries FROM Job"));
+        Assert.Equal(0L, db.Scalar("SELECT Attempts FROM Job"));
     }
 
     [Fact]

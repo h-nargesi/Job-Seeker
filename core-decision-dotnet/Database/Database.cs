@@ -1,4 +1,5 @@
-﻿using System.Data.SQLite;
+﻿using System.Data;
+using System.Data.SQLite;
 using Dapper;
 
 namespace Photon.JobSeeker
@@ -20,10 +21,19 @@ namespace Photon.JobSeeker
         this.connection = connection;
     }
 
+    public bool InTransaction => transaction != null;
+
     public void BeginTransaction()
-        {
-            transaction = connection.BeginTransaction();
-        }
+    {
+        transaction = connection.BeginTransaction();
+    }
+
+    public void BeginTransaction(bool immediate)
+    {
+        transaction = immediate
+            ? connection.BeginTransaction(IsolationLevel.Serializable)
+            : connection.BeginTransaction(IsolationLevel.ReadCommitted);
+    }
 
         public void Commit()
         {
