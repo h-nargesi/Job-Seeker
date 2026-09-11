@@ -5,6 +5,9 @@ importScripts("./core-messaging.js", "./storage-handler.js", "./trend-collection
 const messaging = new CoreMessaging();
 const trends = new TrendCollection();
 
+const ORDERS_ALARM = "trend-orders";
+let orders_pending = false;
+
 chrome.runtime.onMessage.addListener(
     async function (request, sender) {
         // console.log("AGENT", "Background", request, sender.tab.windowId, sender.tab.id);
@@ -20,7 +23,7 @@ chrome.runtime.onMessage.addListener(
                 Respond(sender.tab, request.id, messaging.Send(request.params));
                 break;
             case "scopes":
-                Respond(sender.tab, request.id, messaging.Scopes(request.params.reset));
+                Respond(sender.tab, request.id, messaging.Scopes());
                 break;
             case "orders":
                 Respond(sender.tab, request.id, messaging.Orders());
@@ -42,6 +45,77 @@ chrome.runtime.onMessage.addListener(
 chrome.tabs.onRemoved.addListener(function (tabId) {
     trends.remove(tabId);
 });
+
+chrome.alarms.onAlarm.addListener(function (alarm) {
+    if (alarm.name === ORDERS_ALARM) CheckNewOrders();
+});
+
+chrome.runtime.onStartup.addListener(ResumeOrdering);
+
+chrome.runtime.onInstalled.addListener(ResumeOrdering);
+
+chrome.storage.onChanged.addListener(function (changes, area) {
+    if (area !== "local" || !changes[StorageHandler.ORDERING]) return;
+
+    if (changes[StorageHandler.ORDERING].newValue === true) ResumeOrdering();
+});
+
+EnsureOrdersAlarm();
+
+function ResumeOrdering() {
+    EnsureOrdersAlarm();
+    CheckNewOrders();
+}
+
+async function EnsureOrdersAlarm() {
+    try {
+        const existing = await chrome.alarms.get(ORDERS_ALARM);
+        if (!existing) await chrome.alarms.create(ORDERS_ALARM, { periodInMinutes: 0.5 });
+    } catch (e) {
+        console.error("AGENT", "EnsureOrdersAlarm", e);
+    }
+}
+
+async function CheckNewOrders() {
+    if (orders_pending) return;
+
+    const ordering = await StorageHandler.OrderingAsync();
+    if (!ordering) return;
+
+    orders_pending = true;
+    console.log("AGENT", "Orders", "polling ...");
+
+    let opened = 0;
+    let error = null;
+
+    try {
+        const result = await messaging.Orders();
+
+        if (!result || result.error !== undefined) {
+            error = result ? result.error : "no-response";
+            console.error("AGENT", "Orders", "failed", result);
+        } else {
+            for (let i in result.commands) {
+                const command = result.commands[i];
+                if (!command) continue;
+
+                if (command.action === "open") {
+                    const response = await OpenTab(command.params?.url);
+                    if (response.error === undefined) opened++;
+                } else if (command.action !== "close") {
+                    console.log("AGENT", "Orders", "unsupported on orders path", command.action);
+                }
+            }
+        }
+    } catch (e) {
+        console.error("AGENT", "Orders", e);
+        error = "client";
+    } finally {
+        orders_pending = false;
+    }
+
+    StorageHandler.Set(StorageHandler.LAST_ORDERS, { at: Date.now(), opened: opened, error: error });
+}
 
 async function OpenTab(url) {
     if (!url) return { error: "open-failed" };

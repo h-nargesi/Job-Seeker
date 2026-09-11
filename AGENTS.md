@@ -42,7 +42,8 @@ Job-Seeker/
 │   ├── structure/             # agency.sql, job.sql, job-option.sql, trend.sql
 │   ├── installation.sh        # creates/reseeds the schema
 │   └── data.sqlite3           # main DB (gitignored)
-├── core-decision.sln          # VS solution
+├── Job Seeker.sln            # VS solution (contains only core-decision;
+│                             # run tests on core-decision-dotnet.Tests directly)
 └── job-seeker.sh              # runs the published binary on port 8081
 ```
 
@@ -53,7 +54,7 @@ The server is .NET 8. There is **no JS build step**. Tests live in
 
 ```bash
 # Build (from repo root)
-dotnet build core-decision.sln
+dotnet build "Job Seeker.sln"
 
 # Run the server (development)
 dotnet run --project core-decision-dotnet
@@ -106,11 +107,11 @@ API Key in the popup menu (press Enter in each field to save).
 
 | Check        | Command | Notes |
 |--------------|---------|-------|
-| Compile      | `dotnet build core-decision.sln` | Primary validation gate. Warnings are treated seriously (`<Nullable>enable</Nullable>`). |
+| Compile      | `dotnet build "Job Seeker.sln"` | Primary validation gate. Warnings are treated seriously (`<Nullable>enable</Nullable>`). |
 | Extension JS | none    | Plain JS loaded directly by Chrome. Verify by loading the unpacked extension and watching the `AGENT` console logs. |
-| Tests        | `dotnet test core-decision.sln` | xUnit project `core-decision-dotnet.Tests` (first in repo). |
+| Tests        | `dotnet test core-decision-dotnet.Tests/core-decision-dotnet.Tests.csproj` | xUnit project `core-decision-dotnet.Tests` — not in the solution, run it directly. |
 
-After editing C#, **always run `dotnet build core-decision.sln`** before declaring done.
+After editing C#, **always run `dotnet build "Job Seeker.sln"`** before declaring done.
 
 ## 4. How the pieces talk (the request loop)
 
@@ -138,6 +139,9 @@ extension (check-page.js)                server (DecisionController.Take)
   `Command.cs` and `PageAction` for the full vocabulary, and `action-handler.js`
   for how each is executed.
 - A `trend` id binds a logical workflow (login → search → job) to a browser tab.
+- Idle trends are driven by the extension's **service worker** polling
+  `GET /decision/orders` on a ~30 s alarm (popup "Trend Ordering" toggle);
+  the dashboard is a control/monitor console only and no longer polls orders.
 
 Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 

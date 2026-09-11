@@ -3,6 +3,10 @@ console.log("AGENT", "check-page");
 ActionHandler.OnPageLoad = function () {
     console.log("AGENT", 'Page', 'loaded');
     setTimeout(async function () {
+        if (await OnDashboard()) return;
+
+        ActionHandler.SetCloseTimer();
+
         const scopes = await BackgroundMessaging.Scopes();
 
         if (!scopes || scopes.error !== undefined) {
@@ -21,37 +25,17 @@ ActionHandler.OnPageLoad = function () {
             }
         }
     }, 1000);
+}
 
-    if (document.getElementById('job-seeker-trend-list') != null) {
+async function OnDashboard() {
+    try {
+        const server_url = await StorageHandler.ServerUrlAsync();
+        if (server_url && window.location.origin === new URL(server_url).origin) return true;
+    } catch (e) {
+        console.error("AGENT", 'Page', "OnDashboard", e);
+    }
 
-        document.getElementById('reset-trends').addEventListener("click", function () { BackgroundMessaging.Scopes(true); }, false);
-
-        const millisecnod = 1000;
-        let ordering_interval = null;
-        const ordering_button = document.getElementById('stop-start-ordering');
-
-        ordering_button.addEventListener("click", function () {
-
-            if (ordering_interval != null) {
-                clearInterval(ordering_interval);
-                ordering_interval = null;
-            }
-
-            let current = ordering_button.getAttribute('ordering');
-
-            if (current !== 'true') {
-                CheckNewOrders();
-                ordering_interval = setInterval(CheckNewOrders, millisecnod * 20);
-                current = 'true';
-
-            } else {
-                current = 'false';
-            }
-
-            ordering_button.setAttribute('ordering', current);
-        }, false);
-
-    } else if (window.location.hostname != 'localhost') ActionHandler.SetCloseTimer();
+    return document.getElementById('job-seeker-trend-list') != null;
 }
 
 async function SendingPageInfo(scope) {
@@ -103,18 +87,6 @@ async function Heartbeat() {
 
     if (!result || result.error !== undefined)
         console.warn("AGENT", 'Page', "heartbeat failed", result);
-}
-
-async function CheckNewOrders() {
-    console.log("AGENT", 'Page', 'Taking Orders ...');
-    const result = await BackgroundMessaging.Orders();
-
-    if (!result || result.error !== undefined) {
-        console.error("AGENT", 'Page', "orders failed", result);
-        return;
-    }
-
-    ActionHandler.Handle(result.commands, true);
 }
 
 if (window.addEventListener) {

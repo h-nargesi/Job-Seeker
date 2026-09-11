@@ -56,11 +56,13 @@ Two entry points trigger analysis:
 
 1. **Page load** (`check-page.js` → `SendingPageInfo`): the normal reactive path.
    Fires whenever the browser navigates to a matched domain.
-2. **Polling** (`check-page.js` → `CheckNewOrders`): the dashboard page (served
-   by the server itself, on `localhost`) calls `GET /decision/orders` on a
-   timer to ask "what should I open next?". This is how idle trends (e.g.
-   "open the search page", "open the next saved job") get acted on even when no
-   user-triggered navigation is happening.
+2. **Orders polling** (service worker `background.js` → `CheckNewOrders`): the
+   extension's service worker polls `GET /decision/orders` on a 30 s
+   `chrome.alarms` timer, gated by the popup's "Trend Ordering" toggle, to ask
+   "what should I open next?". This is how idle trends (e.g. "open the search
+   page") get acted on even when no user-triggered navigation is happening.
+   The dashboard is a human control/monitor console only — no extension code
+   runs on it.
 
 ## Server internals
 
@@ -172,13 +174,13 @@ All logs are prefixed `console.log("AGENT", ...)`.
 | File | Role |
 |------|------|
 | `manifest.json` | MV3 manifest; content scripts on `*://*/*`, service worker `background.js` |
-| `controllers/check-page.js` | Runs on every page load. Matches hostname → agency, posts HTML to `/decision/take`. On the dashboard it also polls `/decision/orders`. |
-| `controllers/background.js` | Service worker. Routes messages, stamps the `trend` id onto each request, and maps the response back to the originating tab. |
-| `controllers/core-messaging.js` | Thin HTTP client for the three server endpoints (`take`, `scopes`, `orders`). |
+| `controllers/check-page.js` | Runs on every page load. Matches hostname → agency, posts HTML to `/decision/take`. Inert on the dashboard (server-origin / `#job-seeker-trend-list` check). |
+| `controllers/background.js` | Service worker. Routes messages, stamps the `trend` id onto each request, maps responses back to tabs, and drives idle trends: polls `/decision/orders` on a 30 s alarm and executes `open` commands (gated by the popup's ordering toggle). |
+| `controllers/core-messaging.js` | Thin HTTP client for the server endpoints (`take`, `scopes`, `orders`, `heartbeat`); sends `X-Client: search`. |
 | `controllers/action-handler.js` | Executes `Command[]`. Maps `go/open/fill/click/recheck/close/wait/reload` to DOM/window calls. |
 | `controllers/trend-collection.js` | In-memory map `windowId → tabId → trendId`. |
-| `controllers/storage-handler.js` | Persists the server URL in `chrome.storage.local`. |
-| `application/menu.html` + `menu.js` | Popup UI to set the server URL. |
+| `controllers/storage-handler.js` | Persists settings (server URL, API key, ordering flag, last-poll status) in `chrome.storage.local`. |
+| `application/menu.html` + `menu.js` | Popup UI: server URL, API key, Trend Ordering toggle, last-poll status. |
 
 The `recheck` command is special: it re-runs `OnPageLoad` in-page (no real
 navigation) so the server can re-evaluate after, e.g., clicking "next page".

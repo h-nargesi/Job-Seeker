@@ -78,25 +78,29 @@ HTML analysis, no state mutation — just refreshes `LastActivity`.
 
 ### `GET /decision/scopes`
 Returns the active agencies the extension should react to. Cached on the client
-until a reset.
+(the extension re-fetches when its cache is older than ~60 s; there is no
+server-side invalidation).
 
 - **Response**: array of `{ "name", "domain", "waiting" }`.
   - `domain` — regex; the extension matches `window.location.hostname` against it.
   - `waiting` — optional delay (ms) the extension honors before sending the page.
 
-### `POST /decision/scopes?reset=true`
-(POST overload) Invalidates the extension's cached scope list. Triggered from
-the dashboard's "reset" button.
+> Correction: earlier docs described `POST /decision/scopes?reset=true` — that
+> endpoint never existed server-side. The "reset" was the dashboard's content
+> script clearing its own cache; cache refresh is now the client-side TTL.
 
 ### `GET /decision/orders`
-The polling path. Asks "what should open next?" with no page HTML. Runs
+The polling path. Asks "what should open next?" with no page HTML. Polled by
+the extension's **service worker** on a ~30 s `chrome.alarms` timer, gated by
+the popup's Trend Ordering toggle — the dashboard does not poll it. Runs
 `TrendsCheckpoint.CheckCurrentTrends()` and returns commands to start idle
-trends (e.g. open the search page, go to the next saved job).
+trends (e.g. open the search page).
 
-- **Response**: commands to start idle trends (same `Command` array as `take`;
-  no `trend`/`close_timeout_ms` wrapper — the dashboard handles the body as-is).
-  `CheckCurrentTrends` also sweeps expired trends and reservations older than
-  30 s, so each poll is the fast re-open path for abandoned `Open`s.
+- **Response**: `{ trendID, agencyID, state, commands }`. The service worker
+  consumes `commands` only — on this path only `open` is ever emitted (the
+  poller skips the trailing `close`). `CheckCurrentTrends` also sweeps expired
+  trends and reservations older than 30 s, so each poll is the fast re-open
+  path for abandoned `Open`s.
 
 ### `POST /decision/reset`
 Wipes all trend rows instantly — expired and reserved alike

@@ -2,6 +2,8 @@ console.log("AGENT", "menu.js");
 
 const Manifest = chrome.runtime.getManifest();
 const OpenServer = document.getElementById('OpenServer');
+const Ordering = document.getElementById('Ordering');
+const OrdersStatus = document.getElementById('OrdersStatus');
 const ServerUrl = document.getElementById('ServerUrl');
 const ApiKey = document.getElementById('ApiKey');
 const ManifestTitle = document.getElementById('ManifestTitle');
@@ -34,10 +36,35 @@ OpenServer.addEventListener("click", async function () {
     window.open(await StorageHandler.ServerUrlAsync());
 });
 
+Ordering.addEventListener("click", async function () {
+    const enabled = await StorageHandler.OrderingAsync();
+    StorageHandler.Ordering = !enabled;
+    SetOrderingState(!enabled);
+});
+
+function SetOrderingState(enabled) {
+    Ordering.setAttribute('data-state', enabled ? 'on' : 'off');
+}
+
+async function LoadOrdersStatus() {
+    const last = await StorageHandler.LastOrdersAsync();
+
+    if (!last) {
+        OrdersStatus.innerText = "No orders poll yet.";
+        return;
+    }
+
+    const at = new Date(last.at).toLocaleTimeString();
+    const outcome = last.error ? `error: ${last.error}` : `opened ${last.opened}`;
+    OrdersStatus.innerText = `Last poll ${at} — ${outcome}`;
+}
+
 async function LoadData() {
     console.log("AGENT", "Menu", "LoadData");
     ServerUrl.value = await StorageHandler.ServerUrlAsync();
     ApiKey.value = await StorageHandler.ApiKeyAsync();
+    SetOrderingState(await StorageHandler.OrderingAsync());
+    await LoadOrdersStatus();
     ManifestTitle.innerText = Manifest.name;
     ManifestDescr.innerText = Manifest.description ?? "";
 }

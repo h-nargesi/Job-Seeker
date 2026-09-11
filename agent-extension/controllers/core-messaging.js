@@ -5,10 +5,13 @@ class CoreMessaging {
     static SERVER_URL;
     static API_KEY;
     static SCOPES;
+    static SCOPES_AT = 0;
+    static SCOPES_TTL = 60000;
     static REQUEST_TIMEOUT = 30000;
     static HEADERS = {
         'Accept': 'application/json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Client': 'search'
     };
 
     async CheckServerUrl() {
@@ -93,13 +96,11 @@ class CoreMessaging {
         return result;
     }
 
-    async Scopes(reset) {
+    async Scopes() {
         try {
-            if (reset === true) {
-                CoreMessaging.SCOPES = undefined;
-            }
+            const fresh = CoreMessaging.SCOPES !== undefined && Date.now() - CoreMessaging.SCOPES_AT < CoreMessaging.SCOPES_TTL;
 
-            if (CoreMessaging.SCOPES === undefined) {
+            if (!fresh) {
 
                 const server_url = await this.CheckServerUrl() + "decision/scopes";
 
@@ -111,6 +112,7 @@ class CoreMessaging {
                 if (result.error !== undefined) return result;
 
                 CoreMessaging.SCOPES = result;
+                CoreMessaging.SCOPES_AT = Date.now();
                 console.log("AGENT", "CoreMessaging", "Scopes", CoreMessaging.SCOPES);
             }
 

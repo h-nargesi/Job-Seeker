@@ -6,6 +6,9 @@ class StorageHandler {
     static SERVER_URL_DEFAULT = "http://localhost:8081/";
     static API_KEY = "API_KEY";
     static API_KEY_DEFAULT = "";
+    static ORDERING = "ORDERING";
+    static ORDERING_DEFAULT = false;
+    static LAST_ORDERS = "LAST_ORDERS";
 
     static async Get(key, default_value) {
         return new Promise(function (resolve, reject) {
@@ -40,5 +43,17 @@ class StorageHandler {
 
     static set ApiKey(value) {
         StorageHandler.Set(StorageHandler.API_KEY, value);
+    }
+
+    static async OrderingAsync() {
+        return (async () => Boolean(await StorageHandler.Get(StorageHandler.ORDERING, StorageHandler.ORDERING_DEFAULT)))();
+    }
+
+    static set Ordering(value) {
+        StorageHandler.Set(StorageHandler.ORDERING, Boolean(value));
+    }
+
+    static async LastOrdersAsync() {
+        return (async () => await StorageHandler.Get(StorageHandler.LAST_ORDERS, null))();
     }
 }

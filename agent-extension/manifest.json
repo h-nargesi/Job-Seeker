@@ -29,7 +29,8 @@
 	},
 	"permissions": [
 		"storage",
-		"activeTab"
+		"activeTab",
+		"alarms"
 	],
 	"icons": {
 		"16": "assets/images/job-16.png",
