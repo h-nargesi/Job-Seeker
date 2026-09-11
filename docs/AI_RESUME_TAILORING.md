@@ -29,8 +29,9 @@ generation. That is exactly the hook the LLM plugs into.
 Decided (2026-09-10): this mechanism does not change. The AI delta reuses
 the same `ResumeContext` structure in `Job.AiOptions` (a second
 ResumeContext — no new inventory table), the view resolves
-`AiOptions ?? Options`, and the block inventory for the prompt is derived
-from the template automatically at runtime.
+`Options.HumanEdited ? Options : (AiOptions ?? Options)` (2026-09-11, §6),
+and the block inventory for the prompt is derived from the template
+automatically at runtime.
 
 ## 2. The pattern: the LLM produces a ResumeContext *delta*, not HTML
 
@@ -56,8 +57,9 @@ job description (plain text)
 ```
 
 The delta is applied to a **separate** `Job.AiOptions` field; rendering and
-template stay unchanged. The resume view resolves `AiOptions ?? Options`, so
-the regex-built context always remains the fallback.
+template stay unchanged. The resume view resolves
+`Options.HumanEdited ? Options : (AiOptions ?? Options)` (§6), so the
+regex-built context always remains the fallback.
 
 Why this beats HTML editing:
 
@@ -81,24 +83,34 @@ Why this beats HTML editing:
 | `INPUT_DATA` | Numeric overrides applied to elements carrying the matching class (e.g. years of experience) |
 | `Elements` | Header items (phone, location, image, footer) |
 
-## 3. No generated text — the summary becomes segmented
+## 3. Selection over pre-written text — the summary becomes segmented
 
-Decided (2026-09-10): the model never writes free text. The two former
-free-text slots become selection problems:
+Decided (2026-09-10): the model never writes free text (one guarded,
+title-only exception — 2026-09-11, below). The two former free-text slots
+become selection problems:
 
 - **Summary** — becomes a multi-variant segmented paragraph: pre-written,
   `key-*`-tagged sentences the model (or the user) turns on/off, exactly
   like blocks. The hardcoded ".NET Core, Angular, SQL Server" lead
   disappears behind variants aligned with the enabled `keys`. The template
   renders the enabled segments from the ResumeContext.
-- **JobTitle** — same treatment intended (fixed headline variants instead of
-  copying the raw `job.Title`); final call open (round 2).
+- **JobTitle** — decided (2026-09-11): fixed pre-written headline variants
+  selected by the enabled keys; copying the raw `job.Title` is dropped. One
+  bounded exception: the model may *propose* free text for the title slot
+  only — acceptable because the human review gate approves every delta
+  before it renders. Guards: (a) title only — the summary and every other
+  slot stay strictly selection-only (multi-line prose carries higher
+  fabrication risk and is harder to review); (b) the review UI flags such
+  deltas as containing free text; (c) they never apply without explicit
+  user acceptance; (d) a server-side sanity cap enforces a single line and
+  bounded length. Template details settle in phase 3.
 
 ## 4. Guardrails (non-negotiable)
 
 1. **Selection only.** The model chooses among pre-written blocks and
-   summary/title variants. It never writes free text, and never adds
-   experience entries, employers, dates, or metrics.
+   summary/title variants. It never writes free text (the guarded
+   title-only exception of §3 aside), and never adds experience entries,
+   employers, dates, or metrics.
 2. **Human in the loop.** The delta is previewed on the dashboard and must be
    approved before a job moves to `Applied`.
 3. **Versioned and reversible.** `Job.AiOptions` is stored separately from
@@ -138,16 +150,32 @@ Job.AiOptions  (new column; Options kept as fallback)
 dashboard: preview + human approval
    │
    ▼
-resume view renders AiOptions ?? Options   →   /job/resume?jobid=...
+resume view renders Options.HumanEdited ? Options : (AiOptions ?? Options)
+   │
+   ▼
+/job/resume?jobid=...
    │
    ▼
 user prints from the browser (Brave print dialog) — @media print CSS is in the template
 ```
 
-Open (round 2): how AI deltas and human edits coexist
-(`ResumeContext.Version` interplay), and whether `jobTitle` gets fixed
-variants like the summary. `Applied` remains a manual user action;
-phase-5 integration is revisited in the final phase.
+Decided (2026-09-11) — human/AI coexistence, three layers:
+
+- `ResumeContext` gains a `HumanEdited` flag inside the stored JSON (the
+  `Version` constant bumps with it). The flag round-trips through
+  `SimlpeSerialize`/`SimlpeDeserialize` with the rest of the context —
+  `Job.Options` uses that "simple JSON" format, not standard JSON.
+- Rendering precedence: `Options.HumanEdited ? Options : (AiOptions ??
+  Options)` — a human edit always wins; otherwise the AI delta; otherwise
+  the regex-built context.
+- AI writes only `AiOptions`, never `Options`; human edits keep writing
+  `Options` through the existing `JobController.Options` → `ChangeOptions`
+  path. After a human edit, newer AI suggestions appear on the dashboard as
+  a diff with an explicit accept action; accepting copies/merges the delta
+  into `Options`.
+
+`Applied` remains a manual user action; phase-5 integration is revisited in
+the final phase.
 
 ### Delivery (decided)
 

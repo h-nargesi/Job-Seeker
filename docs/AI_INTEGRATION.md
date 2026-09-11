@@ -30,7 +30,7 @@ The regex gate stays first and cheap — it rejects most jobs and costs nothing.
 The LLM only sees the survivors. This alone cuts the number of model calls by
 roughly an order of magnitude versus scoring every scraped job.
 
-The queue lives on the core (DB-backed claim — §2); the consumer is
+The queue lives on the core (DB-backed — §2); the consumer is
 `ai-worker`, a separate program on the AI station. The in-core precedent for
 a one-by-one background pass with progress tracking is
 `JobEligibilityHelper.RunRevaluateProcess`.
@@ -51,7 +51,7 @@ Four stations, three of them outbound-only (the fourth is planned):
                 │  core: job-seeker (.NET)       │  public, SSL (reverse proxy),
                 │  SQLite + AI queue + API       │  X-API-Key + X-Client role
                 └─▲──────────────▲─────────────▲─┘
-   POST /decision/take             │            │  POST /ai/claim · /ai/verdict
+   POST /decision/take             │            │  GET /ai/next · POST /ai/verdict
    GET  /decision/scopes           │            │  POST /assistant/* (planned —
    (X-Client: search)              │            │  phase 5, X-Client: assistant)
   ┌────────────────────────────────┴─┐        ┌─┴──────────────────────┐      ┌─────────────────────────────┐
@@ -84,28 +84,33 @@ Four stations, three of them outbound-only (the fourth is planned):
   browser — the search extension matches `*://*/*` and would fight over the
   apply tabs.
 - **Clients & roles.** Four clients reach the core: the search extension
-  (`X-Client: search`), the dashboard user (existing login/API-key — no
-  role header), `ai-worker` (`X-Client: worker`, restricted to `/ai/*`),
-  and the assistant (`X-Client: assistant`). An absent header is treated as
-  legacy search.
+  (`X-Client: search` — shipped in phase 1, decided 2026-09-11: a one-line
+  extension change, single deployment), the dashboard user (existing
+  login/API-key — no role header), `ai-worker` (`X-Client: worker`,
+  restricted to `/ai/*`), and the assistant (`X-Client: assistant`). An
+  absent header is treated as legacy search.
 
-### 2.1 The ai-worker run — manual, no polling
+### 2.1 The ai-worker run — manual, no polling, no claim
 
-Decided (2026-09-10): `ai-worker` has **no polling loop and no scheduler** —
-the user runs it manually whenever unranked jobs should be processed. One
-run:
+Decided (2026-09-10; simplified 2026-09-11): `ai-worker` has **no polling
+loop and no scheduler** — the user runs it manually whenever unranked jobs
+should be processed. One run:
 
-1. Startup sweep: reset stale in-flight jobs back to pending (crash
-   recovery). With a single manually-run consumer there is nothing else to
-   protect against, so the timed lease is dropped *(pending round-2
-   confirmation)*.
-2. `POST /ai/claim` (`X-Client: worker`) repeatedly, oldest first: each
-   response carries one job's text and marks it in-flight; the worker stops
-   when the core answers "empty".
-3. For each job: run the local `llama-server` call, then
-   `POST /ai/verdict` (idempotent by job id). The core validates, writes the
-   verdict, and runs the stage-2 purge (§6).
+1. `GET /ai/next` (`X-Client: worker`) repeatedly, oldest first. The fetch
+   is **read-only**: the response carries one `Pending` job's text plus the
+   candidate's resume text, and changes no state. The worker stops when
+   the core answers "empty".
+2. For each job: run the local `llama-server` call(s) (§6), then
+   `POST /ai/verdict` (idempotent by job id) — the only write in the AI
+   lane. The core validates the job is still `Pending` (§4.1), writes the
+   verdict + extraction, and marks purge candidates (§6).
 
+- **No claim, no lease, no startup sweep** (2026-09-11, superseding the
+  2026-09-10 sweep/claim design). A crash before the verdict simply leaves
+  the job `Pending` — the next run retries it naturally; nothing to reset.
+  The rule stays **run one `ai-worker` at a time**: an accidental second
+  worker merely duplicates inference on the same job (idempotent,
+  last-write-wins — wasted compute, no corruption).
 - The worker **never touches SQLite directly** — only the two endpoints.
 - **Rejected alternative: tunnels** (Tailscale, cloudflared, SSH reverse)
   would restore core→AI reachability and allow an in-core worker calling
@@ -152,7 +157,7 @@ At a glance (details in the subsections below):
 |---|-------|------|--------|------|
 | 4.1 | Semantic verdict / re-ranking | background | **High** — fixes the sharpest weakness: lexical scoring treats one ".NET" mention like a .NET-centric role; near-misses get a second chance | Low–medium — additive verdict columns + careful `Q_INDEX` v2 |
 | 4.2 | Structured extraction | background | **High** — replaces guesswork heuristics (`EvaluateSalaryScore`); enables dashboard filters on salary/work-model reality | Low — additive columns only; `Q_INDEX` untouched |
-| 4.3 | Resume tailoring delta | background (manual worker runs) | **Highest end value** — per-job customization with no fabrication risk (selection only) | Medium — new `Job.AiOptions` column + human review gate |
+| 4.3 | Resume tailoring delta | background (manual worker runs) | **Highest end value** — per-job customization, selection-only except the guarded title exception ([`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) §3) | Medium — new `Job.AiOptions` column + human review gate |
 | 4.4 | Cross-platform deduplication | background | **Medium** — one posting listed on two agencies stops being scored twice | Low |
 | 4.5 | Dashboard digest stats | dashboard | **Low–medium** — closes the notification gap with no external service | Low — read-only over existing data |
 
@@ -176,7 +181,23 @@ verdict — `{ relevance: 0-100, seniority, verdict, reason }` — stored in
 Decided (2026-09-10): the verdict is **effective** — `AiScore` participates
 in ranking. This deliberately overrides the earlier "don't touch `Q_INDEX`"
 note: the ranking query must gain a careful v2 (enum-name literals, the
-`Relocation` marker — see §4.2). Exact formula open (round 2).
+`Relocation` marker — see §4.2).
+
+Decided (2026-09-11) — final score: `Score` (regex) and `AiScore` stay
+separate columns; the blend is computed **at query time in `Q_INDEX` v2,
+never stored**: `FinalScore = W_r * Score + W_a * AiScore`, initial
+`W_r = 0.35`, `W_a = 0.65` (trial-and-error tunable), weights held in
+job-option settings so they change without a rebuild. Jobs without a
+verdict yet rank by their regex `Score`.
+
+Decided (2026-09-11) — AI status encoding: a new additive `Job.AiState`
+column (enum name as text). `Pending` is set by the core when a job enters
+the queue (Attention + near-miss 50–99); `Processed` is set by
+`/ai/verdict` after validating the job is `Pending`; NULL = outside the
+queue — the default for all existing rows, honoring the no-backfill
+decision. Purge candidacy derives from `AiState = 'Processed'` + `AiScore`
+below threshold; a verdict for a job that is not `Pending` is rejected and
+logged.
 
 ### 4.2 Structured extraction
 
@@ -192,8 +213,17 @@ parseable JSON:
 }
 ```
 
-Stored as **new additive columns** on `Job`, enabling dashboard filters by
-work model / salary reality instead of approximate score.
+Stored as **new additive columns on the same `Job` table** (1:1 — no new
+table): `AiSalaryMin`, `AiSalaryMax`, `AiCurrency`, `AiPeriod`,
+`AiSeniority`, `AiWorkModel`, `AiContract`, `AiExperienceYears`, and
+`AiSkills` as JSON via the existing type-handler pattern; enum-valued
+columns store the enum *name* as text (repo rule). This enables dashboard
+filters by work model / salary reality instead of approximate score.
+
+Decided (2026-09-11): the extraction is produced by the **same worker pass
+as the verdict** — one JSON-schema-constrained call returns both (§6). The
+former phase 2 is thereby absorbed into phase 1; phases 3–5 keep their
+numbers (§7).
 
 > **`JobBusiness.Q_INDEX` is fragile — edit only as a deliberate v2.** The
 > ranking SQL silently depends on enum-name string literals and the
@@ -252,14 +282,25 @@ verdict), matching the "leave the system running" usage pattern.
   only the job description differs per call.
 - **Structured output.** Use `response_format` (JSON schema / GBNF grammar)
   so verdicts and extractions always parse. Never regex-scrape model output.
-- **Two-stage purge (decided 2026-09-10).** Stage 1: jobs scoring
-  **below 50** purge immediately (today's behavior, re-thresholded).
-  Stage 2: the AI queue covers **Attention + near-miss (50–99)**; their
-  `Html`/`Content` is retained until the verdict lands, and `/ai/verdict`
-  processing purges the jobs whose AI rank is inadequate. A per-job AI
-  status (pending / processed) makes retention and stage-2 purge decidable —
-  exact encoding open (round 2). `/ai/claim` must carry the job text and,
-  per the ranking decision (§4.1), the candidate's resume text.
+- **Two-stage purge — stage 2 human-confirmed (decided 2026-09-10; amended
+  2026-09-11).** Stage 1: jobs scoring **below 50** purge immediately
+  (today's behavior, unchanged) — they never enter the AI queue. Stage 2:
+  the AI queue covers **Attention + near-miss (50–99)**; their
+  `Html`/`Content` is retained until the verdict lands. A weak verdict now
+  only marks the job a **purge candidate**; actual deletion is a dashboard
+  action (single or bulk, pre-selected by threshold). `GET /ai/next`
+  carries the job text and, per the ranking decision (§4.1), the
+  candidate's resume text.
+- **Two model calls per worker pass (decided 2026-09-11).** Call 1
+  (always): verdict + extraction as one JSON-schema-constrained response —
+  input: system rubric + candidate resume text + JD; output:
+  `{ relevance, seniority, verdict, reason, salary_min/max, currency,
+  period, work_model, contract, experience_years, skills[] }`. Call 2
+  (conditional, relevance ≥ threshold only): the resume-tailoring delta —
+  input: JD + block inventory + current ResumeContext + profile; activated
+  in phase 3. Both results return to the core in one idempotent
+  `POST /ai/verdict`. Rejected jobs never pay for tailoring; smaller
+  schemas parse more reliably; the two calls retry independently.
 - **Context length.** Configurable cap, **16k tokens to start** (32k
   acceptable), tuned by trial and error; truncate from the top, requirements
   live early. The ranking prompt also carries the resume text (§4.1).
@@ -269,19 +310,21 @@ verdict), matching the "leave the system running" usage pattern.
 | Phase | Deliverable | Risk |
 |-------|-------------|------|
 | 0 | Topology (§2) — documentation only | Decided 2026-09-10: no standalone deliverable |
-| 1 | Verdict + ranking: `ai-worker` + `/ai/claim` & `/ai/verdict` (built here) + additive verdict columns + `Q_INDEX` v2 | Worker infra absorbed into phase 1; the ranking edit is the delicate part |
-| 2 | Structured extraction columns + dashboard filters | Additive schema only |
+| 1 | Verdict + extraction + ranking: `ai-worker` + `GET /ai/next` & `POST /ai/verdict` (built here) + additive verdict/extraction columns + `Q_INDEX` v2 | Worker infra absorbed into phase 1; the ranking edit is the delicate part |
+| ~~2~~ | ~~Structured extraction columns~~ — **absorbed into phase 1** (2026-09-11: one worker pass produces verdict + extraction); dashboard filters may still land separately | Additive schema only |
 | 3 | Resume tailoring delta (`Job.AiOptions`) | Human review gate before `Applied` |
 | 4 | Cross-platform dedup + daily digest | Read-only over existing data |
 | 5 | Apply assistant on a personal terminal ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)) | New extension + `/assistant/*` endpoints; the human presses every submit |
 
 Best ratio of value to risk is still **phase 1**: it corrects the most
 precise weakness of the current pipeline — lexical regex scoring — and now
-also carries the worker infrastructure and the `Q_INDEX` v2 edit. The
-highest end value sits in **phase 3**: the delta pattern means the model can
-only *select* among pre-written blocks (now including the summary — see
-[`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) §3), which on a factual
-document is the line between tailoring and fabrication.
+also carries the worker infrastructure, the structured extraction, and the
+`Q_INDEX` v2 edit. The highest end value sits in **phase 3**: the delta
+pattern means the model can only *select* among pre-written blocks (now
+including the summary and headline variants, plus the guarded title-only
+free-text exception — see [`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md)
+§3), which on a factual document is the line between tailoring and
+fabrication.
 
 ## 8. Decision log
 
@@ -292,20 +335,34 @@ document is the line between tailoring and fabrication.
 | 2026-09 | **Resume-from-JD at the job stage is the target flow** (§4.3): regex `ResumeContext` first, LLM delta on top, human review, then print from `/job/resume`. |
 | 2026-09 | **Apply-stage exception to the golden rule** (§1): a delay of a few seconds is acceptable when a single job page is in flight and a human reviews the output before printing. |
 | 2026-09 | **Provider-agnostic client** (§3): plain `HttpClient` + OpenAI-compatible endpoint; local (`llama-server`, Ollama, LM Studio) or hosted (OpenRouter, Groq, DeepSeek, OpenAI, Anthropic, Gemini) chosen by config only. |
-| 2026-09 | **Phase 0 topology: three stations, pull model** (§2). Core (`job-seeker`, public SSL, `X-API-Key`) is the only reachable server. The search agent's host is a long-running, outbound-only browser desktop — a station, not a server, no code changes. The AI station (GPU box) is unreachable from the core, so the AI lane runs as a **pull worker**: a new `ai-worker` console project on the AI station, using two new authenticated endpoints (`/ai/claim` with lease, `/ai/verdict`). The core never initiates AI traffic; the worker never touches SQLite directly. Tunnels (Tailscale, cloudflared, SSH reverse) were considered to restore core→AI reachability and rejected. |
+| 2026-09 | **Phase 0 topology: three stations, pull model** (§2). Core (`job-seeker`, public SSL, `X-API-Key`) is the only reachable server. The search agent's host is a long-running, outbound-only browser desktop — a station, not a server, no code changes. The AI station (GPU box) is unreachable from the core, so the AI lane runs as a **pull worker**: a new `ai-worker` console project on the AI station, using two new authenticated endpoints (`/ai/claim` with lease, `/ai/verdict`). The core never initiates AI traffic; the worker never touches SQLite directly. Tunnels (Tailscale, cloudflared, SSH reverse) were considered to restore core→AI reachability and rejected. *(The `/ai/claim`-with-lease endpoint was superseded 2026-09-11 by the read-only `GET /ai/next`.)* |
 | 2026-09 | **Apply-stage mechanism amended** (§1): since the core cannot call the AI station, the apply-stage "synchronous LLM call" becomes a **priority claim** — apply-stage jobs jump the queue and `ai-worker` polls at its shortest interval while any are pending. Principle unchanged (a deliberate pause at delivery is acceptable); mechanism now matches the topology. |
 | 2026-09 | **Apply assistant planned (phase 5)** ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)): a fourth station — the personal terminal — runs a second MV3 extension that fills apply forms through an agentic tool loop (`memory_query` / `memory_write` / `fill`) against the AI station's `llama-server` reached over the LAN; the learning memory lives on the core behind new `/assistant/*` endpoints. Apply stays human-triggered (no new `JobState` in v1) and the human presses every submit. **Never both extensions in one browser** — the search extension matches `*://*/*` and would fight over the apply tabs. |
 | 2026-09 | **Assistant guardrails and data sources** ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) §3–§5): the model sees a form inventory only (never raw HTML, never emits selectors); there is no submit tool; core keys stay in the extension; personal data comes from the job's resume text in the Fill prompt plus memory — deliberately no structured profile table; submit-time diffs and chat tips are the two learning channels. An `X-Client` role header distinguishes the two extensions (absent header = legacy search). |
 | 2026-09-10 | **Phase 0 is documentation-only; implementation starts at phase 1**, which absorbs `ai-worker` + `/ai/claim` + `/ai/verdict` (no separate milestone). |
 | 2026-09-10 | **Four clients, three role headers.** `search`, `worker` (new — `ai-worker`, restricted to `/ai/*`), `assistant`; the dashboard user authenticates via the existing login/API-key and sends no role header. Absent header = legacy search. |
-| 2026-09-10 | **`ai-worker` runs manually; no polling loop** (§2.1). The timed lease is dropped in favor of a startup sweep that resets stale in-flight jobs *(pending round-2 confirmation)*. |
+| 2026-09-10 | **`ai-worker` runs manually; no polling loop** (§2.1). The timed lease is dropped in favor of a startup sweep that resets stale in-flight jobs *(pending round-2 confirmation)*. **Superseded 2026-09-11:** no sweep, no claim, no lease — read-only `GET /ai/next` + idempotent `POST /ai/verdict`. |
 | 2026-09-10 | **Apply-stage priority claim removed** (§1). The core never tracks apply stage: the user opens `job-detail`, applies on the external site, and presses the manual Apply button (`server-operations.js` `apply(jobid)`). No exception to the golden rule remains. |
-| 2026-09-10 | **Two-stage purge** (§6). Score < 50 purges immediately; Attention + near-miss (50–99) keep `Html`/`Content` until the verdict; `/ai/verdict` processing purges inadequate AI ranks. Per-job AI-status encoding open (round 2). |
-| 2026-09-10 | **Verdict is effective** (§4.1). `AiScore` lives in separate additive columns (regex `Score` untouched) and participates in ranking — a deliberate, careful `Q_INDEX` v2 edit; the earlier "don't touch" note is overridden. Exact formula open (round 2). |
+| 2026-09-10 | **Two-stage purge** (§6). Score < 50 purges immediately; Attention + near-miss (50–99) keep `Html`/`Content` until the verdict; `/ai/verdict` processing purges inadequate AI ranks. Per-job AI-status encoding open (round 2). *(Resolved 2026-09-11: `AiState` encoding + human-confirmed stage 2.)* |
+| 2026-09-10 | **Verdict is effective** (§4.1). `AiScore` lives in separate additive columns (regex `Score` untouched) and participates in ranking — a deliberate, careful `Q_INDEX` v2 edit; the earlier "don't touch" note is overridden. Exact formula open (round 2). *(Resolved 2026-09-11: `FinalScore = W_r * Score + W_a * AiScore` — see below.)* |
 | 2026-09-10 | **Local-only across all lanes** (§3). The resume is PII and the full resume text is sent for ranking too, so hosted LLM endpoints are unused; the provider-agnostic client remains for the future. |
-| 2026-09-10 | **Quality by trial and error; feedback loop agreed in principle.** No golden set. User overrides of AI rankings will be recorded and injected into future ranking prompts (design round 2). |
+| 2026-09-10 | **Quality by trial and error; feedback loop agreed in principle.** No golden set. User overrides of AI rankings will be recorded and injected into future ranking prompts (design round 2). *(Settled 2026-09-11: raw override log + unified memory with hybrid injection — see below.)* |
 | 2026-09-10 | **Context cap 16k tokens, configurable** (32k acceptable); tuned by trial and error. |
 | 2026-09-10 | **No backfill.** Old jobs are expired; reprocessing is manual: change the job's state, run `ai-worker`. |
-| 2026-09-10 | **Duplicates are advisory** (§4.4). Dashboard warning, user-clearable; on confirmation the second posting moves to a new `Duplicated` state, which ranking must exclude. Mechanics open (round 2). |
+| 2026-09-10 | **Duplicates are advisory** (§4.4). Dashboard warning, user-clearable; on confirmation the second posting moves to a new `Duplicated` state, which ranking must exclude. Mechanics open (round 2). *(Resolved 2026-09-11: mechanics deferred to phase 4.)* |
 | 2026-09-10 | **Digest is dashboard-only statistics** (§4.5) — counts of new jobs, good jobs (regex) and strong jobs (AI verdict); no external notification channel. |
-| 2026-09-10 | **Resume tailoring is selection-only end to end** (§4.3 / [`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) §3). The summary becomes segmented pre-written variants; free-text summary/jobTitle generation is dropped. The user's text-box selection mechanism and `AiOptions ?? Options` fallback are unchanged. |
+| 2026-09-10 | **Resume tailoring is selection-only end to end** (§4.3 / [`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) §3). The summary becomes segmented pre-written variants; free-text summary/jobTitle generation is dropped. The user's text-box selection mechanism and `AiOptions ?? Options` fallback are unchanged. *(Partly superseded 2026-09-11: jobTitle gains a guarded title-only free-text exception, and the fallback becomes `Options.HumanEdited ? Options : (AiOptions ?? Options)`.)* |
+| 2026-09-11 | **Phases 1+2 merged.** One `ai-worker` pass per job produces the semantic verdict AND the structured extraction; the former phase 2 is absorbed into phase 1, phases 3–5 keep their numbers (§7). |
+| 2026-09-11 | **Two model calls per worker pass** (§6). Call 1 (always): verdict + extraction as one JSON-schema-constrained response. Call 2 (conditional, relevance ≥ threshold): resume-tailoring delta (phase 3). Both return in one idempotent `POST /ai/verdict`; rejected jobs never pay for tailoring. |
+| 2026-09-11 | **Extraction storage on `Job` itself** (§4.2): additive columns `AiSalaryMin/Max`, `AiCurrency`, `AiPeriod`, `AiSeniority`, `AiWorkModel`, `AiContract`, `AiExperienceYears`, `AiSkills` (JSON, type-handler pattern); enums as names; no new table (1:1). |
+| 2026-09-11 | **Final score blend** (§4.1): `FinalScore = W_r * Score + W_a * AiScore` computed at query time in `Q_INDEX` v2, never stored; initial `W_r = 0.35`, `W_a = 0.65`, weights in job-option settings (tunable, no rebuild); verdict-less jobs rank by regex `Score`. |
+| 2026-09-11 | **Stage-2 purge is human-confirmed** (§6): a weak verdict only marks a purge candidate; `Html`/`Content` deletion is a dashboard action (single/bulk, pre-selected by threshold). Stage 1 (< 50) stays automatic. |
+| 2026-09-11 | **No claim, no lease, no sweep** (§2.1). `GET /ai/next` is read-only (oldest `Pending`, job text + resume, no state change); idempotent `POST /ai/verdict` is the only write. Crash before verdict = still `Pending`, retried naturally. One worker at a time; a second worker only duplicates inference (last-write-wins). |
+| 2026-09-11 | **`Job.AiState` encoding**: additive column, enum name as text; `Pending` (queue entry: Attention + near-miss 50–99) / `Processed` (set by `/ai/verdict` after `Pending` validation); NULL = outside the queue (no backfill honored). Non-`Pending` verdicts are rejected and logged. |
+| 2026-09-11 | **Human/AI coexistence on resume context** ([`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) §6): `HumanEdited` flag in `ResumeContext` (version bump; round-trips through `SimlpeSerialize`); precedence `Options.HumanEdited ? Options : (AiOptions ?? Options)`; AI writes only `AiOptions`; post-edit AI suggestions show as a diff with an explicit accept action. |
+| 2026-09-11 | **jobTitle: fixed variants + guarded title-only free text** ([`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) §3): default is selection among pre-written headline variants; the model may propose free text for the title slot only — review-flagged, never auto-applied, server-side single-line/length cap. Raw `job.Title` copying is dropped. |
+| 2026-09-11 | **`Duplicated` mechanics deferred to phase 4**; the advisory-only decision stands. |
+| 2026-09-11 | **Unified memory subsystem** ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) §4): one table/API/retrieval mechanism with a `Scope` column (`resume`/`apply`/`ranking`), replacing the planned `apply_memory`; ranking keeps a separate raw override log, durable lessons distill into `Scope = ranking` rows. |
+| 2026-09-11 | **Hybrid memory injection** ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) §4): deterministic pre-injection of high-confidence rows as a labeled, token-capped (~1–2k), stably-ordered data block + `memory_query` for exploration. Memory is data, never instructions; `UseCount` bumps only on applied values; chat writes visible and deletable; page text never enters memory unconfirmed. |
+| 2026-09-11 | **`X-Client: search` ships in phase 1** — one-line extension change, single deployment; `X-API-Key` unchanged. |
+| 2026-09-11 | **Assistant-mediated feedback UX** ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) §4): resume-tailoring and apply-form feedback both flow through the assistant chat; the model decides what to persist and instructs the assistant to write memory rows for future prompts. |

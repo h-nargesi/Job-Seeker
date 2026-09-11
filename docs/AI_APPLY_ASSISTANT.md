@@ -96,10 +96,14 @@ Guardrails (non-negotiable):
 
 ## 4. Memory (the learning part)
 
-Planned table `apply_memory` (new `database/structure/apply-memory.sql`):
+Decided (2026-09-11): **one unified memory subsystem** — a single table, a
+single API, and a single retrieval/injection mechanism shared by all three
+lanes, with a `Scope` column distinguishing them (this replaces the earlier
+separate `apply_memory` design):
 
 | Column | Meaning |
 |--------|---------|
+| `Scope` | which lane the row serves: `resume` / `apply` / `ranking` |
 | `AgencyDomain` | page hostname, or `'*'` for global |
 | `FieldKey` | canonical field identity: prefer the control's `name` attribute, else normalized label text (lowercase, whitespace collapsed, trailing `:*` stripped); the raw label is stored beside it |
 | `Kind` | `tip` (from chat) or `correction` (from submit-time diff) |
@@ -116,26 +120,41 @@ Two learning channels:
 - **Auto diff capture (primary).** At submit time the assistant diffs
   AI-filled values against final human values (only fields the AI filled in
   that session) and offers them as corrections — no typing required.
-- **Chat (complementary).** The side-panel chat is session-scoped
-  (`chrome.storage.session`, never persisted to the core); tips the user
-  types become memory rows through the LLM's `memory_write`.
+- **Chat (complementary, assistant-mediated — decided 2026-09-11).** The
+  side-panel chat transcript stays session-scoped
+  (`chrome.storage.session`, never persisted to the core); both apply-form
+  tips and resume-tailoring feedback reach the model here, and the model
+  decides what to persist — instructing the assistant, as its agent, to
+  write memory rows for injection into future prompts.
 
 Privacy: rows hold PII, on the user-owned core, plaintext in v1
 (documented); future hardening can reuse the existing AES-GCM
 `CredentialKey` infrastructure. No memory-management dashboard in v1 — API
 CRUD only. (Encryption decision deferred to the final phase — 2026-09-10.)
 
-Related (round 2): the ranking stage gets its own human-feedback loop —
-user overrides of AI verdicts recorded and injected into future ranking
-prompts ([`AI_INTEGRATION.md`](AI_INTEGRATION.md) §4.1); whether it shares
-this `apply_memory` table or gets its own is undecided.
+Decided (2026-09-11) — ranking feedback and hybrid injection:
+
+- The ranking stage keeps a **separate raw override log** (`jobId`,
+  `AiScore`, user action); durable lessons are distilled into shared memory
+  rows (`Scope = ranking`) for injection into future ranking prompts
+  ([`AI_INTEGRATION.md`](AI_INTEGRATION.md) §4.1) — no separate ranking
+  memory table.
+- **Hybrid injection:** high-confidence rows are deterministically
+  pre-injected into prompts as a labeled data block (precedence:
+  correction > tip; exact domain > `*`; then `UseCount`; then newest),
+  token-capped at ~1–2k with stable ordering for prefix caching;
+  `memory_query` handles exploratory retrieval. Memory is data, never
+  instructions. `UseCount` bumps only when a row's value was actually
+  applied; chat-driven writes are visible and deletable; page text never
+  enters memory without user confirmation.
 
 ## 5. Personal data: resume text + memory
 
 There is deliberately no structured profile table. Each Fill prompt carries
 the job's resume as plain text — the resume already is the source of truth
 for name, contacts, and history. The text is produced server-side
-(`GET /assistant/jobs` renders `AiOptions ?? Options` and strips tags with
+(`GET /assistant/jobs` renders `Options.HumanEdited ? Options :
+(AiOptions ?? Options)` and strips tags with
 HtmlAgilityPack, already a dependency); resume HTML never reaches the
 extension. Facts outside the resume (salary expectation, tone, relocation)
 arrive through chat and diffs and persist as memory. Human corrections
@@ -154,8 +173,8 @@ form.
 `X-Client` role rules: `assistant` is rejected on `/decision/take`; `search`
 is rejected on `/assistant/*` writes; `worker` (`ai-worker`) is restricted
 to `/ai/*`; **absent header = legacy search** (current extension versions
-send none); the search extension will be updated to send `X-Client: search`
-(timing open — round 2).
+send none); the search extension sends `X-Client: search` starting in
+phase 1 (decided 2026-09-11 — one-line change, single deployment).
 
 ## 7. Out of scope v1
 
