@@ -35,7 +35,9 @@ Job-Seeker/
 ├── agent-extension/           # Chrome MV3 extension (vanilla JS, no build)
 │   ├── manifest.json
 │   ├── controllers/           # check-page, background, messaging, action-handler
-│   └── application/           # popup UI (menu.html / menu.js)
+│   ├── application/           # popup UI (menu.html / menu.js)
+│   ├── tests/                 # node:test suite (vm-loads the classic scripts)
+│   └── package.json           # test runner config; only devDependency happy-dom
 ├── assistant-extension/       # (planned, not created yet) apply-assistant MV3
 │                              # extension — see docs/AI_APPLY_ASSISTANT.md
 ├── database/                  # SQLite schema + seed data
@@ -108,7 +110,7 @@ API Key in the popup menu (press Enter in each field to save).
 | Check        | Command | Notes |
 |--------------|---------|-------|
 | Compile      | `dotnet build "Job Seeker.sln"` | Primary validation gate. Warnings are treated seriously (`<Nullable>enable</Nullable>`). |
-| Extension JS | none    | Plain JS loaded directly by Chrome. Verify by loading the unpacked extension and watching the `AGENT` console logs. |
+| Extension JS | `cd agent-extension && npm test` | node:test + happy-dom; sources stay classic scripts loaded via `node:vm` (no build step). Also verify manually by loading the unpacked extension and watching the `AGENT` console logs. |
 | Tests        | `dotnet test core-decision-dotnet.Tests/core-decision-dotnet.Tests.csproj` | xUnit project `core-decision-dotnet.Tests` — not in the solution, run it directly. |
 
 After editing C#, **always run `dotnet build "Job Seeker.sln"`** before declaring done.

@@ -51,7 +51,20 @@
 > [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شدند — تأیید نهایی با نخستین اجرای زنده.
 > مورد ۲.۲۰ (قفل per-agency روی `AnalyzeContent`) در ۱۴۰۵/۰۶/۲۰
 > (2026-09-11) رفع و به [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شد —
-> تأیید نهایی با نخستین اجرای زنده. مورد باز این بخش باقی نمانده است.
+> تأیید نهایی با نخستین اجرای زنده.
+>
+> ۱۴۰۵/۰۶/۲۱ (2026-09-12): با راه‌اندازی سوئیت تست JS اکستنشن
+> (`agent-extension/tests/` — `npm test`)، مورد جدید **۲.۲۳** ثبت شد.
+
+### ۲.۲۳ فرمان recheck بدون OnPageLoad منجر به TypeError می‌شود
+**فایل:** `agent-extension/controllers/action-handler.js` (متد `Execute`، case "recheck")
+
+وقتی `ActionHandler.OnPageLoad` تنظیم نشده باشد فقط هشدار داده می‌شود و بلافاصله
+`ActionHandler.OnPageLoad()` صدا زده می‌شود → `TypeError: ... is not a function` و
+رد شدن باقی‌ماندهٔ زنجیرهٔ فرمان‌ها. در عمل check-page.js این فیلد را قبل از استفاده ست
+می‌کند، ولی هر مسیر دیگری (مثلاً فرمان recheck از مسیر سفارش‌ها) کرش می‌کند.
+تأییدشده با `tests/action-handler.test.js` («recheck with OnPageLoad unset ...»).
+**اقدام:** `if (ActionHandler.OnPageLoad) ActionHandler.OnPageLoad(); else console.warn(...)`.
 
 ---
 
@@ -181,16 +194,16 @@ Stepstone آلمانی است؛ فرمت `50.000,00` با فرض آمریکای�
 پیشخان جدا و مستقل باشد؛ اجرا نشده و در هر دو جهت نقض شده است:
 
 ۱. **پیشخان به وضعیت زندهٔ حلقه می‌نویسد:** `POST /decision/running` تنها از
-`wwwroot/scripts/server-operations.js` صدا می‌خورَد و مستقیم روی شیء سینگلتون
-آژانس جهش می‌کند (`CurrentMethodIndex`، بیت `ActiveSeeking`، `ClearSearching`،
-`SaveState`)؛ `POST /decision/reset` روندها را می‌کشد و با `ClearAgencies`
-شیءهای زنده را زیر تحلیل‌های در جریان تعویض می‌کند؛ `POST /job/setting` با
-`reload` همان‌جا سینگلتون‌ها را بازبارگذاری می‌کند و کنسول SQL همان endpoint
-نوشتن خام روی سطر تنظیمات را ممکن می‌کند.
+   `wwwroot/scripts/server-operations.js` صدا می‌خورَد و مستقیم روی شیء سینگلتون
+   آژانس جهش می‌کند (`CurrentMethodIndex`، بیت `ActiveSeeking`، `ClearSearching`،
+   `SaveState`)؛ `POST /decision/reset` روندها را می‌کشد و با `ClearAgencies`
+   شیءهای زنده را زیر تحلیل‌های در جریان تعویض می‌کند؛ `POST /job/setting` با
+   `reload` همان‌جا سینگلتون‌ها را بازبارگذاری می‌کند و کنسول SQL همان endpoint
+   نوشتن خام روی سطر تنظیمات را ممکن می‌کند.
 ۲. **حلقه به پیشخان وابسته است:** پمپ سفارش‌ها (`CheckNewOrders` — فعال‌ساز
-روندهای بی‌کار مثل «تب جستجو را باز کن») فقط روی تب پیشخان اجرا می‌شود
-(`check-page.js:25-52`، دکمهٔ `stop-start-ordering`، تایمر ۲۰ ثانیه)؛ بدون تب
-پیشخان جستجو می‌ایستد.
+   روندهای بی‌کار مثل «تب جستجو را باز کن») فقط روی تب پیشخان اجرا می‌شود
+   (`check-page.js:25-52`، دکمهٔ `stop-start-ordering`، تایمر ۲۰ ثانیه)؛ بدون تب
+   پیشخان جستجو می‌ایستد.
 
 **اقدام:** اصل نویسندهٔ واحد (single-writer): مالکیت وضعیت آژانس فقط با حلقهٔ
 تصمیم (take/orders/checkpoint)؛ نیت پیشخان از طریق DB در نقطهٔ امن اعمال شود
@@ -198,6 +211,27 @@ Stepstone آلمانی است؛ فرمت `50.000,00` با فرض آمریکای�
 `checkpoint_lock` → قفل آژانس)؛ انتقال پمپ سفارش‌ها به service worker
 پس‌زمینهٔ افزونه (`chrome.alarms` به‌دلیل خواب MV3، هم‌نوا با ۲.۱۷). پس از
 استقرار، پوشش قفلی ۲.۲۰ برای endpoint `Running` حذف‌شدنی است.
+
+> ۱۴۰۵/۰۶/۲۱ (2026-09-12): با سوئیت تست JS اکستنشن (`agent-extension/tests/`)
+> موارد جدید **۳.۲۷** و **۳.۲۸** ثبت شدند.
+
+### ۳.۲۷ هشدار مردهٔ «Not found» در OnFill/OnClick
+**فایل:** `agent-extension/controllers/action-handler.js`
+
+`document.querySelectorAll` هرگز null برنمی‌گرداند ( NodeList خالی)، پس
+`if (!elements) console.warn("Not found", object)` هرگز اجرا نمی‌شود و سلکتور
+اشتباه بی‌صدا نادیده گرفته می‌شود. تأییدشده با `tests/action-handler.test.js`
+(«fill/click on an empty selector ... never warns»).
+**اقدام:** شرط را به `if (!elements.length)` تغییر دهید.
+
+### ۳.۲۸ کش استاتیک SERVER_URL/API_KEY در Service Worker
+**فایل:** `agent-extension/controllers/core-messaging.js` (`CheckServerUrl`/`CheckApiKey`)
+
+آدرس سرور و کلید API یک‌بار خوانده و در فیلد استاتیک کش می‌شوند؛ تغییر آنها از
+popup تا ری‌استارت بعدی Service Worker بی‌اثر می‌ماند. MV3 SW ها مکرر ری‌استارت
+می‌شوند ولی در بازهٔ عمرشان با تنظیمات کهنه کار می‌کنند. تأییدشده با
+`tests/core-messaging.test.js` («caches the URL after the first storage read»).
+**اقدام:** TTL کوتاه برای کش یا پاکسازی با `chrome.storage.onChanged`.
 
 ---
 
@@ -229,6 +263,9 @@ Stepstone آلمانی است؛ فرمت `50.000,00` با فرض آمریکای�
 - استفاده از `DateTime.Now` (زمان محلی) در `Trend.LastActivity`/`DeleteExpired` — در تغییر DST می‌تواند TTL را جابه‌جا کند؛ UTC بهتر است.
 - `ResumeContext.Version => 42` عدد جادویی بدون مهاجرت.
 - نبود `.editorconfig`؛ ترکیب tab/space و استایل نامنظم.
+- در `agent-extension` (کشف با سوئیت تست، ۱۴۰۵/۰۶/۲۱ — 2026-09-12): `event.keyCode` منسوخ در
+  `application/menu.js` (به‌جای آن `event.key === 'Enter'`) و غلط املایی `Unkown action` در
+  لاگ `controllers/action-handler.js` (`Execute`).
 
 ---
 

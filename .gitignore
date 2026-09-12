@@ -10,6 +10,9 @@
 /selenium/driver/
 /database/structure/passwords.sql
 
+# JS tests (agent-extension)
+node_modules/
+
 # Dotnet Build results
 /publish/
 *.sln

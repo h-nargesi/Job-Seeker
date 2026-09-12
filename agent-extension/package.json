@@ -1,0 +1,13 @@
+{
+	"name": "job-seeker-agent-extension-tests",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"description": "Unit tests for the agent extension classic scripts (node:test + happy-dom, loaded via node:vm).",
+	"scripts": {
+		"test": "node --test tests/"
+	},
+	"devDependencies": {
+		"happy-dom": "^20.14.5"
+	}
+}
