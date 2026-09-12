@@ -22,7 +22,7 @@ public class AuthController(IDataProtectionProvider protection, IConfiguration c
     {
         if (AuthDisabled) return Redirect("/");
 
-        return View("~/views/auth/login.cshtml", string.Empty);
+        return View("~/views/login.cshtml", string.Empty);
     }
 
     [HttpPost]
@@ -35,7 +35,7 @@ public class AuthController(IDataProtectionProvider protection, IConfiguration c
         if (string.IsNullOrEmpty(password) || !FixedTimeEquals(password, api_key))
         {
             Log.Warning("Failed login attempt from {0}", HttpContext.Connection.RemoteIpAddress);
-            return View("~/views/auth/login.cshtml", "Wrong password.");
+            return View("~/views/login.cshtml", "Wrong password.");
         }
 
         Response.Cookies.Append(AuthOptions.CookieName, protector.Protect("ok"), new CookieOptions
