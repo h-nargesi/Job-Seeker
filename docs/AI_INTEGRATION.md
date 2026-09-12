@@ -75,7 +75,9 @@ Four stations, three of them outbound-only (the fourth is planned):
 - **AI station** — the GPU box running `llama-server` (localhost) plus
   **`ai-worker`, the one new program this design requires** (a small console
   project in this repository). It reaches the core over the public SSL
-  endpoint and nothing else; the core cannot see it back.
+  endpoint and nothing else; the core cannot see it back. `llama-server`
+  stays localhost-bound through phase 3 (2026-09-12); any LAN exposure for
+  the phase-5 assistant is a phase-5 decision (§3).
 - **Personal terminal (phase 5 — planned)** — the assistant's host: the
   user's own desktop, running the planned `assistant-extension`
   ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)). Outbound-only to the
@@ -98,19 +100,24 @@ should be processed. One run:
 
 1. `GET /ai/next` (`X-Client: worker`) repeatedly, oldest first. The fetch
    is **read-only**: the response carries one `Pending` job's text plus the
-   candidate's resume text, and changes no state. The worker stops when
+   candidate's master resume text, and changes no state. The worker stops when
    the core answers "empty".
 2. For each job: run the local `llama-server` call(s) (§6), then
-   `POST /ai/verdict` (idempotent by job id) — the only write in the AI
-   lane. The core validates the job is still `Pending` (§4.1), writes the
-   verdict + extraction, and marks purge candidates (§6).
+   `POST /ai/verdict` — the only write in the AI lane. Decided (2026-09-12,
+   superseding the Pending-validation rule): the verdict is an **upsert** —
+   it always updates the job. The core validates that the job exists and the
+   payload is sane (AiScore 0–100, enum names, length caps), writes the
+   verdict + extraction, sets `AiState = Processed`, and marks purge
+   candidates (§6); verdicts arriving for out-of-queue jobs are logged
+   informationally, not rejected. A re-POST after a lost HTTP response is a
+   natural no-op, and re-running the worker overwrites old verdicts.
 
 - **No claim, no lease, no startup sweep** (2026-09-11, superseding the
   2026-09-10 sweep/claim design). A crash before the verdict simply leaves
   the job `Pending` — the next run retries it naturally; nothing to reset.
-  The rule stays **run one `ai-worker` at a time**: an accidental second
-  worker merely duplicates inference on the same job (idempotent,
-  last-write-wins — wasted compute, no corruption).
+  The rule stays **run one `ai-worker` at a time** (2026-09-12: a standing
+  convention, not enforced in code): with upsert semantics a stray second
+  instance can only waste compute, never corrupt state.
 - The worker **never touches SQLite directly** — only the two endpoints.
 - **Rejected alternative: tunnels** (Tailscale, cloudflared, SSH reverse)
   would restore core→AI reachability and allow an in-core worker calling
@@ -122,7 +129,11 @@ should be processed. One run:
 - llama.cpp's `llama-server` exposes an OpenAI-compatible endpoint
   (`/v1/chat/completions`) on the AI station's localhost. The model never
   ships inside `job-seeker`; the core never talks to it at all — `ai-worker`
-  is its only client.
+  is its only client. Decided (2026-09-12): localhost-only through phase 3;
+  any LAN exposure for the phase-5 assistant (interface binding or a local
+  reverse proxy, and the home-LAN trust assumption it implies) is decided in
+  phase 5 — this resolves the earlier §2-diagram /
+  [`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) contradiction.
 - `ai-worker` client: a plain `HttpClient` + JSON. No new package
   dependencies on the core.
 - Suggested configuration (the worker's, not the core's `appsettings.json`):
@@ -171,8 +182,9 @@ bands: jobs that passed the regex gate (`State = Attention`) and near-misses
 > Is this genuinely a senior full-stack role? Real seniority? Direct hire or
 > staffing agency? Is relocation supported?
 
-The prompt carries the job description **and the candidate's resume text**,
-so the verdict ranks against the actual background. Output is a small JSON
+The prompt carries the job description **and the candidate's master resume
+text** — a stable, job-independent base resume (decided 2026-09-12; storage
+source open, round 3) — so the verdict ranks against the actual background. Output is a small JSON
 verdict — `{ relevance: 0-100, seniority, verdict, reason }` — stored in
 **separate additive columns** (e.g. `AiScore`, verdict, reason); the regex
 `Score` is never overwritten, and `reason` is also appended to `job.Log`
@@ -190,14 +202,27 @@ never stored**: `FinalScore = W_r * Score + W_a * AiScore`, initial
 job-option settings so they change without a rebuild. Jobs without a
 verdict yet rank by their regex `Score`.
 
+Amended (2026-09-12) — scale normalization. `AiScore` is fixed at **0–100**
+(the model judges apply-worthiness from the master resume + JD + JobOption
+weights). Regex `Score` is salary-inflated and unbounded, so the blend
+normalizes first: `RegexNorm = min(Score, ScoreCap) / ScoreCap × 100` with
+`ScoreCap` a new job-option setting (initial ~300, tunable);
+`FinalScore = W_r * RegexNorm + W_a * AiScore` on a 0–100 scale;
+verdict-less jobs rank by `RegexNorm`; the time-decay curve applies to
+`FinalScore` post-blend (the `Analyze/JobRanking.cs` mirror of the decay
+weights must be updated in the same change). Open (round 3): whether a
+near-miss crossing the second-chance threshold gets a dynamic top category
+in `Q_INDEX` v2 or a `JobState` change. Regex-vs-AI divergence statistics
+are dropped (scales differ — not a requirement).
+
 Decided (2026-09-11) — AI status encoding: a new additive `Job.AiState`
 column (enum name as text). `Pending` is set by the core when a job enters
 the queue (Attention + near-miss 50–99); `Processed` is set by
 `/ai/verdict` after validating the job is `Pending`; NULL = outside the
 queue — the default for all existing rows, honoring the no-backfill
 decision. Purge candidacy derives from `AiState = 'Processed'` + `AiScore`
-below threshold; a verdict for a job that is not `Pending` is rejected and
-logged.
+below threshold. *(The "non-Pending verdicts rejected" clause was
+superseded 2026-09-12 by upsert semantics — §2.1.)*
 
 ### 4.2 Structured extraction
 
@@ -283,14 +308,18 @@ verdict), matching the "leave the system running" usage pattern.
 - **Structured output.** Use `response_format` (JSON schema / GBNF grammar)
   so verdicts and extractions always parse. Never regex-scrape model output.
 - **Two-stage purge — stage 2 human-confirmed (decided 2026-09-10; amended
-  2026-09-11).** Stage 1: jobs scoring **below 50** purge immediately
-  (today's behavior, unchanged) — they never enter the AI queue. Stage 2:
-  the AI queue covers **Attention + near-miss (50–99)**; their
-  `Html`/`Content` is retained until the verdict lands. A weak verdict now
-  only marks the job a **purge candidate**; actual deletion is a dashboard
-  action (single or bulk, pre-selected by threshold). `GET /ai/next`
-  carries the job text and, per the ranking decision (§4.1), the
-  candidate's resume text.
+  2026-09-11, 2026-09-12).** Stage 1: jobs scoring **below the configurable
+  near-miss floor** purge immediately — the floor (e.g. 50 or 70) is a
+  job-option setting shared with AI-queue entry, and this is a **deliberate
+  behavior change**: today's code purges everything below
+  `MinEligibilityScore = 100`, so retaining the floor–99 band (with its DB
+  growth) is part of the phase-1 deliverables (§7). The Attention pass-mark
+  stays fixed at 100 — the floor never changes `JobState`. Stage 2: the AI
+  queue covers **Attention + near-miss (floor–99)**; their `Html`/`Content`
+  is retained until the verdict lands. A weak verdict now only marks the job
+  a **purge candidate**; actual deletion is a dashboard action (single or
+  bulk, pre-selected by threshold). `GET /ai/next` carries the job text and,
+  per the ranking decision (§4.1), the master resume text.
 - **Two model calls per worker pass (decided 2026-09-11).** Call 1
   (always): verdict + extraction as one JSON-schema-constrained response —
   input: system rubric + candidate resume text + JD; output:
@@ -310,7 +339,7 @@ verdict), matching the "leave the system running" usage pattern.
 | Phase | Deliverable | Risk |
 |-------|-------------|------|
 | 0 | Topology (§2) — documentation only | Decided 2026-09-10: no standalone deliverable |
-| 1 | Verdict + extraction + ranking: `ai-worker` + `GET /ai/next` & `POST /ai/verdict` (built here) + additive verdict/extraction columns + `Q_INDEX` v2 | Worker infra absorbed into phase 1; the ranking edit is the delicate part |
+| 1 | Verdict + extraction + ranking: `ai-worker` + `GET /ai/next` & `POST /ai/verdict` (built here) + additive verdict/extraction columns + `Q_INDEX` v2 + near-miss retention change (purge reads the floor setting; written together with `AiState = Pending` — §6) | Worker infra absorbed into phase 1; the ranking edit is the delicate part |
 | ~~2~~ | ~~Structured extraction columns~~ — **absorbed into phase 1** (2026-09-11: one worker pass produces verdict + extraction); dashboard filters may still land separately | Additive schema only |
 | 3 | Resume tailoring delta (`Job.AiOptions`) | Human review gate before `Applied` |
 | 4 | Cross-platform dedup + daily digest | Read-only over existing data |
@@ -366,3 +395,10 @@ fabrication.
 | 2026-09-11 | **Hybrid memory injection** ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) §4): deterministic pre-injection of high-confidence rows as a labeled, token-capped (~1–2k), stably-ordered data block + `memory_query` for exploration. Memory is data, never instructions; `UseCount` bumps only on applied values; chat writes visible and deletable; page text never enters memory unconfirmed. |
 | 2026-09-11 | **`X-Client: search` ships in phase 1** — one-line extension change, single deployment; `X-API-Key` unchanged. |
 | 2026-09-11 | **Assistant-mediated feedback UX** ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) §4): resume-tailoring and apply-form feedback both flow through the assistant chat; the model decides what to persist and instructs the assistant to write memory rows for future prompts. |
+| 2026-09-12 | **Near-miss retention is a phase-1 code change** (§6). Today's purge threshold is `Score < MinEligibilityScore = 100` — the earlier "below 50, today's behavior unchanged" claim was wrong. The new stage-1 threshold is the configurable near-miss floor (e.g. 50/70), shared with AI-queue entry and shipped together with `AiState = Pending` in `EvaluateJobEligibility`; expected DB growth accepted; the Attention pass-mark stays 100 (the floor never changes `JobState`). |
+| 2026-09-12 | **Verdict semantics are upsert** (§2.1), superseding the 2026-09-11 "non-Pending verdicts rejected" rule: `POST /ai/verdict` always updates after validating job existence and payload (AiScore 0–100, enum names, length caps); out-of-queue verdicts are logged informationally. Resolves the idempotent/last-write-wins contradiction; retry-after-lost-response is a no-op; manual reprocess = re-run the worker. |
+| 2026-09-12 | **AiScore fixed at 0–100; FinalScore normalized** (§4.1): the model judges apply-worthiness (master resume + JD + JobOption weights); `RegexNorm = min(Score, ScoreCap)/ScoreCap×100` (`ScoreCap` setting, initial ~300); `FinalScore = W_r×RegexNorm + W_a×AiScore` on 0–100; decay applied post-blend; the `JobRanking.cs` mirror is updated in the same change. Regex-vs-AI divergence statistics are dropped (scale mismatch). |
+| 2026-09-12 | **Ranking profile = master resume** (§4.1): the verdict prompt carries a stable, job-independent base resume. Open (round 3): storage source — settings text vs rendered default template. |
+| 2026-09-12 | **Second-chance threshold is a setting** applied to `FinalScore` (0–100 scale). Open (round 3): promotion mechanics — dynamic top category in `Q_INDEX` v2 vs `JobState` change. |
+| 2026-09-12 | **`llama-server` stays localhost through phase 3** (§3); LAN exposure (binding/proxy + home-LAN trust assumption) is decided in phase 5 — resolves the §2/§3 contradiction. **One worker at a time** is a standing convention, not enforced in code. |
+| 2026-09-12 | **Open (round 3) queue:** master-resume storage source; near-miss promotion mechanics; confirmation of upsert guards + `ScoreCap` initial value. Deferred: queue membership rules (when `Pending` is set/exited, Revaluation re-queue, oldest-first key), poison-job error verdict, manual-reprocess dashboard action, roles-are-not-a-security-boundary note (cookie auth = dashboard), proxy hardening (rate limit / HSTS / IP allowlist for `/ai/*`), worker config core `ApiKey` + deployment story. |

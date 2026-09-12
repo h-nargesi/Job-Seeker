@@ -27,7 +27,9 @@ The assistant connects outbound only:
   reporting, memory CRUD;
 - over the **LAN** to the AI station's `llama-server` (the core cannot
   proxy — Phase 0 rule — and the AI station never receives core
-  credentials).
+  credentials). `llama-server` stays localhost-bound through phase 3; the
+  binding/proxy choice (and the home-LAN trust assumption it implies) is
+  decided in phase 5 (AI_INTEGRATION.md §3, 2026-09-12).
 
 Decided (2026-09-10): the assistant is **local-only** — it may carry
 sensitive data, so hosted LLM endpoints are never used by the assistant,
