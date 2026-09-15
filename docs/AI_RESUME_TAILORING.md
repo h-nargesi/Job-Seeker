@@ -184,4 +184,4 @@ its API key was removed and the service is no longer used. The print surface
 is `/job/resume` in any browser: the template's `@media print` rules make the
 served page print-ready, so printing to paper/PDF is a manual browser step.
 No server-side PDF conversion and no new `print` browser command are planned
-(see the decision log in [`AI_INTEGRATION.md`](AI_INTEGRATION.md) §8).
+(see [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md)).
