@@ -134,10 +134,13 @@ should be processed. One run:
   planned `AiState` column): the regex gate enters the queue (§4.1), the
   verdict gate leaves it. Re-queue rules: a settings change followed by
   `RunRevaluateProcess` re-queues **every** floor-passing job (including
-  `Attention`/`NotApprovedAI`); a browser re-scrape re-queues only when the
-  scraped text changed (an edited posting) — an unchanged re-visit leaves
-  AI-judged states alone, while un-judged states (`Saved`, `AiPending`,
-  `NotApprovedRegex`) always re-evaluate.
+  `Attention`/`NotApprovedAI`); a purged `NotApprovedRegex` job whose
+  stored `Score` passes the new floor goes back to `Saved` for a natural
+  re-scrape (2026-09-17 — purge nulls only `Html`/`Content`); a browser
+  re-scrape re-queues only when the scraped text changed (whitespace-
+  normalized compare against stored `Content`, 2026-09-17) — an unchanged
+  re-visit leaves AI-judged states alone, while un-judged states (`Saved`,
+  `AiPending`, `NotApprovedRegex`, `AIError`) always re-evaluate.
 - **Rejected alternative: tunnels** (Tailscale, cloudflared, SSH reverse)
   would restore core→AI reachability and allow an in-core worker calling
   `llama-server` remotely. Rejected for Phase 0: extra infrastructure to keep
@@ -258,8 +261,10 @@ gate writes its own domain: below the configurable floor (default 70) →
 `NotApprovedRegex` with `Html`/`Content` purged; at or above the floor →
 `AiPending` (both the floor–99 near-miss band and 100+). The verdict gate
 writes the AI domain: `AiScore ≥ AiPassmark` (default 60) → `Attention`,
-otherwise `NotApprovedAI`. Enum order: `Saved, Revaluation,
-NotApprovedRegex, AiPending, NotApprovedAI, Attention, Rejected, Applied`;
+otherwise `NotApprovedAI`; an error verdict → `AIError`, bypassing the
+passmark gate (2026-09-17). Enum order: `Saved, Revaluation,
+NotApprovedRegex, AiPending, NotApprovedAI, AIError, Attention, Rejected,
+Applied`;
 the order-dependent `user_changes` guard (`State > Attention`) becomes an
 explicit `is Rejected or Applied` check. Browser follow-up commands
 (`JobPage`/`StepstonePageJob` save-button clicks) re-key from `Attention`
@@ -267,7 +272,8 @@ to the regex-approval result, so browser behavior is unchanged. **No
 bypass:** `Attention` is reachable only via a verdict — no AI-off fallback,
 no manual promote; the top list stays empty until the worker runs.
 Implementation starts from a **fresh database** (old jobs expired) — no row
-migration, no backfill. Purge candidacy is `NotApprovedAI` (§6).
+migration, no backfill. Purge candidacy is `NotApprovedAI` and `AIError`
+(§6).
 
 ### 4.2 Structured extraction
 
@@ -369,11 +375,12 @@ verdict), matching the "leave the system running" usage pattern.
   the existing old-age cleanup also covers `NotApprovedRegex` and
   `NotApprovedAI`. `GET /ai/next` carries the job text (`Job.Content`) and,
   per the ranking decision (§4.1), the master resume text.
-- **Poison jobs (decided 2026-09-15).** A model/parse failure is retried
-  twice within the same worker run; persistent failure posts an **error
-  verdict** moving the job to `NotApprovedAI` with the error as its reason.
-  Without it, oldest-first would spin the worker on the same broken job
-  forever. The dashboard re-queue button (job → `AiPending`) retries later.
+- **Poison jobs (decided 2026-09-15; amended 2026-09-17 — target state).**
+  A model/parse failure is retried twice within the same worker run;
+  persistent failure posts an **error verdict** moving the job to
+  `AIError` with the error as its reason. Without it, oldest-first would
+  spin the worker on the same broken job forever. The dashboard re-queue
+  button (job → `AiPending`) retries later.
 - **Two model calls per worker pass (decided 2026-09-11).** Call 1
   (always): verdict + extraction as one JSON-schema-constrained response —
   input: system rubric + candidate resume text + JD; output:
@@ -385,8 +392,12 @@ verdict), matching the "leave the system running" usage pattern.
   `POST /ai/verdict`. Rejected jobs never pay for tailoring; smaller
   schemas parse more reliably; the two calls retry independently.
 - **Context length.** Configurable cap, **16k tokens to start** (32k
-  acceptable), tuned by trial and error; truncate from the top, requirements
-  live early. The ranking prompt also carries the resume text (§4.1).
+  acceptable), tuned by trial and error; budget: rubric (~1k) + master
+  resume in full + JD remainder, an over-long JD truncated at its **tail**
+  — requirements live early (clarified 2026-09-17). The ranking prompt also
+  carries the resume text (§4.1). Worker calls time out at 120 s;
+  connection failures abort the whole run and write nothing (error classes
+  per the 2026-09-17 decision-log entry).
 
 ## 7. Phasing
 
@@ -394,20 +405,17 @@ verdict), matching the "leave the system running" usage pattern.
 |-------|-------------|------|
 | 0 | Topology (§2) — documentation only | Decided 2026-09-10: no standalone deliverable |
 | 1 | Verdict + extraction + ranking: `ai-worker` + `GET /ai/next` & `POST /ai/verdict` (built here) + additive verdict/extraction columns + `Q_INDEX` v2 + the sequential state machine (`NotApprovedRegex`/`AiPending`/`NotApprovedAI`; queue = `AiPending`, no `AiState` column) + near-miss retention (floor default 70) + new job-option settings (floor, aipassmark=60, scorecap=300, w_regex=0.35, w_ai=0.65) + fresh DB (no migration) | Worker infra absorbed into phase 1; the ranking edit is the delicate part |
-| ~~2~~ | ~~Structured extraction columns~~ — **absorbed into phase 1** (2026-09-11: one worker pass produces verdict + extraction); dashboard filters may still land separately | Additive schema only |
+| ~~2~~ | ~~Structured extraction columns~~ — **absorbed into phase 1** (2026-09-11: one worker pass produces verdict + extraction); dashboard filters deferred to phase 6 (2026-09-17) | Additive schema only |
 | 3 | Resume tailoring delta (`Job.AiOptions`) | Human review gate before `Applied` |
 | 4 | Cross-platform dedup + daily digest | Read-only over existing data |
 | 5 | Apply assistant on a personal terminal ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)) | New extension + `/assistant/*` endpoints; the human presses every submit |
+| 6 | Dashboard side-work (2026-09-17): filters over the extraction columns (design + implementation), bulk purge for `NotApprovedAI`/`AIError`, digest-count redefinition | Read-only over existing data; no browser/worker changes |
 
-Best ratio of value to risk is still **phase 1**: it corrects the most
-precise weakness of the current pipeline — lexical regex scoring — and now
-also carries the worker infrastructure, the structured extraction, and the
-`Q_INDEX` v2 edit. The highest end value sits in **phase 3**: the delta
-pattern means the model can only *select* among pre-written blocks (now
-including the summary and headline variants, plus the guarded title-only
-free-text exception — see [`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md)
-§3), which on a factual document is the line between tailoring and
-fabrication.
+Best value-to-risk is still **phase 1** (fixes lexical regex scoring;
+carries the worker, the structured extraction and the `Q_INDEX` v2 edit).
+The highest end value sits in **phase 3**: selection-only tailoring is the
+line between tailoring and fabrication
+([`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) §3).
 
 ## 8. Decision log
 
