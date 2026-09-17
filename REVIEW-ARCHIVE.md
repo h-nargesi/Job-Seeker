@@ -1,3 +1,5 @@
+<div dir="rtl" lang="fa">
+
 # آرشیو موارد رفع‌شدهٔ REVIEW.md
 
 > مواردی از گزارش مرور که در تاریخ ۱۴۰۵/۰۶/۰۹ (2026-08-31) با کد فعلی تطبیق داده شدند
@@ -473,3 +475,5 @@ DI کامل (مورد ۳.۳ باز ماند). نکتهٔ فنی: `Settings` حق
 fixture مشترک `core-decision-dotnet.Tests/EligibilityFixture.cs:7-112`؛
 seam: `core-decision-dotnet/Analyze/JobEligibilityHelper.cs:34-39` (سازندهٔ internal) و
 `:198,225,317,341` (internal شدن)، `core-decision-dotnet/core-decision.csproj:11-13` (`InternalsVisibleTo`).
+
+</div>

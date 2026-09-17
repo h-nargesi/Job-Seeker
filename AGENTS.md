@@ -180,6 +180,15 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **Nullable enabled.** Don't silence nullability with `!` unless necessary.
 - **Technical docs (`docs/`, `AGENTS.md`) are English-only.** Personal working
   logs (`REVIEW*.md`) may be Persian; anything an agent reads must be English.
+  Persian markdown files wrap their whole body in one `<div dir="rtl" lang="fa">`
+  per file — opening tag on line 1, closing tag on the last line, blank line
+  after/before the tags, never per-line — and never contain RLM (U+200F) or
+  other invisible bidi control characters. Fenced code blocks inside such a
+  file are additionally wrapped in `<div dir="ltr">` (same blank-line rule) to
+  keep code left-aligned; inline code needs nothing unless its content starts
+  or ends with neutral characters (`:` `/` `.` `-`) and renders wrong — fix
+  that span surgically with `<code dir="ltr">…</code>`, never with invisible
+  marks (RLM/LRM).
 
 ## 6. Common tasks (pointers)
 
