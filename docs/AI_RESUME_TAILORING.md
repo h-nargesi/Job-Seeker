@@ -4,7 +4,10 @@
 > [`AI_INTEGRATION.md`](AI_INTEGRATION.md) (phase 3). Records the design for
 > LLM-driven, per-job resume customization, including the decided delivery
 > step (§6): the tailored resume is printed manually from the browser, and
-> the decided selection-only summary (§3). No AI code exists yet.
+> the decided selection-only summary (§3). No AI code exists yet. Amended
+> 2026-09-17: phase-3 ambiguities resolved — see the decision log
+> ([`AI_DECISION_LOG.md`](AI_DECISION_LOG.md), "Phase-3 ambiguities
+> resolved").
 
 ## 1. How the resume works today (the part that matters)
 
@@ -15,8 +18,9 @@ possible resume variant, and the delivered resume is produced by pruning it:
   `key-extra-2`, `key-not-extra-3`, ...), including English (`ltr`) and
   Persian (`rtl`) variants of each experience.
 - Scoring already populates a `ResumeContext` (stored as `Job.Options`):
-  `Keys`, `Included`/`NotIncluded`, `Length`, `Elements`, `INPUT_DATA`,
-  `MORE`, `PageBreak`.
+  `Keys`, `Included`/`NotIncluded`, `Length`, `JobTitle`, `Elements`,
+  `INPUT_DATA`, `PageBreak`. (`MORE`, listed here earlier, is not a context
+  field — see the lever-table correction in §2.)
 - Client-side JS in the template hides/shows blocks from those flags. The
   `Included`/`NotIncluded` entries are **arbitrary CSS selectors** — see
   `KeyWordContext.ClearanceMonitoring` (`#clearance-monitoring`) — so a
@@ -56,6 +60,16 @@ job description (plain text)
 }
 ```
 
+*Illustrative only (corrected 2026-09-17 — decision log, "Phase-3
+ambiguities resolved"): the final delta contract is `keys`,
+`included`/`notIncluded` selectors, `length` — plus summary-segment and
+title-variant selection expressed as template-element selections, and an
+optional guarded free-text title string. The `summaryOn`/`titleVariant`
+context fields shown above are dropped (no new `ResumeContext` fields). The
+**core** applies the delta onto `Job.Options` and stores the complete
+resulting context in `Job.AiOptions`; the worker only posts the raw delta
+inside `POST /ai/verdict`.*
+
 The delta is applied to a **separate** `Job.AiOptions` field; rendering and
 template stay unchanged. The resume view resolves
 `Options.HumanEdited ? Options : (AiOptions ?? Options)` (§6), so the
@@ -79,9 +93,15 @@ Why this beats HTML editing:
 | `Keys` (`DOTNET`, `JAVA`, `SQL`, ...) | Which stacks — and their matching experience articles and skill chips — appear |
 | `Included` / `NotIncluded` | Any CSS selector: whole articles, skill chips, a single `<li>` |
 | `Length` (1 / 2) | `key-extra-N` / `key-not-extra-N` blocks (page budget) |
-| `MORE` | Extra skill chips injected after the matching `key-*` chip |
 | `INPUT_DATA` | Numeric overrides applied to elements carrying the matching class (e.g. years of experience) |
 | `Elements` | Header items (phone, location, image, footer) |
+| `PageBreak` | Page-break placement |
+
+*Correction (2026-09-17): `MORE` is not a `ResumeContext` lever — it is a
+template JS constant (`Views/resume.cshtml`) fed from job-option keywords.
+Delta-contract whitelist: the model may set `Keys`, `Included`/
+`NotIncluded`, `Length` and select summary/title template elements;
+`INPUT_DATA`, `Elements` and `PageBreak` are human-only.*
 
 ## 3. Selection over pre-written text — the summary becomes segmented
 
@@ -97,13 +117,17 @@ become selection problems:
 - **JobTitle** — decided (2026-09-11): fixed pre-written headline variants
   selected by the enabled keys; copying the raw `job.Title` is dropped. One
   bounded exception: the model may *propose* free text for the title slot
-  only — acceptable because the human review gate approves every delta
-  before it renders. Guards: (a) title only — the summary and every other
-  slot stay strictly selection-only (multi-line prose carries higher
-  fabrication risk and is harder to review); (b) the review UI flags such
-  deltas as containing free text; (c) they never apply without explicit
-  user acceptance; (d) a server-side sanity cap enforces a single line and
-  bounded length. Template details settle in phase 3.
+  only. Pending-title mechanism (2026-09-17, replacing the earlier
+  "acceptable because the review gate approves every delta" rationale): the
+  proposal lives in an additive `Job.AiTitle` column (single line ≤ 80
+  chars) and **never renders unaccepted** — until explicit acceptance the
+  selected/default variant renders; accepting writes it into
+  `AiOptions.JobTitle` and clears the column. Guards: (a) title only — the
+  summary and every other slot stay strictly selection-only (multi-line
+  prose carries higher fabrication risk and is harder to review); (b) the
+  job-detail diff UI flags the pending title as free text with explicit
+  accept/reject actions; (c) server-side validation enforces a single line
+  ≤ 80 chars. Template details settle in the phase-3 build.
 
 ## 4. Guardrails (non-negotiable)
 
@@ -111,8 +135,15 @@ become selection problems:
    summary/title variants. It never writes free text (the guarded
    title-only exception of §3 aside), and never adds experience entries,
    employers, dates, or metrics.
-2. **Human in the loop.** The delta is previewed on the dashboard and must be
-   approved before a job moves to `Applied`.
+2. **Human in the loop — user duty on job-detail (2026-09-17).**
+   *Supersedes the earlier rule 2 ("previewed on the dashboard and must be
+   approved before a job moves to `Applied`") — decision log, "Phase-3
+   ambiguities resolved".* There is no mechanical approval step for
+   selection deltas: they are live immediately, and reviewing/adjusting
+   them before going to the apply page is the user's duty, performed on the
+   job-detail page — the only UI path to the resume (resume links exist
+   nowhere else). The free-text title is the sole exception: it never
+   renders unaccepted (§3).
 3. **Versioned and reversible.** `Job.AiOptions` is stored separately from
    `Options`; deleting the delta falls back to the regex-built context.
 
@@ -136,18 +167,23 @@ and the template's own show/hide logic — so treat it as a last resort.
 Job (State = Attention)
    │
    ▼
-background AI worker (see AI_INTEGRATION.md §2.1)
-    prompt: JD + block inventory + profile
-    (produced during manual ai-worker runs)
+ai-worker call 2 (AI_INTEGRATION.md §6; runs only when the verdict
+     promotes to Attention — threshold = AiPassmark)
+     input: rubric + block inventory + current context + JD
    │
    ▼
-delta JSON  (keys / removals / summary segments / title variant)
+delta JSON  (keys / included & notIncluded selectors / length /
+     summary-segment & title-variant selection)
    │
    ▼
-Job.AiOptions  (new column; Options kept as fallback)
+POST /ai/verdict — the CORE validates the delta, applies it onto the
+     regex-built Options and stores the complete context in Job.AiOptions
+     (new column; Options kept as fallback; raw delta appended to job.Log)
    │
    ▼
-dashboard: preview + human approval
+job-detail page: field-level diff AiOptions vs Options — review and
+     adjustment is the user's duty (no approval step; the only UI path
+     to the resume)
    │
    ▼
 resume view renders Options.HumanEdited ? Options : (AiOptions ?? Options)
@@ -170,9 +206,12 @@ Decided (2026-09-11) — human/AI coexistence, three layers:
   the regex-built context.
 - AI writes only `AiOptions`, never `Options`; human edits keep writing
   `Options` through the existing `JobController.Options` → `ChangeOptions`
-  path. After a human edit, newer AI suggestions appear on the dashboard as
-  a diff with an explicit accept action; accepting copies/merges the delta
-  into `Options`.
+  path. After a human edit, newer AI suggestions appear on the job-detail
+  page as a diff with an explicit accept action; accepting is a **full
+  copy** into `Options` (sets `HumanEdited`) — never a field-wise merge
+  (2026-09-17). A re-run rewrites `AiOptions`, unless
+  `Options.HumanEdited` — then the new suggestion stays a diff-only
+  proposal.
 
 `Applied` remains a manual user action; phase-5 integration is revisited in
 the final phase.

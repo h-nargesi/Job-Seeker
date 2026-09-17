@@ -109,8 +109,11 @@ should be processed. One run:
 
 1. `GET /ai/next` (`X-Client: worker`) repeatedly, oldest first by `JobID`.
    The fetch is **read-only**: the response carries one `AiPending` job's
-   text plus the candidate's master resume text, and changes no state. The
-   worker stops when the core answers "empty".
+   text, the candidate's master resume text and the JobOption-derived
+   `keywords` (2026-09-17), and changes no state. Phase 3 (2026-09-17)
+   extends the payload with `settings` (`aiPassmark`), the per-job
+   `options` as standard JSON, and the template-derived block `inventory`
+   (§3). The worker stops when the core answers "empty".
 2. For each job: run the local `llama-server` call(s) (§6), then
    `POST /ai/verdict` — the only write in the AI lane. Decided (2026-09-12,
    superseding the Pending-validation rule): the verdict is an **upsert** —
@@ -180,7 +183,14 @@ should be processed. One run:
   result in memory** (lazy first render; invalidated only by a process
   restart, so template changes take effect on the next deploy). The 16k
   token cap (§6) truncates from the top if needed. Served only through
-  `GET /ai/next`; no second resume artifact to keep in sync.
+  `GET /ai/next`; no second resume artifact to keep in sync. Phase 3
+  (2026-09-17) extends the same endpoint with the call-2 inputs:
+  `settings` (`aiPassmark` — drives the tailoring-threshold decision
+  worker-side), the per-job `options` (`ResumeContext`) converted by the
+  core to **standard JSON** — the worker never sees the simple-JSON
+  storage format; the core is the conversion boundary both ways — and the
+  template-derived block `inventory` (stable id = selector, type, `key-*`
+  tags, short excerpt; cached in memory like the master resume).
 - **Provider-agnostic by construction.** Because the worker's LLM client is a
   plain `HttpClient` speaking the OpenAI chat-completions protocol, any
   compatible endpoint works and switching is a config change only:
@@ -381,16 +391,30 @@ verdict), matching the "leave the system running" usage pattern.
   `AIError` with the error as its reason. Without it, oldest-first would
   spin the worker on the same broken job forever. The dashboard re-queue
   button (job → `AiPending`) retries later.
-- **Two model calls per worker pass (decided 2026-09-11).** Call 1
-  (always): verdict + extraction as one JSON-schema-constrained response —
-  input: system rubric + candidate resume text + JD; output:
-  `{ relevance, seniority, verdict, reason, salary_min/max, currency,
-  period, work_model, contract, experience_years, skills[] }`. Call 2
-  (conditional, relevance ≥ threshold only): the resume-tailoring delta —
-  input: JD + block inventory + current ResumeContext + profile; activated
-  in phase 3. Both results return to the core in one idempotent
-  `POST /ai/verdict`. Rejected jobs never pay for tailoring; smaller
-  schemas parse more reliably; the two calls retry independently.
+- **Two model calls per worker pass (decided 2026-09-11; phase-3 contract
+  2026-09-17).** Call 1 (always): verdict + extraction as one
+  JSON-schema-constrained response — input: system rubric + candidate
+  resume text + JD; output: `{ relevance, seniority, verdict, reason,
+  salary_min/max, currency, period, work_model, contract,
+  experience_years, skills[] }`. Call 2 (conditional): the resume-tailoring
+  delta — runs only when the same verdict promotes the job to `Attention`
+  (relevance ≥ `AiPassmark`, shipped in `/ai/next` `settings`); input:
+  rubric + block inventory + current context + JD (all from `/ai/next`;
+  the fixed candidate profile sits in the call-2 system prompt); the 16k
+  cap applies **per call**, JD tail-truncated. The worker posts the raw
+  delta inside `POST /ai/verdict`; the **core validates it** (keys ⊆
+  `MainKeys`; selectors ⊆ inventory and segments/variants ⊆ known template
+  ids — a whitelist, not syntax-only; length ∈ {1,2}; free-text title
+  single line ≤ 80 chars; caps ≤ 8 keys / ≤ 30 selectors), applies it onto
+  `Options` and stores the complete context in `AiOptions`, appending the
+  raw delta to `job.Log`. A delta still invalid after the worker's two
+  call-2 retries is dropped — the verdict applies alone; the core likewise
+  drops any delta arriving with a non-promoting or `Error` verdict
+  (`AIError` carries no delta — call 2 never runs after persistent call-1
+  failure). The two calls fail independently: a call-2 connection failure
+  aborts the run and writes nothing; a model-output failure retries twice,
+  then the verdict posts alone. Rejected jobs never pay for tailoring;
+  smaller schemas parse more reliably.
 - **Context length.** Configurable cap, **16k tokens to start** (32k
   acceptable), tuned by trial and error; budget: rubric (~1k) + master
   resume in full + JD remainder, an over-long JD truncated at its **tail**
@@ -406,7 +430,7 @@ verdict), matching the "leave the system running" usage pattern.
 | 0 | Topology (§2) — documentation only | Decided 2026-09-10: no standalone deliverable |
 | 1 | Verdict + extraction + ranking: `ai-worker` + `GET /ai/next` & `POST /ai/verdict` (built here) + additive verdict/extraction columns + `Q_INDEX` v2 + the sequential state machine (`NotApprovedRegex`/`AiPending`/`NotApprovedAI`; queue = `AiPending`, no `AiState` column) + near-miss retention (floor default 70) + new job-option settings (floor, aipassmark=60, scorecap=300, w_regex=0.35, w_ai=0.65) + fresh DB (no migration) | Worker infra absorbed into phase 1; the ranking edit is the delicate part |
 | ~~2~~ | ~~Structured extraction columns~~ — **absorbed into phase 1** (2026-09-11: one worker pass produces verdict + extraction); dashboard filters deferred to phase 6 (2026-09-17) | Additive schema only |
-| 3 | Resume tailoring delta (`Job.AiOptions`) | Human review gate before `Applied` |
+| 3 | Resume tailoring delta (`Job.AiOptions`, `Job.AiTitle`) — ambiguities resolved 2026-09-17 (decision log) | Review = user duty on job-detail (supersedes the earlier "review gate before `Applied`"); free-text title stays accept-gated |
 | 4 | Cross-platform dedup + daily digest | Read-only over existing data |
 | 5 | Apply assistant on a personal terminal ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)) | New extension + `/assistant/*` endpoints; the human presses every submit |
 | 6 | Dashboard side-work (2026-09-17): filters over the extraction columns (design + implementation), bulk purge for `NotApprovedAI`/`AIError`, digest-count redefinition | Read-only over existing data; no browser/worker changes |

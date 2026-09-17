@@ -171,3 +171,7 @@ injects the JobOption-derived `keywords` payload at `{{keywords}}`:
 
 - `AI_INTEGRATION.md` §4.5 digest counts ("good jobs = regex") predate the
   state machine; redefinition deferred to phase 6 (2026-09-17).
+- Phase-3 delta contract and `/ai/next` payload extension decided
+  2026-09-17 — see the "Phase-3 ambiguities resolved" row in
+  [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md); F1/F2 already anticipate
+  both.
