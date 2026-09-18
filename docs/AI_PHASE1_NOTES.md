@@ -157,7 +157,10 @@
 - **`job.sql`** — no AI columns yet; add the additive set: `AiScore`,
   `AiVerdict`, `AiReason`, `AiSeniority`, `AiSalaryMin/Max`, `AiCurrency`,
   `AiPeriod`, `AiWorkModel`, `AiContract`, `AiExperienceYears`, `AiSkills`
-  (JSON via type-handler; enums as names). **No `AiState` column** (queue is
+  (JSON via type-handler; enums as names), plus the phase-3 columns
+  `AiOptions` (JSON `ResumeContext`, existing type handler) and `AiTitle`
+  (TEXT, ≤ 80 chars) from day one (single release — D18, 2026-09-18).
+  **No `AiState` column** (queue is
   `State = AiPending`). Enum member sets locked 2026-09-17 — identical in
   the model's JSON schema, the verdict validation and the columns:
   `AiVerdict`: `StrongMatch, Match, Possible, NoMatch, Error`; `AiSeniority`:
@@ -174,9 +177,9 @@
   floor/passmark reads silently fall back to defaults (no ordering
   dependency); `job-option.sql` is untouched.
 - Fresh database on implementation — no row migration (phase-1 scope;
-  whether phase-3 `AiOptions`/`AiTitle` also enter `job.sql` from day one
-  vs via a documented `ALTER TABLE` depends on the open
-  rollout-granularity decision — decision log, 2026-09-18).
+  phases 1–3 ship as a single release — rollout-granularity decision
+  (D18), 2026-09-18 — so the phase-3 `AiOptions`/`AiTitle` columns enter
+  `job.sql` from day one; no `ALTER TABLE` path).
 
 ## ai-worker (new console project, repo root)
 
