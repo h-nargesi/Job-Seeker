@@ -14,7 +14,11 @@
 > + Attempts-reset law, per-job Revaluate, verdict fingerprint,
 > `AppSetting` table, `Q_CLEAN_ATTENTION` blend keying, Temperature/Seed
 > determinism, per-client keys, emergency promote) — see the 2026-09-18
-> decision-log entries.
+> decision-log entries. Same-day second batch D11–D17 folded in below:
+> dashboard category layout (D11), re-queue source-state guard (D12),
+> worker core-error protocol (D13), RubricTailor v1 (D14), `keywords`/
+> inventory payload formats (D15/D16), no `Enabled` config key (D17),
+> and the `installation.sh` schema-task correction.
 
 ## Core (core-decision-dotnet)
 
@@ -60,18 +64,32 @@
   shared C# SQL fragment (scorecap + weights as SQL parameters from
   `AppSetting`) used by `Q_INDEX` v2 and `Q_CLEAN_ATTENTION` alike: the
   latter's top-100 Html-retention subquery orders by `FinalScore`, not raw
-  `Score` (D5). Cleanup family: `Q_CLEAN` (deletes old non-Applied — bounds
-  queue history), `Q_CLEAN_ATTENTION` (top-100 Html retention),
-  `Q_CLEAN_NOT_APPROVED` (content purge → must cover `NotApprovedRegex`,
-  `NotApprovedAI` **and `AIError`** — today it matches only `NotApproved`).
-  New typed methods: `FetchNextAiPending` (oldest by `JobID`, read-only;
+  `Score` (D5). Dashboard layout (D11): category numbers + display caps —
+  `Attention = 1` (12 rows, `FinalScore`; verdict-less promoted jobs
+  COALESCE to `RegexNorm`), `AiPending = 2` (6, `RegexNorm`),
+  `NotApprovedAI = 3` (6, `FinalScore`), `Applied`/`Rejected = 4` (3 each,
+  unchanged), `NotApprovedRegex = 5` (6, `RegexNorm`), `AIError = 6` (3,
+  `RegexNorm`), ELSE `Saved`/`Revaluation = 12` (1, unchanged); page order
+  top→bottom Attention, AiPending, NotApprovedAI, Applied/Rejected,
+  NotApprovedRegex, AIError, Saved/Revaluation — actionable rows on top,
+  bulk/informational bands below. Cleanup family: `Q_CLEAN` (deletes old
+  non-Applied — bounds queue history), `Q_CLEAN_ATTENTION` (top-100 Html
+  retention), `Q_CLEAN_NOT_APPROVED` (content purge → must cover
+  `NotApprovedRegex`, `NotApprovedAI` **and `AIError`** — today it matches
+  only `NotApproved`). New typed methods: `FetchNextAiPending` (oldest by
+  `JobID`, read-only, **`Content IS NOT NULL` defensive filter** — D12;
   response carries the job text, the master resume text, a JobOption-derived
-  `keywords` field — 2026-09-17 — and the content `fingerprint`, D2),
+  `keywords` field — 2026-09-17; a standard JSON array of
+  `{category, score, title}` objects, `reject` category excluded, stable
+  cached `FetchAll` order — D15 — and the content `fingerprint`, D2),
   `ApplyAiVerdict` (upsert + guarded state transition; `AiVerdict = Error`
   transitions to `AIError` bypassing the passmark gate; recomputes the
   fingerprint from the stored `Content` — on mismatch upsert +
   informational log, **no state transition**, `Content == null` = mismatch
-  — D2), `RequeueJob` (`AiPending` from `AIError` and others), `PromoteJob`
+  — D2), `RequeueJob` (`AIError`/`NotApprovedAI` → `AiPending` **only** —
+  never `Attention` (the per-job Revaluate, D1.4, covers that), `Rejected`,
+  `Applied`, `Saved`; disabled/hidden when `Content == null` — D12),
+  `PromoteJob`
   (emergency manual promote, D8: `AiPending`/`NotApprovedAI`/`AIError` →
   `Attention` only; appends `Manually promoted (emergency) — <date>` to
   `Log`, bumps `ModifiedOn`; no synthetic `AiScore`). `RunRevaluateProcess`
@@ -148,10 +166,17 @@
   `AiPeriod`: `Hour, Day, Month, Year, Unknown`.
 - **`app-setting.sql`** (new, D3) — `AppSetting (Key TEXT PRIMARY KEY,
   Value TEXT)` + seeds `floor=70`, `aipassmark=60`, `scorecap=300`,
-  `w_regex=0.35`, `w_ai=0.65`. `installation.sh` picks up files in
-  `structure/` automatically (no ordering dependency); `job-option.sql` is
-  untouched.
-- Fresh database on implementation — no row migration.
+  `w_regex=0.35`, `w_ai=0.65`. **`installation.sh` does NOT pick up
+  `structure/` files automatically** (2026-09-18 correction — the script
+  enumerates each file explicitly): the phase-1 change must add
+  `sqlite3 data.sqlite3 < structure/app-setting.sql;` to
+  `database/installation.sh`, or the settings table never exists and the
+  floor/passmark reads silently fall back to defaults (no ordering
+  dependency); `job-option.sql` is untouched.
+- Fresh database on implementation — no row migration (phase-1 scope;
+  whether phase-3 `AiOptions`/`AiTitle` also enter `job.sql` from day one
+  vs via a documented `ALTER TABLE` depends on the open
+  rollout-granularity decision — decision log, 2026-09-18).
 
 ## ai-worker (new console project, repo root)
 
@@ -164,27 +189,40 @@
   D7) + `Temperature` (default 0.2) and `Seed` (fixed value) sent with
   every request (D6 — `llama-server` supports both; re-runs must be stable
   so `AiScore` cannot flip around `aiPassmark` without an input change).
+  No `Enabled` kill-switch key (D17 — the worker runs manually; a
+  kill-switch is a dead code path).
 - Ops (2026-09-17): 120 s timeout per model call; **connection failures
   abort the whole run and write nothing** (a GPU outage must never
   mass-produce verdicts) — only model-output failures (invalid
   JSON/schema) retry and then error-verdict that one job. Context budget
   under the 16k cap: rubric (~1k) + master resume in full + JD remainder;
   an over-long JD is truncated at its tail (requirements live early).
+- **Core-error protocol (D13):** `GET /ai/next` — any network error or
+  non-200 aborts the whole run; `POST /ai/verdict` — 404 (job deleted
+  between fetch and verdict) → log + continue with the next job; 400
+  (validation rejection = worker bug) → abort the run loudly; 5xx or
+  network error → abort the run. Loop-safety: prevents an endless loop
+  on the same oldest `AiPending` job.
 - Prompts are assembled worker-side from labeled blocks in stable order —
   rubric → keywords → [reserved slot: phase-5 memory injection] → resume →
   JD (F1) — keeping the shared prefix cache-friendly; `/ai/next` ships
-  data only (job text, master resume, `keywords`), never a finished
+  data only (job text, master resume, `keywords` — a standard JSON array
+  of `{category, score, title}` objects, `reject` category excluded,
+  stable cached `FetchAll` order — D15), never a finished
   prompt.
 - **Add to `Job Seeker.sln`** so `dotnet build "Job Seeker.sln"` (the
   primary validation gate) covers it.
 
 ## Extension (agent-extension)
 
-- **`controllers/core-messaging.js`** — `BuildHeaders` adds `X-API-Key`;
-  add `X-Client: search` here (the decided one-line phase-1 change). The
-  popup API-Key field takes the **Search** key (`Auth:ApiKeys:Search`,
-  D7) — pasted by the user; no further code change.
-- Tests live in `tests/core-messaging.test.js` (header assertions).
+- **`controllers/core-messaging.js`** — **already shipped** (2026-09-18
+  audit): `BuildHeaders` sends both `X-API-Key` and `X-Client: search`
+  (`core-messaging.js`, the `BuildHeaders` constant) — the decided
+  one-line phase-1 change is a no-op; don't re-do it. The popup API-Key
+  field takes the **Search** key (`Auth:ApiKeys:Search`, D7) — pasted by
+  the user; no further code change.
+- Tests live in `tests/core-messaging.test.js` and already assert the
+  `X-Client` header.
 
 ## Tests (core-decision-dotnet.Tests)
 
@@ -214,6 +252,36 @@ injects the JobOption-derived `keywords` payload at `{{keywords}}`:
 > candidate's market. When in doubt, score lower. Also extract the
 > structured fields exactly as specified by the schema; use "Unknown" when
 > the posting does not say.
+
+## RubricTailor v1 (2026-09-18, D14)
+
+The call-2 system prompt; ships as `Llm:RubricTailor` in the worker's
+appsettings (env-overridable like `Llm:Rubric`), sharing the same
+`Temperature`/`Seed` (D6). Like call 1 it consumes `{{keywords}}` — a
+deliberate extension of the declared call-2 input list (rubric +
+inventory + context + JD): legal because `keywords` ships in `/ai/next`
+from phase 1 and is a constant (the global `JobOption` table), so the
+call-2 prefix stays cache-stable.
+
+> You tailor the candidate's resume for one job by **selection only**. You
+> receive the job description, the candidate's current resume context, and an
+> inventory of pre-written blocks (with selectors), summary segments, and
+> title variants. Choose the combination that best matches the job's keywords
+> and seniority. Rules: never invent, reword, or omit facts; select only
+> items that exist in the inventory; prefer fewer, highly relevant blocks;
+> you may propose a free-text job title only in the dedicated title field —
+> everything else must be a selection. Weight the candidate's keyword
+> priorities: {{keywords}}. When uncertain, keep the current selection.
+
+## Payload details (2026-09-18, D15/D16)
+
+- **`keywords`** (`GET /ai/next`, phase 1): a standard JSON array of
+  `{category, score, title}` objects derived from `JobOption`; the
+  `reject` category is excluded (regex-side concern, wasted tokens);
+  stable cached order (`FetchAll` order) for determinism.
+- **Inventory caps** (call 2, phase 3): per-item text excerpt ≤ 120
+  chars; no item-count cap — the template is finite and bounded by
+  design, and the existing JD tail-truncation absorbs any 16k overflow.
 
 ## Forward-compatibility constraints (2026-09-17)
 

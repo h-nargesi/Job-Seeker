@@ -200,7 +200,10 @@ Decided (2026-09-11) — human/AI coexistence, three layers:
 - `ResumeContext` gains a `HumanEdited` flag inside the stored JSON (the
   `Version` constant bumps with it). The flag round-trips through
   `SimlpeSerialize`/`SimlpeDeserialize` with the rest of the context —
-  `Job.Options` uses that "simple JSON" format, not standard JSON.
+  that "simple JSON" form is the dashboard/client **exchange** format;
+  `Job.Options` itself is stored as standard JSON via
+  `ResumeContextTypeHandler` (`SqliteTypeHandlers.cs`) (wording
+  corrected 2026-09-18).
 - Rendering precedence: `Options.HumanEdited ? Options : (AiOptions ??
   Options)` — a human edit always wins; otherwise the AI delta; otherwise
   the regex-built context.

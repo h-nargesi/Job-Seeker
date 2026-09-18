@@ -12,8 +12,10 @@
 > `AiState`-column design (§4.1 and the decision log). Amended 2026-09-18:
 > design-review decisions D1–D10 folded in (revaluation scope + Attempts
 > law, per-job Revaluate, verdict fingerprint, `AppSetting` table,
-> per-client keys, emergency promote, deterministic verdicts — see the
-> decision log's 2026-09-18 entries).
+> per-client keys, emergency promote, deterministic verdicts), then the
+> same-day second batch D11–D17 (dashboard layout, re-queue source-state
+> guard, worker core-error protocol, tailoring rubric, payload formats,
+> config cleanup) — see the decision log's 2026-09-18 entries.
 
 Related: [`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) (phase 3 detail),
 [`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) (phase 5 detail).
@@ -130,9 +132,9 @@ should be processed. One run:
    it always updates the job. The core validates that the job exists and the
    payload is sane (AiScore 0–100, enum names, length caps), writes the
    verdict + extraction, and — only when the job is currently `AiPending` —
-   applies the verdict gate: `AiScore ≥ AiPassmark` (job-option setting,
-   default 60) promotes to `Attention`, otherwise `NotApprovedAI` (a purge
-   candidate, §6). Verdicts arriving for out-of-queue jobs are logged
+   applies the verdict gate: `AiScore ≥ AiPassmark` (an `AppSetting` key,
+   default 60 — D3) promotes to `Attention`, otherwise `NotApprovedAI` (a
+   purge candidate, §6). Verdicts arriving for out-of-queue jobs are logged
    informationally, not rejected. A re-POST after a lost HTTP response is a
    natural no-op, and re-running the worker overwrites old verdicts. The
    verdict echoes the `fingerprint`; the core recomputes it from the
@@ -178,7 +180,15 @@ should be processed. One run:
   clears `AiOptions`/`AiTitle`; disabled when `Content == null`; a
   floor-passing job returns to `AiPending` (accepted); no param = the
   global process unchanged; no locking vs a concurrent global run (regex
-  is deterministic; last write wins).
+  is deterministic; last write wins). A **dashboard re-queue button**
+  (2026-09-18, D12) sets a single job back to `AiPending` from `AIError`
+  or `NotApprovedAI` **only** — never from `Attention` (the per-job
+  Revaluate button already covers its return to the queue), `Rejected`,
+  `Applied`, or `Saved`; it is disabled/hidden when `Content == null`
+  (the manual `Clean` button's 7-day `Q_CLEAN_NOT_APPROVED` purges the
+  content of exactly these two states), and `FetchNextAiPending`
+  defensively filters `Content IS NOT NULL` — a contentless job must
+  never reach a verdict (consistent with D2's mismatch rule).
 - **Rejected alternative: tunnels** (Tailscale, cloudflared, SSH reverse)
   would restore core→AI reachability and allow an in-core worker calling
   `llama-server` remotely. Rejected for Phase 0: extra infrastructure to keep
@@ -197,7 +207,8 @@ should be processed. One run:
   home-LAN trust assumption remains.
 - `ai-worker` client: a plain `HttpClient` + JSON. No new package
   dependencies on the core.
-- Suggested configuration (the worker's, not the core's `appsettings.json`):
+- Suggested configuration (the worker's, not the core's `appsettings.json`;
+  no `Enabled` kill-switch key — the worker runs manually, D17):
 
 ```json
 "Llm": {
@@ -206,8 +217,7 @@ should be processed. One run:
   "Core": "https://core.example.com",
   "CoreApiKey": "<the core's worker key — Auth:ApiKeys:Worker, D7>",
   "Temperature": 0.2,
-  "Seed": 42,
-  "Enabled": true
+  "Seed": 42
 }
 ```
 
@@ -225,11 +235,14 @@ should be processed. One run:
   `GET /ai/next`; no second resume artifact to keep in sync. Phase 3
   (2026-09-17) extends the same endpoint with the call-2 inputs:
   `settings` (`aiPassmark` — drives the tailoring-threshold decision
-  worker-side), the per-job `options` (`ResumeContext`) converted by the
-  core to **standard JSON** — the worker never sees the simple-JSON
-  storage format; the core is the conversion boundary both ways — and the
-  template-derived block `inventory` (stable id = selector, type, `key-*`
-  tags, short excerpt; cached in memory like the master resume).
+  worker-side), the per-job `options` (`ResumeContext`) as **standard
+  JSON** — `Job.Options` is itself stored as standard JSON via
+  `ResumeContextTypeHandler` (`SqliteTypeHandlers.cs`); the simple-JSON
+  format (`SimlpeSerialize`) is only the dashboard/client exchange
+  format, which the worker never sees (wording corrected 2026-09-18) —
+  and the template-derived block `inventory` (stable id = selector, type,
+  `key-*` tags, excerpt ≤ 120 chars per item, no item-count cap — D16;
+  cached in memory like the master resume).
 - **Provider-agnostic by construction.** Because the worker's LLM client is a
   plain `HttpClient` speaking the OpenAI chat-completions protocol, any
   compatible endpoint works and switching is a config change only:
@@ -309,6 +322,16 @@ its top-100 Html-retention subquery orders by `FinalScore` (previously
 raw `Score`); the blend expression is a shared C# SQL fragment (scorecap +
 weights as SQL parameters from `AppSetting`) used by both `Q_INDEX` v2
 and `Q_CLEAN_ATTENTION`.
+
+Decided (2026-09-18, D11) — the concrete v2 dashboard layout. Category
+numbers, display caps and page order are fixed: `Attention` (12 rows,
+`FinalScore`) on top, then `AiPending` (6, `RegexNorm`), `NotApprovedAI`
+(6, `FinalScore`), `Applied`/`Rejected` (3 each, unchanged),
+`NotApprovedRegex` (6, `RegexNorm`), `AIError` (3, `RegexNorm`),
+`Saved`/`Revaluation` (1, unchanged); within `Attention`, verdict-less
+(manually promoted) jobs COALESCE to `RegexNorm`. Rationale: actionable
+rows (AI-approved, queue) on top; bulk/informational bands below. Full
+table in [`AI_PHASE1_NOTES.md`](AI_PHASE1_NOTES.md) (`JobBusiness`).
 
 Decided (2026-09-15) — sequential state machine (supersedes the 2026-09-11
 `Job.AiState` column; queue membership is `State = AiPending`). The regex
@@ -419,7 +442,12 @@ verdict), matching the "leave the system running" usage pattern.
   jobs are comfortable.
 - **Prompt caching.** `llama-server` caches the shared prompt prefix. Put the
   fixed rubric (scoring criteria + candidate profile) in the system prompt so
-  only the job description differs per call.
+  only the job description differs per call. Prefix-cache scope (2026-09-18):
+  call 1 and call 2 share **no** cached prefix — their rubrics diverge at
+  the first token — but the cache pays off **across jobs of the same call
+  type**: F1's stable block order keeps the fixed parts (rubric + master
+  resume / rubric + inventory) at the front and only the JD varies at the
+  tail.
 - **Structured output.** Use `response_format` (JSON schema / GBNF grammar)
   so verdicts and extractions always parse. Never regex-scrape model output.
 - **Determinism (2026-09-18, D6).** Every model request carries
@@ -449,7 +477,8 @@ verdict), matching the "leave the system running" usage pattern.
   persistent failure posts an **error verdict** moving the job to
   `AIError` with the error as its reason. Without it, oldest-first would
   spin the worker on the same broken job forever. The dashboard re-queue
-  button (job → `AiPending`) retries later.
+  button (job → `AiPending`) retries later (source states `AIError`/
+  `NotApprovedAI` only + the `Content == null` guard — D12, §2.1).
 - **Two model calls per worker pass (decided 2026-09-11; phase-3 contract
   2026-09-17).** Call 1 (always): verdict + extraction as one
   JSON-schema-constrained response — input: system rubric + candidate
@@ -459,7 +488,12 @@ verdict), matching the "leave the system running" usage pattern.
   delta — runs only when the same verdict promotes the job to `Attention`
   (relevance ≥ `AiPassmark`, shipped in `/ai/next` `settings`); input:
   rubric + block inventory + current context + JD (all from `/ai/next`;
-  the fixed candidate profile sits in the call-2 system prompt); the 16k
+  the fixed candidate profile sits in the call-2 system prompt — its own
+  config key `Llm:RubricTailor`, D14, v1 draft in
+  [`AI_PHASE1_NOTES.md`](AI_PHASE1_NOTES.md)); inventory excerpts are
+  capped at ≤ 120 chars per item with no item-count cap (2026-09-18, D16
+  — the template is finite and bounded by design; the JD tail-truncation
+  absorbs any 16k overflow); the 16k
   cap applies **per call**, JD tail-truncated. The worker posts the raw
   delta inside `POST /ai/verdict`; the **core validates it** (keys ⊆
   `MainKeys`; selectors ⊆ inventory and segments/variants ⊆ known template
@@ -481,13 +515,19 @@ verdict), matching the "leave the system running" usage pattern.
   carries the resume text (§4.1). Worker calls time out at 120 s;
   connection failures abort the whole run and write nothing (error classes
   per the 2026-09-17 decision-log entry).
+- **Core-error protocol (2026-09-18, D13).** `GET /ai/next`: any network
+  error or non-200 aborts the whole run. `POST /ai/verdict`: 404 (job
+  deleted between fetch and verdict) → log + continue with the next job;
+  400 (validation rejection = a worker bug) → abort the run loudly; 5xx
+  or network error → abort the run. Loop-safety: without these rules the
+  worker could spin endlessly on the same oldest `AiPending` job.
 
 ## 7. Phasing
 
 | Phase | Deliverable | Risk |
 |-------|-------------|------|
 | 0 | Topology (§2) — documentation only | Decided 2026-09-10: no standalone deliverable |
-| 1 | Verdict + extraction + ranking: `ai-worker` + `GET /ai/next` & `POST /ai/verdict` (built here) + additive verdict/extraction columns + `Q_INDEX` v2 + the sequential state machine (`NotApprovedRegex`/`AiPending`/`NotApprovedAI`; queue = `AiPending`, no `AiState` column) + near-miss retention (floor default 70) + new `AppSetting` table for the five settings (floor=70, aipassmark=60, scorecap=300, w_regex=0.35, w_ai=0.65 — D3) + per-client API keys (D7) + verdict fingerprint (D2) + emergency promote button (D8) + fresh DB (no migration) | Worker infra absorbed into phase 1; the ranking edit is the delicate part |
+| 1 | Verdict + extraction + ranking: `ai-worker` + `GET /ai/next` & `POST /ai/verdict` (built here) + additive verdict/extraction columns + `Q_INDEX` v2 (dashboard category layout per D11) + the sequential state machine (`NotApprovedRegex`/`AiPending`/`NotApprovedAI`; queue = `AiPending`, no `AiState` column) + near-miss retention (floor default 70) + new `AppSetting` table for the five settings (floor=70, aipassmark=60, scorecap=300, w_regex=0.35, w_ai=0.65 — D3) + per-client API keys (D7) + verdict fingerprint (D2) + emergency promote button (D8) + fresh DB (no migration) | Worker infra absorbed into phase 1; the ranking edit is the delicate part |
 | ~~2~~ | ~~Structured extraction columns~~ — **absorbed into phase 1** (2026-09-11: one worker pass produces verdict + extraction); dashboard filters deferred to phase 6 (2026-09-17) | Additive schema only |
 | 3 | Resume tailoring delta (`Job.AiOptions`, `Job.AiTitle`) — ambiguities resolved 2026-09-17 (decision log) | Review = user duty on job-detail (supersedes the earlier "review gate before `Applied`"); free-text title stays accept-gated |
 | 4 | Cross-platform dedup + daily digest | Read-only over existing data |
