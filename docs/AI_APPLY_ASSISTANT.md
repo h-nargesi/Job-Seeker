@@ -3,16 +3,19 @@
 > **Status: design proposal — not implemented.** Companion to
 > [`AI_INTEGRATION.md`](AI_INTEGRATION.md) (phase 5). Records the design for
 > a second browser extension — the *assistant* — that fills job-application
-> forms on a personal terminal, driven by a local LLM and a learning memory
-> stored on the core. No assistant code exists yet; `assistant-extension/`
-> is a planned directory.
+> forms, driven by a local LLM and a learning memory stored on the core. No
+> assistant code exists yet; `assistant-extension/` is a planned directory.
+> Amended 2026-09-18: the assistant runs on the AI station host (no LAN
+> leg); the phase-5 decisions are recorded in
+> [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md).
 
-## 1. Stations: a fourth terminal, a second extension
+## 1. Stations: a browser on the AI station, a second extension
 
-The assistant adds a fourth station to the deployment topology
+The assistant adds a browser to the deployment topology
 (AI_INTEGRATION.md §2): the search extension keeps scanning job boards on
-the **search terminal**, while the assistant lives on the user's own
-**personal terminal**, where apply forms are opened and filled.
+the **search terminal**, while the assistant lives in a browser **on the
+AI station host** (decided 2026-09-18 — the planned separate "personal
+terminal" machine is dropped), where apply forms are opened and filled.
 
 **Never both extensions in one browser.** This is structural, not
 preference: the search extension injects `check-page.js` on `*://*/*`
@@ -25,16 +28,17 @@ The assistant connects outbound only:
 
 - to the **core** (`X-API-Key` + `X-Client: assistant`): job list, applied
   reporting, memory CRUD;
-- over the **LAN** to the AI station's `llama-server` (the core cannot
-  proxy — Phase 0 rule — and the AI station never receives core
-  credentials). `llama-server` stays localhost-bound through phase 3; the
-  binding/proxy choice (and the home-LAN trust assumption it implies) is
-  decided in phase 5 (AI_INTEGRATION.md §3, 2026-09-12).
+- to `llama-server` at **localhost** — the assistant's browser runs on the
+  AI station host (2026-09-18), so the previously deferred LAN exposure,
+  binding/proxy choice and home-LAN trust assumption are moot:
+  `llama-server` stays localhost-bound permanently (AI_INTEGRATION.md §3).
+  The core still cannot proxy (Phase 0 rule) and the AI station never
+  receives core credentials.
 
 Decided (2026-09-10): the assistant is **local-only** — it may carry
 sensitive data, so hosted LLM endpoints are never used by the assistant,
-and remote operation without LAN reachability to the AI station is out of
-scope (no hosted fallback).
+and running it anywhere other than the AI station host is out of scope
+(no hosted fallback).
 
 ## 2. The decided flow (human-triggered)
 
@@ -47,7 +51,7 @@ user reviews the resume, opens the job's apply page
 user presses Fill ──► assistant extracts the form inventory
    │                   (DOM controls: field_id, tag, type, label, options)
    ▼
-agentic tool loop (llama-server over LAN):
+agentic tool loop (llama-server, localhost, same host):
    LLM receives: inventory + resume text + persona/rubric (system prompt)
    LLM returns:  memory_query / memory_write / fill(field_id, value)
    assistant executes the tools (core API / DOM) and posts results back
@@ -129,10 +133,21 @@ Two learning channels:
   decides what to persist — instructing the assistant, as its agent, to
   write memory rows for injection into future prompts.
 
-Privacy: rows hold PII, on the user-owned core, plaintext in v1
-(documented); future hardening can reuse the existing AES-GCM
-`CredentialKey` infrastructure. No memory-management dashboard in v1 — API
-CRUD only. (Encryption decision deferred to the final phase — 2026-09-10.)
+Privacy: rows hold PII, on the user-owned core, plaintext in v1; future
+hardening can reuse the existing AES-GCM `CredentialKey` infrastructure.
+No memory-management dashboard in v1 — API CRUD only. Decided (2026-09-18,
+replacing the ambiguous "deferred to the final phase" wording of
+2026-09-10): **encryption is deferred beyond v1** — accepted risk:
+protecting `data.sqlite3` is a disk/file-security concern, revisited
+alongside the other §7 out-of-scope hardening.
+
+Hygiene (decided 2026-09-18): a deterministic row cap per `Scope`, from a
+new `memorycap` AppSetting (default 500 — the `AppSetting (Key, Value)`
+pattern); on a write past the cap the core prunes the lowest-value row:
+lowest `UseCount`, then oldest `UpdatedAt`. The model has **no delete
+tool** — stale facts are superseded via `memory_write` plus the precedence
+rule above, and the cap retires dead rows; manual delete via the memory
+CRUD API remains.
 
 Decided (2026-09-11) — ranking feedback and hybrid injection:
 
@@ -184,6 +199,12 @@ not by the `X-Client` header. `X-Client` stays informational/logging only,
 and phase 5 adds `Auth:ApiKeys:Assistant` as a registration (F3). The
 "absent header = legacy search" rule and the per-role rejections above
 describe the superseded header-gating model.)*
+
+Decided (2026-09-18): the phase-5 `Auth:ApiKeys:Assistant` key follows D7
+with path rules — allowlisted to `/assistant/*` (all methods: jobs list,
+applied report, memory CRUD) and `GET /decision/scopes`; no `/ai/*`, no
+`/decision/take`. Path-based rules only (`/decision/scopes` is a GET-only
+route), implemented as an F3 registration in the data-driven role table.
 
 ## 7. Out of scope v1
 

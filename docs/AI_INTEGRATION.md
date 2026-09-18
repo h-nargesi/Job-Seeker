@@ -53,25 +53,25 @@ Nothing in the browser loop ever waits on the model.
 
 ## 2. Deployment topology (Phase 0 — decided)
 
-Four stations, three of them outbound-only (the fourth is planned):
+Three stations, two of them outbound-only:
 
 ```
-                ┌────────────────────────────────┐
-                │  core: job-seeker (.NET)       │  public, SSL (reverse proxy),
-                │  SQLite + AI queue + API       │  per-client X-API-Key = role
-                └─▲──────────────▲─────────────▲─┘
-   POST /decision/take             │            │  GET /ai/next · POST /ai/verdict
-   GET  /decision/scopes           │            │  POST /assistant/* (planned —
-   (X-Client: search)              │            │  phase 5, X-Client: assistant)
-  ┌────────────────────────────────┴─┐        ┌─┴──────────────────────┐      ┌─────────────────────────────┐
-  │ search terminal (browser host)   │        │ AI station             │ LAN  │ personal terminal (planned) │
-  │ long-running desktop; logged-in  │        │ GPU box behind NAT —   │◄─────│ assistant-extension: apply- │
-  │ browser + agent-extension;       │        │ NOT reachable from the │ LLM  │ form filling + chat;        │
-  │ outbound only                    │        │ core; ai-worker +      │only  │ outbound only               │
-  └────────────────┬─────────────────┘        │ llama-server (localhost│      └─────────────────────────────┘
-                   │ HTTPS                    └────────────────────────┘
-                   ▼
-            job-board sites
+                 ┌────────────────────────────────┐
+                 │  core: job-seeker (.NET)       │  public, SSL (reverse proxy),
+                 │  SQLite + AI queue + API       │  per-client X-API-Key = role
+                 └─▲──────────────▲─────────────▲─┘
+    POST /decision/take             │            │  GET /ai/next · POST /ai/verdict
+    GET  /decision/scopes           │            │  POST /assistant/* (planned —
+    (X-Client: search)              │            │  phase 5, X-Client: assistant)
+   ┌────────────────────────────────┴─┐        ┌─┴────────────────────────────┐
+   │ search terminal (browser host)   │        │ AI station                   │
+   │ long-running desktop; logged-in  │        │ GPU box behind NAT — NOT     │
+   │ browser + agent-extension;       │        │ reachable from the core;     │
+   │ outbound only                    │        │ ai-worker + llama-server     │
+   └────────────────┬─────────────────┘        │ (localhost) + assistant      │
+                    │ HTTPS                    │ browser (phase 5)            │
+                    ▼                          └──────────────────────────────┘
+             job-board sites
 ```
 
 - **Core** — `job-seeker`, the only reachable server (SSL, `X-API-Key`).
@@ -83,17 +83,15 @@ Four stations, three of them outbound-only (the fourth is planned):
   requests. Long uptime = scraping throughput. No code changes required.
 - **AI station** — the GPU box running `llama-server` (localhost) plus
   **`ai-worker`, the one new program this design requires** (a small console
-  project in this repository). It reaches the core over the public SSL
-  endpoint and nothing else; the core cannot see it back. `llama-server`
-  stays localhost-bound through phase 3 (2026-09-12); any LAN exposure for
-  the phase-5 assistant is a phase-5 decision (§3).
-- **Personal terminal (phase 5 — planned)** — the assistant's host: the
-  user's own desktop, running the planned `assistant-extension`
-  ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)). Outbound-only to the
-  core (`X-Client: assistant`) and, over the LAN, to the AI station's
-  `llama-server`. Never the search extension and the assistant in one
-  browser — the search extension matches `*://*/*` and would fight over the
-  apply tabs.
+  project in this repository) and, from phase 5, the assistant browser. It
+  reaches the core over the public SSL endpoint and nothing else; the core
+  cannot see it back. `llama-server` stays localhost-bound **permanently**
+  (2026-09-18): the assistant runs on this host, so no exposure decision
+  remains (§3).
+- **Assistant host (phase 5)** — the assistant browser runs on the AI
+  station machine itself (2026-09-18; the planned separate "personal
+  terminal" is dropped): outbound to the core with the Assistant key and to
+  `llama-server` at localhost. Never both extensions in one browser.
 - **Clients & roles.** Four clients reach the core: the search extension
   (header `X-Client: search` — shipped, informational only), the dashboard
   user, `ai-worker`, and the assistant (phase 5). Amended 2026-09-18 (D7,
@@ -190,12 +188,13 @@ should be processed. One run:
 
 - llama.cpp's `llama-server` exposes an OpenAI-compatible endpoint
   (`/v1/chat/completions`) on the AI station's localhost. The model never
-  ships inside `job-seeker`; the core never talks to it at all — `ai-worker`
-  is its only client. Decided (2026-09-12): localhost-only through phase 3;
-  any LAN exposure for the phase-5 assistant (interface binding or a local
-  reverse proxy, and the home-LAN trust assumption it implies) is decided in
-  phase 5 — this resolves the earlier §2-diagram /
-  [`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) contradiction.
+  ships inside `job-seeker`; the core never talks to it at all. Decided
+  (2026-09-12): localhost-only through phase 3; resolved 2026-09-18 —
+  **permanent localhost**: the phase-5 assistant runs on the same host and
+  shares the instance with the worker (`--parallel 2`, two independent
+  clients; the total context `-c` splits across slots — provision ≥ ~32k:
+  worker 16k + assistant ~8k). No interface binding, reverse proxy, or
+  home-LAN trust assumption remains.
 - `ai-worker` client: a plain `HttpClient` + JSON. No new package
   dependencies on the core.
 - Suggested configuration (the worker's, not the core's `appsettings.json`):
@@ -492,7 +491,7 @@ verdict), matching the "leave the system running" usage pattern.
 | ~~2~~ | ~~Structured extraction columns~~ — **absorbed into phase 1** (2026-09-11: one worker pass produces verdict + extraction); dashboard filters deferred to phase 6 (2026-09-17) | Additive schema only |
 | 3 | Resume tailoring delta (`Job.AiOptions`, `Job.AiTitle`) — ambiguities resolved 2026-09-17 (decision log) | Review = user duty on job-detail (supersedes the earlier "review gate before `Applied`"); free-text title stays accept-gated |
 | 4 | Cross-platform dedup + daily digest | Read-only over existing data |
-| 5 | Apply assistant on a personal terminal ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)) | New extension + `/assistant/*` endpoints; the human presses every submit |
+| 5 | Apply assistant — browser on the AI station ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)) | New extension + `/assistant/*` endpoints; the human presses every submit |
 | 6 | Dashboard side-work (2026-09-17): filters over the extraction columns (design + implementation), bulk purge for `NotApprovedAI`/`AIError`, digest-count redefinition + `AiPending` counter for data-driven floor tuning (2026-09-18, D9) | Read-only over existing data; no browser/worker changes |
 
 Best value-to-risk is still **phase 1** (fixes lexical regex scoring;

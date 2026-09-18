@@ -213,8 +213,9 @@ Decided (2026-09-11) — human/AI coexistence, three layers:
   `Options.HumanEdited` — then the new suggestion stays a diff-only
   proposal.
 
-`Applied` remains a manual user action; phase-5 integration is revisited in
-the final phase.
+`Applied` stays a user action; both report paths (dashboard button,
+`POST /assistant/applied`) are idempotent and `job.Log` records the source
+(decided 2026-09-18).
 
 ### Delivery (decided)
 
