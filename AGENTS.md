@@ -76,13 +76,20 @@ This runs the `.sql` files in `database/structure/` against `data.sqlite3`.
 `passwords.sql` is gitignored (contains real agency credentials) — create it if
 absent, otherwise `installation.sh` will error on the last line.
 
-**Auth secrets** — two secrets configure single-user auth + credential
-encryption (`appsettings.json` ships them empty; never commit real values):
+**Auth secrets** — two secret concerns: API auth and credential encryption
+(`appsettings.json` ships them empty; never commit real values):
 
-- `Auth:ApiKey` — shared secret. Extension sends it as `X-API-Key`; the
-  dashboard login (`/auth/login`) uses it as the password. In **production the
-  server refuses to start without it**; in Development it may be omitted (auth
-  disabled, warning logged).
+- `Auth:ApiKey` — shared secret (current code). Extension sends it as
+  `X-API-Key`; the dashboard login (`/auth/login`) uses it as the password.
+  In **production the server refuses to start without it**; in Development
+  it may be omitted (auth disabled, warning logged). Decided (AI phase 1,
+  2026-09-18): replaced by per-client keys `Auth:ApiKeys:Dashboard` /
+  `:Search` / `:Worker` — key = role with path rules (`search` →
+  `/decision/*`, `worker` → `/ai/*`, `dashboard` → everything;
+  `X-Client` informational only); popup API-Key field = the Search key;
+  login password = the Dashboard key; production fail-fast only on a
+  missing Dashboard key (missing Search/Worker keys warn). See
+  [`docs/AI_INTEGRATION.md`](docs/AI_INTEGRATION.md) §2.
 - `Auth:CredentialKey` — 32-byte base64 key (AES-GCM) encrypting agency
   passwords at rest (`enc:` prefix, auto-migrated on startup). Generate with
   `openssl rand -base64 32`. Same fail-fast rule in production.
@@ -91,10 +98,15 @@ encryption (`appsettings.json` ships them empty; never commit real values):
 # Development (user-secrets, run inside core-decision-dotnet/)
 dotnet user-secrets set "Auth:ApiKey" "some-random-secret"
 dotnet user-secrets set "Auth:CredentialKey" "$(openssl rand -base64 32)"
+# AI phase 1 replaces Auth:ApiKey with per-client keys:
+#   dotnet user-secrets set "Auth:ApiKeys:Dashboard" "..."
+#   dotnet user-secrets set "Auth:ApiKeys:Search" "..."
+#   dotnet user-secrets set "Auth:ApiKeys:Worker" "..."
 
 # Production (environment variables)
 export Auth__ApiKey="some-random-secret"
 export Auth__CredentialKey="<openssl rand -base64 32>"
+# AI phase 1: Auth__ApiKeys__Dashboard / __Search / __Worker instead
 ```
 
 SQLite runs in WAL mode: `data.sqlite3-wal` / `data.sqlite3-shm` files appear
@@ -102,8 +114,9 @@ next to the DB and are normal — include them in backups/restores.
 
 **Load the extension** — `chrome://extensions` → Developer mode → Load unpacked
 → select `agent-extension/`. Set the server URL (default
-`http://localhost:8081/`) and, when `Auth:ApiKey` is configured, the matching
-API Key in the popup menu (press Enter in each field to save).
+`http://localhost:8081/`) and, when an API key is configured, the matching
+API Key in the popup menu — the **Search** key under the AI-phase-1
+per-client scheme (press Enter in each field to save).
 
 ## 3. Lint / typecheck / test
 

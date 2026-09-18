@@ -2,13 +2,19 @@
 
 > Verified code touchpoints for the phase-1 implementation of the sequential
 > state machine (design: [`AI_INTEGRATION.md`](AI_INTEGRATION.md) §4.1, §7;
-> decisions: [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md) 2026-09-15).
+> decisions: [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md) 2026-09-15,
+> 2026-09-17, 2026-09-18).
 > Symbol-level pointers, deliberately no line numbers — they rot. Written
 > 2026-09-15 during the design session; re-verify each item before editing.
 > Amended 2026-09-17: the open ambiguities are resolved and folded in
 > (`AIError` state, AI enum sets, rubric v1, content-change compare,
 > `Saved` resurrection, worker ops) plus forward-compatibility constraints
-> F1–F6 — same-day decision-log entries are authoritative.
+> F1–F6 — same-day decision-log entries are authoritative. Amended
+> 2026-09-18: design-review decisions D1–D10 folded in (revaluation scope
+> + Attempts-reset law, per-job Revaluate, verdict fingerprint,
+> `AppSetting` table, `Q_CLEAN_ATTENTION` blend keying, Temperature/Seed
+> determinism, per-client keys, emergency promote) — see the 2026-09-18
+> decision-log entries.
 
 ## Core (core-decision-dotnet)
 
@@ -18,14 +24,18 @@
   Applied` (2026-09-17: `AIError` for poison jobs — error verdicts bypass
   the passmark gate). No order-dependent logic may be introduced (F4).
 - **`Analyze/JobEligibilityHelper.cs`** — the regex gate. `MinEligibilityScore`
-  const becomes the job-option floor setting (default 70); both usages (the
+  const becomes the `AppSetting` floor key (default 70 — D3); both usages (the
   `clear_content` purge check and the `EvaluateEligibility` pass check) read
   it. State writes in `EvaluateJobEligibility` (`!eligibility → NotApproved`,
   `else → Attention`) become `below floor → NotApprovedRegex` / `floor+ →
   AiPending`. The `user_changes = State > Attention` guard (order-dependent)
   becomes an explicit `State is Rejected or Applied` check. Persistence goes
-  through `UpdateEvaluation`. The file is ~409 lines — already over the
-  ~400-line budget (AGENTS.md); split by content while touching it.
+  through `UpdateEvaluation`. Phase-3 law recorded now (D1): when
+  `job.Options?.HumanEdited == true`, skip the `Options` overwrite (keep
+  stored context) — `Score`/`Log` still regenerate; applies to every eval
+  path except the per-job force button (D1.4). The file is ~409
+  lines — already over the ~400-line budget (AGENTS.md); split by content
+  while touching it.
 - **`Analyze/Pages/JobPage.cs`** — browser-loop follow-ups. `IssueCommand`
   early-returns `[]` for `NotApproved` and fires `JobFallow` commands on
   regex approval (today: `state == JobState.Attention`); both re-key to the
@@ -45,39 +55,77 @@
   `RegexNorm = min(Score, ScoreCap)/ScoreCap×100`, `FinalScore` for
   `Attention`/`NotApprovedAI` only, `RegexNorm` for `AiPending`; `AIError`
   gets its own category ordered by `RegexNorm`, never `FinalScore`
-  (2026-09-17). Cleanup family: `Q_CLEAN` (deletes old non-Applied — bounds
+  (2026-09-17); within `Attention`, verdict-less (manually promoted) jobs
+  rank by `RegexNorm` — COALESCE-style (D8). The blend expression is a
+  shared C# SQL fragment (scorecap + weights as SQL parameters from
+  `AppSetting`) used by `Q_INDEX` v2 and `Q_CLEAN_ATTENTION` alike: the
+  latter's top-100 Html-retention subquery orders by `FinalScore`, not raw
+  `Score` (D5). Cleanup family: `Q_CLEAN` (deletes old non-Applied — bounds
   queue history), `Q_CLEAN_ATTENTION` (top-100 Html retention),
   `Q_CLEAN_NOT_APPROVED` (content purge → must cover `NotApprovedRegex`,
   `NotApprovedAI` **and `AIError`** — today it matches only `NotApproved`).
   New typed methods: `FetchNextAiPending` (oldest by `JobID`, read-only;
-  response carries the job text, the master resume text and a
-  JobOption-derived `keywords` field — 2026-09-17), `ApplyAiVerdict`
-  (upsert + guarded state transition; `AiVerdict = Error` transitions to
-  `AIError` bypassing the passmark gate), `RequeueJob` (`AiPending` from
-  `AIError` and others). `RunRevaluateProcess` gains the 2026-09-17
-  resurrection rule: a purged `NotApprovedRegex` job whose stored `Score`
-  passes the new floor → `State = Saved` (natural re-scrape; `Score`
-  survives purge — `Q_REMOVE_HTML` nulls only `Html`/`Content`).
-  Revaluation machinery to keep compatible: `RunRevaluateProcess` /
-  `FetchFrom` / `ResetRevaluations` (transient `Revaluation` state; selects
-  jobs with `Content IS NOT NULL`).
+  response carries the job text, the master resume text, a JobOption-derived
+  `keywords` field — 2026-09-17 — and the content `fingerprint`, D2),
+  `ApplyAiVerdict` (upsert + guarded state transition; `AiVerdict = Error`
+  transitions to `AIError` bypassing the passmark gate; recomputes the
+  fingerprint from the stored `Content` — on mismatch upsert +
+  informational log, **no state transition**, `Content == null` = mismatch
+  — D2), `RequeueJob` (`AiPending` from `AIError` and others), `PromoteJob`
+  (emergency manual promote, D8: `AiPending`/`NotApprovedAI`/`AIError` →
+  `Attention` only; appends `Manually promoted (emergency) — <date>` to
+  `Log`, bumps `ModifiedOn`; no synthetic `AiScore`). `RunRevaluateProcess`
+  gains the 2026-09-17 resurrection rule: a purged `NotApprovedRegex` job
+  whose stored `Score` passes the new floor → `State = Saved` **plus
+  `Attempts = 0, Tries = NULL`** (D4 unified law: any deliberate return to
+  `Saved` resets Attempts; natural re-scrape; `Score` survives purge —
+  `Q_REMOVE_HTML` nulls only `Html`/`Content`). Revaluation machinery (D1):
+  `Q_FETCH_FROM`/`Q_FETCH_FROM_COUNT` use the positive list
+  `State IN ('Attention','AiPending','NotApprovedAI','AIError') AND
+  Content IS NOT NULL AND ModifiedOn <= @date` (the old
+  `State != 'Revaluation'` condition is absorbed; `Saved`/`Rejected`/
+  `Applied` excluded — frozen history); `FetchFrom` keeps the transient
+  `Revaluation` mark (double-pickup guard); `ResetRevaluations` becomes
+  `UPDATE Job SET State = 'Saved', Attempts = 0, Tries = NULL WHERE
+  State = 'Revaluation'` (crashed runs recover via browser revisit; the
+  reset avoids the `Attempts >= 4` zombie trap in `Q_FETCH_FIRST`).
 - **`Database/Business/AgencyBusiness.cs`** — dashboard stats count
   `Attention`; semantics shift to AI-approved (no code change expected).
 - **`Analyze/JobRanking.cs`** — decay-weight mirror of `Q_INDEX`; must be
   updated in the same change as v2.
 - **`Analyze/Models/Job.cs`** — `SetHtml` already derives `Content` via
   `GetTextContent`; that is the `/ai/next` job text (no new derivation).
-- **`Analyze/Models/JobOptionSettings.cs`** — extend for floor, aipassmark,
-  scorecap, w_regex, w_ai.
+- **`Database/Business/AppSettingBusiness.cs`** (new, D3) — the five
+  phase-1 settings (`floor=70`, `aipassmark=60`, `scorecap=300`,
+  `w_regex=0.35`, `w_ai=0.65`) live in the new `AppSetting` table, **not**
+  in job-option settings (`JobOptionSettings.cs` is untouched). Typed
+  getters with defaults for absent keys; **no cache** — read per use.
+  Consumers: the regex gate (floor — replaces `MinEligibilityScore` in
+  both usages), `/ai/next` (`aipassmark`, phase 3), `Q_INDEX` v2 +
+  `Q_CLEAN_ATTENTION` (scorecap + weights as SQL parameters). Editing: the
+  existing job-options SQL console (`POST /job/setting`).
 - **`Program.cs`** — inline auth middleware (`Authorized`: `X-API-Key` or
-  dashboard cookie) is where the `X-Client` role check lands (worker
-  restricted to `/ai/*`; absent header = legacy search). Keep the role
-  table data-driven so the phase-5 `assistant` role + `/assistant/*` is a
-  registration, not a middleware rewrite (F3).
+  dashboard cookie) becomes per-client-key (D7): `Auth:ApiKeys:Dashboard` /
+  `:Search` / `:Worker` in config/env (`Assistant` is added in phase 5),
+  each compared with the existing FixedTimeEquals helper. **Key = role with
+  path rules:** `search` → `/decision/*` (+ `/decision/scopes`), `worker` →
+  `/ai/*`, `dashboard` → everything; `X-Client` stays an
+  informational/logging header only; the single `Auth:ApiKey` mode is
+  removed (clean cutover). Production fail-fast: only a missing
+  **Dashboard** key refuses startup; missing Search/Worker keys log a
+  warning. Keep the key⇒role table data-driven so the phase-5 `assistant`
+  key + `/assistant/*` is a registration, not a middleware rewrite (F3).
 - **`Views/job-detail.cshtml`** — state badge colors per `JobState`; new
-  states + re-queue button (`AIError → AiPending` too) + AiScore display.
+  states + re-queue button (`AIError → AiPending` too) + AiScore display +
+  per-job Revaluate (D1.4) and emergency promote (D8) buttons.
   Phase-1 UI is minimal (2026-09-17): extracted-value display, AiScore,
   re-queue button — filters, bulk purge and digest changes are phase 6.
+- **`Controllers/Job.cs`** — `Revaluate` gains an optional `jobid` query
+  param (D1.4): single-job force re-eval (ignores the `HumanEdited` guard;
+  keeps the explicit `Rejected`/`Applied` guard; from phase 3 clears
+  `AiOptions`/`AiTitle`; disabled/hidden when `Content == null`; no param =
+  the global process unchanged; no locking vs a concurrent global run). New
+  `Promote` action (D8): `POST /job/promote?jobid=` → `PromoteJob`.
 - **Master resume service** (new) — render `Views/resume.cshtml` with a
   fixed default `ResumeContext`, prune the superset + strip text with
   HtmlAgilityPack (pattern: `JobEligibilityHelper.GetTextContent`),
@@ -98,8 +146,11 @@
   `Junior, Mid, Senior, Lead, Unknown`; `AiWorkModel`: `Onsite, Hybrid,
   Remote, Unknown`; `AiContract`: `Permanent, B2B, Temporary, Unknown`;
   `AiPeriod`: `Hour, Day, Month, Year, Unknown`.
-- **`job-option.sql`** — seed the new settings (floor=70, aipassmark=60,
-  scorecap=300, w_regex=0.35, w_ai=0.65).
+- **`app-setting.sql`** (new, D3) — `AppSetting (Key TEXT PRIMARY KEY,
+  Value TEXT)` + seeds `floor=70`, `aipassmark=60`, `scorecap=300`,
+  `w_regex=0.35`, `w_ai=0.65`. `installation.sh` picks up files in
+  `structure/` automatically (no ordering dependency); `job-option.sql` is
+  untouched.
 - Fresh database on implementation — no row migration.
 
 ## ai-worker (new console project, repo root)
@@ -109,7 +160,10 @@
   phase-3 call 2 (validation ignores it — F2); loop `GET /ai/next` until
   empty; 2 retries per job then error verdict (`AiVerdict = Error`, state
   `AIError`); single-flight; config via `Llm` section (appsettings +
-  env vars).
+  env vars): `BaseUrl/Model/Core` + `CoreApiKey` (the core's worker key,
+  D7) + `Temperature` (default 0.2) and `Seed` (fixed value) sent with
+  every request (D6 — `llama-server` supports both; re-runs must be stable
+  so `AiScore` cannot flip around `aiPassmark` without an input change).
 - Ops (2026-09-17): 120 s timeout per model call; **connection failures
   abort the whole run and write nothing** (a GPU outage must never
   mass-produce verdicts) — only model-output failures (invalid
@@ -127,7 +181,9 @@
 ## Extension (agent-extension)
 
 - **`controllers/core-messaging.js`** — `BuildHeaders` adds `X-API-Key`;
-  add `X-Client: search` here (the decided one-line phase-1 change).
+  add `X-Client: search` here (the decided one-line phase-1 change). The
+  popup API-Key field takes the **Search** key (`Auth:ApiKeys:Search`,
+  D7) — pasted by the user; no further code change.
 - Tests live in `tests/core-messaging.test.js` (header assertions).
 
 ## Tests (core-decision-dotnet.Tests)
@@ -136,7 +192,10 @@ Expected touch points: `JobRankingTests.cs` (categories/blend),
 `JobEligibilityHelperTests.cs`, `PhaseAGoldenTests.cs`, `PhaseBNewApiTests.cs`,
 `GetFirstJobTests.cs`, `SalaryScoreTests.cs` (state renames, floor setting).
 Add: verdict-guard tests (validation, state-transition-only-from-`AiPending`)
-and the re-scrape content-change rule.
+and the re-scrape content-change rule; per the 2026-09-18 decisions also
+the revaluation-scope predicate, fingerprint mismatch path, promote
+source-state guards, auth role/path table, settings defaults and the
+resurrection Attempts reset.
 
 ## Rubric v1 (2026-09-17)
 
@@ -165,12 +224,14 @@ injects the JobOption-derived `keywords` payload at `{{keywords}}`:
 | F3 | `X-Client` role registration data-driven in `Program.cs` (phase 5 adds `assistant` + `/assistant/*` as a registration) |
 | F4 | No order-dependent `JobState` logic — explicit `is Rejected or Applied` checks only (phase 4 adds `Duplicated`) |
 | F5 | Master-resume prune/strip built as a reusable helper (phases 3/5 reuse the pattern) |
-| F6 | Single shared `X-API-Key`; no key⇒role assumptions (per-client keys are phase 5) |
+| F6 | Superseded 2026-09-18 (D7): per-client keys ship in phase 1 — `Auth:ApiKeys:Dashboard/Search/Worker`; key ⇒ role with path rules in `Program.cs`; `X-Client` informational/logging only. Phase 5 adds `Auth:ApiKeys:Assistant` as a registration (F3) |
 
 ## Known follow-ups
 
 - `AI_INTEGRATION.md` §4.5 digest counts ("good jobs = regex") predate the
-  state machine; redefinition deferred to phase 6 (2026-09-17).
+  state machine; redefinition deferred to phase 6 (2026-09-17) — which also
+  gains an `AiPending` counter for data-driven floor tuning via
+  `AppSetting` (2026-09-18, D9).
 - Phase-3 delta contract and `/ai/next` payload extension decided
   2026-09-17 — see the "Phase-3 ambiguities resolved" row in
   [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md); F1/F2 already anticipate

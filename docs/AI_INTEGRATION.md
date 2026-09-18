@@ -9,7 +9,11 @@
 > code exists yet; nothing here describes current behavior. Amended
 > 2026-09-15: the AI lane now runs as a sequential state machine (`AiPending`
 > → verdict → `Attention`/`NotApprovedAI`), superseding the earlier parallel
-> `AiState`-column design (§4.1 and the decision log).
+> `AiState`-column design (§4.1 and the decision log). Amended 2026-09-18:
+> design-review decisions D1–D10 folded in (revaluation scope + Attempts
+> law, per-job Revaluate, verdict fingerprint, `AppSetting` table,
+> per-client keys, emergency promote, deterministic verdicts — see the
+> decision log's 2026-09-18 entries).
 
 Related: [`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) (phase 3 detail),
 [`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) (phase 5 detail).
@@ -54,7 +58,7 @@ Four stations, three of them outbound-only (the fourth is planned):
 ```
                 ┌────────────────────────────────┐
                 │  core: job-seeker (.NET)       │  public, SSL (reverse proxy),
-                │  SQLite + AI queue + API       │  X-API-Key + X-Client role
+                │  SQLite + AI queue + API       │  per-client X-API-Key = role
                 └─▲──────────────▲─────────────▲─┘
    POST /decision/take             │            │  GET /ai/next · POST /ai/verdict
    GET  /decision/scopes           │            │  POST /assistant/* (planned —
@@ -91,15 +95,20 @@ Four stations, three of them outbound-only (the fourth is planned):
   browser — the search extension matches `*://*/*` and would fight over the
   apply tabs.
 - **Clients & roles.** Four clients reach the core: the search extension
-  (`X-Client: search` — shipped in phase 1, decided 2026-09-11: a one-line
-  extension change, single deployment), the dashboard user (existing
-  login/API-key — no role header), `ai-worker` (`X-Client: worker`,
-  restricted to `/ai/*`), and the assistant (`X-Client: assistant`). An
-  absent header is treated as legacy search. **Roles are routing, not
-  authorization** (2026-09-15): `X-Client` is a claim anyone holding the
-  ApiKey can send — the security boundary is the shared `X-API-Key` (plus
-  the dashboard cookie); the worker role's `/ai/*` restriction is a
-  behavioral filter, not a permission wall.
+  (header `X-Client: search` — shipped, informational only), the dashboard
+  user, `ai-worker`, and the assistant (phase 5). Amended 2026-09-18 (D7,
+  supersedes "roles are routing, not authorization" of 2026-09-15):
+  **the key is the role.** Three per-client keys live in config/env —
+  `Auth:ApiKeys:Dashboard`, `Auth:ApiKeys:Search`, `Auth:ApiKeys:Worker`
+  (`Assistant` is added in phase 5; the single `Auth:ApiKey` mode is
+  removed — clean cutover). The `Authorized` middleware in `Program.cs`
+  matches each key (FixedTimeEquals) and enforces path rules: `search` →
+  `/decision/*` (+ `/decision/scopes`), `worker` → `/ai/*`, `dashboard` →
+  everything. `X-Client` remains an informational/logging header only — it
+  grants nothing. Dashboard cookie login is unchanged; the login password
+  is the Dashboard key. Production fail-fast applies only to a missing
+  Dashboard key; missing Search/Worker keys log a warning. The
+  reverse-proxy hardening recommendation stands (2026-09-15).
 
 ### 2.1 The ai-worker run — manual, no polling, no claim
 
@@ -113,7 +122,10 @@ should be processed. One run:
    `keywords` (2026-09-17), and changes no state. Phase 3 (2026-09-17)
    extends the payload with `settings` (`aiPassmark`), the per-job
    `options` as standard JSON, and the template-derived block `inventory`
-   (§3). The worker stops when the core answers "empty".
+   (§3). Since 2026-09-18 (D2) the payload also carries `fingerprint` =
+   SHA-256 hex of the whitespace-normalized `Content` (the same Normalize
+   as the content-change rule) — computed per request, nothing stored (no
+   hash column). The worker stops when the core answers "empty".
 2. For each job: run the local `llama-server` call(s) (§6), then
    `POST /ai/verdict` — the only write in the AI lane. Decided (2026-09-12,
    superseding the Pending-validation rule): the verdict is an **upsert** —
@@ -124,7 +136,14 @@ should be processed. One run:
    default 60) promotes to `Attention`, otherwise `NotApprovedAI` (a purge
    candidate, §6). Verdicts arriving for out-of-queue jobs are logged
    informationally, not rejected. A re-POST after a lost HTTP response is a
-   natural no-op, and re-running the worker overwrites old verdicts.
+   natural no-op, and re-running the worker overwrites old verdicts. The
+   verdict echoes the `fingerprint`; the core recomputes it from the
+   currently stored `Content` (2026-09-18, D2). A match applies the normal
+   gate; a **mismatch** — the content changed between fetch and verdict —
+   upserts the verdict columns and logs informationally with **no state
+   transition**: the job stays `AiPending` and is re-judged on the next
+   worker run. `Content == null` at verdict time counts as a mismatch.
+   This closes the `/ai/next` ↔ `/ai/verdict` race.
 
 - **No claim, no lease, no startup sweep** (2026-09-11, superseding the
   2026-09-10 sweep/claim design). A crash before the verdict simply leaves
@@ -135,15 +154,33 @@ should be processed. One run:
 - The worker **never touches SQLite directly** — only the two endpoints.
 - **Queue membership = `State = AiPending`** (2026-09-15; supersedes the
   planned `AiState` column): the regex gate enters the queue (§4.1), the
-  verdict gate leaves it. Re-queue rules: a settings change followed by
-  `RunRevaluateProcess` re-queues **every** floor-passing job (including
-  `Attention`/`NotApprovedAI`); a purged `NotApprovedRegex` job whose
-  stored `Score` passes the new floor goes back to `Saved` for a natural
-  re-scrape (2026-09-17 — purge nulls only `Html`/`Content`); a browser
-  re-scrape re-queues only when the scraped text changed (whitespace-
-  normalized compare against stored `Content`, 2026-09-17) — an unchanged
-  re-visit leaves AI-judged states alone, while un-judged states (`Saved`,
-  `AiPending`, `NotApprovedRegex`, `AIError`) always re-evaluate.
+  verdict gate leaves it. Re-queue rules (amended 2026-09-18, D1): a
+  settings change followed by `RunRevaluateProcess` re-queues floor-passing
+  jobs in the **AI-domain, content-bearing states only** — `State IN
+  ('Attention','AiPending','NotApprovedAI','AIError') AND Content IS NOT
+  NULL` (supersedes the 2026-09-15 "every floor-passing job" wording; the
+  old `State != 'Revaluation'` condition is absorbed). `Saved`,
+  `Rejected`, `Applied` (and future `Duplicated`) are excluded —
+  terminal/user-decided jobs keep Score/Log frozen as a historical record.
+  Crash recovery returns stranded `Revaluation` rows to `Saved` with
+  `Attempts = 0, Tries = NULL` — unified law: **any deliberate return to
+  `Saved` for reprocessing resets `Attempts`** (the 2026-09-17
+  floor-lowering resurrection included; without the reset the
+  `Attempts >= 4` guard in `Q_FETCH_FIRST` would zombie-trap such jobs). A
+  purged `NotApprovedRegex` job whose stored `Score` passes the new floor
+  goes back to `Saved` for a natural re-scrape (2026-09-17 — purge nulls
+  only `Html`/`Content`); a browser re-scrape re-queues only when the
+  scraped text changed (whitespace-normalized compare against stored
+  `Content`, 2026-09-17) — an unchanged re-visit leaves AI-judged states
+  alone, while un-judged states (`Saved`, `AiPending`, `NotApprovedRegex`,
+  `AIError`) always re-evaluate. A **per-job Revaluate button** (2026-09-18,
+  D1.4) on job-detail force-re-evaluates one job: it ignores the phase-3
+  `HumanEdited` guard (overwrites `Options` with the fresh regex context),
+  keeps the explicit `Rejected`/`Applied` guard, and — from phase 3 —
+  clears `AiOptions`/`AiTitle`; disabled when `Content == null`; a
+  floor-passing job returns to `AiPending` (accepted); no param = the
+  global process unchanged; no locking vs a concurrent global run (regex
+  is deterministic; last write wins).
 - **Rejected alternative: tunnels** (Tailscale, cloudflared, SSH reverse)
   would restore core→AI reachability and allow an in-core worker calling
   `llama-server` remotely. Rejected for Phase 0: extra infrastructure to keep
@@ -168,6 +205,9 @@ should be processed. One run:
   "BaseUrl": "http://localhost:8082/v1",
   "Model": "Qwen3-30B-A3B-Q5_K_M",
   "Core": "https://core.example.com",
+  "CoreApiKey": "<the core's worker key — Auth:ApiKeys:Worker, D7>",
+  "Temperature": 0.2,
+  "Seed": 42,
   "Enabled": true
 }
 ```
@@ -241,9 +281,9 @@ note: the ranking query must gain a careful v2 (enum-name literals, the
 Decided (2026-09-11) — final score: `Score` (regex) and `AiScore` stay
 separate columns; the blend is computed **at query time in `Q_INDEX` v2,
 never stored**: `FinalScore = W_r * Score + W_a * AiScore`, initial
-`W_r = 0.35`, `W_a = 0.65` (trial-and-error tunable), weights held in
-job-option settings so they change without a rebuild. Jobs without a
-verdict yet rank by their regex `Score`.
+`W_r = 0.35`, `W_a = 0.65` (trial-and-error tunable), weights held in the
+new `AppSetting` table (2026-09-18, D3) so they change without a rebuild.
+Jobs without a verdict yet rank by their regex `Score`.
 
 Amended (2026-09-12) — scale normalization. `AiScore` is fixed at **0–100**
 (the model judges apply-worthiness from the master resume + JD + JobOption
@@ -265,6 +305,12 @@ states (`Attention`, `NotApprovedAI`); `AiPending` jobs rank by `RegexNorm`
 alone. A re-queued job keeps its previous verdict columns visible but
 unused — no destructive clear (re-queue rules in §2.1).
 
+Amended (2026-09-18, D5): the same v2 blend keys `Q_CLEAN_ATTENTION` —
+its top-100 Html-retention subquery orders by `FinalScore` (previously
+raw `Score`); the blend expression is a shared C# SQL fragment (scorecap +
+weights as SQL parameters from `AppSetting`) used by both `Q_INDEX` v2
+and `Q_CLEAN_ATTENTION`.
+
 Decided (2026-09-15) — sequential state machine (supersedes the 2026-09-11
 `Job.AiState` column; queue membership is `State = AiPending`). The regex
 gate writes its own domain: below the configurable floor (default 70) →
@@ -279,8 +325,17 @@ the order-dependent `user_changes` guard (`State > Attention`) becomes an
 explicit `is Rejected or Applied` check. Browser follow-up commands
 (`JobPage`/`StepstonePageJob` save-button clicks) re-key from `Attention`
 to the regex-approval result, so browser behavior is unchanged. **No
-bypass:** `Attention` is reachable only via a verdict — no AI-off fallback,
-no manual promote; the top list stays empty until the worker runs.
+bypass** (2026-09-15; amended 2026-09-18, D8): `Attention` is reachable
+only via a verdict — no AI-off fallback — with one emergency exception: a
+dashboard button (`POST /job/promote?jobid=`) promotes a single job from
+`AiPending`, `NotApprovedAI` or `AIError` to `Attention` (never from
+`Rejected`/`Applied`, or future `Duplicated`). No synthetic `AiScore` is
+written — within `Attention` the promoted job ranks by `RegexNorm`
+(COALESCE-style in `Q_INDEX` v2); the action appends `Manually promoted
+(emergency) — <date>` to `job.Log` and bumps `ModifiedOn`; the job leaves
+the queue and the worker will not see it again until a changed re-scrape
+or a revaluation re-queues it (accepted). Otherwise the top list stays
+empty until the worker runs.
 Implementation starts from a **fresh database** (old jobs expired) — no row
 migration, no backfill. Purge candidacy is `NotApprovedAI` and `AIError`
 (§6).
@@ -368,11 +423,15 @@ verdict), matching the "leave the system running" usage pattern.
   only the job description differs per call.
 - **Structured output.** Use `response_format` (JSON schema / GBNF grammar)
   so verdicts and extractions always parse. Never regex-scrape model output.
+- **Determinism (2026-09-18, D6).** Every model request carries
+  `Temperature` (default 0.2) and a fixed `Seed` (`llama-server` supports
+  both). Re-runs must be stable so `AiScore` cannot flip around
+  `aiPassmark` without an input change.
 - **Two-stage purge — stage 2 human-confirmed (decided 2026-09-10; amended
   2026-09-11, 2026-09-12, 2026-09-15).** Stage 1: jobs scoring **below the
-  configurable near-miss floor** purge immediately — the floor is a
-  job-option setting shared with AI-queue entry, and this is a **deliberate
-  behavior change**: today's code purges everything below
+  configurable near-miss floor** purge immediately — the floor is an
+  `AppSetting` key (2026-09-18, D3) shared with AI-queue entry, and this
+  is a **deliberate behavior change**: today's code purges everything below
   `MinEligibilityScore = 100`, so retaining the floor–99 band (with its DB
   growth) is part of the phase-1 deliverables (§7). Amended (2026-09-15):
   the floor's default is **70** and it is now a state boundary — below it
@@ -383,8 +442,9 @@ verdict), matching the "leave the system running" usage pattern.
   moves the job to `NotApprovedAI` as a **purge candidate**; actual deletion
   is a dashboard action (single or bulk, pre-selected by threshold), and
   the existing old-age cleanup also covers `NotApprovedRegex` and
-  `NotApprovedAI`. `GET /ai/next` carries the job text (`Job.Content`) and,
-  per the ranking decision (§4.1), the master resume text.
+  `NotApprovedAI`. `GET /ai/next` carries the job text (`Job.Content`), the
+  content `fingerprint` (D2, §2.1) and, per the ranking decision (§4.1),
+  the master resume text.
 - **Poison jobs (decided 2026-09-15; amended 2026-09-17 — target state).**
   A model/parse failure is retried twice within the same worker run;
   persistent failure posts an **error verdict** moving the job to
@@ -428,12 +488,12 @@ verdict), matching the "leave the system running" usage pattern.
 | Phase | Deliverable | Risk |
 |-------|-------------|------|
 | 0 | Topology (§2) — documentation only | Decided 2026-09-10: no standalone deliverable |
-| 1 | Verdict + extraction + ranking: `ai-worker` + `GET /ai/next` & `POST /ai/verdict` (built here) + additive verdict/extraction columns + `Q_INDEX` v2 + the sequential state machine (`NotApprovedRegex`/`AiPending`/`NotApprovedAI`; queue = `AiPending`, no `AiState` column) + near-miss retention (floor default 70) + new job-option settings (floor, aipassmark=60, scorecap=300, w_regex=0.35, w_ai=0.65) + fresh DB (no migration) | Worker infra absorbed into phase 1; the ranking edit is the delicate part |
+| 1 | Verdict + extraction + ranking: `ai-worker` + `GET /ai/next` & `POST /ai/verdict` (built here) + additive verdict/extraction columns + `Q_INDEX` v2 + the sequential state machine (`NotApprovedRegex`/`AiPending`/`NotApprovedAI`; queue = `AiPending`, no `AiState` column) + near-miss retention (floor default 70) + new `AppSetting` table for the five settings (floor=70, aipassmark=60, scorecap=300, w_regex=0.35, w_ai=0.65 — D3) + per-client API keys (D7) + verdict fingerprint (D2) + emergency promote button (D8) + fresh DB (no migration) | Worker infra absorbed into phase 1; the ranking edit is the delicate part |
 | ~~2~~ | ~~Structured extraction columns~~ — **absorbed into phase 1** (2026-09-11: one worker pass produces verdict + extraction); dashboard filters deferred to phase 6 (2026-09-17) | Additive schema only |
 | 3 | Resume tailoring delta (`Job.AiOptions`, `Job.AiTitle`) — ambiguities resolved 2026-09-17 (decision log) | Review = user duty on job-detail (supersedes the earlier "review gate before `Applied`"); free-text title stays accept-gated |
 | 4 | Cross-platform dedup + daily digest | Read-only over existing data |
 | 5 | Apply assistant on a personal terminal ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)) | New extension + `/assistant/*` endpoints; the human presses every submit |
-| 6 | Dashboard side-work (2026-09-17): filters over the extraction columns (design + implementation), bulk purge for `NotApprovedAI`/`AIError`, digest-count redefinition | Read-only over existing data; no browser/worker changes |
+| 6 | Dashboard side-work (2026-09-17): filters over the extraction columns (design + implementation), bulk purge for `NotApprovedAI`/`AIError`, digest-count redefinition + `AiPending` counter for data-driven floor tuning (2026-09-18, D9) | Read-only over existing data; no browser/worker changes |
 
 Best value-to-risk is still **phase 1** (fixes lexical regex scoring;
 carries the worker, the structured extraction and the `Q_INDEX` v2 edit).

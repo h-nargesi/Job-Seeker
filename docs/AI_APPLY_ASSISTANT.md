@@ -178,6 +178,13 @@ to `/ai/*`; **absent header = legacy search** (current extension versions
 send none); the search extension sends `X-Client: search` starting in
 phase 1 (decided 2026-09-11 — one-line change, single deployment).
 
+*(2026-09-18 note, rework in the phase-5 pass: with per-client keys
+decided for phase 1 — `AI_DECISION_LOG.md` D7 — role gating is by **key**,
+not by the `X-Client` header. `X-Client` stays informational/logging only,
+and phase 5 adds `Auth:ApiKeys:Assistant` as a registration (F3). The
+"absent header = legacy search" rule and the per-role rejections above
+describe the superseded header-gating model.)*
+
 ## 7. Out of scope v1
 
 Automatic claim queue (would need an `Applying` state + lease),
