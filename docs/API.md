@@ -228,6 +228,7 @@ rejected with 400; extend by doc change. `scope`/`kind` are enum names
 | `POST /assistant/memoryedit?id=` (body) | patch the same fields on one row (provided fields only) |
 | `POST /assistant/memoryconfirm?id=&confirmed=` | confirm / unconfirm (confirm-then-inject) |
 | `POST /assistant/memorydelete?id=` | delete |
+| `POST /assistant/memorybump?id=` | bump `UseCount` (the assistant applied the row's value) |
 
 - `domain` defaults to `*` (global); hostnames are lowercased.
 - `fieldKey`: apply/resume = the control's `name` else normalized label (the

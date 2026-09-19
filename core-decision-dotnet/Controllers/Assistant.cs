@@ -150,6 +150,20 @@ public class AssistantController(Database database) : Controller
         }
     }
 
+    [HttpPost]
+    public IActionResult MemoryBump([FromQuery] long id)
+    {
+        try
+        {
+            return database.Memory.BumpUseCount(id) ? Ok() : NotFound();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
     private static MemoryScope? ParseScope(string? scope, out bool invalid)
     {
         invalid = false;

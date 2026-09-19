@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<style>
+		body {
+			width: 380px;
+			margin: 0;
+			padding: 8px;
+			font-size: 13px;
+			font-family: system-ui, sans-serif;
+		}
+
+		.section {
+			margin-bottom: 10px;
+		}
+
+		label {
+			display: block;
+			margin-top: 6px;
+		}
+
+		input[type="text"], input[type="password"], select {
+			width: 100%;
+			box-sizing: border-box;
+		}
+
+		button {
+			margin: 1px;
+			padding: 2px 8px;
+			font-size: 12px;
+		}
+
+		.nav button {
+			padding: 4px 12px;
+		}
+
+		.nav .active {
+			font-weight: bold;
+			text-decoration: underline;
+		}
+
+		.job, .memory-row {
+			padding: 4px 0;
+			border-bottom: 1px solid #eee;
+		}
+
+		.warn {
+			color: #a00;
+		}
+
+		.muted {
+			color: #666;
+		}
+
+		#JobsList, #MemoryList {
+			max-height: 260px;
+			overflow-y: auto;
+		}
+
+		#ChatLog {
+			max-height: 90px;
+			overflow-y: auto;
+			font-size: 12px;
+		}
+
+		ul {
+			margin: 4px 0;
+			padding-left: 16px;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="section">
+		<b>Apply Assistant</b>
+		<span id="Mode" class="muted"></span>
+		<label>Mode override:
+			<select id="ModeOverride">
+				<option value="auto">auto</option>
+				<option value="job_detail">job_detail</option>
+				<option value="apply_form">apply_form</option>
+			</select>
+		</label>
+	</div>
+	<div class="section">
+		<details>
+			<summary>Settings</summary>
+			<label>Core URL: <input id="ServerUrl" type="text" /></label>
+			<label>Assistant API Key: <input id="ApiKey" type="password" /></label>
+			<label>Llama URL: <input id="LlamaUrl" type="text" /></label>
+			<label>Llama Model: <input id="LlamaModel" type="text" /></label>
+			<p class="muted">Press Enter in each field to save.</p>
+		</details>
+	</div>
+	<div class="section nav">
+		<button id="ShowJobs" class="active">Jobs</button>
+		<button id="ShowMemory">Memory</button>
+	</div>
+	<div id="JobsView" class="section">
+		<button id="RefreshJobs">Refresh</button>
+		<span id="JobsStatus" class="muted"></span>
+		<div id="JobsList"></div>
+	</div>
+	<div id="MemoryView" class="section" style="display:none">
+		<button id="RefreshMemory">Refresh</button>
+		<select id="MemoryScope">
+			<option value="">all scopes</option>
+			<option value="Apply">apply</option>
+			<option value="Resume">resume</option>
+			<option value="Ranking">ranking</option>
+		</select>
+		<div id="MemoryCap" class="warn"></div>
+		<div id="MemoryList"></div>
+		<hr />
+		<b>Add lesson (tip, confirmed)</b>
+		<label>Scope: <select id="TipScope"></select></label>
+		<label>Field: <select id="TipRankingKey" style="display:none"></select>
+			<input id="TipFieldKey" type="text" placeholder="field key (name or label)" />
+		</label>
+		<label>Value: <input id="TipValue" type="text" /></label>
+		<label>Note: <input id="TipNote" type="text" /></label>
+		<button id="SaveTip">Save lesson</button>
+		<div id="ChatLog" class="muted"></div>
+	</div>
+	<script src="../controllers/storage-handler.js"></script>
+	<script src="../controllers/background-messaging.js"></script>
+	<script src="../controllers/form-inventory.js"></script>
+	<script src="panel.js"></script>
+</body>
+
+</html>

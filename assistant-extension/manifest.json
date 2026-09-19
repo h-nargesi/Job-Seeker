@@ -1,0 +1,45 @@
+{
+	"name": "Job Seeker Apply Assistant",
+	"version": "0.1.0",
+	"description": "Human-triggered apply-form fill assistant driven by a local LLM. Fills forms, learns memory, never submits.",
+	"manifest_version": 3,
+	"action": {
+		"default_popup": "application/panel.html",
+		"default_title": "Apply Assistant",
+		"default_icon": {
+			"16": "assets/images/job-16.png",
+			"32": "assets/images/job-32.png",
+			"48": "assets/images/job-48.png",
+			"128": "assets/images/job-128.png"
+		}
+	},
+	"content_scripts": [
+		{
+			"matches": ["*://*/*"],
+			"js": [
+				"controllers/storage-handler.js",
+				"controllers/background-messaging.js",
+				"controllers/form-inventory.js",
+				"controllers/fill-handler.js",
+				"controllers/submit-diff.js",
+				"controllers/assistant-page.js"
+			]
+		}
+	],
+	"background": {
+		"service_worker": "controllers/background.js"
+	},
+	"permissions": [
+		"storage"
+	],
+	"host_permissions": [
+		"http://localhost/*",
+		"http://127.0.0.1/*"
+	],
+	"icons": {
+		"16": "assets/images/job-16.png",
+		"32": "assets/images/job-32.png",
+		"48": "assets/images/job-48.png",
+		"128": "assets/images/job-128.png"
+	}
+}

@@ -1,6 +1,10 @@
 # Chat 8 — `assistant-extension/` Fill loop
 
-**Status:** not started. **Depends on:** Chat 7.
+**Status:** done (2026-09-19). **Depends on:** Chat 7.
+
+Core tweak shipped with this slice: `POST /assistant/memorybump?id=` (the
+documented UseCount bump the fill loop calls when it applies a confirmed row's
+value).
 
 ## Goal
 

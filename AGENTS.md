@@ -42,8 +42,10 @@ Job-Seeker/
 │                              # station: GET /ai/next → llama-server call 1 →
 │                              # POST /ai/verdict; tests in ai-worker.Tests;
 │                              # see docs/AI_IMPLEMENTATION.md Stack
-├── assistant-extension/       # (planned, Chat 8) apply-assistant MV3,
-│                              # vanilla JS — see docs/AI_APPLY_ASSISTANT.md
+├── assistant-extension/       # (Chat 8) apply-assistant MV3, vanilla JS —
+│                              # generic DOM fill loop + memory UI; tests in
+│                              # assistant-extension/tests; see
+│                              # docs/AI_APPLY_ASSISTANT.md
 ├── database/                  # SQLite schema + seed data
 │   ├── structure/             # agency.sql, job.sql, job-option.sql, trend.sql
 │   ├── installation.sh        # creates/reseeds the schema
@@ -115,7 +117,9 @@ next to the DB and are normal — include them in backups/restores.
 → select `agent-extension/`. Set the server URL (default
 `http://localhost:8081/`) and, when an API key is configured, the matching
 API Key in the popup menu — the **Search** key under the AI-phase-1
-per-client scheme (press Enter in each field to save).
+per-client scheme (press Enter in each field to save). The apply assistant
+(`assistant-extension/`, Chat 8) loads the same way on the AI-station browser
+with the **Assistant** key — never both extensions in one browser.
 
 ## 3. Lint / typecheck / test
 
@@ -123,6 +127,7 @@ per-client scheme (press Enter in each field to save).
 |--------------|---------|-------|
 | Compile      | `dotnet build "Job Seeker.sln"` | Primary validation gate. Warnings are treated seriously (`<Nullable>enable</Nullable>`). |
 | Extension JS | `cd agent-extension && npm test` | node:test + happy-dom; sources stay classic scripts loaded via `node:vm` (no build step). Also verify manually by loading the unpacked extension and watching the `AGENT` console logs. |
+| Assistant JS | `cd assistant-extension && npm test` | same node:test + happy-dom pattern for the apply assistant (`ASSISTANT` logs). |
 | Tests        | `dotnet test core-decision-dotnet.Tests/core-decision-dotnet.Tests.csproj` | xUnit project `core-decision-dotnet.Tests` — not in the solution, run it directly. |
 
 After editing C#, **always run `dotnet build "Job Seeker.sln"`** before declaring done.
