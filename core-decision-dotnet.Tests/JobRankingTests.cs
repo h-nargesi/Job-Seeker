@@ -70,4 +70,32 @@ public class JobRankingTests
         Assert.Equal(30, JobRanking.Effective(200, 35), 10);
         Assert.Equal(0, JobRanking.Effective(0, 7), 10);
     }
+
+    [Fact]
+    public void RegexNorm_caps_and_scales_to_100()
+    {
+        Assert.Equal(100, JobRanking.RegexNorm(300, 300), 10);
+        Assert.Equal(100, JobRanking.RegexNorm(900, 300), 10);
+        Assert.Equal(100.0 / 3, JobRanking.RegexNorm(100, 300), 10);
+        Assert.Equal(0, JobRanking.RegexNorm(null, 300), 10);
+        Assert.Equal(0, JobRanking.RegexNorm(100, 0), 10);
+    }
+
+    [Fact]
+    public void FinalScore_blends_normalized_regex_and_ai()
+    {
+        Assert.Equal(100, JobRanking.FinalScore(300, 100, 300, 0.35, 0.65), 10);
+        Assert.Equal(35, JobRanking.FinalScore(300, 0, 300, 0.35, 0.65), 10);
+        Assert.Equal(65, JobRanking.FinalScore(0, 100, 300, 0.35, 0.65), 10);
+    }
+
+    [Fact]
+    public void RankScore_uses_final_only_for_attention_and_not_approved_ai_with_verdict()
+    {
+        Assert.Equal(35, JobRanking.RankScore(JobState.Attention, 300, 0, 300, 0.35, 0.65), 10);
+        Assert.Equal(100, JobRanking.RankScore(JobState.Attention, 300, null, 300, 0.35, 0.65), 10);
+        Assert.Equal(35, JobRanking.RankScore(JobState.NotApprovedAI, 300, 0, 300, 0.35, 0.65), 10);
+        Assert.Equal(100, JobRanking.RankScore(JobState.AiPending, 300, 0, 300, 0.35, 0.65), 10);
+        Assert.Equal(100, JobRanking.RankScore(JobState.AIError, 300, 0, 300, 0.35, 0.65), 10);
+    }
 }

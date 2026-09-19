@@ -409,7 +409,7 @@ public class PhaseAGoldenTests
     {
         using var db = new GoldenDatabase();
         db.SaveSearchJob("ff1", "https://example.com/jobs/ff1");
-        db.ExecuteRaw("UPDATE Job SET Content = 'some text' WHERE Code = 'ff1'");
+        db.ExecuteRaw("UPDATE Job SET Content = 'some text', State = 'AiPending' WHERE Code = 'ff1'");
 
         var job = db.Database.Job.FetchFrom(DateTime.Now.AddDays(1));
 

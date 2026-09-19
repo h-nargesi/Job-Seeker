@@ -57,6 +57,7 @@ public class JobEligibilityHelper : IDisposable
             {
                 using var database = database_factory.Open();
                 database.Job.ResetRevaluations();
+                database.Job.ResurrectFloorPassing(database.AppSetting.Floor());
                 var start_time = DateTime.Now.AddSeconds(-1);
                 var total_count = (int)database.Job.FetchFromCount(start_time);
                 CurrentRevaluationProcess = new RevaluationProcess(start_time, total_count);

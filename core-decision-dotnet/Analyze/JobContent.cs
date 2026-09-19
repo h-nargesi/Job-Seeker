@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
@@ -42,5 +43,11 @@ public static class JobContent
     public static bool HasChanged(string? stored, string? incoming)
     {
         return Normalize(stored) != Normalize(incoming);
+    }
+
+    public static string Fingerprint(string? text)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(Normalize(text)));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 }

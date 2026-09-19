@@ -1,6 +1,6 @@
 # Chat 3 — Ranking SQL and verdict persistence
 
-**Status:** not started. **Depends on:** Chat 2. **Highest-risk slice.**
+**Status:** done. **Depends on:** Chat 2. **Highest-risk slice.**
 
 ## Goal
 

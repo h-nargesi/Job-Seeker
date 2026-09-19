@@ -26,4 +26,17 @@ public class JobContentNormalizeTests
         Assert.True(JobContent.HasChanged(null, "new listing"));
         Assert.False(JobContent.HasChanged(null, "   "));
     }
+
+    [Fact]
+    public void Fingerprint_is_sha256_of_normalized_text()
+    {
+        var a = JobContent.Fingerprint("hello   world");
+        var b = JobContent.Fingerprint("hello world");
+        var c = JobContent.Fingerprint("hello worlds");
+
+        Assert.Equal(64, a.Length);
+        Assert.Equal(a, b);
+        Assert.NotEqual(a, c);
+        Assert.Equal(JobContent.Fingerprint(null), JobContent.Fingerprint(""));
+    }
 }
