@@ -191,7 +191,9 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
   Match the surrounding style.
 - **Nullable enabled.** Don't silence nullability with `!` unless necessary.
 - **Technical docs (`docs/`, `AGENTS.md`) are English-only.** Personal working
-  logs (`REVIEW*.md`) may be Persian; anything an agent reads must be English.
+  logs (`REVIEW*.md`, `TODO.md`) may be Persian; anything an agent reads must be
+  English. Closed log items are archived by period under `archive/`
+  (`review-YYYY-MM.md`, `todo-YYYY-MM.md`); active logs stay at the repo root.
   Persian markdown files wrap their whole body in one `<div dir="rtl" lang="fa">`
   per file — opening tag on line 1, closing tag on the last line, blank line
   after/before the tags, never per-line — and never contain RLM (U+200F) or

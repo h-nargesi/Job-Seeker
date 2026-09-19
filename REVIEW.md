@@ -2,7 +2,7 @@
 
 # گزارش مرور پروژه Job-Seeker — موارد باز
 
-> موارد رفع‌شده‌ای که با کد تطبیق داده شدند به [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md)
+> موارد رفع‌شده‌ای که با کد تطبیق داده شدند به [`archive/review-2026-09.md`](archive/review-2026-09.md)
 > منتقل شدند (بررسی: ۱۴۰۵/۰۶/۰۹ — 2026-08-31). این فایل فقط موارد باز/ناقص را دنبال می‌کند.
 >
 > رنگ‌بندی اولویت: 🔴 بحرانی · 🟠 مهم · 🟡 متوسط · 🔵 خفیف
@@ -28,7 +28,7 @@
 >
 > موارد ۱.۵ (مسیریابی پاسخ پس‌زمینه بر اساس `tab.index`)، ۱.۶ (زنجیرهٔ پیام‌رسانی بدون
 > timeout/چک ok/catch) و ۱.۷ (هویت تب فقط در حافظهٔ SW) در ۱۴۰۵/۰۶/۱۸ (2026-09-09) رفع و به
-> [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شدند — ۱.۷ با کامیت `d2861ff` (binding
+> [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شدند — ۱.۷ با کامیت `d2861ff` (binding
 > پایدار + adoption بر اساس آژانس)؛ تأیید نهایی با نخستین اجرای زنده.
 > مورد باز در این بخش باقی نمانده است.
 
@@ -42,17 +42,17 @@
 >
 > آخرین مورد باز بخش ۲ (۲.۱۶ — الگوی `/rc/clk?jk=` در استخراج شغل این‌دیس) در ۱۴۰۵/۰۶/۱۷
 > (2026-09-08) با الگوی چندشکلی `IndeedSerp` رفع و به
-> [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شد — تأیید نهایی با نخستین اجرای زنده.
+> [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شد — تأیید نهایی با نخستین اجرای زنده.
 >
 > موارد ۲.۱۷ (TTL بدون heartbeat)، ۲.۱۸ (رزرو بدون lease) و ۲.۲۲ (اجرای open با
 > `window.open`) در ۱۴۰۵/۰۶/۱۸ (2026-09-09) با کامیت `8503003` رفع و به
-> [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شدند — تأیید نهایی با نخستین اجرای زنده.
+> [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شدند — تأیید نهایی با نخستین اجرای زنده.
 > موارد ۲.۱۹ (اتمیزم Orders×Take با تراکنش `BEGIN IMMEDIATE` + قفل ایستا دور کل پاس
 > چک‌پوینت) و ۲.۲۱ (مرتب‌سازی/سقف عددی با ستون `Attempts` + مهاجرت backfill در
 > `installation.sh`) در ۱۴۰۵/۰۶/۲۰ (2026-09-11) رفع و به
-> [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شدند — تأیید نهایی با نخستین اجرای زنده.
+> [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شدند — تأیید نهایی با نخستین اجرای زنده.
 > مورد ۲.۲۰ (قفل per-agency روی `AnalyzeContent`) در ۱۴۰۵/۰۶/۲۰
-> (2026-09-11) رفع و به [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شد —
+> (2026-09-11) رفع و به [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شد —
 > تأیید نهایی با نخستین اجرای زنده.
 >
 > ۱۴۰۵/۰۶/۲۱ (2026-09-12): با راه‌اندازی سوئیت تست JS اکستنشن
@@ -73,18 +73,18 @@
 ## بخش ۳ — 🟡 متوسط (طراحی و قابلیت نگهداری)
 
 > مورد ۳.۱ (ORM بازتابی شکننده) در ۱۴۰۵/۰۶/۱۸ (2026-09-09) با مهاجرت کامل لایهٔ داده به Dapper رفع و به
-> [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شد — به همراه فیکس باگ upsert ترند؛ رفتارهای حفظ‌شده
+> [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شد — به همراه فیکس باگ upsert ترند؛ رفتارهای حفظ‌شده
 > (ترکیب UTC/local مهلت `ModifiedOn` و `Tries = NULL` در اسکرپ Stepstone) در همان مدخل آرشیو مستند شد.
 >
 > مورد ۳.۲ (استفادهٔ بیش از حد `dynamic` و anonymous types) در ۱۴۰۵/۰۶/۱۸ (2026-09-09) با مدل‌ها/record های
 > تایپ‌دار (`JobOptionSettings`، `AgencyRate`، `TrendReportItem`، `JobListItem`، `AgencyInfo`،
 > `AgencyDashboardItem`، `DashboardViewModel`) و view های `@model`دار رفع و به
-> [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شد — به همراه حذف کد مرده (`LoadSetting` و overload
+> [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شد — به همراه حذف کد مرده (`LoadSetting` و overload
 > داینامیک `Query`)؛ گزینهٔ حقوقی بدشکل اکنون هشدار + امتیاز ۰ می‌دهد به‌جای کرش binder.
 >
 > مورد ۳.۳ (`Database.Open()` دستی همه‌جا — نقض DI) در ۱۴۰۵/۰۶/۱۸ (2026-09-09) با حذف کامل
 > `Open`/`SetConfiguration` استاتیک و جایگزینی با `IDatabaseFactory` (Singleton) + `Database` اسکوپ‌شده
-> در DI رفع و به [`REVIEW-ARCHIVE.md`](REVIEW-ARCHIVE.md) منتقل شد — به همراه فیکس اتصال مرده در
+> در DI رفع و به [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شد — به همراه فیکس اتصال مرده در
 > `Page.GetUserPass`؛ نیمهٔ باز ماندهٔ مورد ۲.۸ آرشیوشده نیز بسته شد.
 
 ### ۳.۴ تکرار کد `LoadJob` در Stepstone
@@ -116,7 +116,7 @@
 **فایل:** `JobEligibilityHelper.cs`
 
 فقط والد مستقیم script/head/style چک می‌شود؛ `<noscript>`, `<svg>`, CSS/JS توکار
-نشت می‌کنند. (مربوط به todo.txt: «Ignore javascript/json on content?»)
+نشت می‌کنند. (مربوط به TODO.md: «Ignore javascript/json on content?»)
 
 ### ۳.۱۶ `Program.cs` APIهای منسوخ
 
@@ -283,7 +283,7 @@ popup تا ری‌استارت بعدی Service Worker بی‌اثر می‌ما
 8. **پیکربندی:** رفع مسیرهای هاردکد (`job-seeker.sh`).
 9. **CI/CD:** اضافه کردن workflow برای build/test در `.github/workflows`.
 10. **مستندسازی:** توضیح الگوریتم امتیازدهی (فرمول LaTeX در `JobBusiness.cs`) و حالت‌های ماشین Trend در یک سند (بخشی از آن در `TrendsCheckpoint.md` هست ولی ناقص).
-11. **todo.txt** موارد باز: افزودن Qatar/Oman (بخشی در SQL هست)، bayt/qatarliving/omanjobs، popup هنگام باز کردن صفحه (ریشه: مورد ۲.۲۲)، حذف ستون HTML، نادیده‌گرفتن JS/JSON در محتوا.
+11. **TODO.md** موارد باز: افزودن Qatar/Oman (بخشی در SQL هست)، bayt/qatarliving/omanjobs، popup هنگام باز کردن صفحه (ریشه: مورد ۲.۲۲)، حذف ستون HTML، نادیده‌گرفتن JS/JSON در محتوا.
 12. **پروتکل پایدار تب↔trend:** ~~binding ماندگار در اکستنشن (`chrome.storage.session` + `onRemoved`)~~ (انجام شد — ۱۴۰۵/۰۶/۱۸؛ مورد ۱.۷ آرشیو شد) + ~~heartbeat و TTL آگاه از حالت (۲.۱۷)~~ (انجام شد — ۱۴۰۵/۰۶/۱۸؛ مورد ۲.۱۷ آرشیو شد) + ~~lease مهلت‌دار رزروها (۲.۱۸)~~ (انجام شد — ۱۴۰۵/۰۶/۱۸؛ مورد ۲.۱۸ آرشیو شد) و ~~اجرای open از SW با `chrome.tabs.create` (۲.۲۲)~~ (انجام شد — ۱۴۰۵/۰۶/۱۸؛ مورد ۲.۲۲ آرشیو شد — close هم از SW با `chrome.tabs.remove` اجرا می‌شود).
 13. **Idempotency در پروتکل درایو:** request-id/sequence در `PageContext` و پاسخ‌ها برای تشخیص درخواست تکراری/stale — ریشهٔ ۲.۱۹ با تراکنش اتمیک رفع شد (۱۴۰۵/۰۶/۲۰)؛ این مورد به‌عنوان لایهٔ دفاعی دوم باز می‌ماند.
 
