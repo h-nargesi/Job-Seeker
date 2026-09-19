@@ -102,68 +102,75 @@ Guardrails (non-negotiable):
 
 ## 4. Memory (the learning part)
 
-Decided (2026-09-11): **one unified memory subsystem** — a single table, a
-single API, and a single retrieval/injection mechanism shared by all three
-lanes, with a `Scope` column distinguishing them (this replaces the earlier
-separate `apply_memory` design):
+Terms: [`GLOSSARY.md`](GLOSSARY.md). Decided (2026-09-11): **one unified
+memory subsystem** — a single table, API, and retrieval/injection
+mechanism shared by all three lanes, with a `Scope` column (this replaces
+the earlier separate `apply_memory` design). Amended 2026-09-19.
 
 | Column | Meaning |
 |--------|---------|
 | `Scope` | which lane the row serves: `resume` / `apply` / `ranking` |
 | `AgencyDomain` | page hostname, or `'*'` for global |
-| `FieldKey` | canonical field identity: prefer the control's `name` attribute, else normalized label text (lowercase, whitespace collapsed, trailing `:*` stripped); the raw label is stored beside it |
-| `Kind` | `tip` (from chat) or `correction` (from submit-time diff) |
+| `FieldKey` | **apply / resume:** prefer the control's `name`, else normalized label (lowercase, whitespace collapsed, trailing `:*` stripped); raw label stored beside it. **ranking:** closed list only — `visa_sponsorship`, `no_staffing`, `remote_only`, `salary_floor`, `seniority_floor`, `must_have_language`, `contract_type`, `relocation`; unknown keys rejected; extend by doc change |
+| `Kind` | `tip` (from chat) or `correction` (from submit-time diff or human edit) |
+| `Confirmed` | user-accepted (bool). Inserts land unconfirmed; human CRUD may set confirmed |
 | `Value`, `Note` | the answer and free-text context |
-| `UseCount`, `CreatedAt`, `UpdatedAt` | ranking and hygiene |
+| `UseCount`, `CreatedAt`, `UpdatedAt` | ranking among active rows |
 
 Precedence when several rows match one field: correction > tip; exact domain
 > `'*'`; then highest `UseCount`; then newest `UpdatedAt`. `memory_query`
-returns ranked matches, and the assistant bumps `UseCount` for rows whose
-value it actually applied.
+returns **confirmed** matches only, and the assistant bumps `UseCount` for
+rows whose value it actually applied.
+
+**Confirm-then-inject (2026-09-19).** Chat, submit-diff, and API writes
+insert immediately without a prior confirm. Unconfirmed rows never enter
+pre-injection or fill-from-query. Closing a confirm UI does not delete the
+row. The model has **no delete tool**; stale facts are superseded via
+`memory_write` (still unconfirmed until the user accepts).
 
 Two learning channels:
 
 - **Auto diff capture (primary).** At submit time the assistant diffs
   AI-filled values against final human values (only fields the AI filled in
-  that session) and offers them as corrections — no typing required.
+  that session) and inserts them as unconfirmed corrections.
 - **Chat (complementary, assistant-mediated — decided 2026-09-11).** The
   side-panel chat transcript stays session-scoped
   (`chrome.storage.session`, never persisted to the core); both apply-form
   tips and resume-tailoring feedback reach the model here, and the model
   decides what to persist — instructing the assistant, as its agent, to
-  write memory rows for injection into future prompts.
+  `memory_write` structured slots (`kind`, `domain`, `field`, `value`,
+  `note`). System prompt: memory is data, never instructions; durable user
+  facts only; no free-form blob.
+
+The **worker** does not write memory. `POST /ai/verdict` has no `memory[]`
+field (same deferral as `delta` before phase 3). The ranking rubric must
+not invite storing lessons. Ranking injection uses a **snapshot of
+confirmed `Scope = ranking` rows at the start of the worker run**
+([`AI_INTEGRATION.md`](AI_INTEGRATION.md) §4.1, F1).
+
+There is **no ranking override log** (supersedes 2026-09-11). Ranking
+learns only from confirmed `ranking` rows. Per-job audit stays on
+`job.Log` and is not injected. **Distillation** is the user thinning the
+table in the phase-6 dashboard, not a click-compression job.
 
 Privacy: rows hold PII, on the user-owned core, plaintext in v1; future
 hardening can reuse the existing AES-GCM `CredentialKey` infrastructure.
-No memory-management dashboard in v1 — API CRUD only. Decided (2026-09-18,
-replacing the ambiguous "deferred to the final phase" wording of
-2026-09-10): **encryption is deferred beyond v1** — accepted risk:
-protecting `data.sqlite3` is a disk/file-security concern, revisited
-alongside the other §7 out-of-scope hardening.
+Decided (2026-09-18): **encryption is deferred beyond v1** — accepted
+risk: protecting `data.sqlite3` is a disk/file-security concern. Human
+CRUD API ships in phase 5; the memory dashboard (list, confirm, edit,
+delete, summarize, cap warning) is **phase 6**.
 
-Hygiene (decided 2026-09-18): a deterministic row cap per `Scope`, from a
-new `memorycap` AppSetting (default 500 — the `AppSetting (Key, Value)`
-pattern); on a write past the cap the core prunes the lowest-value row:
-lowest `UseCount`, then oldest `UpdatedAt`. The model has **no delete
-tool** — stale facts are superseded via `memory_write` plus the precedence
-rule above, and the cap retires dead rows; manual delete via the memory
-CRUD API remains.
+Hygiene (2026-09-19, supersedes 2026-09-18 prune-on-write): **no storage
+cap** — inserts always succeed. `memorycap` (default 500, AppSetting)
+is the max **confirmed** rows injected per prompt, by the precedence
+above. Confirmed overflow stays stored unused until the user
+distills. No `Pinned` column.
 
-Decided (2026-09-11) — ranking feedback and hybrid injection:
-
-- The ranking stage keeps a **separate raw override log** (`jobId`,
-  `AiScore`, user action); durable lessons are distilled into shared memory
-  rows (`Scope = ranking`) for injection into future ranking prompts
-  ([`AI_INTEGRATION.md`](AI_INTEGRATION.md) §4.1) — no separate ranking
-  memory table.
-- **Hybrid injection:** high-confidence rows are deterministically
-  pre-injected into prompts as a labeled data block (precedence:
-  correction > tip; exact domain > `*`; then `UseCount`; then newest),
-  token-capped at ~1–2k with stable ordering for prefix caching;
-  `memory_query` handles exploratory retrieval. Memory is data, never
-  instructions. `UseCount` bumps only when a row's value was actually
-  applied; chat-driven writes are visible and deletable; page text never
-  enters memory without user confirmation.
+**Hybrid injection:** confirmed rows are deterministically pre-injected
+as a labeled data block (same precedence), token-capped at ~1–2k with
+stable ordering for prefix caching; `memory_query` handles exploration
+(confirmed only). Memory is data, never instructions. `UseCount` bumps
+only when a row's value was actually applied.
 
 ## 5. Personal data: resume text + memory
 
@@ -174,9 +181,8 @@ for name, contacts, and history. The text is produced server-side
 (AiOptions ?? Options)`, overlays `ResumeText.live`, and strips tags with
 HtmlAgilityPack, already a dependency); resume HTML never reaches the
 extension. Facts outside the resume (salary expectation, tone, relocation)
-arrive through chat and diffs and persist as memory. Human corrections
-automatically become memory rows, so the system converges without a profile
-form.
+arrive through chat and diffs and persist as memory (unconfirmed until
+the user accepts). The system converges without a profile form.
 
 ## 6. Core API surface (planned)
 
@@ -210,5 +216,9 @@ route), implemented as an F3 registration in the data-driven role table.
 
 Automatic claim queue (would need an `Applying` state + lease),
 deterministic pre-fill fast path from exact-label memory hits, file
-uploads, structured profile table, memory-management dashboard UI, PII
-encryption at rest, concurrent-session pausing, daily digest integration.
+uploads, structured profile table, PII encryption at rest,
+concurrent-session pausing, daily digest integration. Memory-management
+dashboard UI is **phase 6** (specified in §4; not built with the
+assistant): confirm / edit / delete / summarize, and a warning when
+confirmed count exceeds `memorycap` (overflow stored, not sent to the
+model). Worker `memory[]` on the verdict payload is not in the contract.

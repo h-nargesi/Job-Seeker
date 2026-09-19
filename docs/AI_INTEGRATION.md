@@ -364,6 +364,15 @@ Implementation starts from a **fresh database** (old jobs expired) — no row
 migration, no backfill. Purge candidacy is `NotApprovedAI` and `AIError`
 (§6).
 
+Ranking feedback (2026-09-19, [`GLOSSARY.md`](GLOSSARY.md)): there is **no
+override log**. The F1 memory-injection slot is a labeled block of
+**confirmed** `Scope = ranking` rows, snapshotted at **worker run start**
+(D6 determinism / prefix cache). Unconfirmed rows and `job.Log` audit
+lines are not injected. `POST /ai/verdict` has no `memory[]` field; the
+worker does not write memory. `memorycap` limits how many confirmed rows
+are sent, not how many are stored. See
+[`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) §4.
+
 ### 4.2 Structured extraction
 
 Replace heuristics like `EvaluateSalaryScore`, which guesses "amount > 35000
@@ -516,7 +525,8 @@ verdict), matching the "leave the system running" usage pattern.
   acceptable), tuned by trial and error; budget: rubric (~1k) + master
   resume in full + JD remainder, an over-long JD truncated at its **tail**
   — requirements live early (clarified 2026-09-17). The ranking prompt also
-  carries the resume text (§4.1). Worker calls time out at 120 s;
+  carries the resume text (§4.1) and, from phase 5, a snapshot of confirmed
+  ranking memory (F1). Worker calls time out at 120 s;
   connection failures abort the whole run and write nothing (error classes
   per the 2026-09-17 decision-log entry).
 - **Core-error protocol (2026-09-18, D13).** `GET /ai/next`: any network
@@ -536,7 +546,7 @@ verdict), matching the "leave the system running" usage pattern.
 | 3 | Resume tailoring (`Job.AiOptions`, `Job.ResumeText`) — two-layer, 2026-09-19 (decision log) | Selection review = user duty on job-detail; text proposals stay accept-gated; no `AiTitle` |
 | 4 | Cross-platform dedup + daily digest | Read-only over existing data |
 | 5 | Apply assistant — browser on the AI station ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)) | New extension + `/assistant/*` endpoints; the human presses every submit |
-| 6 | Dashboard side-work (2026-09-17): filters over the extraction columns (design + implementation), bulk purge for `NotApprovedAI`/`AIError`, digest-count redefinition + `AiPending` counter for data-driven floor tuning (2026-09-18, D9) | Read-only over existing data; no browser/worker changes |
+| 6 | Dashboard side-work (2026-09-17): filters over the extraction columns (design + implementation), bulk purge for `NotApprovedAI`/`AIError`, digest-count redefinition + `AiPending` counter for data-driven floor tuning (2026-09-18, D9), **memory dashboard** (confirm / edit / delete / summarize / `memorycap` warning — 2026-09-19) | Read-only over existing data plus memory CRUD already on the core; no browser/worker changes |
 
 Best value-to-risk is still **phase 1** (fixes lexical regex scoring;
 carries the worker, the structured extraction and the `Q_INDEX` v2 edit).
