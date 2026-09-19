@@ -123,6 +123,7 @@ public sealed class AiVerdictRequest
         update.AiExperienceYears = ExperienceYears;
         update.AiSkills = Skills;
         update.Fingerprint = Fingerprint;
+        update.Delta = Delta;
         return true;
     }
 

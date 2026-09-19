@@ -21,7 +21,7 @@ using var llm_http = new HttpClient { BaseAddress = new Uri(Base(options.BaseUrl
 var worker = new WorkerLoop(
     new CoreClient(core_http, options.CoreApiKey),
     new LlmClient(llm_http, options),
-    new PromptBuilder(options.Rubric));
+    new PromptBuilder(options.Rubric, options.RubricTailor));
 
 using var cancellation = new CancellationTokenSource();
 Console.CancelKeyPress += (_, args) =>

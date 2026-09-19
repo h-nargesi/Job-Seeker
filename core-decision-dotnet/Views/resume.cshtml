@@ -1,55 +1,56 @@
 @using Photon.JobSeeker
-@model Photon.JobSeeker.ResumeContext
+@model Photon.JobSeeker.ResumePage
 
 <!DOCTYPE html>
 <html>
 <head>
 <title>Hamed Nargesi | Senior Software Developer Resume</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1lw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <script>
-    const VERSION = @Model.Version;
-    const LENGTH = @Model.Length;
+    const VERSION = @Model.Context.Version;
+    const LENGTH = @Model.Context.Length;
     const INPUT_DATA = {
-        BACK_END_EXP: @Model.InputData.BACK_END_EXP,
-        FRONT_END_EXP: @Model.InputData.FRONT_END_EXP,
+        BACK_END_EXP: @Model.Context.InputData.BACK_END_EXP,
+        FRONT_END_EXP: @Model.Context.InputData.FRONT_END_EXP,
     };
     const KEYS = {
-        DOTNET: @Model.Keys.DOTNET.JS(),
-        JAVA: @Model.Keys.JAVA.JS(),
-        PYTHON: @Model.Keys.PYTHON.JS(),
-        GOLANG: @Model.Keys.GOLANG.JS(),
-        SQL: @Model.Keys.SQL.JS(),
-        FRONT_END: @Model.Keys.FRONT_END.JS(),
-        WEB: @Model.Keys.WEB.JS(),
-        MACHINE_LEARNING: @Model.Keys.MACHINE_LEARNING.JS(),
-        NETWORK: @Model.Keys.NETWORK.JS(),
+        DOTNET: @Model.Context.Keys.DOTNET.JS(),
+        JAVA: @Model.Context.Keys.JAVA.JS(),
+        PYTHON: @Model.Context.Keys.PYTHON.JS(),
+        GOLANG: @Model.Context.Keys.GOLANG.JS(),
+        SQL: @Model.Context.Keys.SQL.JS(),
+        FRONT_END: @Model.Context.Keys.FRONT_END.JS(),
+        WEB: @Model.Context.Keys.WEB.JS(),
+        MACHINE_LEARNING: @Model.Context.Keys.MACHINE_LEARNING.JS(),
+        NETWORK: @Model.Context.Keys.NETWORK.JS(),
 
         JAVA_SPRING: false,
         JAVA_KOTLIN: false,
         SQL_POSTGRE: true,
     };
     const MORE = {
-        @Html.Raw(Model.Keys.ToSimpleJson())
+        @Html.Raw(Model.Context.Keys.ToSimpleJson())
     };
     const PAGE_BREAK = [
-        @Html.Raw(Model.PageBreak.ToSimpleJson())
+        @Html.Raw(Model.Context.PageBreak.ToSimpleJson())
     ];
     const NOT_INCLUDED = [
-        @Html.Raw(Model.NotIncluded.ToSimpleJson())
+        @Html.Raw(Model.Context.NotIncluded.ToSimpleJson())
     ];
     const INCLUDED = [
-        @Html.Raw(Model.Included.ToSimpleJson())
+        @Html.Raw(Model.Context.Included.ToSimpleJson())
     ];
     const ELEMENTS = {
-        IMAGE: @Model.Elements.IMAGE.JS(),
-        PHONE: @Model.Elements.PHONE.JS(),
-        LINKEDIN: @Model.Elements.LINKEDIN.JS(),
-        SKYPE: @Model.Elements.SKYPE.JS(),
-        LOCATION: @Model.Elements.LOCATION.JS(),
-        LOCATION_TJ: @Model.Elements.LOCATION_TJ.JS(),
-        FOOTER: @Model.Elements.FOOTER.JS(),
+        IMAGE: @Model.Context.Elements.IMAGE.JS(),
+        PHONE: @Model.Context.Elements.PHONE.JS(),
+        LINKEDIN: @Model.Context.Elements.LINKEDIN.JS(),
+        SKYPE: @Model.Context.Elements.SKYPE.JS(),
+        LOCATION: @Model.Context.Elements.LOCATION.JS(),
+        LOCATION_TJ: @Model.Context.Elements.LOCATION_TJ.JS(),
+        FOOTER: @Model.Context.Elements.FOOTER.JS(),
         PARSI: false,
     };
+    const RESUME_TEXT = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Text));
 </script>
 <style>
     :root {
@@ -111,7 +112,7 @@
             margin-top: 5pt;
         }
         .header.cls-image {
-            background-image: url(@Html.Raw(Model.Elements.GetImageURL().JS()));
+            background-image: url(@Html.Raw(Model.Context.Elements.GetImageURL().JS()));
             background-repeat: no-repeat;
             background-size: contain;
             background-position-x: right;
@@ -247,7 +248,7 @@
 <header class="header highligh cls-image">
     <div class="header-column">
         <h2 class="header-fullname">Hamed <span class="lang-en">(Ryan)</span> Nargesi</h2>
-        <h1 class="header-job-title">@Model.JobTitle</h1>
+        <h1 class="header-job-title">@Model.Context.JobTitle</h1>
     </div>
     <div class="header-column header-right">
         <ul>
@@ -264,7 +265,7 @@
 <main>
     <section class="ltr">
         <h2>Summary</h2>
-        <p>
+        <p id="summary">
             Experienced software engineer with over 16 years of hands-on experience in backend and full-stack development. Specialized in .NET Core, Angular, SQL Server. Proven ability to deliver scalable enterprise-grade solutions. Passionate about clean architecture, performance optimization, microservice architectures, and working in agile teams. Actively seeking international remote.
         </p>
     </section>
@@ -746,6 +747,8 @@
                     .forEach((element) => { element.innerText = value; });
         }
 
+        applyResumeText(RESUME_TEXT);
+
         document.querySelectorAll('.exp-date')
                 .forEach((element) => {
                     element.innerHTML = DateDiff(element.innerHTML);
@@ -755,6 +758,25 @@
         document.querySelectorAll(`[class*="${lang_suffix_ignore}"]`)
                 .forEach((element) => element.style.display = 'none');
     });
+
+    function applyResumeText(texts) {
+        for (const slot in texts) {
+            const value = texts[slot];
+            if (!value) continue;
+
+            let element = null;
+            if (slot === 'title')
+                element = document.querySelector('.header-job-title');
+            else if (slot === 'summary')
+                element = document.querySelector('#summary');
+            else {
+                try { element = document.querySelectorAll(slot)[0]; }
+                catch (e) { element = null; }
+            }
+
+            if (element) element.innerText = value;
+        }
+    }
 
     function DateDiff(period) {
         const parts = period.split('<br>');

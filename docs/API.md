@@ -133,16 +133,35 @@ Worker-only (`Auth:ApiKeys:Worker`). Payloads are data, not finished prompts.
 ### `GET /ai/next`
 Read-only. Oldest `AiPending` job with `Content`. Empty queue → `200` `{ "empty": true }`.
 
-- **Response** (when a job exists): `{ empty: false, jobId, content, resume, keywords: [{ category, score, title }], fingerprint, settings: { aipassmark } }`.
+- **Response** (when a job exists): `{ empty: false, jobId, content, resume, keywords: [{ category, score, title }], fingerprint, settings: { aipassmark }, options, inventory: [{ id, type, keys, text }] }`.
 - `keywords` comes from cached `JobOption.FetchAll` order with the `reject` category omitted.
 - `fingerprint` is SHA-256 hex of whitespace-normalized `Content` (not stored).
 - `resume` is the pruned/stripped master resume (16k-token cap from the top).
+- `options` is the job's current `ResumeContext` as standard JSON (never the
+  dashboard's simple-JSON exchange format).
+- `inventory` is the template-derived block inventory (cached in memory like the
+  master resume): `id` = selector (`title`, `summary`, `#article`, `#article
+  li:nth-child(n)`, `.key-*`), `type` = `slot`/`block`/`bullet`/`key`, `keys` =
+  the block's `key-*` classes, `text` = full template text on editable slots
+  (`slot`, `bullet`), ≤ 120-char excerpt elsewhere.
 
 ### `POST /ai/verdict?jobid=`
-Idempotent upsert. Body is the call-1 JSON (snake_case extraction fields). An absent `delta` is ignored (phase 3 activates it).
+Idempotent upsert. Body is the call-1 JSON (snake_case extraction fields). An absent `delta` is ignored.
 
 - **Required**: `relevance` (0–100), `verdict` (AiVerdict name), `fingerprint`.
-- **Optional**: `reason` (≤ 2000), `skills` (≤ 20), `seniority` / `period` / `work_model` / `contract` (enum names), `salary_min` / `salary_max` (≥ 0), `experience_years` (0–50), `currency`.
+- **Optional**: `reason` (≤ 2000), `skills` (≤ 20), `seniority` / `period` / `work_model` / `contract` (enum names), `salary_min` / `salary_max` (≥ 0), `experience_years` (0–50), `currency`, `delta`.
+- `delta` (call-2 tailoring, validated by the core independently of the verdict):
+  `{ keys: [...], included: [...], notIncluded: [...], length: 1|2, texts: { slot: "..." } }`.
+  - Applied only when the verdict promotes the job to `Attention` (queued,
+    fingerprint match, non-`Error`, score ≥ passmark).
+  - Selection half: `keys` ⊆ `MainKeys` (≤ 8), selectors ⊆ inventory whitelist
+    (≤ 30 total), `length` ∈ {1, 2}. Applied onto the regex-built `Options` and
+    stored complete in `AiOptions` (live unless `Options.HumanEdited`).
+  - Texts half: slots ⊆ `title`/`summary`/inventory bullets, no HTML, `title`
+    one line ≤ 80 chars. Writes `ResumeText.proposal` (`pending`); never
+    touches `live`. A rejected slot is not re-proposed with identical wording.
+  - The halves validate independently; an invalid half is dropped (with the
+    reason in `job.Log`), never a 400. The raw delta is appended to `job.Log`.
 - **404** if the job is gone; **400** `{ error: "validation", message }` if the payload is rejected.
 
 ## Management API — `JobController`
@@ -159,12 +178,31 @@ Mark a job `Applied`.
 Drop the job's HTML/content and mark it `Rejected`.
 
 ### `POST /job/options?jobid=` (body: serialized `ResumeContext`)
-Replace the resume-keyword context (Options) computed for a job. Returns the
-re-serialized context. Selection only — text overlays live in `ResumeText`.
+Replace the resume-keyword context (Options) computed for a job — marks it
+`HumanEdited`, so later AI selections stay diff-only until accepted. Returns
+the re-serialized context. Selection only — text overlays live in `ResumeText`.
+
+### `POST /job/acceptai?jobid=`
+Accept the AI selection: full copy of `AiOptions` into `Options` (sets
+`HumanEdited`). `400` when there is no `AiOptions`.
+
+### `POST /job/resumetext?jobid=&slot=&op=` (op `live`: body = raw string)
+Per-slot `ResumeText` operations on job-detail:
+
+- `op=accept` — copy `proposal` → `live` (status `accepted`); does not set
+  `HumanEdited` (text accept is not a selection accept).
+- `op=reject` — mark the proposal `rejected`; `live` and the template default
+  are untouched.
+- `op=live` — write the body string as `live` (status `accepted`, human
+  source); empty/null clears `live` back to the template default.
+
+`slot` must be `title`, `summary`, or an existing `ResumeText` key; otherwise
+`400`.
 
 ### `GET /job/resume?jobid=`
-Render the tailored resume HTML for a job (selection from Options/AiOptions,
-then `ResumeText.live` overlay).
+Render the tailored resume HTML for a job (selection precedence
+`Options.HumanEdited ? Options : (AiOptions ?? Options)`, then a `ResumeText.live`
+overlay via the template's client JS; proposals never render).
 
 ### `GET /job/resume64?jobid=`
 Same resume, returned as a downloadable `.html` file attachment.

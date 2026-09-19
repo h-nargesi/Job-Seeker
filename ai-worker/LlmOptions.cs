@@ -16,6 +16,8 @@ public sealed class LlmOptions
 
     public string Rubric { get; set; } = string.Empty;
 
+    public string RubricTailor { get; set; } = string.Empty;
+
     public double Temperature { get; set; } = DefaultTemperature;
 
     public int Seed { get; set; }
@@ -29,6 +31,9 @@ public sealed class LlmOptions
         if (string.IsNullOrWhiteSpace(Rubric)) return "Llm:Rubric is required";
         if (!Rubric.Contains(PromptBuilder.KeywordsPlaceholder, StringComparison.Ordinal))
             return $"Llm:Rubric must contain {PromptBuilder.KeywordsPlaceholder}";
+        if (string.IsNullOrWhiteSpace(RubricTailor)) return "Llm:RubricTailor is required";
+        if (!RubricTailor.Contains(PromptBuilder.KeywordsPlaceholder, StringComparison.Ordinal))
+            return $"Llm:RubricTailor must contain {PromptBuilder.KeywordsPlaceholder}";
         if (Temperature is < 0 or > 2) return "Llm:Temperature must be within 0-2";
         return null;
     }

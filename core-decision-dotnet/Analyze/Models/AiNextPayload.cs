@@ -1,3 +1,5 @@
+using Newtonsoft.Json;
+
 namespace Photon.JobSeeker;
 
 public sealed class AiNextSettings
@@ -21,9 +23,14 @@ public sealed class AiNextPayload
 
     public AiNextSettings? Settings { get; init; }
 
+    public string? Options { get; init; }
+
+    public IReadOnlyList<ResumeInventoryItem>? Inventory { get; init; }
+
     public static AiNextPayload None { get; } = new() { Empty = true };
 
-    public static AiNextPayload From(Job job, string resume, IReadOnlyList<JobKeyword> keywords, int aipassmark)
+    public static AiNextPayload From(Job job, string resume, IReadOnlyList<JobKeyword> keywords, int aipassmark,
+        ResumeInventory? inventory = null)
     {
         return new AiNextPayload
         {
@@ -34,6 +41,8 @@ public sealed class AiNextPayload
             Keywords = keywords,
             Fingerprint = JobContent.Fingerprint(job.Content),
             Settings = new AiNextSettings { Aipassmark = aipassmark },
+            Options = job.Options == null ? null : JsonConvert.SerializeObject(job.Options),
+            Inventory = inventory?.Items,
         };
     }
 }

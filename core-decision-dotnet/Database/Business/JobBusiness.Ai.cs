@@ -7,7 +7,7 @@ namespace Photon.JobSeeker
             return database.Query<Job>(Q_FETCH_NEXT_AI).FirstOrDefault();
         }
 
-        public bool ApplyAiVerdict(long jobId, AiVerdictUpdate update)
+        public bool ApplyAiVerdict(long jobId, AiVerdictUpdate update, ResumeInventory? inventory = null)
         {
             var job = Fetch(jobId);
             if (job == null) return false;
@@ -32,15 +32,21 @@ namespace Photon.JobSeeker
                     StringComparison.OrdinalIgnoreCase);
 
             var queued = job.State == JobState.AiPending;
+            var promoting = false;
             if (!mismatch && queued)
             {
                 if (update.AiVerdict == AiVerdict.Error)
                     job.State = JobState.AIError;
                 else if (update.AiScore >= database.AppSetting.AiPassmark())
+                {
                     job.State = JobState.Attention;
+                    promoting = true;
+                }
                 else
                     job.State = JobState.NotApprovedAI;
             }
+
+            AiTailoring.Apply(job, update, promoting && !mismatch, inventory);
 
             var note = mismatch
                 ? "**AI verdict** (fingerprint mismatch — no state change)"
@@ -49,6 +55,8 @@ namespace Photon.JobSeeker
                     : "**AI verdict** (informational — not in queue)";
             if (!string.IsNullOrEmpty(update.AiReason))
                 note += "\n" + update.AiReason;
+            if (!string.IsNullOrEmpty(update.TailoringNote))
+                note += "\n" + update.TailoringNote;
 
             job.Log = AppendLog(job.Log, note);
             PersistVerdict(job);
@@ -96,6 +104,8 @@ namespace Photon.JobSeeker
                 aiContract = job.AiContract?.ToString(),
                 aiExperienceYears = job.AiExperienceYears,
                 aiSkills = job.AiSkills,
+                aiOptions = job.AiOptions,
+                resumeText = job.ResumeText,
                 log = job.Log,
                 state = job.State.ToString(),
                 now = DateTime.Now,
@@ -138,6 +148,8 @@ UPDATE Job SET
     AiCurrency = @aiCurrency,
     AiExperienceYears = @aiExperienceYears,
     AiSkills = @aiSkills,
+    AiOptions = @aiOptions,
+    ResumeText = @resumeText,
     Log = @log,
     State = @state,
     ModifiedOn = @now

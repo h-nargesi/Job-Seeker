@@ -13,6 +13,21 @@ public static class ResumeHtml
         return context;
     }
 
+    public static ResumeContext Selection(Job job)
+    {
+        if (job.Options?.HumanEdited == true) return job.Options;
+        return job.AiOptions ?? job.Options ?? new ResumeContext();
+    }
+
+    public static Dictionary<string, string> LiveText(Job job)
+    {
+        var result = new Dictionary<string, string>();
+        foreach (var (slot, value) in job.ResumeText ?? [])
+            if (!string.IsNullOrEmpty(value.Live))
+                result[slot] = value.Live;
+        return result;
+    }
+
     public static string PruneStripCap(string html)
     {
         return CapFromTop(JobContent.GetTextContent(html));

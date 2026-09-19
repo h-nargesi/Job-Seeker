@@ -1,6 +1,6 @@
 # Chat 1 — Schema and types
 
-**Status:** not started. **Depends on:** nothing.
+**Status:** done. **Depends on:** nothing.
 
 ## Goal
 

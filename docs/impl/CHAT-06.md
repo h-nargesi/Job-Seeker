@@ -1,6 +1,6 @@
 # Chat 6 — Phase 3 resume tailoring
 
-**Status:** not started. **Depends on:** Chat 5.
+**Status:** done. **Depends on:** Chat 5.
 
 ## Goal
 

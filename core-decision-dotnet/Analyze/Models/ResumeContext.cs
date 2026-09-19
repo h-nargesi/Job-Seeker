@@ -119,6 +119,37 @@ public partial class ResumeContext
         public string GetImageURL() => !string.IsNullOrWhiteSpace(IMAGE_URL) ? IMAGE_URL : "/images/portrate.png";
     }
 
+    public ResumeContext Clone()
+    {
+        var clone = new ResumeContext
+        {
+            HumanEdited = HumanEdited,
+            Length = Length,
+            JobTitle = JobTitle,
+        };
+
+        foreach (var data in InputData)
+            clone.InputData[data.Key] = data.Value;
+
+        foreach (var key in Keys)
+            clone.Keys[key.Key] = key.Value == null ? null : new HashSet<string>(key.Value, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in PageBreak) clone.PageBreak.Add(item);
+        foreach (var item in NotIncluded) clone.NotIncluded.Add(item);
+        foreach (var item in Included) clone.Included.Add(item);
+
+        clone.Elements.IMAGE = Elements.IMAGE;
+        clone.Elements.LOCATION = Elements.LOCATION;
+        clone.Elements.LOCATION_TJ = Elements.LOCATION_TJ;
+        clone.Elements.PHONE = Elements.PHONE;
+        clone.Elements.SKYPE = Elements.SKYPE;
+        clone.Elements.LINKEDIN = Elements.LINKEDIN;
+        clone.Elements.FOOTER = Elements.FOOTER;
+        clone.Elements.IMAGE_URL = Elements.IMAGE_URL;
+
+        return clone;
+    }
+
     public string FileName(string extnesion)
     {
         return $"hamed-nargesi-resume-{Version}-{GetKeywords()}.{extnesion}";

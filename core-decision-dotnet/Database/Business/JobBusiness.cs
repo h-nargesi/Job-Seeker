@@ -1,5 +1,4 @@
 ﻿using Dapper;
-using Newtonsoft.Json;
 
 namespace Photon.JobSeeker
 {
@@ -82,13 +81,6 @@ namespace Photon.JobSeeker
         public Job? Fetch(long job_id)
         {
             return database.Query<Job>(Q_FETCH_ID, new { job = job_id }).FirstOrDefault();
-        }
-
-        public ResumeContext? FetchOptions(long job_id)
-        {
-            var options = database.ExecuteScalar<string?>(Q_FETCH_OPTIONS, new { job = job_id });
-
-            return options == null ? default : JsonConvert.DeserializeObject<ResumeContext>(options);
         }
 
         public string? GetFirstJob(long agency_id)

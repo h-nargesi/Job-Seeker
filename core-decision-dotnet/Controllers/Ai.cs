@@ -7,7 +7,8 @@ namespace Photon.JobSeeker;
 public class AiController(
     Database database,
     IDatabaseFactory database_factory,
-    MasterResumeCache master_resume) : Controller
+    MasterResumeCache master_resume,
+    ResumeInventoryCache inventory_cache) : Controller
 {
     [HttpGet]
     public async Task<IActionResult> Next()
@@ -18,8 +19,9 @@ public class AiController(
             if (job == null) return Ok(AiNextPayload.None);
 
             var resume = await master_resume.GetAsync(HttpContext);
+            var inventory = await inventory_cache.GetAsync(HttpContext);
             var keywords = JobKeywords.From(JobEligibilityHelper.SharedOptions(database_factory));
-            return Ok(AiNextPayload.From(job, resume, keywords, database.AppSetting.AiPassmark()));
+            return Ok(AiNextPayload.From(job, resume, keywords, database.AppSetting.AiPassmark(), inventory));
         }
         catch (Exception ex)
         {
@@ -29,7 +31,7 @@ public class AiController(
     }
 
     [HttpPost]
-    public IActionResult Verdict([FromQuery] long? jobid, [FromBody] AiVerdictRequest? body)
+    public async Task<IActionResult> Verdict([FromQuery] long? jobid, [FromBody] AiVerdictRequest? body)
     {
         try
         {
@@ -43,7 +45,8 @@ public class AiController(
             if (id is not long job_id)
                 return BadRequest(new { error = "validation", message = "jobId is required" });
 
-            if (!database.Job.ApplyAiVerdict(job_id, update))
+            var inventory = update.Delta == null ? null : await inventory_cache.GetAsync(HttpContext);
+            if (!database.Job.ApplyAiVerdict(job_id, update, inventory))
                 return NotFound();
 
             return Ok();

@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace AiWorker;
@@ -48,6 +49,10 @@ public sealed class VerdictPayload
 
     [JsonPropertyName("fingerprint")]
     public string Fingerprint { get; set; } = string.Empty;
+
+    [JsonPropertyName("delta")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public JsonNode? Delta { get; set; }
 
     public static VerdictPayload Error(long jobId, string fingerprint, string reason)
     {

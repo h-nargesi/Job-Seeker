@@ -141,6 +141,40 @@ async function submit_options(job_id, json_id) {
     }
 }
 
+async function accept_ai(jobid) {
+    try {
+        await fetch(`/job/acceptai?jobid=${jobid}`, { method: 'POST' });
+        location.reload();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function text_op(jobid, slot, op, value_id) {
+    try {
+        const url = `/job/resumetext?jobid=${jobid}` +
+            `&slot=${encodeURIComponent(slot)}&op=${encodeURIComponent(op)}`;
+
+        if (op === 'live') {
+            const element = document.getElementById(value_id);
+            if (!element) return;
+
+            await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(element.value)
+            });
+        } else {
+            await fetch(url, { method: 'POST' });
+        }
+
+        location.reload();
+
+    } catch (e) {
+        console.error(e);
+    }
+}
+
 async function clean() {
     try {
         await fetch("/job/clean", { method: 'POST' });

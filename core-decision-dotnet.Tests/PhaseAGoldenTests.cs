@@ -189,7 +189,7 @@ public class PhaseAGoldenTests
         Assert.Equal("<html><body>raw</body></html>", db.Scalar("SELECT Html FROM Job"));
         Assert.Equal("backend alpha beta", db.Scalar("SELECT Content FROM Job"));
 
-        var options = db.Database.Job.FetchOptions(job.JobID);
+        var options = db.Database.Job.Fetch(job.JobID)!.Options;
         Assert.NotNull(options);
         Assert.True(options!.Keys.ContainsKey("MORE"));
         Assert.Contains("Backend", options.Keys["MORE"]!);
@@ -316,7 +316,7 @@ public class PhaseAGoldenTests
         var helper = MakeHelper(db, EligibilityFixture.Option("field", 100, "backend", "Backend"));
         helper.EvaluateJobEligibility(job, null);
 
-        var options = db.Database.Job.FetchOptions(job.JobID);
+        var options = db.Database.Job.Fetch(job.JobID)!.Options;
         Assert.NotNull(options);
         Assert.True(options!.HumanEdited);
         Assert.Equal("Keep This Title", options.JobTitle);

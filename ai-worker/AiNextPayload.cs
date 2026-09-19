@@ -21,6 +21,36 @@ public sealed class AiNextPayload
 
     [JsonPropertyName("fingerprint")]
     public string? Fingerprint { get; set; }
+
+    [JsonPropertyName("settings")]
+    public AiNextSettings? Settings { get; set; }
+
+    [JsonPropertyName("options")]
+    public string? Options { get; set; }
+
+    [JsonPropertyName("inventory")]
+    public List<InventoryItem>? Inventory { get; set; }
+}
+
+public sealed class AiNextSettings
+{
+    [JsonPropertyName("aipassmark")]
+    public int Aipassmark { get; set; }
+}
+
+public sealed class InventoryItem
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = string.Empty;
+
+    [JsonPropertyName("keys")]
+    public List<string>? Keys { get; set; }
+
+    [JsonPropertyName("text")]
+    public string Text { get; set; } = string.Empty;
 }
 
 public sealed class JobKeyword

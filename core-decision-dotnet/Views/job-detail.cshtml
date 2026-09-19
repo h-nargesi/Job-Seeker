@@ -1,3 +1,4 @@
+@using System.Text.RegularExpressions
 @using Photon.JobSeeker
 @model (Job Job, Agency Agency, string Resume)
 
@@ -23,6 +24,10 @@
   var can_requeue = has_content && job.State is JobState.AIError or JobState.NotApprovedAI;
   var can_promote = job.State is JobState.AiPending or JobState.NotApprovedAI or JobState.AIError;
   var can_force = has_content && job.State is not (JobState.Rejected or JobState.Applied);
+  var ai_live = job.AiOptions != null && job.Options?.HumanEdited != true;
+  var text_slots = new List<string> { "title", "summary" };
+  text_slots.AddRange((job.ResumeText ?? []).Keys.Where(key => key != "title" && key != "summary"));
+  var DomId = (string slot) => "slot-" + Regex.Replace(slot, @"[^a-zA-Z0-9-]", "");
 }
 
 <div class="container py-4">
@@ -62,6 +67,37 @@
           <a href="/job/resume?jobid=@job.JobID" target="_blank" class="btn btn-outline-primary">Resume as html</a>
           <a href="/job/resume64?jobid=@job.JobID" class="btn btn-outline-secondary">Download Resume as html file</a>
         </div>
+        @if (job.AiOptions != null)
+        {
+          <h2>AI selection</h2>
+          <p class="text-body-secondary">@(ai_live ? "Live — the resume renders this selection." : "Diff-only proposal — accepting copies it over your selection.")</p>
+          <textarea id="ai-options" class="codes" readonly>@Html.Raw(job.AiOptions.SimlpeSerialize())</textarea>
+          <button onclick="accept_ai(@job.JobID)" type="button" class="btn btn-outline-primary">Accept AI selection</button>
+        }
+        <h2>Resume text</h2>
+        @foreach (var slot in text_slots)
+        {
+          var value = job.ResumeText?.TryGetValue(slot, out var slot_value) == true ? slot_value : null;
+          var dom_id = DomId(slot);
+          <div class="mb-3">
+            <label for="@dom_id" class="form-label">@slot</label>
+            <textarea id="@dom_id" class="codes">@Html.Raw(value?.Live)</textarea>
+            <button onclick="text_op(@job.JobID, '@slot', 'live', '@dom_id')" type="button" class="btn btn-outline-primary btn-sm">Save live</button>
+            @if (value?.Proposal != null && value.Status == ResumeTextSlotStatus.Pending)
+            {
+              <div class="border rounded p-2 mt-2 bg-body-tertiary">
+                <span class="text-body-secondary">Proposal:</span>
+                <p style="white-space: break-spaces;">@value.Proposal</p>
+                <button onclick="text_op(@job.JobID, '@slot', 'accept', null)" type="button" class="btn btn-outline-success btn-sm">Accept</button>
+                <button onclick="text_op(@job.JobID, '@slot', 'reject', null)" type="button" class="btn btn-outline-danger btn-sm">Reject</button>
+              </div>
+            }
+            else if (value?.Status == ResumeTextSlotStatus.Rejected)
+            {
+              <span class="badge text-bg-secondary">rejected</span>
+            }
+          </div>
+        }
         <h2>Actions</h2>
         <button onclick="apply(@job.JobID)" class="btn btn-outline-success" type="button">Applied</button>
         <button onclick="reject(@job.JobID)" class="btn btn-outline-danger" type="button">Rejected</button>

@@ -65,8 +65,46 @@ public class JobController(Analyzer analyzer, Database database, IDatabaseFactor
         try
         {
             var resume = ResumeContext.SimlpeDeserialize(options);
+            if (resume != null) resume.HumanEdited = true;
             database.Job.ChangeOptions(jobid, resume);
             return Ok(resume?.SimlpeSerialize());
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
+    [HttpPost]
+    public IActionResult AcceptAi([FromQuery] long jobid)
+    {
+        try
+        {
+            return database.Job.AcceptAiOptions(jobid) ? Ok() : BadRequest();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
+    [HttpPost]
+    public IActionResult ResumeText([FromQuery] long jobid, [FromQuery] string slot, [FromQuery] string op,
+        [FromBody] string? text)
+    {
+        try
+        {
+            var done = op switch
+            {
+                "accept" => database.Job.AcceptTextSlot(jobid, slot),
+                "reject" => database.Job.RejectTextSlot(jobid, slot),
+                "live" => database.Job.WriteLiveText(jobid, slot, text),
+                _ => false,
+            };
+
+            return done ? Ok() : BadRequest();
         }
         catch (Exception ex)
         {
@@ -83,12 +121,14 @@ public class JobController(Analyzer analyzer, Database database, IDatabaseFactor
             var resume_generator = HttpContext.RequestServices.GetService<IViewRenderService>() ??
                 throw new Exception("The 'IViewRenderService' is not initialized.");
 
-            var context = database.Job.FetchOptions(jobid) ?? new ResumeContext();
+            var job = database.Job.Fetch(jobid);
+            if (job == null) return NotFound();
+            var page = new ResumePage { Context = ResumeHtml.Selection(job), Text = ResumeHtml.LiveText(job) };
 
-            var result = await resume_generator.RenderToStringAsync(HttpContext, "~/views/resume.cshtml", context);
+            var result = await resume_generator.RenderToStringAsync(HttpContext, "~/views/resume.cshtml", page);
             var content = Encoding.UTF8.GetBytes(result);
 
-            return File(content, "text/html", context.FileName("html"));
+            return File(content, "text/html", page.Context.FileName("html"));
         }
         catch (Exception ex)
         {
@@ -102,9 +142,11 @@ public class JobController(Analyzer analyzer, Database database, IDatabaseFactor
     {
         try
         {
-            var context = database.Job.FetchOptions(jobid) ?? new ResumeContext();
+            var job = database.Job.Fetch(jobid);
+            if (job == null) return NotFound();
 
-            return View("~/views/resume.cshtml", context);
+            var page = new ResumePage { Context = ResumeHtml.Selection(job), Text = ResumeHtml.LiveText(job) };
+            return View("~/views/resume.cshtml", page);
         }
         catch (Exception ex)
         {

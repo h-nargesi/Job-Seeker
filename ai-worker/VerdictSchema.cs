@@ -31,4 +31,29 @@ public static class VerdictSchema
       }
     }
     """;
+
+    public const string TailorResponseFormat = """
+    {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "resume_tailoring_delta",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "keys": { "type": "array", "items": { "type": "string" }, "maxItems": 8 },
+            "notIncluded": { "type": "array", "items": { "type": "string" }, "maxItems": 30 },
+            "included": { "type": "array", "items": { "type": "string" }, "maxItems": 30 },
+            "length": { "type": "integer", "enum": [1, 2] },
+            "texts": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            }
+          },
+          "required": ["keys", "notIncluded", "included", "length", "texts"],
+          "additionalProperties": false
+        }
+      }
+    }
+    """;
 }

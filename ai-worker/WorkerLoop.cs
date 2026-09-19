@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 namespace AiWorker;
 
 public sealed class WorkerLoop
@@ -47,6 +49,9 @@ public sealed class WorkerLoop
             try
             {
                 verdict = await JudgeAsync(next, job_id, ct);
+
+                if (Promotes(next, verdict))
+                    verdict.Delta = await TailorAsync(next, job_id, ct);
             }
             catch (LlmUnavailableException ex)
             {
@@ -60,13 +65,21 @@ public sealed class WorkerLoop
                 if (outcome == PostVerdictResult.JobMissing)
                     Console.WriteLine($"[worker] job {job_id}: gone (404) - continuing");
                 else
-                    Console.WriteLine($"[worker] job {job_id}: verdict {verdict.Verdict} ({verdict.Relevance}) - posted");
+                    Console.WriteLine($"[worker] job {job_id}: verdict {verdict.Verdict} ({verdict.Relevance})" +
+                        (verdict.Delta == null ? string.Empty : " + delta") + " - posted");
             }
             catch (CoreAbortException ex)
             {
                 return Abort(ExitCoreAbort, $"core error, aborting run: {ex.Message}");
             }
         }
+    }
+
+    internal static bool Promotes(AiNextPayload next, VerdictPayload verdict)
+    {
+        if (verdict.Verdict == "Error") return false;
+        var passmark = next.Settings?.Aipassmark;
+        return passmark is int mark && verdict.Relevance >= mark;
     }
 
     private async Task<VerdictPayload> JudgeAsync(AiNextPayload next, long jobId, CancellationToken ct)
@@ -94,6 +107,31 @@ public sealed class WorkerLoop
 
         Console.WriteLine($"[worker] job {jobId}: posting Error verdict after {MaxModelAttempts} model-output failures");
         return VerdictPayload.Error(jobId, next.Fingerprint!, last!.Message);
+    }
+
+    private async Task<JsonNode?> TailorAsync(AiNextPayload next, long jobId, CancellationToken ct)
+    {
+        var message = prompt.ComposeTailor(next);
+
+        for (var attempt = 1; attempt <= MaxModelAttempts; attempt++)
+        {
+            try
+            {
+                var content = await llm.CompleteAsync(message.System, message.User, VerdictSchema.TailorResponseFormat, ct);
+                return TailorParser.Parse(content);
+            }
+            catch (LlmUnavailableException)
+            {
+                throw;
+            }
+            catch (ModelOutputException ex)
+            {
+                Console.WriteLine($"[worker] job {jobId}: tailoring output invalid (attempt {attempt}/{MaxModelAttempts}): {ex.Message}");
+            }
+        }
+
+        Console.WriteLine($"[worker] job {jobId}: posting verdict without tailoring after {MaxModelAttempts} model-output failures");
+        return null;
     }
 
     private static int Abort(int code, string message)

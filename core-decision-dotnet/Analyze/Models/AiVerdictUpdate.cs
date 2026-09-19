@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Photon.JobSeeker;
 
 public sealed class AiVerdictUpdate
@@ -27,4 +29,8 @@ public sealed class AiVerdictUpdate
     public List<string>? AiSkills { get; set; }
 
     public string Fingerprint { get; set; } = string.Empty;
+
+    public JsonElement? Delta { get; set; }
+
+    public string? TailoringNote { get; set; }
 }

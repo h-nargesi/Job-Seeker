@@ -36,6 +36,10 @@ WHERE JobID = @jobId";
 UPDATE Job SET Options = @options, ModifiedOn = @now
 WHERE JobID = @jobId";
 
+        private readonly static string Q_SAVE_RESUME_TEXT = @"
+UPDATE Job SET ResumeText = @resumeText, ModifiedOn = @now
+WHERE JobID = @jobId";
+
         private const string Q_DELETE = @"
 DELETE FROM Job WHERE JobID = @jobId";
 
@@ -132,9 +136,6 @@ WHERE State = '{nameof(JobState.Revaluation)}'";
         private readonly static string Q_RESURRECT = @$"
 UPDATE Job SET State = '{nameof(JobState.Saved)}', Attempts = 0, Tries = NULL, ModifiedOn = @now
 WHERE State = '{nameof(JobState.NotApprovedRegex)}' AND Score >= @floor";
-
-        private const string Q_FETCH_OPTIONS = @"
-SELECT Options FROM Job WHERE JobID = @job";
 
         private readonly static string Q_FETCH_FIRST = $@"
 SELECT JobID, Url, Tries, Attempts, RegTime FROM Job

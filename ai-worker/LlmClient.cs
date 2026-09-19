@@ -19,7 +19,12 @@ public sealed class LlmClient
             http.DefaultRequestHeaders.Add("Authorization", $"Bearer {options.ApiKey}");
     }
 
-    public async Task<string> CompleteAsync(string system, string user, CancellationToken ct)
+    public Task<string> CompleteAsync(string system, string user, CancellationToken ct)
+    {
+        return CompleteAsync(system, user, VerdictSchema.ResponseFormat, ct);
+    }
+
+    public async Task<string> CompleteAsync(string system, string user, string responseFormat, CancellationToken ct)
     {
         var request = new Dictionary<string, object?>
         {
@@ -32,7 +37,7 @@ public sealed class LlmClient
             ["temperature"] = options.Temperature,
             ["seed"] = options.Seed,
             ["stream"] = false,
-            ["response_format"] = JsonDocument.Parse(VerdictSchema.ResponseFormat).RootElement.Clone(),
+            ["response_format"] = JsonDocument.Parse(responseFormat).RootElement.Clone(),
         };
         var body = JsonSerializer.Serialize(request);
 

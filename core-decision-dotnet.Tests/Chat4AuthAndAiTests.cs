@@ -117,29 +117,29 @@ public class Chat4AuthAndAiTests
     }
 
     [Fact]
-    public void Verdict_http_writes_404_when_job_missing_and_400_when_invalid()
+    public async Task Verdict_http_writes_404_when_job_missing_and_400_when_invalid()
     {
         using var db = new GoldenDatabase();
-        var controller = new AiController(db.Database, null!, null!);
+        var controller = new AiController(db.Database, null!, null!, null!);
 
-        var missing = controller.Verdict(99, ValidBody("deadbeef"));
+        var missing = await controller.Verdict(99, ValidBody("deadbeef"));
         Assert.IsType<NotFoundResult>(missing);
 
-        var bad = controller.Verdict(1, new AiVerdictRequest { Verdict = "Match", Fingerprint = "x" });
+        var bad = await controller.Verdict(1, new AiVerdictRequest { Verdict = "Match", Fingerprint = "x" });
         var bad_result = Assert.IsType<BadRequestObjectResult>(bad);
         Assert.Equal(400, bad_result.StatusCode);
     }
 
     [Fact]
-    public void Verdict_http_applies_from_ai_pending()
+    public async Task Verdict_http_applies_from_ai_pending()
     {
         using var db = new GoldenDatabase();
         var id = Seed(db, "http-v", JobState.AiPending);
-        var controller = new AiController(db.Database, null!, null!);
+        var controller = new AiController(db.Database, null!, null!, null!);
         var body = ValidBody(JobContent.Fingerprint("job text"));
         body.JobId = id;
 
-        Assert.IsType<OkResult>(controller.Verdict(null, body));
+        Assert.IsType<OkResult>(await controller.Verdict(null, body));
         Assert.Equal(JobState.Attention, db.Database.Job.Fetch(id)!.State);
     }
 

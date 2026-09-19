@@ -13,7 +13,8 @@ public sealed class MasterResumeCache(IViewRenderService views)
         try
         {
             if (text != null) return text;
-            var html = await views.RenderToStringAsync(http, "~/views/resume.cshtml", ResumeHtml.MasterContext());
+            var html = await views.RenderToStringAsync(http, "~/views/resume.cshtml",
+                new ResumePage { Context = ResumeHtml.MasterContext() });
             text = ResumeHtml.PruneStripCap(html);
             return text;
         }
