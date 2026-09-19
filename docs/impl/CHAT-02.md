@@ -1,6 +1,6 @@
 # Chat 2 — Regex gate and browser loop
 
-**Status:** not started. **Depends on:** Chat 1.
+**Status:** done. **Depends on:** Chat 1.
 
 ## Goal
 

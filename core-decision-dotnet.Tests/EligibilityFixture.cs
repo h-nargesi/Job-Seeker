@@ -57,6 +57,15 @@ internal sealed class EligibilityFixture : IDisposable
     {
         var connection = new SQLiteConnection("Data Source=:memory:");
         connection.Open();
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = @"
+CREATE TABLE AppSetting (
+    Key     text    not null    primary key,
+    Value   text    not null
+)";
+            command.ExecuteNonQuery();
+        }
         return new Database(connection);
     }
 

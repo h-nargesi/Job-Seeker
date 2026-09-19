@@ -22,7 +22,7 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
 
         var commands = new List<Command>();
 
-        if (state == JobState.Attention)
+        if (state == JobState.AiPending)
         {
             var fallow = JobFallow(content);
             if (fallow?.Length > 0)
@@ -115,13 +115,19 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
             Log.Warning("Title not found ({0}, {1})", Parent.Name, code);
         else job.Title = HttpUtility.HtmlDecode(title).Trim();
 
-        job.SetHtml(GetHtmlContent(html));
+        var html_content = GetHtmlContent(html);
+        var incoming_text = JobContent.GetTextContent(html_content);
+        var content_changed = JobContent.HasChanged(job.Content, incoming_text);
+        job.Html = html_content;
+        job.Content = incoming_text;
 
         ChceckJob(job);
 
         var include_state = job.State == JobState.NotApprovedRegex;
 
         Log.Information("{0} Job: {1} ({2})", Parent.Name, job.Title, job.Code);
+        if (content_changed)
+            Log.Information("{0} Job content changed: {1}", Parent.Name, job.Code);
 
         if (new_job) database.Job.InsertJob(job);
         else database.Job.UpdateScrapedJob(job, code_changed, link_found, include_state);

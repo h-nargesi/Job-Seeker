@@ -18,12 +18,14 @@ namespace Photon.JobSeeker.Stepstone
 
             var job = LoadJob(url, content);
 
+            if (job.State == JobState.NotApprovedRegex) return [];
+
             using var evaluator = new JobEligibilityHelper(Parent.DatabaseFactory);
             var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
 
             var commands = new List<Command>();
 
-            if (state == JobState.Attention)
+            if (state == JobState.AiPending)
             {
                 if (reg_job_adding.IsMatch(content))
                 {
@@ -64,9 +66,15 @@ namespace Photon.JobSeeker.Stepstone
             Log.Warning("Title not found ({0}, {1})", parent.Name, code);
         else job!.Title = HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim();
 
-        job!.SetHtml(GetHtmlContent(html));
+        var html_content = GetHtmlContent(html);
+        var incoming_text = JobContent.GetTextContent(html_content);
+        var content_changed = JobContent.HasChanged(job!.Content, incoming_text);
+        job.Html = html_content;
+        job.Content = incoming_text;
 
         Log.Information("{0} Job: {1} ({2})", parent.Name, job.Title, job.Code);
+        if (content_changed)
+            Log.Information("{0} Job content changed: {1}", parent.Name, job.Code);
 
         if (new_job) database.Job.InsertJob(job);
         else database.Job.UpdateStepstoneJob(job);

@@ -5,7 +5,7 @@ public class GetTextContentTests
     [Fact]
     public void Extracts_leaf_text_nodes_joined_with_spaces()
     {
-        var content = JobEligibilityHelper.GetTextContent("<p>Hello</p><p>World</p>");
+        var content = JobContent.GetTextContent("<p>Hello</p><p>World</p>");
 
         Assert.Equal(" Hello World", content);
     }
@@ -13,7 +13,7 @@ public class GetTextContentTests
     [Fact]
     public void Collapses_blank_lines_inside_a_text_node()
     {
-        var content = JobEligibilityHelper.GetTextContent("<pre>Line1\n\n\n   Line2</pre>");
+        var content = JobContent.GetTextContent("<pre>Line1\n\n\n   Line2</pre>");
 
         Assert.Equal(" Line1\n\nLine2", content);
     }
@@ -24,7 +24,7 @@ public class GetTextContentTests
         var html = "<html><head><style>.x{color:red}</style><script>var a = 1;</script>headnoise</head>" +
                    "<body><p>Visible</p></body></html>";
 
-        var content = JobEligibilityHelper.GetTextContent(html);
+        var content = JobContent.GetTextContent(html);
 
         Assert.Equal(" Visible", content);
     }
@@ -34,7 +34,7 @@ public class GetTextContentTests
     {
         var html = "<body><noscript><p>Enable JavaScript</p></noscript><p>Real content</p></body>";
 
-        var content = JobEligibilityHelper.GetTextContent(html);
+        var content = JobContent.GetTextContent(html);
 
         Assert.Equal(" Enable JavaScript Real content", content);
     }

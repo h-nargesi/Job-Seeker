@@ -160,7 +160,20 @@ public class JobEligibilityHelperTests
     }
 
     [Fact]
-    public void EvaluateEligibility_below_threshold_fails_with_computed_score()
+    public void EvaluateEligibility_field_plus_score_at_floor_passes()
+    {
+        using var fixture = new EligibilityFixture(null,
+            EligibilityFixture.Option("field", 70, "backend", "Backend"));
+
+        var job = EligibilityFixture.MakeJob("backend", "Dev");
+
+        Assert.True(fixture.Helper.EvaluateEligibility(job, out var rejected));
+        Assert.False(rejected);
+        Assert.Equal(70L, job.Score);
+    }
+
+    [Fact]
+    public void EvaluateEligibility_below_floor_fails_with_computed_score()
     {
         using var fixture = new EligibilityFixture(null,
             EligibilityFixture.Option("field", 60, "backend", "Backend"));

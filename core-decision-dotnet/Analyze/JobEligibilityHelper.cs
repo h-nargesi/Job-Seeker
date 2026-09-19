@@ -1,19 +1,11 @@
-﻿using System.Text;
-using System.Text.RegularExpressions;
-using HtmlAgilityPack;
+﻿using System.Text.RegularExpressions;
 using Serilog;
 
 namespace Photon.JobSeeker;
 
 public class JobEligibilityHelper : IDisposable
 {
-    private readonly static Regex remove_new_lines = new(@"(?<=\n)[\n\s]+");
     private readonly static Regex words = new(@"[a-zA-Z]{3,}");
-    private readonly static HashSet<string> invalid_tag =
-    [
-        "script", "head", "style"
-    ];
-    public const long MinEligibilityScore = 100;
 
     private readonly Dictionaries dictionaries;
     private readonly Database database;
@@ -129,7 +121,8 @@ public class JobEligibilityHelper : IDisposable
             job.Log = string.Empty;
             job.Score = null;
 
-            var user_changes = job.State > JobState.Attention;
+            var user_changes = job.State is JobState.Rejected or JobState.Applied;
+            var keep_options = job.Options?.HumanEdited == true ? job.Options : null;
 
             var job_expired = job_acceptability_check?.IsMatch(job.Content);
             var correct_language = job_expired != true ? LanguageIsMatch(job) : (bool?)null;
@@ -143,11 +136,13 @@ public class JobEligibilityHelper : IDisposable
 
             if (!user_changes)
             {
-                if (!eligibility) job.State = JobState.NotApprovedRegex;
-                else job.State = JobState.Attention;
+                job.State = eligibility ? JobState.AiPending : JobState.NotApprovedRegex;
             }
 
-            var clear_content = rejected || job.Score < MinEligibilityScore;
+            if (keep_options != null)
+                job.Options = keep_options;
+
+            var clear_content = rejected || job.Score < database.AppSetting.Floor();
             if (clear_content)
             {
                 job.Html = null;
@@ -171,26 +166,6 @@ public class JobEligibilityHelper : IDisposable
     {
         database.Dispose();
         GC.SuppressFinalize(this);
-    }
-
-    public static string GetTextContent(string html)
-    {
-        var doc = new HtmlDocument();
-        doc.LoadHtml(html);
-
-        var root = doc.DocumentNode;
-        var buffer = new StringBuilder();
-        foreach (var node in root.DescendantsAndSelf())
-        {
-            if (node.HasChildNodes) continue;
-            if (invalid_tag.Contains(node.ParentNode.Name)) continue;
-
-            string text = node.InnerText;
-            if (!string.IsNullOrEmpty(text))
-                buffer.Append(' ').Append(text.Trim());
-        }
-
-        return remove_new_lines.Replace(buffer.ToString(), "\n");
     }
 
     internal bool LanguageIsMatch(Job job)
@@ -309,7 +284,7 @@ public class JobEligibilityHelper : IDisposable
         job.Options.CheckSize();
 
         if (!hasField || rejected) return false;
-        else return job.Score >= MinEligibilityScore;
+        else return job.Score >= database.AppSetting.Floor();
     }
 
     internal static long CheckOptionIn(Job job, JobOption option, out string matched)

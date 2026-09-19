@@ -166,7 +166,7 @@ public class PhaseAGoldenTests
     }
 
     [Fact]
-    public void EvaluateJobEligibility_eligible_job_becomes_attention_with_score_log_options()
+    public void EvaluateJobEligibility_eligible_job_becomes_ai_pending_with_score_log_options()
     {
         using var db = new GoldenDatabase();
         db.SaveSearchJob("elig1", "https://example.com/jobs/elig1");
@@ -178,8 +178,8 @@ public class PhaseAGoldenTests
         var helper = MakeHelper(db, EligibilityFixture.Option("field", 100, "backend", "Backend"));
         var state = helper.EvaluateJobEligibility(job, null);
 
-        Assert.Equal(JobState.Attention, state);
-        Assert.Equal("Attention", db.Scalar("SELECT State FROM Job"));
+        Assert.Equal(JobState.AiPending, state);
+        Assert.Equal("AiPending", db.Scalar("SELECT State FROM Job"));
         Assert.Equal(100L, db.Scalar("SELECT Score FROM Job"));
 
         var log = Assert.IsType<string>(db.Scalar("SELECT Log FROM Job"));
@@ -232,6 +232,98 @@ public class PhaseAGoldenTests
         Assert.StartsWith("Expired!", Assert.IsType<string>(db.Scalar("SELECT Log FROM Job")));
         Assert.Equal(DBNull.Value, db.Scalar("SELECT Html FROM Job"));
         Assert.Equal(DBNull.Value, db.Scalar("SELECT Content FROM Job"));
+    }
+
+    [Fact]
+    public void EvaluateJobEligibility_score_at_floor_keeps_content_and_enters_queue()
+    {
+        using var db = new GoldenDatabase();
+        db.SaveSearchJob("elig4", "https://example.com/jobs/elig4");
+        db.ExecuteRaw("UPDATE Job SET Html = '<html>keep</html>', Content = 'backend alpha beta' WHERE Code = 'elig4'");
+        var job = db.Database.Job.Fetch(GoldenDatabase.AgencyId, "elig4")!;
+
+        var helper = MakeHelper(db, EligibilityFixture.Option("field", 70, "backend", "Backend"));
+        var state = helper.EvaluateJobEligibility(job, null);
+
+        Assert.Equal(JobState.AiPending, state);
+        Assert.Equal(70L, db.Scalar("SELECT Score FROM Job"));
+        Assert.Equal("<html>keep</html>", db.Scalar("SELECT Html FROM Job"));
+        Assert.Equal("backend alpha beta", db.Scalar("SELECT Content FROM Job"));
+    }
+
+    [Fact]
+    public void EvaluateJobEligibility_below_floor_purges_content()
+    {
+        using var db = new GoldenDatabase();
+        db.SaveSearchJob("elig5", "https://example.com/jobs/elig5");
+        db.ExecuteRaw("UPDATE Job SET Html = '<html>drop</html>', Content = 'backend alpha beta' WHERE Code = 'elig5'");
+        var job = db.Database.Job.Fetch(GoldenDatabase.AgencyId, "elig5")!;
+
+        var helper = MakeHelper(db, EligibilityFixture.Option("field", 69, "backend", "Backend"));
+        var state = helper.EvaluateJobEligibility(job, null);
+
+        Assert.Equal(JobState.NotApprovedRegex, state);
+        Assert.Equal(69L, db.Scalar("SELECT Score FROM Job"));
+        Assert.Equal(DBNull.Value, db.Scalar("SELECT Html FROM Job"));
+        Assert.Equal(DBNull.Value, db.Scalar("SELECT Content FROM Job"));
+    }
+
+    [Fact]
+    public void EvaluateJobEligibility_reads_floor_from_app_setting()
+    {
+        using var db = new GoldenDatabase();
+        db.ExecuteRaw("INSERT INTO AppSetting (Key, Value) VALUES ('floor', '90')");
+        db.SaveSearchJob("elig6", "https://example.com/jobs/elig6");
+        db.ExecuteRaw("UPDATE Job SET Html = '<html>drop</html>', Content = 'backend alpha beta' WHERE Code = 'elig6'");
+        var job = db.Database.Job.Fetch(GoldenDatabase.AgencyId, "elig6")!;
+
+        var helper = MakeHelper(db, EligibilityFixture.Option("field", 80, "backend", "Backend"));
+        var state = helper.EvaluateJobEligibility(job, null);
+
+        Assert.Equal(JobState.NotApprovedRegex, state);
+        Assert.Equal(80L, db.Scalar("SELECT Score FROM Job"));
+        Assert.Equal(DBNull.Value, db.Scalar("SELECT Html FROM Job"));
+    }
+
+    [Fact]
+    public void EvaluateJobEligibility_does_not_overwrite_rejected_or_applied()
+    {
+        using var db = new GoldenDatabase();
+        db.SaveSearchJob("elig7", "https://example.com/jobs/elig7");
+        db.ExecuteRaw("UPDATE Job SET Html = '<html>keep</html>', Content = 'backend alpha beta', State = 'Rejected' WHERE Code = 'elig7'");
+        var rejected_job = db.Database.Job.Fetch(GoldenDatabase.AgencyId, "elig7")!;
+        var helper = MakeHelper(db, EligibilityFixture.Option("field", 100, "backend", "Backend"));
+
+        Assert.Equal(JobState.Rejected, helper.EvaluateJobEligibility(rejected_job, null));
+        Assert.Equal("Rejected", db.Scalar("SELECT State FROM Job"));
+        Assert.Equal(100L, db.Scalar("SELECT Score FROM Job"));
+
+        db.ExecuteRaw("UPDATE Job SET State = 'Applied', Html = '<html>keep</html>', Content = 'backend alpha beta' WHERE Code = 'elig7'");
+        var applied_job = db.Database.Job.Fetch(GoldenDatabase.AgencyId, "elig7")!;
+        Assert.Equal(JobState.Applied, helper.EvaluateJobEligibility(applied_job, null));
+        Assert.Equal("Applied", db.Scalar("SELECT State FROM Job"));
+    }
+
+    [Fact]
+    public void EvaluateJobEligibility_skips_options_overwrite_when_human_edited()
+    {
+        using var db = new GoldenDatabase();
+        db.SaveSearchJob("elig8", "https://example.com/jobs/elig8");
+        db.ExecuteRaw("UPDATE Job SET Html = '<html>keep</html>', Content = 'backend alpha beta' WHERE Code = 'elig8'");
+        var job = db.Database.Job.Fetch(GoldenDatabase.AgencyId, "elig8")!;
+        job.Options = new ResumeContext { JobTitle = "Keep This Title", HumanEdited = true };
+
+        var helper = MakeHelper(db, EligibilityFixture.Option("field", 100, "backend", "Backend"));
+        helper.EvaluateJobEligibility(job, null);
+
+        var options = db.Database.Job.FetchOptions(job.JobID);
+        Assert.NotNull(options);
+        Assert.True(options!.HumanEdited);
+        Assert.Equal("Keep This Title", options.JobTitle);
+        Assert.Equal(100L, db.Scalar("SELECT Score FROM Job"));
+        Assert.Equal("AiPending", db.Scalar("SELECT State FROM Job"));
+        var log = Assert.IsType<string>(db.Scalar("SELECT Log FROM Job"));
+        Assert.Contains("*Field:*", log);
     }
 
     [Fact]

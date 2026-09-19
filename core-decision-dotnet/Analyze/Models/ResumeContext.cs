@@ -7,6 +7,7 @@ namespace Photon.JobSeeker;
 public partial class ResumeContext
 {
     public int Version => 42;
+    public bool HumanEdited { get; set; }
     public int Length { get; set; } = 1;
     public string JobTitle { get; set; } = "Senior Full Stack Software Developer";
     public InputDataContext InputData { get; } = new()

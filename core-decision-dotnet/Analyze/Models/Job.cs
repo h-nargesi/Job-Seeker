@@ -63,7 +63,7 @@
         public void SetHtml(string html)
         {
             Html = html;
-            Content = JobEligibilityHelper.GetTextContent(html);
+            Content = JobContent.GetTextContent(html);
         }
     }
 }
