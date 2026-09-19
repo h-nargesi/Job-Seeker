@@ -13,11 +13,16 @@ the prompt are **empty reserved** (F1).
 [`AI_PHASE1_NOTES.md`](../AI_PHASE1_NOTES.md) (ai-worker section, Rubric v1,
 D6, D13, D17, F1). [`AI_INTEGRATION.md`](../AI_INTEGRATION.md) §2.1 / §6.
 Decision log: two calls per pass (call 2 = Chat 6); one worker at a time
-is convention, not mutex.
+is convention, not mutex. Stack: C# console on Linux — see
+[`AI_IMPLEMENTATION.md`](../AI_IMPLEMENTATION.md) **Stack**.
 
 ## Files
 
-- New `ai-worker/` console project at repo root; add to `Job Seeker.sln`.
+- New `ai-worker/` **.NET 8 C#** console at repo root; add to
+  `Job Seeker.sln`. Not Python.
+- Optional `ai-worker.sh` (env + exec), same idea as `job-seeker.sh`.
+  Publish RID: `linux-x64 --self-contained` (Chat 5 may land the script;
+  publish is the deploy contract even if the script waits).
 - `Llm` config (appsettings + env): `BaseUrl`, `Model`, `Core` (core base
   URL), `CoreApiKey`, `Rubric`, `Temperature` (default 0.2), `Seed` (fixed).
   **No** `Enabled` key (D17).
@@ -37,7 +42,8 @@ is convention, not mutex.
 ## Must not
 
 Call 2 / `Llm:RubricTailor` (Chat 6). `memory[]` on verdict. Mutex vs
-assistant. Polling daemon / Windows service.
+assistant. Polling daemon / Windows service. Python worker. A shell
+script that *is* the worker (launcher only).
 
 ## Validate
 

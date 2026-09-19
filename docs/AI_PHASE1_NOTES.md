@@ -225,7 +225,11 @@
   stable cached `FetchAll` order — D15), never a finished
   prompt. The worker does not emit memory writes.
 - **Add to `Job Seeker.sln`** so `dotnet build "Job Seeker.sln"` (the
-  primary validation gate) covers it.
+  primary validation gate) covers it. Language is **C# / .NET 8**, not
+  Python — the AI station is a Linux terminal; that is a RID
+  (`linux-x64 --self-contained` publish + optional `ai-worker.sh`
+  launcher), not a stack change
+  ([`AI_IMPLEMENTATION.md`](AI_IMPLEMENTATION.md) Stack, 2026-09-19).
 
 ## Extension (agent-extension)
 

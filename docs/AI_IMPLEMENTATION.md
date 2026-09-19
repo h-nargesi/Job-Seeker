@@ -48,6 +48,21 @@ Chat 1 schema → 2 regex gate → 3 ranking SQL → 4 auth/API/UI
 - After C# edits: `dotnet build "Job Seeker.sln"`. Tests:
   `dotnet test core-decision-dotnet.Tests/core-decision-dotnet.Tests.csproj`.
 
+## Stack (worker, assistant, Linux)
+
+Locked 2026-09-19 — Linux on the AI station is **not** a language reason.
+
+- **`ai-worker`** is a **.NET 8 C# console** at repo root, in
+  `Job Seeker.sln`. Not Python (no venv, no transformers). It is a
+  `HttpClient` to the core and to localhost `llama-server` (llama.cpp
+  does inference). Chat 5 builds it.
+- **Linux deploy:** `dotnet publish ai-worker -c Release -r linux-x64
+  --self-contained`, then copy. No SDK required on the GPU box. Optional
+  thin launcher like `job-seeker.sh` (`ai-worker.sh`: env + exec). Shell
+  is **not** a second worker. Manual run, no systemd / polling (D17).
+- **`assistant-extension/`** is Chrome MV3 **vanilla JS**, no build,
+  patterned on `agent-extension/` (Chat 8). Not a Python UI.
+
 ## Out of this program
 
 Phase **4** (dedup + digest). Phase **6** (extraction filters, bulk purge,

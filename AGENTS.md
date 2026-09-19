@@ -38,8 +38,11 @@ Job-Seeker/
 │   ├── application/           # popup UI (menu.html / menu.js)
 │   ├── tests/                 # node:test suite (vm-loads the classic scripts)
 │   └── package.json           # test runner config; only devDependency happy-dom
-├── assistant-extension/       # (planned, not created yet) apply-assistant MV3
-│                              # extension — see docs/AI_APPLY_ASSISTANT.md
+├── ai-worker/                 # (planned, Chat 5) .NET 8 C# console on the
+│                              # Linux AI station — not Python; see
+│                              # docs/AI_IMPLEMENTATION.md Stack
+├── assistant-extension/       # (planned, Chat 8) apply-assistant MV3,
+│                              # vanilla JS — see docs/AI_APPLY_ASSISTANT.md
 ├── database/                  # SQLite schema + seed data
 │   ├── structure/             # agency.sql, job.sql, job-option.sql, trend.sql
 │   ├── installation.sh        # creates/reseeds the schema
