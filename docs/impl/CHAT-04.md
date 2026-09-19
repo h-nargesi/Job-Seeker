@@ -1,6 +1,6 @@
 # Chat 4 — Auth, `/ai/*`, phase-1 dashboard
 
-**Status:** not started. **Depends on:** Chat 3.
+**Status:** done. **Depends on:** Chat 3.
 
 ## Goal
 

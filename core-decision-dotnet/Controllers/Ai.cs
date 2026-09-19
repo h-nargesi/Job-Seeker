@@ -1,0 +1,57 @@
+using Microsoft.AspNetCore.Mvc;
+using Serilog;
+
+namespace Photon.JobSeeker;
+
+[Route("[controller]/[action]")]
+public class AiController(
+    Database database,
+    IDatabaseFactory database_factory,
+    MasterResumeCache master_resume) : Controller
+{
+    [HttpGet]
+    public async Task<IActionResult> Next()
+    {
+        try
+        {
+            var job = database.Job.FetchNextAiPending();
+            if (job == null) return Ok(AiNextPayload.None);
+
+            var resume = await master_resume.GetAsync(HttpContext);
+            var keywords = JobKeywords.From(JobEligibilityHelper.SharedOptions(database_factory));
+            return Ok(AiNextPayload.From(job, resume, keywords, database.AppSetting.AiPassmark()));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
+    [HttpPost]
+    public IActionResult Verdict([FromQuery] long? jobid, [FromBody] AiVerdictRequest? body)
+    {
+        try
+        {
+            if (body == null)
+                return BadRequest(new { error = "validation", message = "missing body" });
+
+            if (!body.TryCreate(out var update, out var error))
+                return BadRequest(new { error = "validation", message = error });
+
+            var id = jobid ?? body.JobId;
+            if (id is not long job_id)
+                return BadRequest(new { error = "validation", message = "jobId is required" });
+
+            if (!database.Job.ApplyAiVerdict(job_id, update))
+                return NotFound();
+
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+}

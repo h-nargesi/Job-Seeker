@@ -114,12 +114,43 @@ public class JobController(Analyzer analyzer, Database database, IDatabaseFactor
     }
 
     [HttpPost]
-    public IActionResult Revaluate()
+    public IActionResult Revaluate([FromQuery] long? jobid)
     {
         try
         {
+            if (jobid is long id)
+                return ForceRevaluate(id);
+
             JobEligibilityHelper.RunRevaluateProcess(analyzer, database_factory);
             return Ok();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
+    [HttpPost]
+    public IActionResult Requeue([FromQuery] long jobid)
+    {
+        try
+        {
+            return database.Job.RequeueJob(jobid) ? Ok() : BadRequest();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
+    [HttpPost]
+    public IActionResult Promote([FromQuery] long jobid)
+    {
+        try
+        {
+            return database.Job.PromoteJob(jobid) ? Ok() : BadRequest();
         }
         catch (Exception ex)
         {
@@ -193,6 +224,19 @@ public class JobController(Analyzer analyzer, Database database, IDatabaseFactor
             Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
             throw;
         }
+    }
+
+    private IActionResult ForceRevaluate(long jobid)
+    {
+        var job = database.Job.Fetch(jobid);
+        if (job == null) return NotFound();
+        if (job.Content == null) return BadRequest();
+        if (job.State is JobState.Rejected or JobState.Applied) return BadRequest();
+
+        analyzer.AgenciesByID.TryGetValue(job.AgencyID, out var agency);
+        using var evaluator = new JobEligibilityHelper(database_factory);
+        evaluator.EvaluateJobEligibility(job, agency?.JobAcceptabilityChecker, force: true);
+        return Ok();
     }
 
     public class SettingContext

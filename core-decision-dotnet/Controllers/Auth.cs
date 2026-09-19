@@ -28,11 +28,11 @@ public class AuthController(IDataProtectionProvider protection, IConfiguration c
     [HttpPost]
     public IActionResult Login([FromForm] string? password)
     {
-        var api_key = configuration["Auth:ApiKey"];
+        var api_key = configuration["Auth:ApiKeys:Dashboard"];
 
         if (string.IsNullOrEmpty(api_key)) return Redirect("/");
 
-        if (string.IsNullOrEmpty(password) || !FixedTimeEquals(password, api_key))
+        if (string.IsNullOrEmpty(password) || !ApiAuthorization.KeyEquals(password, api_key))
         {
             Log.Warning("Failed login attempt from {0}", HttpContext.Connection.RemoteIpAddress);
             return View("~/views/login.cshtml", "Wrong password.");
@@ -56,7 +56,7 @@ public class AuthController(IDataProtectionProvider protection, IConfiguration c
         return Redirect("/auth/login");
     }
 
-    private bool AuthDisabled => string.IsNullOrEmpty(configuration["Auth:ApiKey"]);
+    private bool AuthDisabled => string.IsNullOrEmpty(configuration["Auth:ApiKeys:Dashboard"]);
 
     public static bool FixedTimeEquals(string a, string b)
     {

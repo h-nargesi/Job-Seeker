@@ -27,17 +27,27 @@ Log.Information("Starting up ...");
 var database_factory = new DatabaseFactory(builder.Configuration);
 Dictionaries.SetConfiguration(path: builder.Configuration["Database:Dictionaries"] ?? string.Empty);
 
-var api_key = builder.Configuration["Auth:ApiKey"];
+var dashboard_key = builder.Configuration["Auth:ApiKeys:Dashboard"];
+var search_key = builder.Configuration["Auth:ApiKeys:Search"];
+var worker_key = builder.Configuration["Auth:ApiKeys:Worker"];
 var credential_key = builder.Configuration["Auth:CredentialKey"];
+var api_clients = ApiAuthorization.FromConfig(dashboard_key, search_key, worker_key);
 
-var auth_enabled = !string.IsNullOrEmpty(api_key);
+var auth_enabled = !string.IsNullOrEmpty(dashboard_key);
 
 if (!auth_enabled)
 {
     if (builder.Environment.IsProduction())
-        throw new Exception("Auth:ApiKey is required in production (set the Auth__ApiKey environment variable).");
+        throw new Exception("Auth:ApiKeys:Dashboard is required in production (set the Auth__ApiKeys__Dashboard environment variable).");
 
-    Log.Warning("Auth:ApiKey is not set - authentication is disabled (development only).");
+    Log.Warning("Auth:ApiKeys:Dashboard is not set - authentication is disabled (development only).");
+}
+else
+{
+    if (string.IsNullOrEmpty(search_key))
+        Log.Warning("Auth:ApiKeys:Search is not set - the search extension cannot authenticate.");
+    if (string.IsNullOrEmpty(worker_key))
+        Log.Warning("Auth:ApiKeys:Worker is not set - ai-worker cannot authenticate.");
 }
 
 if (string.IsNullOrEmpty(credential_key))
@@ -63,6 +73,7 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IDatabaseFactory>().Open(
 builder.Services.AddScoped<TrendsCheckpoint>();
 builder.Services.AddSingleton<Analyzer>();
 builder.Services.AddScoped<IViewRenderService, ViewRenderService>();
+builder.Services.AddSingleton<MasterResumeCache>();
 builder.Services.AddDataProtection();
 builder.Services.AddHostedService<TrendsCleanupService>();
 
@@ -126,10 +137,14 @@ bool Authorized(HttpContext ctx)
 
     if (ctx.Request.Path.StartsWithSegments("/auth")) return true;
 
+    var x_client = ctx.Request.Headers["X-Client"].ToString();
+    if (x_client.Length > 0)
+        Log.Debug("X-Client {Client} {Method} {Path}", x_client, ctx.Request.Method, ctx.Request.Path);
+
     var header_key = ctx.Request.Headers["X-API-Key"].ToString();
 
-    if (header_key.Length > 0 && !string.IsNullOrEmpty(api_key) &&
-        AuthController.FixedTimeEquals(header_key, api_key)) return true;
+    if (header_key.Length > 0)
+        return api_clients.TryAuthorize(header_key, ctx.Request.Path, ctx.Request.Method, out _);
 
     var cookie = ctx.Request.Cookies[AuthOptions.CookieName];
 

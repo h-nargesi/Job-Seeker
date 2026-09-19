@@ -1,28 +1,39 @@
 # API reference
 
-The server exposes two families of endpoints: the **automation API** (consumed
-by the extension) under `/decision/*`, and the **management/dashboard API**
-under `/job/*` and `/report/*` (human + extension). All routes use the
-`[Route("[controller]/[action]")]` convention, so the path is always
-`/<controller>/<action>`.
+The server exposes three families of endpoints: the **automation API** (consumed
+by the search extension) under `/decision/*`, the **AI worker API** under
+`/ai/*`, and the **management/dashboard API** under `/job/*` and `/report/*`.
+All routes use the `[Route("[controller]/[action]")]` convention, so the path is
+always `/<controller>/<action>`.
 
-Controllers: `Controllers/Decision.cs`, `Controllers/Job.cs`, `Controllers/Report.cs`.
+Controllers: `Controllers/Decision.cs`, `Controllers/Ai.cs`, `Controllers/Job.cs`,
+`Controllers/Report.cs`.
 
 ## Authentication
 
-Single-user, shared-secret auth (`Auth:ApiKey` in configuration). When the key
-is configured, every endpoint requires it; without it (Development only) the
-server runs auth-free and logs a warning.
+Per-client keys (`Auth:ApiKeys:Dashboard`, `:Search`, `:Worker`). The matching
+key **is** the role; `X-Client` is logged only and never used for allow/deny.
 
-- **Extension / API clients**: send header `X-API-Key: <key>` with every
-  request. Missing/wrong key → `401` JSON (for `Accept: application/json`
-  requests) or a redirect to the login page.
-- **Dashboard / browser**: `GET /auth/login`, enter the same secret as the
-  password → signed HttpOnly cookie (`js_auth`, DataProtection-protected,
+When the Dashboard key is configured, every non-exempt endpoint requires a
+matching `X-API-Key` (or the dashboard cookie). Without a Dashboard key
+(Development only) the server runs auth-free and logs a warning.
+
+| Key | Path rules |
+|-----|------------|
+| `Auth:ApiKeys:Search` | `/decision/*` |
+| `Auth:ApiKeys:Worker` | `/ai/*` |
+| `Auth:ApiKeys:Dashboard` | everything |
+
+- **Extension / worker**: send `X-API-Key: <that client's key>`. Wrong key or
+  a key used on a disallowed path → `401` JSON (for `Accept: application/json`)
+  or a redirect to the login page.
+- **Dashboard / browser**: `GET /auth/login`, enter the **Dashboard** key as
+  the password → signed HttpOnly cookie (`js_auth`, DataProtection-protected,
   SameSite=Lax, 30 days). `GET /auth/logout` clears it.
 - `/auth/*` and static files (`wwwroot`) are exempt from auth.
-- Production startup **fails fast** when `Auth:ApiKey` / `Auth:CredentialKey`
-  are missing; Development degrades with warnings.
+- Production startup **fails fast** only when `Auth:ApiKeys:Dashboard` or
+  `Auth:CredentialKey` is missing. Missing Search/Worker keys log a warning.
+  Development degrades with warnings.
 - Agency credentials (`Agency.Password`) are stored AES-GCM encrypted
   (`enc:` prefix) and migrated automatically on startup when
   `Auth:CredentialKey` (32-byte base64) is set.
@@ -115,12 +126,31 @@ Start/stop an agency's active seeking, or set its current locale index.
     that agency's search trends.
   - `running` null/omitted → disable `ActiveSeeking` for the agency.
 
+## AI worker API — `AiController`
+
+Worker-only (`Auth:ApiKeys:Worker`). Payloads are data, not finished prompts.
+
+### `GET /ai/next`
+Read-only. Oldest `AiPending` job with `Content`. Empty queue → `200` `{ "empty": true }`.
+
+- **Response** (when a job exists): `{ empty: false, jobId, content, resume, keywords: [{ category, score, title }], fingerprint, settings: { aipassmark } }`.
+- `keywords` comes from cached `JobOption.FetchAll` order with the `reject` category omitted.
+- `fingerprint` is SHA-256 hex of whitespace-normalized `Content` (not stored).
+- `resume` is the pruned/stripped master resume (16k-token cap from the top).
+
+### `POST /ai/verdict?jobid=`
+Idempotent upsert. Body is the call-1 JSON (snake_case extraction fields). An absent `delta` is ignored (phase 3 activates it).
+
+- **Required**: `relevance` (0–100), `verdict` (AiVerdict name), `fingerprint`.
+- **Optional**: `reason` (≤ 2000), `skills` (≤ 20), `seniority` / `period` / `work_model` / `contract` (enum names), `salary_min` / `salary_max` (≥ 0), `experience_years` (0–50), `currency`.
+- **404** if the job is gone; **400** `{ error: "validation", message }` if the payload is rejected.
+
 ## Management API — `JobController`
 
 Human-facing job actions + an ad-hoc SQL console. Used by the dashboard.
 
 ### `GET /job/get/{jobid}`
-Renders the `job-detail` view for one job.
+Renders the `job-detail` view for one job (AI badges, extraction, re-queue / force revaluate / emergency promote).
 
 ### `POST /job/apply?jobid=`
 Mark a job `Applied`.
@@ -140,9 +170,18 @@ then `ResumeText.live` overlay).
 Same resume, returned as a downloadable `.html` file attachment.
 
 ### `POST /job/revaluate`
-Kick off the background re-evaluation pass: re-score every job whose content is
-available, against the current `JobOption` rules. Progress is surfaced via
-`JobEligibilityHelper.CurrentRevaluationProcess`.
+With no query: kick off the background re-evaluation pass. Progress is surfaced
+via `JobEligibilityHelper.CurrentRevaluationProcess`.
+
+With `?jobid=`: force re-score that one job (ignores `HumanEdited`; keeps the
+`Rejected`/`Applied` guard; hidden/400 when `Content` is null). Clears
+`AiOptions` and `ResumeText.proposal` (`live` survives).
+
+### `POST /job/requeue?jobid=`
+`AIError` / `NotApprovedAI` → `AiPending` when `Content` is present; otherwise 400.
+
+### `POST /job/promote?jobid=`
+Emergency promote: `AiPending` / `NotApprovedAI` / `AIError` → `Attention`.
 
 ### `POST /job/clean`
 Run the retention queries (`JobBusiness.Clean`): delete old jobs (keeping

@@ -209,13 +209,16 @@ WHERE JobID = @jobId", new
             var clear = clearContent ? ", Html = null, Content = null" : "";
 
             database.Execute($@"
-UPDATE Job SET State = @state, Log = @log, Options = @options, Score = @score{clear}, ModifiedOn = @now
+UPDATE Job SET State = @state, Log = @log, Options = @options, Score = @score,
+    AiOptions = @aiOptions, ResumeText = @resumeText{clear}, ModifiedOn = @now
 WHERE JobID = @jobId", new
             {
                 state = job.State.ToString(),
                 log = job.Log,
                 options = job.Options,
                 score = job.Score,
+                aiOptions = job.AiOptions,
+                resumeText = job.ResumeText,
                 now = DateTime.Now,
                 jobId = job.JobID,
             });

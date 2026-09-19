@@ -63,6 +63,33 @@ async function revaluate() {
     }
 }
 
+async function revaluate_job(jobid) {
+    try {
+        await fetch("/job/revaluate?jobid=" + jobid, { method: 'POST' });
+        location.reload();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function requeue(jobid) {
+    try {
+        await fetch("/job/requeue?jobid=" + jobid, { method: 'POST' });
+        location.reload();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function promote(jobid) {
+    try {
+        await fetch("/job/promote?jobid=" + jobid, { method: 'POST' });
+        location.reload();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
 async function change_running(agency, running) {
     try {
         const current_element = document.getElementById(`RM-${agency}-${running}`);

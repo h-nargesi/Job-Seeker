@@ -4,3 +4,19 @@
     font-size: 1.2em;
     font-family: Consolas,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New, monospace;
 }
+
+.ai-extract {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+    gap: 0.35rem 1rem;
+}
+
+.ai-extract dt {
+    margin: 0;
+    font-weight: 600;
+    opacity: 0.75;
+}
+
+.ai-extract dd {
+    margin: 0;
+}

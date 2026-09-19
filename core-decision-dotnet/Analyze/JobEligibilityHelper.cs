@@ -44,6 +44,8 @@ public class JobEligibilityHelper : IDisposable
         }
     }
 
+    internal static JobOption[] SharedOptions(IDatabaseFactory database_factory) => GetOptions(database_factory);
+
     public static void InvalidateOptionsCache()
     {
         lock (options_lock) cached_options = null;
@@ -114,7 +116,7 @@ public class JobEligibilityHelper : IDisposable
         }
     }
 
-    public JobState EvaluateJobEligibility(Job job, Regex? job_acceptability_check)
+    public JobState EvaluateJobEligibility(Job job, Regex? job_acceptability_check, bool force = false)
     {
         // The state of the current job always should be set because it was converted to 'Revaluation'
         if (job.Content != null)
@@ -123,7 +125,17 @@ public class JobEligibilityHelper : IDisposable
             job.Score = null;
 
             var user_changes = job.State is JobState.Rejected or JobState.Applied;
-            var keep_options = job.Options?.HumanEdited == true ? job.Options : null;
+            var keep_options = !force && job.Options?.HumanEdited == true ? job.Options : null;
+
+            if (force)
+            {
+                job.AiOptions = null;
+                if (job.ResumeText != null)
+                {
+                    foreach (var slot in job.ResumeText.Values)
+                        slot.Proposal = null;
+                }
+            }
 
             var job_expired = job_acceptability_check?.IsMatch(job.Content);
             var correct_language = job_expired != true ? LanguageIsMatch(job) : (bool?)null;

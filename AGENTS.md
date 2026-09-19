@@ -82,34 +82,29 @@ absent, otherwise `installation.sh` will error on the last line.
 **Auth secrets** — two secret concerns: API auth and credential encryption
 (`appsettings.json` ships them empty; never commit real values):
 
-- `Auth:ApiKey` — shared secret (current code). Extension sends it as
-  `X-API-Key`; the dashboard login (`/auth/login`) uses it as the password.
-  In **production the server refuses to start without it**; in Development
-  it may be omitted (auth disabled, warning logged). Decided (AI phase 1,
-  2026-09-18): replaced by per-client keys `Auth:ApiKeys:Dashboard` /
-  `:Search` / `:Worker` — key = role with path rules (`search` →
-  `/decision/*`, `worker` → `/ai/*`, `dashboard` → everything;
-  `X-Client` informational only); popup API-Key field = the Search key;
-  login password = the Dashboard key; production fail-fast only on a
-  missing Dashboard key (missing Search/Worker keys warn). See
-  [`docs/AI_INTEGRATION.md`](docs/AI_INTEGRATION.md) §2.
+- `Auth:ApiKeys:Dashboard` / `:Search` / `:Worker` — the matching key **is**
+  the role (`search` → `/decision/*`, `worker` → `/ai/*`, `dashboard` →
+  everything). Extension sends Search as `X-API-Key`; login password is the
+  Dashboard key; worker uses the Worker key. `X-Client` is logging only. In
+  **production the server refuses to start without the Dashboard key**;
+  missing Search/Worker keys warn. In Development keys may be omitted (auth
+  disabled, warning logged). See [`docs/AI_INTEGRATION.md`](docs/AI_INTEGRATION.md) §2.
 - `Auth:CredentialKey` — 32-byte base64 key (AES-GCM) encrypting agency
   passwords at rest (`enc:` prefix, auto-migrated on startup). Generate with
   `openssl rand -base64 32`. Same fail-fast rule in production.
 
 ```bash
 # Development (user-secrets, run inside core-decision-dotnet/)
-dotnet user-secrets set "Auth:ApiKey" "some-random-secret"
+dotnet user-secrets set "Auth:ApiKeys:Dashboard" "..."
+dotnet user-secrets set "Auth:ApiKeys:Search" "..."
+dotnet user-secrets set "Auth:ApiKeys:Worker" "..."
 dotnet user-secrets set "Auth:CredentialKey" "$(openssl rand -base64 32)"
-# AI phase 1 replaces Auth:ApiKey with per-client keys:
-#   dotnet user-secrets set "Auth:ApiKeys:Dashboard" "..."
-#   dotnet user-secrets set "Auth:ApiKeys:Search" "..."
-#   dotnet user-secrets set "Auth:ApiKeys:Worker" "..."
 
 # Production (environment variables)
-export Auth__ApiKey="some-random-secret"
+export Auth__ApiKeys__Dashboard="..."
+export Auth__ApiKeys__Search="..."
+export Auth__ApiKeys__Worker="..."
 export Auth__CredentialKey="<openssl rand -base64 32>"
-# AI phase 1: Auth__ApiKeys__Dashboard / __Search / __Worker instead
 ```
 
 SQLite runs in WAL mode: `data.sqlite3-wal` / `data.sqlite3-shm` files appear

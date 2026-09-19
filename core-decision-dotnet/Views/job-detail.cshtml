@@ -3,6 +3,8 @@
 
 @{
   Layout = "~/views/layout.cshtml";
+  var job = Model.Job;
+  var has_content = job.Content != null;
   var SafeToString = (object? value) => value?.ToString() ?? string.Empty;
   var HasValue = (object? value) => SafeToString(value).Length > 0 ? "primary" : "secondary";
   var GetColor = (JobState state) => state switch
@@ -10,11 +12,17 @@
     JobState.Saved => "text-secondary",
     JobState.Revaluation => "text-secondary",
     JobState.NotApprovedRegex => "text-warning",
+    JobState.AiPending => "text-primary",
+    JobState.NotApprovedAI => "text-warning",
+    JobState.AIError => "text-danger",
     JobState.Attention => "text-info",
     JobState.Rejected => "text-danger",
     JobState.Applied => "text-success",
-    _=> "text-secondary"
+    _ => "text-secondary"
   };
+  var can_requeue = has_content && job.State is JobState.AIError or JobState.NotApprovedAI;
+  var can_promote = job.State is JobState.AiPending or JobState.NotApprovedAI or JobState.AIError;
+  var can_force = has_content && job.State is not (JobState.Rejected or JobState.Applied);
 }
 
 <div class="container py-4">
@@ -23,15 +31,21 @@
         <span class="fs-4">@Model.Agency?.Name</span>
     </a>
     <span class="ms-3 me-3" style="font-size: 1.4rem;">|</span>
-    <span class="fs-4">@Model.Job.Country</span>
+    <span class="fs-4">@job.Country</span>
   </header>
 
   <div class="p-5 mb-2 bg-body-tertiary rounded-3">
     <div class="container-fluid py-5">
-      <h2 class="display-1"><span class="text-secondary">@Model.Job.Score</span>|<span class="@GetColor(Model.Job.State)">@Model.Job.State</span></h2>
-      <h1 class="display-3 fw-bold d-inline-block">@Model.Job.Title</h1>
-      <h4>Register Time: @Model.Job.RegTime</h4>
-      <h6>ID: #@Model.Job.JobID</h6>
+      <h2 class="display-1">
+        <span class="text-secondary">@job.Score</span>
+        <span class="text-secondary">/</span>
+        <span class="@(job.AiScore == null ? "text-secondary" : "text-info")">@(job.AiScore?.ToString() ?? "—")</span>
+        <span class="text-secondary">|</span>
+        <span class="@GetColor(job.State)">@job.State</span>
+      </h2>
+      <h1 class="display-3 fw-bold d-inline-block">@job.Title</h1>
+      <h4>Register Time: @job.RegTime</h4>
+      <h6>ID: #@job.JobID</h6>
     </div>
   </div>
 
@@ -39,24 +53,52 @@
     <div class="col-lg-6 mb-3">
       <div class="h-100 p-5 bg-body-tertiary border rounded-3">
         <h2>Links</h2>
-        <a href="@Model.Job.Url" class="btn btn-outline-@HasValue(Model.Job.Url)" target="_blank">URL</a>
-        <a href="@Model.Job.Link" class="btn btn-outline-@HasValue(Model.Job.Link)" target="_blank">Link</a>
+        <a href="@job.Url" class="btn btn-outline-@HasValue(job.Url)" target="_blank">URL</a>
+        <a href="@job.Link" class="btn btn-outline-@HasValue(job.Link)" target="_blank">Link</a>
         <h2>Resume</h2>
-        <textarea id="job-options" class="codes">@Html.Raw(Model.Job.Options?.SimlpeSerialize())</textarea>
+        <textarea id="job-options" class="codes">@Html.Raw(job.Options?.SimlpeSerialize())</textarea>
         <div>
-          <button onclick="submit_options(@Model.Job.JobID, 'job-options')" type="button" class="btn btn-outline-primary">Submit</button>
-          <a href="/job/resume?jobid=@Model.Job.JobID" target="_blank" class="btn btn-outline-primary">Resume as html</a>
-          <a href="/job/resume64?jobid=@Model.Job.JobID" class="btn btn-outline-secondary">Download Resume as html file</a>
+          <button onclick="submit_options(@job.JobID, 'job-options')" type="button" class="btn btn-outline-primary">Submit</button>
+          <a href="/job/resume?jobid=@job.JobID" target="_blank" class="btn btn-outline-primary">Resume as html</a>
+          <a href="/job/resume64?jobid=@job.JobID" class="btn btn-outline-secondary">Download Resume as html file</a>
         </div>
         <h2>Actions</h2>
-        <button onclick="apply(@Model.Job.JobID)" class="btn btn-outline-success" type="button">Applied</button>
-        <button onclick="reject(@Model.Job.JobID)" class="btn btn-outline-danger" type="button">Rejected</button>
+        <button onclick="apply(@job.JobID)" class="btn btn-outline-success" type="button">Applied</button>
+        <button onclick="reject(@job.JobID)" class="btn btn-outline-danger" type="button">Rejected</button>
+        @if (can_requeue)
+        {
+          <button onclick="requeue(@job.JobID)" class="btn btn-outline-warning" type="button">Re-queue AI</button>
+        }
+        @if (can_force)
+        {
+          <button onclick="revaluate_job(@job.JobID)" class="btn btn-outline-primary" type="button">Force revaluate</button>
+        }
+        @if (can_promote)
+        {
+          <button onclick="promote(@job.JobID)" class="btn btn-outline-info" type="button">Promote</button>
+        }
       </div>
     </div>
     <div class="col-lg-6 mb-3">
       <div class="h-100 p-5 text-bg-dark rounded-3">
+        <h3>AI extraction</h3>
+        <dl class="ai-extract">
+          <dt>Verdict</dt><dd>@(job.AiVerdict?.ToString() ?? "—")</dd>
+          <dt>AiScore</dt><dd>@(job.AiScore?.ToString() ?? "—")</dd>
+          <dt>Seniority</dt><dd>@(job.AiSeniority?.ToString() ?? "—")</dd>
+          <dt>Work model</dt><dd>@(job.AiWorkModel?.ToString() ?? "—")</dd>
+          <dt>Contract</dt><dd>@(job.AiContract?.ToString() ?? "—")</dd>
+          <dt>Salary</dt>
+          <dd>
+            @(job.AiSalaryMin?.ToString() ?? "—")–@(job.AiSalaryMax?.ToString() ?? "—")
+            @job.AiCurrency @job.AiPeriod
+          </dd>
+          <dt>Experience</dt><dd>@(job.AiExperienceYears?.ToString() ?? "—")</dd>
+          <dt>Skills</dt><dd>@(job.AiSkills == null ? "—" : string.Join(", ", job.AiSkills))</dd>
+          <dt>Reason</dt><dd>@(string.IsNullOrEmpty(job.AiReason) ? "—" : job.AiReason)</dd>
+        </dl>
         <h3>Logs</h3>
-        <p id="logs-body" style="white-space: break-spaces;">@Model.Job.Log</p>
+        <p id="logs-body" style="white-space: break-spaces;">@job.Log</p>
         <script>document.addEventListener("DOMContentLoaded", () => display('logs-body'));</script>
       </div>
     </div>
