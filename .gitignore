@@ -6,7 +6,6 @@
 *.zip
 *.pdf
 
-/documents/
 /selenium/driver/
 /database/structure/passwords.sql
 
