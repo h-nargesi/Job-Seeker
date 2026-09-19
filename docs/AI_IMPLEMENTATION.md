@@ -77,10 +77,11 @@ Structured profile table. PII encryption of memory. Worker polling loop /
 3. Run the slice’s validation commands.
 4. Leave a one-line note in the chat: slice N done / blocked.
 
-Current tree: Chats 1–8 done (AI schema, regex gate, ranking SQL, auth/`/ai/*`,
+Current tree: Chats 1–9 done (AI schema, regex gate, ranking SQL, auth/`/ai/*`,
 `ai-worker` call 1, call 2 tailoring, memory + `/assistant/*` + worker
-snapshots, `assistant-extension/` fill loop + `memorybump`). Remaining:
-Chat 9 Compose.
+snapshots, `assistant-extension/` fill loop + `memorybump`, Compose phase
+5.5 — accept-gated long-form drafts, session-scoped, no memory schema
+change). Remaining: none; the 1–3 / 5 / 5.5 program is complete.
 
 ## Slices
 

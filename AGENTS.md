@@ -43,8 +43,9 @@ Job-Seeker/
 │                              # POST /ai/verdict; tests in ai-worker.Tests;
 │                              # see docs/AI_IMPLEMENTATION.md Stack
 ├── assistant-extension/       # (Chat 8) apply-assistant MV3, vanilla JS —
-│                              # generic DOM fill loop + memory UI; tests in
-│                              # assistant-extension/tests; see
+│                              # generic DOM fill loop + memory UI; (Chat 9)
+│                              # accept-gated Compose for long-form answers;
+│                              # tests in assistant-extension/tests; see
 │                              # docs/AI_APPLY_ASSISTANT.md
 ├── database/                  # SQLite schema + seed data
 │   ├── structure/             # agency.sql, job.sql, job-option.sql, trend.sql

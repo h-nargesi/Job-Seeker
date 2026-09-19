@@ -156,6 +156,7 @@ function RenderJobs() {
         actions.appendChild(JobButton("Open", function () { chrome.tabs.create({ url: job.url }); }));
         actions.appendChild(JobButton("Applied", function () { MarkApplied(job.jobId); }));
         actions.appendChild(JobButton("Fill current tab", function () { FillCurrentTab(job); }));
+        actions.appendChild(JobButton("Compose", function () { ComposeUI.ComposeFor(job); }));
         row.appendChild(actions);
 
         els.jobsList.appendChild(row);
@@ -196,8 +197,11 @@ async function FillCurrentTab(job) {
         resumeText: job.resumeText ?? "",
     });
 
-    if (result?.error) els.jobsStatus.textContent = "fill error: " + result.error;
-    else els.jobsStatus.textContent = `filled ${result?.filled ?? 0} field(s), ${result?.writes ?? 0} memory write(s) — review, then submit yourself`;
+    if (result?.error) {
+        els.jobsStatus.textContent = "fill error: " + result.error
+            + (result.drafted ? ` (${result.drafted} long answer(s) applied)` : "");
+    }
+    else els.jobsStatus.textContent = `filled ${result?.filled ?? 0} field(s), ${result?.writes ?? 0} memory write(s), ${result?.drafted ?? 0} long answer(s) — review, then submit yourself`;
 }
 
 async function RefreshMemory() {
@@ -321,6 +325,7 @@ async function LoadChatLog() {
 async function LoadData() {
     await LoadSettings();
     await LoadMode();
+    await ComposeUI.Init();
     BackgroundMessaging.Message("flush-diffs");
     await RefreshJobs();
     await RefreshMemory();

@@ -21,7 +21,7 @@
 			margin-top: 6px;
 		}
 
-		input[type="text"], input[type="password"], select {
+		input[type="text"], input[type="password"], select, textarea {
 			width: 100%;
 			box-sizing: border-box;
 		}
@@ -103,6 +103,11 @@
 		<span id="JobsStatus" class="muted"></span>
 		<div id="JobsList"></div>
 	</div>
+	<div id="ComposeView" class="section">
+		<b>Long-form drafts</b>
+		<span id="ComposeStatus" class="muted"></span>
+		<div id="ComposeList"></div>
+	</div>
 	<div id="MemoryView" class="section" style="display:none">
 		<button id="RefreshMemory">Refresh</button>
 		<select id="MemoryScope">
@@ -127,6 +132,7 @@
 	<script src="../controllers/storage-handler.js"></script>
 	<script src="../controllers/background-messaging.js"></script>
 	<script src="../controllers/form-inventory.js"></script>
+	<script src="compose-ui.js"></script>
 	<script src="panel.js"></script>
 </body>
 

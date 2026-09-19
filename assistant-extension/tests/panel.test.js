@@ -26,6 +26,7 @@ function fresh(jobs = [], memory = []) {
 	env.load('controllers/storage-handler.js');
 	env.load('controllers/background-messaging.js');
 	env.load('controllers/form-inventory.js');
+	env.load('application/compose-ui.js');
 	env.load('application/panel.js');
 	return env;
 }
@@ -153,4 +154,76 @@ test('job_detail mode offers ranking and delta lessons with the closed key list'
 	assert.strictEqual(tip.params.value, 'required');
 
 	assert.ok($(env, 'ChatLog').textContent.includes('saved Ranking lesson'));
+});
+
+test('Compose sends tab id and resume text, then renders pending drafts for review', async () => {
+	const job = { jobId: 5, title: 'Dev', url: 'u', pendingProposal: false, resumeText: 'RYAN-RESUME' };
+	const draft = {
+		id: 'ats.example::cover', domain: 'ats.example', fieldId: 'f2',
+		fieldKey: 'cover', fieldLabel: 'Cover letter', text: 'Dear team', accepted: false,
+	};
+	const env = fresh([job], []);
+	env.chrome.runtime.behavior = message => {
+		if (message.title === 'jobs') return [job];
+		if (message.title === 'compose') return { drafts: [draft] };
+		if (message.title === 'compose-list') return { drafts: [draft] };
+		return { ok: true };
+	};
+	await settle(env);
+
+	const button = Array.from($(env, 'JobsList').querySelectorAll('button')).find(b => b.textContent === 'Compose');
+	button.click();
+	await settle(env);
+
+	const compose = env.chrome.runtime.sent.find(m => m.title === 'compose');
+	assert.strictEqual(compose.params.tabId, 1);
+	assert.strictEqual(compose.params.jobId, 5);
+	assert.strictEqual(compose.params.resumeText, 'RYAN-RESUME');
+
+	assert.ok($(env, 'ComposeList').textContent.includes('Cover letter'));
+	assert.ok($(env, 'ComposeList').textContent.includes('pending review'));
+	const area = $(env, 'ComposeList').querySelector('textarea');
+	assert.strictEqual(area.value, 'Dear team');
+	assert.strictEqual(area.readOnly, false);
+	const labels = Array.from($(env, 'ComposeList').querySelectorAll('button')).map(b => b.textContent);
+	assert.deepStrictEqual(labels, ['Accept', 'Reject']);
+});
+
+test('accepting a draft posts the edited text and shows the accepted state', async () => {
+	let current = {
+		id: 'ats.example::cover', domain: 'ats.example', fieldId: 'f2',
+		fieldKey: 'cover', fieldLabel: 'Cover letter', text: 'Dear team', accepted: false,
+	};
+	const env = fresh([], []);
+	env.chrome.runtime.behavior = message => {
+		if (message.title === 'compose-list') return { drafts: [current] };
+		if (message.title === 'compose-accept') {
+			current = { ...current, accepted: true, text: message.params.text };
+			return { ok: true };
+		}
+		return { ok: true };
+	};
+	await settle(env);
+
+	const area = $(env, 'ComposeList').querySelector('textarea');
+	area.value = 'Edited draft';
+	Array.from($(env, 'ComposeList').querySelectorAll('button')).find(b => b.textContent === 'Accept').click();
+	await settle(env);
+
+	const accept = env.chrome.runtime.sent.find(m => m.title === 'compose-accept');
+	assert.strictEqual(accept.params.id, 'ats.example::cover');
+	assert.strictEqual(accept.params.text, 'Edited draft');
+
+	assert.ok($(env, 'ComposeList').textContent.includes('accepted — Fill current tab applies it'));
+	assert.ok($(env, 'ComposeStatus').textContent.includes('Fill current tab'));
+	assert.strictEqual($(env, 'ComposeList').querySelector('textarea').readOnly, true);
+});
+
+test('no panel control submits the form', async () => {
+	const env = fresh([], []);
+	await settle(env);
+
+	const labels = Array.from(env.sandbox.document.querySelectorAll('button')).map(b => b.textContent);
+	assert.ok(labels.length >= 5);
+	for (const label of labels) assert.ok(!/submit|send\b/i.test(label), label);
 });

@@ -249,8 +249,11 @@ uploads, structured profile table, PII encryption at rest,
 concurrent-session pausing, daily digest integration, per-site form
 adapters. Worker `memory[]` on the verdict payload is not in the contract.
 
-**Phase 5.5 — Compose (policy recorded 2026-09-19, not built with phase
-5).** Phase 5 Fill does not invent cover letters or “why this company”
-essays. Phase 5.5 adds a **Compose** action: generate long answers into
-an accept-gated side panel; the human accepts; then fill. Still no submit
-tool. Human still sends the form to the company.
+**Phase 5.5 — Compose (policy recorded 2026-09-19; built same day, Chat 9).**
+Phase 5 Fill does not invent cover letters or “why this company”
+essays. The Compose action generates long answers into an accept-gated
+pending panel — session-scoped drafts (`chrome.storage.session`), no
+memory schema change; the human accepts (edits allowed before accept)
+or rejects each draft; only accepted drafts are applied, deterministically
+by field key during Fill, never by the model. Still no submit tool.
+Human still sends the form to the company.

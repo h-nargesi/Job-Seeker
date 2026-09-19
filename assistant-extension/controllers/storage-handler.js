@@ -13,6 +13,7 @@ class StorageHandler {
     static MODE_OVERRIDE = "MODE_OVERRIDE";
     static PENDING_DIFFS = "PENDING_DIFFS";
     static CHAT_LOG = "CHAT_LOG";
+    static COMPOSE_DRAFTS = "COMPOSE_DRAFTS";
 
     static async Get(key, default_value) {
         return new Promise(function (resolve, reject) {

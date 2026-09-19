@@ -5,7 +5,8 @@ importScripts(
     "./core-messaging.js",
     "./llm-client.js",
     "./memory-tools.js",
-    "./fill-loop.js"
+    "./fill-loop.js",
+    "./compose-loop.js"
 );
 
 const messaging = new CoreMessaging();
@@ -44,6 +45,14 @@ async function Route(request) {
             return FlushDiffs();
         case "fill":
             return RunFill(request.params || {});
+        case "compose":
+            return RunCompose(request.params || {});
+        case "compose-list":
+            return { drafts: await ComposeStore.All() };
+        case "compose-accept":
+            return ComposeStore.Accept(request.params?.id, request.params?.text);
+        case "compose-reject":
+            return ComposeStore.Reject(request.params?.id);
         default:
             return { error: "unknown-title" };
     }
@@ -114,7 +123,52 @@ async function RunFill(params) {
         },
     });
 
-    return result;
+    const drafted = await ApplyAcceptedDrafts(params.tabId, domain, state.inventory);
+    return Object.assign(result, { drafted: drafted });
+}
+
+async function RunCompose(params) {
+    if (!params.tabId) return { error: "no-tab" };
+
+    const state = await TabSend(params.tabId, { title: "inventory" });
+    if (!state || state.error) return { error: state ? state.error : "no-content-script" };
+
+    const fields = state.inventory.filter(function (item) { return item.longText && !item.manual; });
+    if (!fields.length) return { error: "no-long-fields" };
+
+    const client = await LlmClient.Create();
+
+    const result = await ComposeLoop.Run({
+        client: client,
+        domain: state.domain,
+        resume: params.resumeText || "",
+        fields: fields,
+        guidance: params.guidance || "",
+    });
+    if (result.error) return result;
+
+    const drafts = ComposeStore.Merge(await ComposeStore.All(), result.drafts, state.domain);
+    await ComposeStore.Save(drafts);
+    return { drafts: drafts };
+}
+
+async function ApplyAcceptedDrafts(tabId, domain, inventory) {
+    const drafts = await ComposeStore.All();
+    let drafted = 0;
+
+    for (const draft of drafts) {
+        if (!draft.accepted || draft.domain !== domain) continue;
+
+        const entry = inventory.find(function (item) {
+            return item.longText && !item.manual && item.fieldKey === draft.fieldKey;
+        });
+        if (!entry) continue;
+
+        const result = await TabSend(tabId, { title: "apply-fill", params: { fieldId: entry.fieldId, value: draft.text } });
+        if (result && result.ok) drafted++;
+    }
+
+    return drafted;
 }
 
 function TabSend(tabId, message) {

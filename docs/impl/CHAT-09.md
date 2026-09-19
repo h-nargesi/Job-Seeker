@@ -1,6 +1,6 @@
 # Chat 9 — Phase 5.5 Compose
 
-**Status:** not started. **Depends on:** Chat 8.
+**Status:** done 2026-09-19. **Depends on:** Chat 8.
 
 ## Goal
 
