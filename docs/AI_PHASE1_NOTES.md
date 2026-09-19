@@ -18,7 +18,9 @@
 > dashboard category layout (D11), re-queue source-state guard (D12),
 > worker core-error protocol (D13), RubricTailor v1 (D14), `keywords`/
 > inventory payload formats (D15/D16), no `Enabled` config key (D17),
-> and the `installation.sh` schema-task correction.
+> and the `installation.sh` schema-task correction. Amended 2026-09-19:
+> two-layer tailoring (`ResumeText`, no `AiTitle`, inventory full-text
+> on editable slots).
 
 ## Core (core-decision-dotnet)
 
@@ -141,7 +143,8 @@
 - **`Controllers/Job.cs`** — `Revaluate` gains an optional `jobid` query
   param (D1.4): single-job force re-eval (ignores the `HumanEdited` guard;
   keeps the explicit `Rejected`/`Applied` guard; from phase 3 clears
-  `AiOptions`/`AiTitle`; disabled/hidden when `Content == null`; no param =
+  `AiOptions` and `ResumeText.proposal` (`live` survives; no `AiTitle`);
+  disabled/hidden when `Content == null`; no param =
   the global process unchanged; no locking vs a concurrent global run). New
   `Promote` action (D8): `POST /job/promote?jobid=` → `PromoteJob`.
 - **Master resume service** (new) — render `Views/resume.cshtml` with a
@@ -158,8 +161,10 @@
   `AiVerdict`, `AiReason`, `AiSeniority`, `AiSalaryMin/Max`, `AiCurrency`,
   `AiPeriod`, `AiWorkModel`, `AiContract`, `AiExperienceYears`, `AiSkills`
   (JSON via type-handler; enums as names), plus the phase-3 columns
-  `AiOptions` (JSON `ResumeContext`, existing type handler) and `AiTitle`
-  (TEXT, ≤ 80 chars) from day one (single release — D18, 2026-09-18).
+  `AiOptions` (JSON `ResumeContext`, existing type handler) and
+  `ResumeText` (JSON slot map: `live` / `proposal` / `status`) from day
+  one (single release — D18, 2026-09-18, amended 2026-09-19 — no
+  `AiTitle`).
   **No `AiState` column** (queue is
   `State = AiPending`). Enum member sets locked 2026-09-17 — identical in
   the model's JSON schema, the verdict validation and the columns:
@@ -178,8 +183,9 @@
   dependency); `job-option.sql` is untouched.
 - Fresh database on implementation — no row migration (phase-1 scope;
   phases 1–3 ship as a single release — rollout-granularity decision
-  (D18), 2026-09-18 — so the phase-3 `AiOptions`/`AiTitle` columns enter
-  `job.sql` from day one; no `ALTER TABLE` path).
+  (D18), 2026-09-18, amended 2026-09-19 — so the phase-3 `AiOptions` and
+  `ResumeText` columns enter `job.sql` from day one; no `ALTER TABLE`
+  path; no `AiTitle`).
 
 ## ai-worker (new console project, repo root)
 
@@ -256,7 +262,7 @@ injects the JobOption-derived `keywords` payload at `{{keywords}}`:
 > structured fields exactly as specified by the schema; use "Unknown" when
 > the posting does not say.
 
-## RubricTailor v1 (2026-09-18, D14)
+## RubricTailor v1 (2026-09-18, D14; amended 2026-09-19)
 
 The call-2 system prompt; ships as `Llm:RubricTailor` in the worker's
 appsettings (env-overridable like `Llm:Rubric`), sharing the same
@@ -266,25 +272,29 @@ inventory + context + JD): legal because `keywords` ships in `/ai/next`
 from phase 1 and is a constant (the global `JobOption` table), so the
 call-2 prefix stays cache-stable.
 
-> You tailor the candidate's resume for one job by **selection only**. You
-> receive the job description, the candidate's current resume context, and an
-> inventory of pre-written blocks (with selectors), summary segments, and
-> title variants. Choose the combination that best matches the job's keywords
-> and seniority. Rules: never invent, reword, or omit facts; select only
-> items that exist in the inventory; prefer fewer, highly relevant blocks;
-> you may propose a free-text job title only in the dedicated title field —
-> everything else must be a selection. Weight the candidate's keyword
-> priorities: {{keywords}}. When uncertain, keep the current selection.
+> You tailor the candidate's resume for one job in two layers. Layer 1 is
+> **selection**: choose among the inventory of pre-written blocks
+> (selectors), matching the job's keywords and seniority; prefer fewer,
+> highly relevant blocks; select only items that exist in the inventory.
+> Layer 2 is **proposed wording** for the closed slot set only — resume
+> title, summary paragraph, and existing job-description bullets. Rules:
+> never invent employers, dates, or new experience entries; reword a slot
+> only when selection is not enough; never emit HTML; title is a single
+> line. Proposed wording is a suggestion — it does not apply until the
+> human accepts it. Weight the candidate's keyword priorities:
+> {{keywords}}. When uncertain, keep the current selection and omit a
+> text proposal.
 
-## Payload details (2026-09-18, D15/D16)
+## Payload details (2026-09-18, D15/D16; inventory amended 2026-09-19)
 
 - **`keywords`** (`GET /ai/next`, phase 1): a standard JSON array of
   `{category, score, title}` objects derived from `JobOption`; the
   `reject` category is excluded (regex-side concern, wasted tokens);
   stable cached order (`FetchAll` order) for determinism.
-- **Inventory caps** (call 2, phase 3): per-item text excerpt ≤ 120
-  chars; no item-count cap — the template is finite and bounded by
-  design, and the existing JD tail-truncation absorbs any 16k overflow.
+- **Inventory caps** (call 2, phase 3): editable text slots (title,
+  summary, job-description bullets) ship **full** current template text;
+  other items keep excerpt ≤ 120 chars; no item-count cap. The 16k
+  per-call cap is unchanged; JD tail-truncation absorbs overflow.
 
 ## Forward-compatibility constraints (2026-09-17)
 
@@ -304,6 +314,5 @@ call-2 prefix stays cache-stable.
   gains an `AiPending` counter for data-driven floor tuning via
   `AppSetting` (2026-09-18, D9).
 - Phase-3 delta contract and `/ai/next` payload extension decided
-  2026-09-17 — see the "Phase-3 ambiguities resolved" row in
-  [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md); F1/F2 already anticipate
-  both.
+  2026-09-17, two-layer text overlay 2026-09-19 — see the decision log;
+  F1/F2 already anticipate the payload extension.

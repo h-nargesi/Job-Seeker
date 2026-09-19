@@ -177,7 +177,8 @@ should be processed. One run:
   D1.4) on job-detail force-re-evaluates one job: it ignores the phase-3
   `HumanEdited` guard (overwrites `Options` with the fresh regex context),
   keeps the explicit `Rejected`/`Applied` guard, and — from phase 3 —
-  clears `AiOptions`/`AiTitle`; disabled when `Content == null`; a
+  clears `AiOptions` and `ResumeText.proposal` (`live` text survives; no
+  `AiTitle`); disabled when `Content == null`; a
   floor-passing job returns to `AiPending` (accepted); no param = the
   global process unchanged; no locking vs a concurrent global run (regex
   is deterministic; last write wins). A **dashboard re-queue button**
@@ -241,7 +242,8 @@ should be processed. One run:
   format (`SimlpeSerialize`) is only the dashboard/client exchange
   format, which the worker never sees (wording corrected 2026-09-18) —
   and the template-derived block `inventory` (stable id = selector, type,
-  `key-*` tags, excerpt ≤ 120 chars per item, no item-count cap — D16;
+  `key-*` tags; editable text slots ship full template text, other items
+  excerpt ≤ 120 chars, no item-count cap — D16 as amended 2026-09-19;
   cached in memory like the master resume).
 - **Provider-agnostic by construction.** Because the worker's LLM client is a
   plain `HttpClient` speaking the OpenAI chat-completions protocol, any
@@ -262,7 +264,7 @@ At a glance (details in the subsections below):
 |---|-------|------|--------|------|
 | 4.1 | Semantic verdict / re-ranking | background | **High** — fixes the sharpest weakness: lexical scoring treats one ".NET" mention like a .NET-centric role; near-misses get a second chance | Low–medium — additive verdict columns + careful `Q_INDEX` v2 |
 | 4.2 | Structured extraction | background | **High** — replaces guesswork heuristics (`EvaluateSalaryScore`); enables dashboard filters on salary/work-model reality | Low — additive columns only; `Q_INDEX` untouched |
-| 4.3 | Resume tailoring delta | background (manual worker runs) | **Highest end value** — per-job customization, selection-only except the guarded title exception ([`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) §3) | Medium — new `Job.AiOptions` column + human review gate |
+| 4.3 | Resume tailoring delta | background (manual worker runs) | **Highest end value** — per-job customization: live selection plus accept-gated text in `ResumeText` ([`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) §3) | Medium — `Job.AiOptions` + `Job.ResumeText` + human text-accept |
 | 4.4 | Cross-platform deduplication | background | **Medium** — one posting listed on two agencies stops being scored twice | Low |
 | 4.5 | Dashboard digest stats | dashboard | **Low–medium** — closes the notification gap with no external service | Low — read-only over existing data |
 
@@ -402,9 +404,11 @@ The strongest free-text use case — see the companion doc
 1. The browser reaches the job page; the server scrapes the job description
    and scores it. The existing regex path already builds the initial
    `ResumeContext` (`Job.Options`) from the JD's keywords.
-2. The LLM refines that context into a reviewable delta stored in
-   `Job.AiOptions` — produced during manual `ai-worker` runs (§2.1), before
-   a human ever reviews the job.
+2. The LLM refines that context into a reviewable selection delta stored in
+   `Job.AiOptions`, and may propose title / summary / bullet wording into
+   `Job.ResumeText.proposal` — produced during manual `ai-worker` runs
+   (§2.1), before a human ever reviews the job. Text proposals never
+   render until accept/edit; selection is live immediately.
 3. The user opens `/job/resume?jobid=...` (or downloads the rendered HTML via
    `/job/resume64`) and **prints from the browser** (Brave). The view already
    carries `@media print` CSS, so it is print-ready as served. No server-side
@@ -480,7 +484,7 @@ verdict), matching the "leave the system running" usage pattern.
   button (job → `AiPending`) retries later (source states `AIError`/
   `NotApprovedAI` only + the `Content == null` guard — D12, §2.1).
 - **Two model calls per worker pass (decided 2026-09-11; phase-3 contract
-  2026-09-17).** Call 1 (always): verdict + extraction as one
+  2026-09-17, amended 2026-09-19).** Call 1 (always): verdict + extraction as one
   JSON-schema-constrained response — input: system rubric + candidate
   resume text + JD; output: `{ relevance, seniority, verdict, reason,
   salary_min/max, currency, period, work_model, contract,
@@ -489,25 +493,25 @@ verdict), matching the "leave the system running" usage pattern.
   (relevance ≥ `AiPassmark`, shipped in `/ai/next` `settings`); input:
   rubric + block inventory + current context + JD (all from `/ai/next`;
   the fixed candidate profile sits in the call-2 system prompt — its own
-  config key `Llm:RubricTailor`, D14, v1 draft in
-  [`AI_PHASE1_NOTES.md`](AI_PHASE1_NOTES.md)); inventory excerpts are
-  capped at ≤ 120 chars per item with no item-count cap (2026-09-18, D16
-  — the template is finite and bounded by design; the JD tail-truncation
-  absorbs any 16k overflow); the 16k
-  cap applies **per call**, JD tail-truncated. The worker posts the raw
-  delta inside `POST /ai/verdict`; the **core validates it** (keys ⊆
-  `MainKeys`; selectors ⊆ inventory and segments/variants ⊆ known template
-  ids — a whitelist, not syntax-only; length ∈ {1,2}; free-text title
-  single line ≤ 80 chars; caps ≤ 8 keys / ≤ 30 selectors), applies it onto
-  `Options` and stores the complete context in `AiOptions`, appending the
-  raw delta to `job.Log`. A delta still invalid after the worker's two
-  call-2 retries is dropped — the verdict applies alone; the core likewise
-  drops any delta arriving with a non-promoting or `Error` verdict
-  (`AIError` carries no delta — call 2 never runs after persistent call-1
-  failure). The two calls fail independently: a call-2 connection failure
-  aborts the run and writes nothing; a model-output failure retries twice,
-  then the verdict posts alone. Rejected jobs never pay for tailoring;
-  smaller schemas parse more reliably.
+  config key `Llm:RubricTailor`, D14, draft in
+  [`AI_PHASE1_NOTES.md`](AI_PHASE1_NOTES.md)); inventory: full template
+  text on editable slots (title / summary / job-description bullets),
+  ≤ 120 char excerpt on other items, no item-count cap (D16 as amended
+  2026-09-19); the 16k cap applies **per call**, JD tail-truncated — do
+  not raise the cap speculatively. The worker posts the raw payload
+  inside `POST /ai/verdict`; the **core validates independently**:
+  selection (`keys` ⊆ `MainKeys`; selectors ⊆ inventory — a whitelist,
+  not syntax-only; length ∈ {1,2}; caps ≤ 8 keys / ≤ 30 selectors)
+  applies onto `Options` and stores the complete context in `AiOptions`;
+  a valid `texts` map writes `ResumeText.proposal` (title one line ≤ 80
+  chars; no HTML). The raw payload is appended to `job.Log`. An invalid
+  texts map must not drop a valid selection delta. An invalid selection after the worker's two call-2 retries is
+  dropped — the verdict applies alone; the core likewise drops any delta
+  arriving with a non-promoting or `Error` verdict (`AIError` carries no
+  delta — call 2 never runs after persistent call-1 failure). The two
+  calls fail independently: a call-2 connection failure aborts the run
+  and writes nothing; a model-output failure retries twice, then the
+  verdict posts alone. Rejected jobs never pay for tailoring.
 - **Context length.** Configurable cap, **16k tokens to start** (32k
   acceptable), tuned by trial and error; budget: rubric (~1k) + master
   resume in full + JD remainder, an over-long JD truncated at its **tail**
@@ -529,16 +533,16 @@ verdict), matching the "leave the system running" usage pattern.
 | 0 | Topology (§2) — documentation only | Decided 2026-09-10: no standalone deliverable |
 | 1 | Verdict + extraction + ranking: `ai-worker` + `GET /ai/next` & `POST /ai/verdict` (built here) + additive verdict/extraction columns + `Q_INDEX` v2 (dashboard category layout per D11) + the sequential state machine (`NotApprovedRegex`/`AiPending`/`NotApprovedAI`; queue = `AiPending`, no `AiState` column) + near-miss retention (floor default 70) + new `AppSetting` table for the five settings (floor=70, aipassmark=60, scorecap=300, w_regex=0.35, w_ai=0.65 — D3) + per-client API keys (D7) + verdict fingerprint (D2) + emergency promote button (D8) + fresh DB (no migration) | Worker infra absorbed into phase 1; the ranking edit is the delicate part |
 | ~~2~~ | ~~Structured extraction columns~~ — **absorbed into phase 1** (2026-09-11: one worker pass produces verdict + extraction); dashboard filters deferred to phase 6 (2026-09-17) | Additive schema only |
-| 3 | Resume tailoring delta (`Job.AiOptions`, `Job.AiTitle`) — ambiguities resolved 2026-09-17 (decision log) | Review = user duty on job-detail (supersedes the earlier "review gate before `Applied`"); free-text title stays accept-gated |
+| 3 | Resume tailoring (`Job.AiOptions`, `Job.ResumeText`) — two-layer, 2026-09-19 (decision log) | Selection review = user duty on job-detail; text proposals stay accept-gated; no `AiTitle` |
 | 4 | Cross-platform dedup + daily digest | Read-only over existing data |
 | 5 | Apply assistant — browser on the AI station ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)) | New extension + `/assistant/*` endpoints; the human presses every submit |
 | 6 | Dashboard side-work (2026-09-17): filters over the extraction columns (design + implementation), bulk purge for `NotApprovedAI`/`AIError`, digest-count redefinition + `AiPending` counter for data-driven floor tuning (2026-09-18, D9) | Read-only over existing data; no browser/worker changes |
 
 Best value-to-risk is still **phase 1** (fixes lexical regex scoring;
 carries the worker, the structured extraction and the `Q_INDEX` v2 edit).
-The highest end value sits in **phase 3**: selection-only tailoring is the
-line between tailoring and fabrication
-([`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) §3).
+The highest end value sits in **phase 3**: live selection plus
+accept-gated text on a closed slot set is the line between tailoring and
+fabrication ([`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) §3).
 
 ## 8. Decision log
 

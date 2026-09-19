@@ -3,11 +3,11 @@
 > **Status: design proposal — not implemented.** Companion to
 > [`AI_INTEGRATION.md`](AI_INTEGRATION.md) (phase 3). Records the design for
 > LLM-driven, per-job resume customization, including the decided delivery
-> step (§6): the tailored resume is printed manually from the browser, and
-> the decided selection-only summary (§3). No AI code exists yet. Amended
-> 2026-09-17: phase-3 ambiguities resolved — see the decision log
-> ([`AI_DECISION_LOG.md`](AI_DECISION_LOG.md), "Phase-3 ambiguities
-> resolved").
+> step (§6): the tailored resume is printed manually from the browser.
+> Two-layer tailoring (2026-09-19): selection stays live; accept-gated
+> text lives in `Job.ResumeText`. No AI code exists yet. Amended
+> 2026-09-17 then 2026-09-19 — see the decision log
+> ([`AI_DECISION_LOG.md`](AI_DECISION_LOG.md)).
 
 ## 1. How the resume works today (the part that matters)
 
@@ -27,17 +27,25 @@ possible resume variant, and the delivered resume is produced by pruning it:
   single bullet is addressable today, e.g.
   `#system-group-total li:nth-child(3)`, with zero template changes.
 
-So customization today = **selection over a fixed superset**, never text
-generation. That is exactly the hook the LLM plugs into.
+So **selection** today = pruning a fixed superset, never text generation.
+That remains layer 1. Layer 2 (2026-09-19) is a separate per-slot text
+overlay (`Job.ResumeText`) for the resume title, the summary paragraph,
+and job-description bullets — never HTML, never new employers or dates.
 
-Decided (2026-09-10): this mechanism does not change. The AI delta reuses
-the same `ResumeContext` structure in `Job.AiOptions` (a second
-ResumeContext — no new inventory table), the view resolves
+Decided (2026-09-10, selection path unchanged 2026-09-19): the AI
+selection delta reuses `ResumeContext` in `Job.AiOptions` (no new
+inventory table). The view resolves
 `Options.HumanEdited ? Options : (AiOptions ?? Options)` (2026-09-11, §6),
-and the block inventory for the prompt is derived from the template
-automatically at runtime.
+then applies `ResumeText.live` over title / summary / bullets. The block
+inventory for the prompt is derived from the template at runtime.
 
-## 2. The pattern: the LLM produces a ResumeContext *delta*, not HTML
+`Job.Options` is standard JSON via `ResumeContextTypeHandler`; it is the
+regex-built (or human-edited) selection context and is **not** left empty
+until a human edits — emptying it would drop the regex baseline after
+`Html`/`Content` purge. The `HumanEdited` flag stays the signal that the
+human owns selection.
+
+## 2. Layer 1: the LLM produces a ResumeContext *delta*, not HTML
 
 Do not put the model on the raw template (a large single file with inline
 JS/CSS — a quantized model will mangle it, and diffs become unreviewable).
@@ -55,36 +63,35 @@ job description (plain text)
   "notIncluded":  ["#system-group-total", ".key-front-end",
                     "#web-sites li:nth-child(2)"],
   "length":       2,
-  "summaryOn":    ["java-backend", "14-years", "distributed"],
-  "titleVariant": "java-backend"
+  "texts": {
+    "title":   "Senior Java Backend Engineer",
+    "summary": "…rewritten summary…",
+    "#douran li:nth-child(2)": "…rewritten bullet…"
+  }
 }
 ```
 
-*Illustrative only (corrected 2026-09-17 — decision log, "Phase-3
-ambiguities resolved"): the final delta contract is `keys`,
-`included`/`notIncluded` selectors, `length` — plus summary-segment and
-title-variant selection expressed as template-element selections, and an
-optional guarded free-text title string. The `summaryOn`/`titleVariant`
-context fields shown above are dropped (no new `ResumeContext` fields). The
-**core** applies the delta onto `Job.Options` and stores the complete
-resulting context in `Job.AiOptions`; the worker only posts the raw delta
-inside `POST /ai/verdict`.*
+*Illustrative (2026-09-19):* the selection half is `keys`,
+`included`/`notIncluded` selectors, `length`. The optional `texts` map is
+**not** stored on `ResumeContext`; the core writes proposals into
+`Job.ResumeText`. The dropped `summaryOn`/`titleVariant` context fields
+stay dropped. There is **no** `Job.AiTitle` column — title is the
+`title` slot in `ResumeText`. The **core** applies a valid selection
+delta onto `Job.Options` and stores the complete context in
+`Job.AiOptions`; a valid `texts` map writes `proposal` fields; the two
+halves validate independently (an invalid texts map must not drop a valid
+selection delta). The worker posts the raw combined payload inside
+`POST /ai/verdict`.
 
-The delta is applied to a **separate** `Job.AiOptions` field; rendering and
-template stay unchanged. The resume view resolves
-`Options.HumanEdited ? Options : (AiOptions ?? Options)` (§6), so the
-regex-built context always remains the fallback.
-
-Why this beats HTML editing:
+Why selection still beats HTML editing:
 
 1. **Layout cannot break** — the model never touches CSS/JS.
-2. **Facts cannot be invented** — the model can only select among real,
-   pre-written blocks; it cannot create experience, employers, dates, or
-   numbers. On a factual document like a resume, that is the line between
-   tailoring and fabrication.
-3. **Reviewable** — the delta is a few lines, previewable on the dashboard.
-4. **Reversible** — `ResumeContext.Version` (currently 42) is the existing
-   versioning hook; the delta lives beside the original, never over it.
+2. **Facts cannot be invented by selection** — the model can only choose
+   among real, pre-written blocks for which articles and chips appear.
+3. **Reviewable** — the selection delta is a few lines; text proposals
+   are per-slot diffs on job-detail.
+4. **Reversible** — `AiOptions` sits beside `Options`; `ResumeText`
+   proposals sit beside `live` (or the template default).
 
 ### The levers `ResumeContext` already exposes
 
@@ -100,56 +107,77 @@ Why this beats HTML editing:
 *Correction (2026-09-17): `MORE` is not a `ResumeContext` lever — it is a
 template JS constant (`Views/resume.cshtml`) fed from job-option keywords.
 Delta-contract whitelist: the model may set `Keys`, `Included`/
-`NotIncluded`, `Length` and select summary/title template elements;
-`INPUT_DATA`, `Elements` and `PageBreak` are human-only.*
+`NotIncluded`, `Length`; `INPUT_DATA`, `Elements` and `PageBreak` are
+human-only. Text slots are not ResumeContext levers — they live in
+`ResumeText` (§3).*
 
-## 3. Selection over pre-written text — the summary becomes segmented
+## 3. Layer 2: accept-gated text in `Job.ResumeText`
 
-Decided (2026-09-10): the model never writes free text (one guarded,
-title-only exception — 2026-09-11, below). The two former free-text slots
-become selection problems:
+Decided (2026-09-19), superseding selection-only end-to-end
+(2026-09-10) and the `AiTitle` column (2026-09-11 / 2026-09-17): the
+model may **propose** free text for a closed set of slots, and the human
+may write the same slots. Proposals **never render unaccepted**.
 
-- **Summary** — becomes a multi-variant segmented paragraph: pre-written,
-  `key-*`-tagged sentences the model (or the user) turns on/off, exactly
-  like blocks. The hardcoded ".NET Core, Angular, SQL Server" lead
-  disappears behind variants aligned with the enabled `keys`. The template
-  renders the enabled segments from the ResumeContext.
-- **JobTitle** — decided (2026-09-11): fixed pre-written headline variants
-  selected by the enabled keys; copying the raw `job.Title` is dropped. One
-  bounded exception: the model may *propose* free text for the title slot
-  only. Pending-title mechanism (2026-09-17, replacing the earlier
-  "acceptable because the review gate approves every delta" rationale): the
-  proposal lives in an additive `Job.AiTitle` column (single line ≤ 80
-  chars) and **never renders unaccepted** — until explicit acceptance the
-  selected/default variant renders; accepting writes it into
-  `AiOptions.JobTitle` and clears the column. Guards: (a) title only — the
-  summary and every other slot stay strictly selection-only (multi-line
-  prose carries higher fabrication risk and is harder to review); (b) the
-  job-detail diff UI flags the pending title as free text with explicit
-  accept/reject actions; (c) server-side validation enforces a single line
-  ≤ 80 chars. Template details settle in the phase-3 build.
+Slots (closed set):
+
+1. Resume title (`title`) — one line, ≤ 80 chars (the old `AiTitle` cap).
+2. Summary / intro (`summary`) — the English summary paragraph. The
+   segmented-summary plan (pre-written `key-*` sentences) is dropped.
+3. Job-description bullets — existing `<li>` selectors only.
+
+`Job.ResumeText` is one JSON column (map of slot id → record). Slot ids
+are `title`, `summary`, or a CSS selector that addresses one `<li>`. Each
+record:
+
+| Field | Meaning |
+|-------|---------|
+| `live` | Text that renders (human-written or accepted AI). Null → template default for that slot. |
+| `proposal` | AI suggestion. Null when none. **Never rendered.** |
+| `status` | `pending` / `accepted` / `rejected` |
+
+Rules (locked):
+
+- AI writes only `proposal` (and `pending`). It does not overwrite `live`
+  when the slot is `accepted` or human-owned.
+- Accept copies `proposal` → `live`, sets `accepted`. This is **not** a
+  selection accept and does **not** set `ResumeContext.HumanEdited`.
+- Reject sets `rejected`; render uses the template default; a re-run must
+  not immediately restore the same proposal.
+- Human edit writes `live` and `accepted` (source is the human).
+- Regex eval never touches `ResumeText`. Force Revaluate (D1.4) clears
+  `AiOptions` and all `proposal` fields; `live` text survives.
+- Render: resolve selection (`Options.HumanEdited ? Options :
+  (AiOptions ?? Options)`), then overlay every `live` value. Pending and
+  rejected never appear — including on `GET /assistant/jobs` resume text.
+
+The 2026-09-17 "accept = full copy into `Options`, never a field-wise
+merge" rule still applies to **selection** only.
+
+Call-2 inventory (amends D16): items that are editable slots carry their
+**full current template text**. Other inventory items keep the ≤ 120 char
+excerpt. No item-count cap. The 16k per-call cap is unchanged; overflow
+still tail-truncates the JD. Do not raise the cap speculatively.
 
 ## 4. Guardrails (non-negotiable)
 
-1. **Selection only.** The model chooses among pre-written blocks and
-   summary/title variants. It never writes free text (the guarded
-   title-only exception of §3 aside), and never adds experience entries,
-   employers, dates, or metrics.
-2. **Human in the loop — user duty on job-detail (2026-09-17).**
-   *Supersedes the earlier rule 2 ("previewed on the dashboard and must be
-   approved before a job moves to `Applied`") — decision log, "Phase-3
-   ambiguities resolved".* There is no mechanical approval step for
-   selection deltas: they are live immediately, and reviewing/adjusting
-   them before going to the apply page is the user's duty, performed on the
-   job-detail page — the only UI path to the resume (resume links exist
-   nowhere else). The free-text title is the sole exception: it never
-   renders unaccepted (§3).
+1. **Selection is live; text is gated.** The model chooses among
+   pre-written blocks (`keys` / `included` / `notIncluded` / `length`).
+   Free text is allowed only as `ResumeText` proposals for the closed
+   slot set in §3. The model never adds experience entries, employers, or
+   dates, and never edits HTML/CSS/JS.
+2. **Human in the loop — user duty on job-detail (2026-09-17), text
+   accept-gated (2026-09-19).** There is no mechanical approval step for
+   selection deltas: they are live immediately; reviewing/adjusting them
+   before apply is the user's duty on job-detail (the only UI path to the
+   resume). Every text proposal stays pending until explicit
+   accept / reject / edit.
 3. **Versioned and reversible.** `Job.AiOptions` is stored separately from
    `Options`; deleting the delta falls back to the regex-built context.
+   Clearing a `ResumeText.live` value falls back to the template slot.
 
 ## 5. If direct HTML surgery is ever needed
 
-The safe variant, should block-level selection ever prove insufficient:
+The safe variant, should the two layers ever prove insufficient:
 
 - The model emits whitelisted operations only —
   `hide(selector)` / `remove(selector)` / `setText(selector, text)` — and
@@ -158,8 +186,9 @@ The safe variant, should block-level selection ever prove insufficient:
   see `JobEligibilityHelper.GetTextContent`), never touching `<script>` or
   `<style>`, and validates the result.
 
-This is strictly weaker than the delta pattern — it bypasses `Job.Options`
-and the template's own show/hide logic — so treat it as a last resort.
+This is strictly weaker than the delta + `ResumeText` pattern — it
+bypasses `Job.Options` and the template's own show/hide logic — so treat
+it as a last resort.
 
 ## 6. Flow
 
@@ -169,33 +198,36 @@ Job (State = Attention)
    ▼
 ai-worker call 2 (AI_INTEGRATION.md §6; runs only when the verdict
      promotes to Attention — threshold = AiPassmark)
-     input: rubric + block inventory + current context + JD
+     input: rubric + block inventory (full text on editable slots)
+           + current context + JD
    │
    ▼
-delta JSON  (keys / included & notIncluded selectors / length /
-     summary-segment & title-variant selection)
+combined JSON  (selection: keys / included & notIncluded / length;
+     texts: title / summary / li-selector → proposed wording)
    │
    ▼
-POST /ai/verdict — the CORE validates the delta, applies it onto the
-     regex-built Options and stores the complete context in Job.AiOptions
-     (new column; Options kept as fallback; raw delta appended to job.Log)
+POST /ai/verdict — the CORE independently:
+     • validates the selection delta, applies it onto the regex-built
+       Options, stores the complete context in Job.AiOptions
+     • validates the texts map, writes ResumeText.proposal (pending)
+     raw payload appended to job.Log
    │
    ▼
-job-detail page: field-level diff AiOptions vs Options — review and
-     adjustment is the user's duty (no approval step; the only UI path
-     to the resume)
+job-detail: selection diff is the user's duty (live, no approval);
+     text proposals are accept / reject / edit (never live until then)
    │
    ▼
-resume view renders Options.HumanEdited ? Options : (AiOptions ?? Options)
+resume view renders selection, then overlays ResumeText.live
    │
    ▼
 /job/resume?jobid=...
    │
    ▼
-user prints from the browser (Brave print dialog) — @media print CSS is in the template
+user prints from the browser — @media print CSS is in the template
 ```
 
-Decided (2026-09-11) — human/AI coexistence, three layers:
+Decided (2026-09-11) — human/AI coexistence on **selection**, unchanged
+2026-09-19:
 
 - `ResumeContext` gains a `HumanEdited` flag inside the stored JSON (the
   `Version` constant bumps with it). The flag round-trips through
@@ -204,17 +236,18 @@ Decided (2026-09-11) — human/AI coexistence, three layers:
   `Job.Options` itself is stored as standard JSON via
   `ResumeContextTypeHandler` (`SqliteTypeHandlers.cs`) (wording
   corrected 2026-09-18).
-- Rendering precedence: `Options.HumanEdited ? Options : (AiOptions ??
-  Options)` — a human edit always wins; otherwise the AI delta; otherwise
-  the regex-built context.
-- AI writes only `AiOptions`, never `Options`; human edits keep writing
-  `Options` through the existing `JobController.Options` → `ChangeOptions`
-  path. After a human edit, newer AI suggestions appear on the job-detail
-  page as a diff with an explicit accept action; accepting is a **full
-  copy** into `Options` (sets `HumanEdited`) — never a field-wise merge
-  (2026-09-17). A re-run rewrites `AiOptions`, unless
+- Rendering precedence for selection: `Options.HumanEdited ? Options :
+  (AiOptions ?? Options)` — a human selection edit always wins; otherwise
+  the AI delta; otherwise the regex-built context. `Options` is never
+  used as a "nullable until human edits" store.
+- AI writes only `AiOptions`, never `Options`; human selection edits keep
+  writing `Options` through the existing `JobController.Options` →
+  `ChangeOptions` path. After a human selection edit, newer AI suggestions
+  appear on the job-detail page as a diff with an explicit accept action;
+  accepting is a **full copy** into `Options` (sets `HumanEdited`) — never
+  a field-wise merge (2026-09-17). A re-run rewrites `AiOptions`, unless
   `Options.HumanEdited` — then the new suggestion stays a diff-only
-  proposal.
+  proposal. Text accept/reject is independent (§3).
 
 `Applied` stays a user action; both report paths (dashboard button,
 `POST /assistant/applied`) are idempotent and `job.Log` records the source

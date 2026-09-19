@@ -130,10 +130,11 @@ Drop the job's HTML/content and mark it `Rejected`.
 
 ### `POST /job/options?jobid=` (body: serialized `ResumeContext`)
 Replace the resume-keyword context (Options) computed for a job. Returns the
-re-serialized context.
+re-serialized context. Selection only — text overlays live in `ResumeText`.
 
 ### `GET /job/resume?jobid=`
-Render the tailored resume HTML for a job (uses stored Options).
+Render the tailored resume HTML for a job (selection from Options/AiOptions,
+then `ResumeText.live` overlay).
 
 ### `GET /job/resume64?jobid=`
 Same resume, returned as a downloadable `.html` file attachment.

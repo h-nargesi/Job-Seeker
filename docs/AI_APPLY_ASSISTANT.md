@@ -171,7 +171,7 @@ There is deliberately no structured profile table. Each Fill prompt carries
 the job's resume as plain text — the resume already is the source of truth
 for name, contacts, and history. The text is produced server-side
 (`GET /assistant/jobs` renders `Options.HumanEdited ? Options :
-(AiOptions ?? Options)` and strips tags with
+(AiOptions ?? Options)`, overlays `ResumeText.live`, and strips tags with
 HtmlAgilityPack, already a dependency); resume HTML never reaches the
 extension. Facts outside the resume (salary expectation, tone, relocation)
 arrive through chat and diffs and persist as memory. Human corrections
