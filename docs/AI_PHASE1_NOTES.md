@@ -20,7 +20,9 @@
 > inventory payload formats (D15/D16), no `Enabled` config key (D17),
 > and the `installation.sh` schema-task correction. Amended 2026-09-19:
 > two-layer tailoring (`ResumeText`, no `AiTitle`, inventory full-text
-> on editable slots).
+> on editable slots). Amended 2026-09-19: F3 = key⇒role table (not
+> `X-Client` gating); `Q_CLEAN_NOT_APPROVED` `WHERE` is three states,
+> re-queue button remains two (D12).
 
 ## Core (core-decision-dotnet)
 
@@ -76,9 +78,10 @@
   NotApprovedRegex, AIError, Saved/Revaluation — actionable rows on top,
   bulk/informational bands below. Cleanup family: `Q_CLEAN` (deletes old
   non-Applied — bounds queue history), `Q_CLEAN_ATTENTION` (top-100 Html
-  retention), `Q_CLEAN_NOT_APPROVED` (content purge → must cover
-  `NotApprovedRegex`, `NotApprovedAI` **and `AIError`** — today it matches
-  only `NotApproved`). New typed methods: `FetchNextAiPending` (oldest by
+  retention), `Q_CLEAN_NOT_APPROVED` (content purge `WHERE` → `NotApprovedRegex`,
+  `NotApprovedAI` **and `AIError`** — today it matches only `NotApproved`;
+  D12's "exactly these two" is the re-queue **button**, not this `WHERE`
+  — 2026-09-19 lock). New typed methods: `FetchNextAiPending` (oldest by
   `JobID`, read-only, **`Content IS NOT NULL` defensive filter** — D12;
   response carries the job text, the master resume text, a JobOption-derived
   `keywords` field — 2026-09-17; a standard JSON array of
@@ -304,7 +307,7 @@ call-2 prefix stays cache-stable.
 |---|-------------------------------------|
 | F1 | Prompts assembled in ai-worker from labeled blocks; `/ai/next` ships data only (phase 3 extends the payload; phase 5 injects **confirmed** ranking-memory into call 1 and **confirmed** resume-memory into call 2, snapshotted at worker **run start** — 2026-09-19). No `memory[]` on `POST /ai/verdict`. |
 | F2 | `/ai/verdict` validation ignores an absent `delta`, never rejects it (phase 3 activates it) |
-| F3 | `X-Client` role registration data-driven in `Program.cs` (phase 5 adds `assistant` + `/assistant/*` as a registration) |
+| F3 | Key⇒role⇒paths table data-driven in `Program.cs` `Authorized` (D7: matching `Auth:ApiKeys:*` is the role; `X-Client` logging only, never an allow/deny `if`). Phase 5 adds one row: `Assistant` → `/assistant/*` + `GET /decision/scopes`. Absent header grants nothing (2026-09-19 lock). |
 | F4 | No order-dependent `JobState` logic — explicit `is Rejected or Applied` checks only (phase 4 adds `Duplicated`) |
 | F5 | Master-resume prune/strip built as a reusable helper (phases 3/5 reuse the pattern) |
 | F6 | Superseded 2026-09-18 (D7): per-client keys ship in phase 1 — `Auth:ApiKeys:Dashboard/Search/Worker`; key ⇒ role with path rules in `Program.cs`; `X-Client` informational/logging only. Phase 5 adds `Auth:ApiKeys:Assistant` as a registration (F3) |

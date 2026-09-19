@@ -187,10 +187,12 @@ should be processed. One run:
   or `NotApprovedAI` **only** — never from `Attention` (the per-job
   Revaluate button already covers its return to the queue), `Rejected`,
   `Applied`, or `Saved`; it is disabled/hidden when `Content == null`
-  (the manual `Clean` button's 7-day `Q_CLEAN_NOT_APPROVED` purges the
-  content of exactly these two states), and `FetchNextAiPending`
-  defensively filters `Content IS NOT NULL` — a contentless job must
-  never reach a verdict (consistent with D2's mismatch rule).
+  (after the 7-day `Q_CLEAN_NOT_APPROVED` those two re-queue sources
+  can lack content — the SQL `WHERE` still covers the full rejected
+  family including `NotApprovedRegex`; 2026-09-19 lock), and
+  `FetchNextAiPending` defensively filters `Content IS NOT NULL` — a
+  contentless job must never reach a verdict (consistent with D2's
+  mismatch rule).
 - **Rejected alternative: tunnels** (Tailscale, cloudflared, SSH reverse)
   would restore core→AI reachability and allow an in-core worker calling
   `llama-server` remotely. Rejected for Phase 0: extra infrastructure to keep

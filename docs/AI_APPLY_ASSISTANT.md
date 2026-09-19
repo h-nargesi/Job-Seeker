@@ -233,24 +233,13 @@ arrive through chat and diffs. The system converges without a profile form.
 | `/assistant/memory` CRUD | assistant | learning memory (including confirm / edit / delete) |
 | `GET /decision/scopes` | both roles | domain list (the assistant matches narrowly) |
 
-`X-Client` role rules: `assistant` is rejected on `/decision/take`; `search`
-is rejected on `/assistant/*` writes; `worker` (`ai-worker`) is restricted
-to `/ai/*`; **absent header = legacy search** (current extension versions
-send none); the search extension sends `X-Client: search` starting in
-phase 1 (decided 2026-09-11 — one-line change, single deployment).
-
-*(2026-09-18 note, rework in the phase-5 pass: with per-client keys
-decided for phase 1 — `AI_DECISION_LOG.md` D7 — role gating is by **key**,
-not by the `X-Client` header. `X-Client` stays informational/logging only,
-and phase 5 adds `Auth:ApiKeys:Assistant` as a registration (F3). The
-"absent header = legacy search" rule and the per-role rejections above
-describe the superseded header-gating model.)*
-
-Decided (2026-09-18): the phase-5 `Auth:ApiKeys:Assistant` key follows D7
-with path rules — allowlisted to `/assistant/*` (all methods: jobs list,
-applied report, memory CRUD) and `GET /decision/scopes`; no `/ai/*`, no
-`/decision/take`. Path-based rules only (`/decision/scopes` is a GET-only
-route), implemented as an F3 registration in the data-driven role table.
+Role gating is the matching `Auth:ApiKeys:*` secret (D7), not `X-Client`.
+The assistant sends `X-Client: assistant` for logs only; an absent header
+grants nothing. Phase 5 registers `Auth:ApiKeys:Assistant` in the F3
+key⇒role⇒paths table: `/assistant/*` (jobs list, applied report, memory
+CRUD) and `GET /decision/scopes`; no `/ai/*`, no `/decision/take`.
+Path-based rules only (`/decision/scopes` is a GET-only route) — a
+registration, not a middleware rewrite (F3 locked 2026-09-19).
 
 ## 7. Out of scope v1 / phase 5.5
 
