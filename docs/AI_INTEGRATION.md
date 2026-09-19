@@ -18,7 +18,8 @@
 > config cleanup) — see the decision log's 2026-09-18 entries.
 
 Related: [`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) (phase 3 detail),
-[`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) (phase 5 detail).
+[`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) (phase 5 detail; 5.5 Compose
+policy).
 Decisions: [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md). Implementation
 pointers: [`AI_PHASE1_NOTES.md`](AI_PHASE1_NOTES.md).
 
@@ -204,7 +205,9 @@ should be processed. One run:
   **permanent localhost**: the phase-5 assistant runs on the same host and
   shares the instance with the worker (`--parallel 2`, two independent
   clients; the total context `-c` splits across slots — provision ≥ ~32k:
-  worker 16k + assistant ~8k). No interface binding, reverse proxy, or
+  worker 16k + assistant ~8k). **No worker/assistant mutex** (2026-09-19):
+  the user chooses when to run the worker; overlapping use is allowed;
+  shared GPU latency is accepted. No interface binding, reverse proxy, or
   home-LAN trust assumption remains.
 - `ai-worker` client: a plain `HttpClient` + JSON. No new package
   dependencies on the core.
@@ -365,13 +368,13 @@ migration, no backfill. Purge candidacy is `NotApprovedAI` and `AIError`
 (§6).
 
 Ranking feedback (2026-09-19, [`GLOSSARY.md`](GLOSSARY.md)): there is **no
-override log**. The F1 memory-injection slot is a labeled block of
-**confirmed** `Scope = ranking` rows, snapshotted at **worker run start**
-(D6 determinism / prefix cache). Unconfirmed rows and `job.Log` audit
-lines are not injected. `POST /ai/verdict` has no `memory[]` field; the
-worker does not write memory. `memorycap` limits how many confirmed rows
-are sent, not how many are stored. See
-[`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) §4.
+override log**. The F1 memory-injection slots are labeled blocks
+snapshotted at **worker run start** (D6 determinism / prefix cache):
+**confirmed** `Scope = ranking` into call 1, **confirmed** `Scope = resume`
+into call 2. Unconfirmed rows and `job.Log` audit lines are not injected.
+`POST /ai/verdict` has no `memory[]` field; the worker does not write
+memory. `memorycap` limits how many confirmed rows are sent, not how many
+are stored. See [`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) §4.
 
 ### 4.2 Structured extraction
 
@@ -525,8 +528,9 @@ verdict), matching the "leave the system running" usage pattern.
   acceptable), tuned by trial and error; budget: rubric (~1k) + master
   resume in full + JD remainder, an over-long JD truncated at its **tail**
   — requirements live early (clarified 2026-09-17). The ranking prompt also
-  carries the resume text (§4.1) and, from phase 5, a snapshot of confirmed
-  ranking memory (F1). Worker calls time out at 120 s;
+  carries the resume text (§4.1) and, from phase 5, snapshots of confirmed
+  ranking memory (call 1) and resume memory (call 2) (F1). Worker calls
+  time out at 120 s;
   connection failures abort the whole run and write nothing (error classes
   per the 2026-09-17 decision-log entry).
 - **Core-error protocol (2026-09-18, D13).** `GET /ai/next`: any network
@@ -545,8 +549,9 @@ verdict), matching the "leave the system running" usage pattern.
 | ~~2~~ | ~~Structured extraction columns~~ — **absorbed into phase 1** (2026-09-11: one worker pass produces verdict + extraction); dashboard filters deferred to phase 6 (2026-09-17) | Additive schema only |
 | 3 | Resume tailoring (`Job.AiOptions`, `Job.ResumeText`) — two-layer, 2026-09-19 (decision log) | Selection review = user duty on job-detail; text proposals stay accept-gated; no `AiTitle` |
 | 4 | Cross-platform dedup + daily digest | Read-only over existing data |
-| 5 | Apply assistant — browser on the AI station ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)) | New extension + `/assistant/*` endpoints; the human presses every submit |
-| 6 | Dashboard side-work (2026-09-17): filters over the extraction columns (design + implementation), bulk purge for `NotApprovedAI`/`AIError`, digest-count redefinition + `AiPending` counter for data-driven floor tuning (2026-09-18, D9), **memory dashboard** (confirm / edit / delete / summarize / `memorycap` warning — 2026-09-19) | Read-only over existing data plus memory CRUD already on the core; no browser/worker changes |
+| 5 | Apply assistant — browser on the AI station ([`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md)): generic DOM Fill, memory UI in the assistant, dual Applied marks, page modes | New extension + `/assistant/*`; human presses every submit; per-site adapters later |
+| 5.5 | Compose — accept-gated long-form (cover letter / screening essays) then fill (policy 2026-09-19; not built with phase 5) | Same assistant; still no submit tool |
+| 6 | Dashboard side-work (2026-09-17): filters over the extraction columns (design + implementation), bulk purge for `NotApprovedAI`/`AIError`, digest-count redefinition + `AiPending` counter for data-driven floor tuning (2026-09-18, D9). Memory UI is **phase 5** (2026-09-19), not this phase. | Read-only over existing data; no browser/worker changes |
 
 Best value-to-risk is still **phase 1** (fixes lexical regex scoring;
 carries the worker, the structured extraction and the `Q_INDEX` v2 edit).

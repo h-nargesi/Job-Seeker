@@ -213,8 +213,9 @@
   network error → abort the run. Loop-safety: prevents an endless loop
   on the same oldest `AiPending` job.
 - Prompts are assembled worker-side from labeled blocks in stable order —
-  rubric → keywords → [reserved slot: phase-5 **confirmed** ranking-memory
-  snapshot at run start] → resume →
+  rubric → keywords → [reserved slots: phase-5 **confirmed** ranking-memory
+  snapshot at run start (call 1); **confirmed** resume-memory snapshot at
+  run start (call 2)] → resume →
   JD (F1) — keeping the shared prefix cache-friendly; `/ai/next` ships
   data only (job text, master resume, `keywords` — a standard JSON array
   of `{category, score, title}` objects, `reject` category excluded,
@@ -301,7 +302,7 @@ call-2 prefix stays cache-stable.
 
 | # | Constraint (protects a later phase) |
 |---|-------------------------------------|
-| F1 | Prompts assembled in ai-worker from labeled blocks; `/ai/next` ships data only (phase 3 extends the payload; phase 5 injects a **confirmed** ranking-memory block, snapshotted at worker **run start** — 2026-09-19). No `memory[]` on `POST /ai/verdict`. |
+| F1 | Prompts assembled in ai-worker from labeled blocks; `/ai/next` ships data only (phase 3 extends the payload; phase 5 injects **confirmed** ranking-memory into call 1 and **confirmed** resume-memory into call 2, snapshotted at worker **run start** — 2026-09-19). No `memory[]` on `POST /ai/verdict`. |
 | F2 | `/ai/verdict` validation ignores an absent `delta`, never rejects it (phase 3 activates it) |
 | F3 | `X-Client` role registration data-driven in `Program.cs` (phase 5 adds `assistant` + `/assistant/*` as a registration) |
 | F4 | No order-dependent `JobState` logic — explicit `is Rejected or Applied` checks only (phase 4 adds `Duplicated`) |

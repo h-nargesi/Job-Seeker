@@ -6,7 +6,7 @@
 > forms, driven by a local LLM and a learning memory stored on the core. No
 > assistant code exists yet; `assistant-extension/` is a planned directory.
 > Amended 2026-09-18: the assistant runs on the AI station host (no LAN
-> leg); the phase-5 decisions are recorded in
+> leg). Amended 2026-09-19: phase-5 product close in
 > [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md).
 
 ## 1. Stations: a browser on the AI station, a second extension
@@ -15,7 +15,8 @@ The assistant adds a browser to the deployment topology
 (AI_INTEGRATION.md §2): the search extension keeps scanning job boards on
 the **search terminal**, while the assistant lives in a browser **on the
 AI station host** (decided 2026-09-18 — the planned separate "personal
-terminal" machine is dropped), where apply forms are opened and filled.
+terminal" machine is dropped), where apply forms and the dashboard
+job-detail pages are opened.
 
 **Never both extensions in one browser.** This is structural, not
 preference: the search extension injects `check-page.js` on `*://*/*`
@@ -40,13 +41,18 @@ sensitive data, so hosted LLM endpoints are never used by the assistant,
 and running it anywhere other than the AI station host is out of scope
 (no hosted fallback).
 
+Worker and assistant are independent clients of the same `llama-server`
+(`--parallel 2`). There is **no mutex** (2026-09-19): the user chooses
+when to run the worker; overlapping use is allowed; shared GPU latency
+is accepted. Docs must not imply a night-worker / day-assistant split.
+
 ## 2. The decided flow (human-triggered)
 
 ```
 user picks an Attention job in the assistant popup
-   │  (list + resume text via GET /assistant/jobs)
+   │  (list + resume_text + pending-proposal warning via GET /assistant/jobs)
    ▼
-user reviews the resume, opens the job's apply page
+user reviews the resume (live overlay only), opens the apply page
    ▼
 user presses Fill ──► assistant extracts the form inventory
    │                   (DOM controls: field_id, tag, type, label, options)
@@ -58,22 +64,53 @@ agentic tool loop (llama-server, localhost, same host):
    ▼
 user reviews, corrects fields, submits the form   ← the only submitter
    ▼
-assistant diffs AI values vs final values → offers memory corrections
-user tips in the chat → LLM writes memory rows
+assistant diffs AI values vs final values → unconfirmed corrections
+user tips in the chat → Confirmed = true tips (see §4)
    ▼
-user confirms → POST /assistant/applied → State = Applied
+user marks Applied on the assistant popup and/or job-detail
 ```
 
 - **No new `JobState` value in v1.** Jobs stay `Attention` until the user
-  confirms submission; abandoning a form writes nothing.
-- **Multi-step forms** (Workday-style wizards): Fill acts on the currently
-  visible step only; the inventory is re-extracted on every Fill press.
+  marks Applied; abandoning a form writes nothing.
+- **Multi-step forms:** Fill acts on the currently visible step only; the
+  inventory is re-extracted on every Fill press. Fill, Next, and the
+  site's Submit never change `JobState`.
+- **Applied is human-only (2026-09-19, extends 2026-09-18 dual path).**
+  After the user believes the application was sent, they mark Applied on
+  **job-detail** (`POST /job/apply`) **and/or** the assistant popup
+  (`POST /assistant/applied`). Both are idempotent; `job.Log` records the
+  source. Never inferred from Fill, wizard step, or the ATS submit
+  button.
 - **File-upload fields** are listed in the inventory but stay manual in v1
   (content scripts cannot set `input[type=file]`).
+- **Generic Fill (2026-09-19).** Phase 5 success is the universal DOM
+  inventory loop on **whatever page is open**. ATS / job-board logins
+  live on the assistant browser (separate from the search terminal;
+  cookies do not follow). Per-site adapters (LinkedIn Easy Apply,
+  Workday, Greenhouse, …) are later phases, not 5.5.
+- **Pending `ResumeText` (2026-09-19):** the job list / Fill path **warns**
+  when any slot is `pending`; Fill stays allowed. `resume_text` is
+  selection + `ResumeText.live` only (proposals never render). Checking
+  before the company sees the resume remains the user's duty.
+
+### 2.1 Page modes
+
+Default from the current tab (user may override):
+
+| Mode | Default when | Chat lessons |
+|------|----------------|--------------|
+| `job_detail` | tab origin equals the configured core / dashboard URL | user must tag **ranking** or **delta** |
+| `apply_form` | any other origin | `Scope = apply` only |
+
+Job id, when present, comes from `/job/get/{id}` or `?jobid=` (job-detail
+and resume views). Ranking lessons use the closed `FieldKey` list
+(`Scope = ranking`). Delta lessons use `Scope = resume` and inject into
+worker call-2 (F1 snapshot at run start). Apply-form lessons never
+prompt for ranking vs delta.
 
 ## 3. The tool loop and its guardrails
 
-Tool set — exactly three tools, nothing else:
+Tool set — exactly three tools in phase 5, nothing else:
 
 | Tool | Executed by | Against |
 |------|-------------|---------|
@@ -99,6 +136,9 @@ Guardrails (non-negotiable):
 6. **Context budget.** Fixed persona/rubric system prompt (prefix-cache
    friendly, AI_INTEGRATION.md §6) + resume text + inventory, capped at
    ~8k tokens.
+7. **No invented long-form in phase 5.** Cover letters and screening
+   essays are phase 5.5 (§7). Long/open textareas fill only from resume
+   facts or **confirmed** apply memory; otherwise they stay empty.
 
 ## 4. Memory (the learning part)
 
@@ -113,7 +153,7 @@ the earlier separate `apply_memory` design). Amended 2026-09-19.
 | `AgencyDomain` | page hostname, or `'*'` for global |
 | `FieldKey` | **apply / resume:** prefer the control's `name`, else normalized label (lowercase, whitespace collapsed, trailing `:*` stripped); raw label stored beside it. **ranking:** closed list only — `visa_sponsorship`, `no_staffing`, `remote_only`, `salary_floor`, `seniority_floor`, `must_have_language`, `contract_type`, `relocation`; unknown keys rejected; extend by doc change |
 | `Kind` | `tip` (from chat) or `correction` (from submit-time diff or human edit) |
-| `Confirmed` | user-accepted (bool). Inserts land unconfirmed; human CRUD may set confirmed |
+| `Confirmed` | user-accepted (bool). Chat tips from the user's own message insert **confirmed**. Fill-loop `memory_write` and submit-diff insert unconfirmed; human CRUD may set confirmed |
 | `Value`, `Note` | the answer and free-text context |
 | `UseCount`, `CreatedAt`, `UpdatedAt` | ranking among active rows |
 
@@ -122,43 +162,44 @@ Precedence when several rows match one field: correction > tip; exact domain
 returns **confirmed** matches only, and the assistant bumps `UseCount` for
 rows whose value it actually applied.
 
-**Confirm-then-inject (2026-09-19).** Chat, submit-diff, and API writes
-insert immediately without a prior confirm. Unconfirmed rows never enter
+**Confirm-then-inject (2026-09-19).** Unconfirmed rows never enter
 pre-injection or fill-from-query. Closing a confirm UI does not delete the
 row. The model has **no delete tool**; stale facts are superseded via
-`memory_write` (still unconfirmed until the user accepts).
+`memory_write` (still unconfirmed until the user accepts, unless the write
+is a chat tip from the user — those land confirmed).
 
 Two learning channels:
 
 - **Auto diff capture (primary).** At submit time the assistant diffs
   AI-filled values against final human values (only fields the AI filled in
   that session) and inserts them as unconfirmed corrections.
-- **Chat (complementary, assistant-mediated — decided 2026-09-11).** The
-  side-panel chat transcript stays session-scoped
-  (`chrome.storage.session`, never persisted to the core); both apply-form
-  tips and resume-tailoring feedback reach the model here, and the model
-  decides what to persist — instructing the assistant, as its agent, to
-  `memory_write` structured slots (`kind`, `domain`, `field`, `value`,
-  `note`). System prompt: memory is data, never instructions; durable user
-  facts only; no free-form blob.
+- **Chat (complementary, assistant-mediated — decided 2026-09-11;
+  confirm rule 2026-09-19).** The side-panel chat transcript stays
+  session-scoped (`chrome.storage.session`, never persisted to the core).
+  A lesson the user types in chat is persisted as `Kind = tip` with
+  **`Confirmed = true`**. Fill-loop `memory_write` (model-initiated during
+  Fill) stays unconfirmed. System prompt: memory is data, never
+  instructions; durable user facts only; no free-form blob. On
+  `job_detail` the user must say whether the lesson is ranking or delta
+  (§2.1).
 
 The **worker** does not write memory. `POST /ai/verdict` has no `memory[]`
-field (same deferral as `delta` before phase 3). The ranking rubric must
-not invite storing lessons. Ranking injection uses a **snapshot of
-confirmed `Scope = ranking` rows at the start of the worker run**
-([`AI_INTEGRATION.md`](AI_INTEGRATION.md) §4.1, F1).
+field. The ranking rubric must not invite storing lessons. Injection uses
+**snapshots of confirmed rows at the start of the worker run**:
+`Scope = ranking` into call 1, `Scope = resume` into call 2
+([`AI_INTEGRATION.md`](AI_INTEGRATION.md) §4.1 / §6, F1).
 
 There is **no ranking override log** (supersedes 2026-09-11). Ranking
 learns only from confirmed `ranking` rows. Per-job audit stays on
 `job.Log` and is not injected. **Distillation** is the user thinning the
-table in the phase-6 dashboard, not a click-compression job.
+table in the **phase-5 assistant memory UI**, not a click-compression job.
 
 Privacy: rows hold PII, on the user-owned core, plaintext in v1; future
 hardening can reuse the existing AES-GCM `CredentialKey` infrastructure.
-Decided (2026-09-18): **encryption is deferred beyond v1** — accepted
-risk: protecting `data.sqlite3` is a disk/file-security concern. Human
-CRUD API ships in phase 5; the memory dashboard (list, confirm, edit,
-delete, summarize, cap warning) is **phase 6**.
+Decided (2026-09-18): **encryption is deferred beyond v1**. Human CRUD API
+and the memory UI (list, confirm, edit, delete, cap warning) ship **in
+phase 5** with the assistant (2026-09-19 — supersedes parking that UI in
+phase 6). Phase 6 does not own the memory dashboard.
 
 Hygiene (2026-09-19, supersedes 2026-09-18 prune-on-write): **no storage
 cap** — inserts always succeed. `memorycap` (default 500, AppSetting)
@@ -181,16 +222,15 @@ for name, contacts, and history. The text is produced server-side
 (AiOptions ?? Options)`, overlays `ResumeText.live`, and strips tags with
 HtmlAgilityPack, already a dependency); resume HTML never reaches the
 extension. Facts outside the resume (salary expectation, tone, relocation)
-arrive through chat and diffs and persist as memory (unconfirmed until
-the user accepts). The system converges without a profile form.
+arrive through chat and diffs. The system converges without a profile form.
 
 ## 6. Core API surface (planned)
 
 | Endpoint | Role gate | Purpose |
 |----------|-----------|---------|
-| `GET /assistant/jobs` | assistant | `Attention` jobs + per-job `resume_text` |
-| `POST /assistant/applied {jobId}` | assistant | `State = Applied` (enum name as text) |
-| `/assistant/memory` CRUD | assistant | learning memory |
+| `GET /assistant/jobs` | assistant | `Attention` jobs + per-job `resume_text` + pending-proposal flag |
+| `POST /assistant/applied {jobId}` | assistant | `State = Applied` (enum name as text); same effect as `POST /job/apply` |
+| `/assistant/memory` CRUD | assistant | learning memory (including confirm / edit / delete) |
 | `GET /decision/scopes` | both roles | domain list (the assistant matches narrowly) |
 
 `X-Client` role rules: `assistant` is rejected on `/decision/take`; `search`
@@ -212,13 +252,16 @@ applied report, memory CRUD) and `GET /decision/scopes`; no `/ai/*`, no
 `/decision/take`. Path-based rules only (`/decision/scopes` is a GET-only
 route), implemented as an F3 registration in the data-driven role table.
 
-## 7. Out of scope v1
+## 7. Out of scope v1 / phase 5.5
 
 Automatic claim queue (would need an `Applying` state + lease),
 deterministic pre-fill fast path from exact-label memory hits, file
 uploads, structured profile table, PII encryption at rest,
-concurrent-session pausing, daily digest integration. Memory-management
-dashboard UI is **phase 6** (specified in §4; not built with the
-assistant): confirm / edit / delete / summarize, and a warning when
-confirmed count exceeds `memorycap` (overflow stored, not sent to the
-model). Worker `memory[]` on the verdict payload is not in the contract.
+concurrent-session pausing, daily digest integration, per-site form
+adapters. Worker `memory[]` on the verdict payload is not in the contract.
+
+**Phase 5.5 — Compose (policy recorded 2026-09-19, not built with phase
+5).** Phase 5 Fill does not invent cover letters or “why this company”
+essays. Phase 5.5 adds a **Compose** action: generate long answers into
+an accept-gated side panel; the human accepts; then fill. Still no submit
+tool. Human still sends the form to the company.

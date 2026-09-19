@@ -149,6 +149,9 @@ Rules (locked):
 - Render: resolve selection (`Options.HumanEdited ? Options :
   (AiOptions ?? Options)`), then overlay every `live` value. Pending and
   rejected never appear — including on `GET /assistant/jobs` resume text.
+  Phase 5 (2026-09-19): that endpoint also flags pending proposals so the
+  assistant can **warn**; Fill stays allowed. Checking the resume before
+  the company sees it remains the user's duty.
 
 The 2026-09-17 "accept = full copy into `Options`, never a field-wise
 merge" rule still applies to **selection** only.
@@ -249,9 +252,10 @@ Decided (2026-09-11) — human/AI coexistence on **selection**, unchanged
   `Options.HumanEdited` — then the new suggestion stays a diff-only
   proposal. Text accept/reject is independent (§3).
 
-`Applied` stays a user action; both report paths (dashboard button,
-`POST /assistant/applied`) are idempotent and `job.Log` records the source
-(decided 2026-09-18).
+`Applied` stays a user action; both report paths (dashboard job-detail
+button `POST /job/apply`, assistant `POST /assistant/applied`) are
+idempotent and `job.Log` records the source (decided 2026-09-18;
+reaffirmed 2026-09-19 — never inferred from Fill or the site submit).
 
 ### Delivery (decided)
 
