@@ -21,7 +21,8 @@ Related: [`AI_RESUME_TAILORING.md`](AI_RESUME_TAILORING.md) (phase 3 detail),
 [`AI_APPLY_ASSISTANT.md`](AI_APPLY_ASSISTANT.md) (phase 5 detail; 5.5 Compose
 policy).
 Decisions: [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md). Implementation
-pointers: [`AI_PHASE1_NOTES.md`](AI_PHASE1_NOTES.md).
+pointers: [`AI_PHASE1_NOTES.md`](AI_PHASE1_NOTES.md). Execution slices:
+[`AI_IMPLEMENTATION.md`](AI_IMPLEMENTATION.md).
 
 ## 1. The golden rule: the LLM never sits in the browser loop
 
