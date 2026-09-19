@@ -15,7 +15,7 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
 
         var job = LoadJob(url, content);
 
-        if (job.State == JobState.NotApproved) return [];
+        if (job.State == JobState.NotApprovedRegex) return [];
 
         using var evaluator = new JobEligibilityHelper(Parent.DatabaseFactory);
         var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
@@ -119,7 +119,7 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
 
         ChceckJob(job);
 
-        var include_state = job.State == JobState.NotApproved;
+        var include_state = job.State == JobState.NotApprovedRegex;
 
         Log.Information("{0} Job: {1} ({2})", Parent.Name, job.Title, job.Code);
 

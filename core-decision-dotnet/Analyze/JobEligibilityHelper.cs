@@ -143,7 +143,7 @@ public class JobEligibilityHelper : IDisposable
 
             if (!user_changes)
             {
-                if (!eligibility) job.State = JobState.NotApproved;
+                if (!eligibility) job.State = JobState.NotApprovedRegex;
                 else job.State = JobState.Attention;
             }
 

@@ -13,6 +13,7 @@ namespace Photon.JobSeeker
     private JobBusiness? job_business;
     private AgencyBusiness? agency_business;
     private JobOptionBusiness? job_option_business;
+    private AppSettingBusiness? app_setting_business;
 
     static Database() => SqliteTypeHandlers.Register();
 
@@ -107,5 +108,7 @@ namespace Photon.JobSeeker
         internal AgencyBusiness Agency => agency_business ??= new AgencyBusiness(this);
 
         internal JobOptionBusiness JobOption => job_option_business ??= new JobOptionBusiness(this);
+
+        internal AppSettingBusiness AppSetting => app_setting_business ??= new AppSettingBusiness(this);
     }
 }

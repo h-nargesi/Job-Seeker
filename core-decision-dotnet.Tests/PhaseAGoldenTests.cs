@@ -17,6 +17,7 @@ internal sealed class GoldenDatabase : IDisposable
         ExecuteRaw(DDL_AGENCY);
         ExecuteRaw(DDL_JOB);
         ExecuteRaw(DDL_TREND);
+        ExecuteRaw(DDL_APP_SETTING);
         ExecuteRaw("INSERT INTO Agency (AgencyID, Title, Active, Domain, Link) VALUES (1, 'Golden', 3, 'example.com', 'https://example.com')");
         Database = new Database(Connection);
     }
@@ -94,6 +95,20 @@ CREATE TABLE Job (
     Options     text            null,
     Tries       text            null,
     Attempts    integer     not null    default 0,
+    AiScore             integer     null,
+    AiVerdict           text        null,
+    AiReason            text        null,
+    AiSeniority         text        null,
+    AiSalaryMin         integer     null,
+    AiSalaryMax         integer     null,
+    AiCurrency          text        null,
+    AiPeriod            text        null,
+    AiWorkModel         text        null,
+    AiContract          text        null,
+    AiExperienceYears   integer     null,
+    AiSkills            text        null,
+    AiOptions           text        null,
+    ResumeText          text        null,
     unique (AgencyID, Code)
 )";
 
@@ -106,6 +121,12 @@ CREATE TABLE Trend (
     LastActivity    timestamp   not null    default current_timestamp,
     Reserved        bit         not null    default 0,
     unique (AgencyID, Type)
+)";
+
+    private const string DDL_APP_SETTING = @"
+CREATE TABLE AppSetting (
+    Key     text    not null    primary key,
+    Value   text    not null
 )";
 }
 
@@ -187,8 +208,8 @@ public class PhaseAGoldenTests
         var helper = MakeHelper(db, EligibilityFixture.Option("field", 100, "backend", "Backend"));
         var state = helper.EvaluateJobEligibility(job, null);
 
-        Assert.Equal(JobState.NotApproved, state);
-        Assert.Equal("NotApproved", db.Scalar("SELECT State FROM Job"));
+        Assert.Equal(JobState.NotApprovedRegex, state);
+        Assert.Equal("NotApprovedRegex", db.Scalar("SELECT State FROM Job"));
         Assert.Equal(DBNull.Value, db.Scalar("SELECT Html FROM Job"));
         Assert.Equal(DBNull.Value, db.Scalar("SELECT Content FROM Job"));
         Assert.Equal(DBNull.Value, db.Scalar("SELECT Score FROM Job"));
@@ -207,7 +228,7 @@ public class PhaseAGoldenTests
         var helper = MakeHelper(db, EligibilityFixture.Option("field", 100, "backend", "Backend"));
         var state = helper.EvaluateJobEligibility(job, new System.Text.RegularExpressions.Regex("no longer accepting"));
 
-        Assert.Equal(JobState.NotApproved, state);
+        Assert.Equal(JobState.NotApprovedRegex, state);
         Assert.StartsWith("Expired!", Assert.IsType<string>(db.Scalar("SELECT Log FROM Job")));
         Assert.Equal(DBNull.Value, db.Scalar("SELECT Html FROM Job"));
         Assert.Equal(DBNull.Value, db.Scalar("SELECT Content FROM Job"));

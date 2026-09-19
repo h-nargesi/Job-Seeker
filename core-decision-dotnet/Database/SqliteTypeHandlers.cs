@@ -1,6 +1,8 @@
 using System.Data;
 using Dapper;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 
 namespace Photon.JobSeeker;
 
@@ -18,7 +20,14 @@ internal static class SqliteTypeHandlers
             Add(new EnumNameTypeHandler<JobState>());
             Add(new EnumNameTypeHandler<TrendState>());
             Add(new EnumNameTypeHandler<TrendType>());
+            Add(new EnumNameTypeHandler<AiVerdict>());
+            Add(new EnumNameTypeHandler<AiSeniority>());
+            Add(new EnumNameTypeHandler<AiWorkModel>());
+            Add(new EnumNameTypeHandler<AiContract>());
+            Add(new EnumNameTypeHandler<AiPeriod>());
             Add(new ResumeContextTypeHandler());
+            Add(new JsonTypeHandler<List<string>>());
+            Add(new JsonTypeHandler<ResumeText>());
 
             registered = true;
         }
@@ -58,5 +67,27 @@ internal sealed class ResumeContextTypeHandler : SqlMapper.TypeHandler<ResumeCon
     {
         parameter.DbType = DbType.String;
         parameter.Value = value == null ? DBNull.Value : JsonConvert.SerializeObject(value);
+    }
+}
+
+internal sealed class JsonTypeHandler<T> : SqlMapper.TypeHandler<T>
+{
+    private static readonly JsonSerializerSettings Settings = new()
+    {
+        ContractResolver = new CamelCasePropertyNamesContractResolver(),
+        Converters = { new StringEnumConverter(new CamelCaseNamingStrategy(), false) },
+    };
+
+    public override T Parse(object value)
+    {
+        if (value is DBNull or null) return default!;
+
+        return JsonConvert.DeserializeObject<T>((string)value, Settings)!;
+    }
+
+    public override void SetValue(IDbDataParameter parameter, T? value)
+    {
+        parameter.DbType = DbType.String;
+        parameter.Value = value == null ? DBNull.Value : JsonConvert.SerializeObject(value, Settings);
     }
 }

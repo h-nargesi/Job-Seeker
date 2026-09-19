@@ -45,7 +45,7 @@ class IndeedPageJob(Indeed parent) : JobPage(parent), IndeedPage
         if (job.Content?.Contains("Indeed does not provide services in your region") == true)
         {
             Log.Warning("Indeed does not provide services in your region ({0}).", job.Code);
-            job.State = JobState.NotApproved;
+            job.State = JobState.NotApprovedRegex;
         }
     }
 

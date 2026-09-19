@@ -309,7 +309,7 @@ WITH date_diff AS (
              , Agency.Title AS AgencyName
              , CASE State
                WHEN '{nameof(JobState.Attention)}' THEN 1
-               WHEN '{nameof(JobState.NotApproved)}' THEN 2
+               WHEN '{nameof(JobState.NotApprovedRegex)}' THEN 2
                WHEN '{nameof(JobState.Applied)}' THEN 4
                WHEN '{nameof(JobState.Rejected)}' THEN 4
                ELSE 12
@@ -390,7 +390,7 @@ WHERE RegTime < @date AND State IN ('{nameof(JobState.Attention)}') AND JobID NO
     ORDER BY Score DESC LIMIT 0, 100)";
 
         private readonly static string Q_CLEAN_NOT_APPROVED = @$"
-UPDATE Job SET Html = null, Content = null WHERE RegTime < @date AND State IN ('{nameof(JobState.NotApproved)}')";
+UPDATE Job SET Html = null, Content = null WHERE RegTime < @date AND State IN ('{nameof(JobState.NotApprovedRegex)}')";
 
         private const string Q_VACUUM = "vacuum;";
     }

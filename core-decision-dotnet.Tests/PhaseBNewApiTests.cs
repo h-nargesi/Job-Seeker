@@ -125,7 +125,7 @@ public class PhaseBNewApiTests
         job.Content = "new content";
         job.Code = "changed-code";
         job.Link = "https://apply.new";
-        job.State = JobState.NotApproved;
+        job.State = JobState.NotApprovedRegex;
 
         db.Database.Job.UpdateScrapedJob(job, codeChanged: false, linkFound: false, includeState: false);
 
@@ -157,13 +157,13 @@ public class PhaseBNewApiTests
 
         job.Code = "sc2-real";
         job.Link = "https://apply.here";
-        job.State = JobState.NotApproved;
+        job.State = JobState.NotApprovedRegex;
 
         db.Database.Job.UpdateScrapedJob(job, codeChanged: true, linkFound: true, includeState: true);
 
         Assert.Equal("sc2-real", db.Scalar("SELECT Code FROM Job"));
         Assert.Equal("https://apply.here", db.Scalar("SELECT Link FROM Job"));
-        Assert.Equal("NotApproved", db.Scalar("SELECT State FROM Job"));
+        Assert.Equal("NotApprovedRegex", db.Scalar("SELECT State FROM Job"));
     }
 
     [Fact]
@@ -247,7 +247,7 @@ public class PhaseBNewApiTests
         var handler = new EnumNameTypeHandler<JobState>();
 
         Assert.Equal(JobState.Saved, handler.Parse("Saved"));
-        Assert.Equal(JobState.NotApproved, handler.Parse("NotApproved"));
+        Assert.Equal(JobState.NotApprovedRegex, handler.Parse("NotApprovedRegex"));
 
         var parameter = new SQLiteParameter();
         handler.SetValue(parameter, JobState.Attention);
