@@ -1,6 +1,6 @@
 # Chat 5 — `ai-worker` call 1
 
-**Status:** not started. **Depends on:** Chat 4.
+**Status:** done. **Depends on:** Chat 4.
 
 ## Goal
 

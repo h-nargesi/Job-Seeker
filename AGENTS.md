@@ -38,9 +38,10 @@ Job-Seeker/
 │   ├── application/           # popup UI (menu.html / menu.js)
 │   ├── tests/                 # node:test suite (vm-loads the classic scripts)
 │   └── package.json           # test runner config; only devDependency happy-dom
-├── ai-worker/                 # (planned, Chat 5) .NET 8 C# console on the
-│                              # Linux AI station — not Python; see
-│                              # docs/AI_IMPLEMENTATION.md Stack
+├── ai-worker/                 # (Chat 5) .NET 8 C# console on the Linux AI
+│                              # station: GET /ai/next → llama-server call 1 →
+│                              # POST /ai/verdict; tests in ai-worker.Tests;
+│                              # see docs/AI_IMPLEMENTATION.md Stack
 ├── assistant-extension/       # (planned, Chat 8) apply-assistant MV3,
 │                              # vanilla JS — see docs/AI_APPLY_ASSISTANT.md
 ├── database/                  # SQLite schema + seed data

@@ -260,7 +260,7 @@ WHERE JobID = @JobID", new
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "core-decision.sln")))
+        while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, "database", "structure")))
             dir = dir.Parent!;
 
         Assert.NotNull(dir);
