@@ -18,6 +18,7 @@ internal sealed class GoldenDatabase : IDisposable
         ExecuteRaw(DDL_JOB);
         ExecuteRaw(DDL_TREND);
         ExecuteRaw(DDL_APP_SETTING);
+        ExecuteRaw(DDL_MEMORY);
         ExecuteRaw("INSERT INTO Agency (AgencyID, Title, Active, Domain, Link) VALUES (1, 'Golden', 3, 'example.com', 'https://example.com')");
         Database = new Database(Connection);
     }
@@ -127,6 +128,22 @@ CREATE TABLE Trend (
 CREATE TABLE AppSetting (
     Key     text    not null    primary key,
     Value   text    not null
+)";
+
+    private const string DDL_MEMORY = @"
+CREATE TABLE Memory (
+    MemoryID        integer     not null    primary key,
+    Scope           text        not null,
+    AgencyDomain    text        not null    default '*',
+    FieldKey        text        not null,
+    FieldLabel      text            null,
+    Kind            text        not null,
+    Confirmed       bit         not null    default 0,
+    Value           text        not null,
+    Note            text            null,
+    UseCount        integer     not null    default 0,
+    CreatedAt       timestamp   not null    default current_timestamp,
+    UpdatedAt       timestamp   not null    default current_timestamp
 )";
 }
 

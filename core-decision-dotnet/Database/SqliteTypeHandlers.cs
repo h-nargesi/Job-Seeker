@@ -25,6 +25,8 @@ internal static class SqliteTypeHandlers
             Add(new EnumNameTypeHandler<AiWorkModel>());
             Add(new EnumNameTypeHandler<AiContract>());
             Add(new EnumNameTypeHandler<AiPeriod>());
+            Add(new EnumNameTypeHandler<MemoryScope>());
+            Add(new EnumNameTypeHandler<MemoryKind>());
             Add(new ResumeContextTypeHandler());
             Add(new JsonTypeHandler<List<string>>());
             Add(new JsonTypeHandler<ResumeText>());

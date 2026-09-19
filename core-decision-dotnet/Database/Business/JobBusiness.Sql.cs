@@ -28,6 +28,10 @@ WHERE JobID = @jobId";
 UPDATE Job SET State = @state, ModifiedOn = @now
 WHERE JobID = @jobId";
 
+        private readonly static string Q_MARK_APPLIED = $@"
+UPDATE Job SET State = '{nameof(JobState.Applied)}', Log = @log, ModifiedOn = @now
+WHERE JobID = @jobId";
+
         private readonly static string Q_REMOVE_HTML = @"
 UPDATE Job SET Html = null, Content = null, ModifiedOn = @now
 WHERE JobID = @jobId";

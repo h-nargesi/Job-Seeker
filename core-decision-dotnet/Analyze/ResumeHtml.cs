@@ -1,6 +1,9 @@
+using System.Text.RegularExpressions;
+using HtmlAgilityPack;
+
 namespace Photon.JobSeeker;
 
-public static class ResumeHtml
+public static partial class ResumeHtml
 {
     public const int TokenCap = 16_000;
     public const int CharsPerToken = 4;
@@ -28,6 +31,19 @@ public static class ResumeHtml
         return result;
     }
 
+    public static bool HasPendingProposal(Job job)
+    {
+        foreach (var (_, slot) in job.ResumeText ?? [])
+            if (slot.Status == ResumeTextSlotStatus.Pending && !string.IsNullOrEmpty(slot.Proposal))
+                return true;
+        return false;
+    }
+
+    public static string RenderText(string html, Dictionary<string, string> liveText)
+    {
+        return CapFromTop(JobContent.GetTextContent(ApplyLiveText(html, liveText)));
+    }
+
     public static string PruneStripCap(string html)
     {
         return CapFromTop(JobContent.GetTextContent(html));
@@ -39,4 +55,49 @@ public static class ResumeHtml
         var max_chars = tokenCap * CharsPerToken;
         return text.Length <= max_chars ? text : text[..max_chars];
     }
+
+    public static string ApplyLiveText(string html, Dictionary<string, string> liveText)
+    {
+        if (liveText.Count == 0) return html;
+
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        foreach (var (slot, value) in liveText)
+        {
+            var node = FindSlotNode(doc, slot);
+            if (node == null) continue;
+
+            node.ChildNodes.Clear();
+            node.AppendChild(doc.CreateTextNode(value));
+        }
+
+        return doc.DocumentNode.OuterHtml;
+    }
+
+    private static HtmlNode? FindSlotNode(HtmlDocument doc, string slot)
+    {
+        var xpath = slot switch
+        {
+            ResumeInventory.TitleSlot => "//h1[contains(@class,'header-job-title')]",
+            ResumeInventory.SummarySlot => "//p[@id='summary']",
+            _ => SlotXPath(slot),
+        };
+
+        return xpath == null ? null : doc.DocumentNode.SelectSingleNode(xpath);
+    }
+
+    private static string? SlotXPath(string slot)
+    {
+        var match = SlotSelector().Match(slot);
+        if (!match.Success) return null;
+
+        var id = match.Groups["id"].Value;
+        return match.Groups["n"].Success
+            ? $"//*[@id='{id}']//li[{match.Groups["n"].Value}]"
+            : $"//*[@id='{id}']";
+    }
+
+    [GeneratedRegex(@"^#(?<id>[\w-]+)(?:\s+li:nth-child\((?<n>\d+)\))?$")]
+    private static partial Regex SlotSelector();
 }

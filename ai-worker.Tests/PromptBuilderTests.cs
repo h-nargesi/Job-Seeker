@@ -147,4 +147,73 @@ public sealed class PromptBuilderTests
         Assert.True(content.Length <= expectedChars, $"JD {content.Length} chars exceeds budget {expectedChars}");
         Assert.DoesNotContain("UNIQUE TAIL MARKER", content, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void EmptyMemoryKeepsPlaceholder()
+    {
+        var prompt = Builder().Compose(Payload());
+        Assert.Contains(PromptBuilder.NoMemoryText, prompt.System, StringComparison.Ordinal);
+
+        prompt = Builder().Compose(Payload(), []);
+        Assert.Contains(PromptBuilder.NoMemoryText, prompt.System, StringComparison.Ordinal);
+
+        var tailor = Builder().ComposeTailor(Payload());
+        Assert.Contains(PromptBuilder.NoMemoryText, tailor.System, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MemoryRowsAreInjectedAsDataLines()
+    {
+        var ranking = new List<MemorySnapshotRow>
+        {
+            new() { Domain = "*", FieldKey = "remote_only", Kind = "Tip", Value = "remote roles only", Note = null },
+            new() { Domain = "linkedin.com", FieldKey = "relocation", Kind = "Correction", Value = "needs visa", Note = "2026 batch" },
+        };
+
+        var prompt = Builder().Compose(Payload(), ranking);
+        var start = prompt.System.IndexOf(PromptBuilder.RankingMemoryLabel, StringComparison.Ordinal)
+            + PromptBuilder.RankingMemoryLabel.Length;
+        var end = prompt.System.IndexOf(PromptBuilder.ResumeLabel, StringComparison.Ordinal);
+        var block = prompt.System[start..end].Trim();
+
+        Assert.DoesNotContain(PromptBuilder.NoMemoryText, block);
+        var lines = block.Split('\n');
+        Assert.Equal(2, lines.Length);
+        Assert.StartsWith("{\"domain\":\"*\",\"fieldKey\":\"remote_only\"", lines[0]);
+        Assert.StartsWith("{\"domain\":\"linkedin.com\",\"fieldKey\":\"relocation\"", lines[1]);
+        Assert.Contains("\"value\":\"needs visa\"", lines[1]);
+        Assert.Contains("\"note\":\"2026 batch\"", lines[1]);
+
+        var resume_memory = new List<MemorySnapshotRow>
+        {
+            new() { Domain = "*", FieldKey = "summary", Kind = "Tip", Value = "lead with backend scale" },
+        };
+        var tailor = Builder().ComposeTailor(Payload(), resume_memory);
+        Assert.Contains("\"fieldKey\":\"summary\"", tailor.System);
+        Assert.DoesNotContain("\"note\"", tailor.System.Split(PromptBuilder.ResumeMemoryLabel)[1]
+            .Split(PromptBuilder.InventoryLabel)[0], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MemoryBlockKeepsWholeRowsWithinTokenCap()
+    {
+        var rows = new List<MemorySnapshotRow>();
+        for (var i = 0; i < 100; i++)
+            rows.Add(new MemorySnapshotRow
+            {
+                Domain = "*",
+                FieldKey = $"key_{i}",
+                Kind = "Tip",
+                Value = new string('v', 200),
+            });
+
+        var block = PromptBuilder.MemoryBlock(rows);
+
+        Assert.DoesNotContain(PromptBuilder.NoMemoryText, block);
+        Assert.True(block.Length <= PromptBuilder.MemoryTokenCap * PromptBuilder.CharsPerToken,
+            $"memory block {block.Length} chars exceeds the cap");
+        foreach (var line in block.Split('\n'))
+            Assert.StartsWith("{\"domain\":\"*\",\"fieldKey\":\"key_", line);
+        Assert.StartsWith("{\"domain\":\"*\",\"fieldKey\":\"key_0\"", block);
+    }
 }

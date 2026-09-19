@@ -57,6 +57,41 @@ public sealed class CoreClient
         }
     }
 
+    public async Task<MemorySnapshot> FetchMemorySnapshotAsync(CancellationToken ct)
+    {
+        HttpResponseMessage response;
+        try
+        {
+            response = await http.GetAsync("ai/memory", ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new CoreAbortException($"GET /ai/memory failed: {ex.Message}");
+        }
+
+        using (response)
+        {
+            if (!response.IsSuccessStatusCode)
+                throw new CoreAbortException($"GET /ai/memory returned {(int)response.StatusCode}");
+
+            var body = await ReadAsync(response, ct);
+            MemorySnapshot? snapshot;
+            try
+            {
+                snapshot = JsonSerializer.Deserialize<MemorySnapshot>(body, Json);
+            }
+            catch (JsonException ex)
+            {
+                throw new CoreAbortException($"GET /ai/memory returned invalid JSON: {ex.Message}");
+            }
+            return snapshot ?? throw new CoreAbortException("GET /ai/memory returned null payload");
+        }
+    }
+
     public async Task<PostVerdictResult> PostVerdictAsync(long jobId, VerdictPayload verdict, CancellationToken ct)
     {
         var body = JsonSerializer.Serialize(verdict, Json);

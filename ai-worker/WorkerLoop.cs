@@ -24,6 +24,16 @@ public sealed class WorkerLoop
 
     public async Task<int> RunAsync(CancellationToken ct)
     {
+        MemorySnapshot memory;
+        try
+        {
+            memory = await core.FetchMemorySnapshotAsync(ct);
+        }
+        catch (CoreAbortException ex)
+        {
+            return Abort(ExitCoreAbort, $"core error, aborting run before memory snapshot: {ex.Message}");
+        }
+
         while (true)
         {
             AiNextPayload next;
@@ -48,10 +58,10 @@ public sealed class WorkerLoop
             VerdictPayload verdict;
             try
             {
-                verdict = await JudgeAsync(next, job_id, ct);
+                verdict = await JudgeAsync(next, job_id, memory.Ranking, ct);
 
                 if (Promotes(next, verdict))
-                    verdict.Delta = await TailorAsync(next, job_id, ct);
+                    verdict.Delta = await TailorAsync(next, job_id, memory.Resume, ct);
             }
             catch (LlmUnavailableException ex)
             {
@@ -82,9 +92,10 @@ public sealed class WorkerLoop
         return passmark is int mark && verdict.Relevance >= mark;
     }
 
-    private async Task<VerdictPayload> JudgeAsync(AiNextPayload next, long jobId, CancellationToken ct)
+    private async Task<VerdictPayload> JudgeAsync(AiNextPayload next, long jobId,
+        IReadOnlyList<MemorySnapshotRow> rankingMemory, CancellationToken ct)
     {
-        var message = prompt.Compose(next);
+        var message = prompt.Compose(next, rankingMemory);
         Exception? last = null;
 
         for (var attempt = 1; attempt <= MaxModelAttempts; attempt++)
@@ -109,9 +120,10 @@ public sealed class WorkerLoop
         return VerdictPayload.Error(jobId, next.Fingerprint!, last!.Message);
     }
 
-    private async Task<JsonNode?> TailorAsync(AiNextPayload next, long jobId, CancellationToken ct)
+    private async Task<JsonNode?> TailorAsync(AiNextPayload next, long jobId,
+        IReadOnlyList<MemorySnapshotRow> resumeMemory, CancellationToken ct)
     {
-        var message = prompt.ComposeTailor(next);
+        var message = prompt.ComposeTailor(next, resumeMemory);
 
         for (var attempt = 1; attempt <= MaxModelAttempts; attempt++)
         {

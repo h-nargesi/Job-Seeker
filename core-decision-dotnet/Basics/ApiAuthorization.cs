@@ -23,16 +23,27 @@ public sealed class ApiAuthorization(IReadOnlyList<ApiClientRole> clients)
     public const string DashboardRole = "dashboard";
     public const string SearchRole = "search";
     public const string WorkerRole = "worker";
+    public const string AssistantRole = "assistant";
 
     public IReadOnlyList<ApiClientRole> Clients { get; } = clients;
 
-    public static ApiAuthorization FromConfig(string? dashboard, string? search, string? worker)
+    public static ApiAuthorization FromConfig(string? dashboard, string? search, string? worker, string? assistant = null)
     {
         return new ApiAuthorization(
         [
             new ApiClientRole { Role = DashboardRole, Secret = dashboard, Rules = [] },
             new ApiClientRole { Role = SearchRole, Secret = search, Rules = [new ApiPathRule { Prefix = "/decision" }] },
             new ApiClientRole { Role = WorkerRole, Secret = worker, Rules = [new ApiPathRule { Prefix = "/ai" }] },
+            new ApiClientRole
+            {
+                Role = AssistantRole,
+                Secret = assistant,
+                Rules =
+                [
+                    new ApiPathRule { Prefix = "/assistant" },
+                    new ApiPathRule { Prefix = "/decision/scopes", Method = "GET" },
+                ],
+            },
         ]);
     }
 

@@ -8,4 +8,5 @@ insert or ignore into AppSetting (Key, Value) values
 	('aipassmark', '60'),
 	('scorecap', '300'),
 	('w_regex', '0.35'),
-	('w_ai', '0.65');
+	('w_ai', '0.65'),
+	('memorycap', '500');

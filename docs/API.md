@@ -1,18 +1,21 @@
 # API reference
 
-The server exposes three families of endpoints: the **automation API** (consumed
+The server exposes four families of endpoints: the **automation API** (consumed
 by the search extension) under `/decision/*`, the **AI worker API** under
-`/ai/*`, and the **management/dashboard API** under `/job/*` and `/report/*`.
+`/ai/*`, the **apply-assistant API** under `/assistant/*`, and the
+**management/dashboard API** under `/job/*` and `/report/*`.
 All routes use the `[Route("[controller]/[action]")]` convention, so the path is
 always `/<controller>/<action>`.
 
-Controllers: `Controllers/Decision.cs`, `Controllers/Ai.cs`, `Controllers/Job.cs`,
+Controllers: `Controllers/Decision.cs`, `Controllers/Ai.cs`,
+`Controllers/Assistant.cs`, `Controllers/Job.cs`,
 `Controllers/Report.cs`.
 
 ## Authentication
 
-Per-client keys (`Auth:ApiKeys:Dashboard`, `:Search`, `:Worker`). The matching
-key **is** the role; `X-Client` is logged only and never used for allow/deny.
+Per-client keys (`Auth:ApiKeys:Dashboard`, `:Search`, `:Worker`, `:Assistant`).
+The matching key **is** the role; `X-Client` is logged only and never used for
+allow/deny.
 
 When the Dashboard key is configured, every non-exempt endpoint requires a
 matching `X-API-Key` (or the dashboard cookie). Without a Dashboard key
@@ -22,6 +25,7 @@ matching `X-API-Key` (or the dashboard cookie). Without a Dashboard key
 |-----|------------|
 | `Auth:ApiKeys:Search` | `/decision/*` |
 | `Auth:ApiKeys:Worker` | `/ai/*` |
+| `Auth:ApiKeys:Assistant` | `/assistant/*` + `GET /decision/scopes` |
 | `Auth:ApiKeys:Dashboard` | everything |
 
 - **Extension / worker**: send `X-API-Key: <that client's key>`. Wrong key or
@@ -32,8 +36,8 @@ matching `X-API-Key` (or the dashboard cookie). Without a Dashboard key
   SameSite=Lax, 30 days). `GET /auth/logout` clears it.
 - `/auth/*` and static files (`wwwroot`) are exempt from auth.
 - Production startup **fails fast** only when `Auth:ApiKeys:Dashboard` or
-  `Auth:CredentialKey` is missing. Missing Search/Worker keys log a warning.
-  Development degrades with warnings.
+  `Auth:CredentialKey` is missing. Missing Search/Worker/Assistant keys log a
+  warning. Development degrades with warnings.
 - Agency credentials (`Agency.Password`) are stored AES-GCM encrypted
   (`enc:` prefix) and migrated automatically on startup when
   `Auth:CredentialKey` (32-byte base64) is set.
@@ -145,6 +149,20 @@ Read-only. Oldest `AiPending` job with `Content`. Empty queue → `200` `{ "empt
   the block's `key-*` classes, `text` = full template text on editable slots
   (`slot`, `bullet`), ≤ 120-char excerpt elsewhere.
 
+### `GET /ai/memory`
+Worker-run memory snapshot (F1). **Confirmed** rows only, snapshotted when the
+worker calls this at run start — never per job.
+
+- **Response**: `{ ranking: [...], resume: [...] }` — `Scope = ranking` rows
+  for call 1, `Scope = resume` rows for call 2, each capped at the `memorycap`
+  `AppSetting` (default 500) in precedence order: `correction > tip`, exact
+  `domain` before `*`, then `UseCount` desc, then newest `UpdatedAt`.
+- Row shape: `{ domain, fieldKey, kind, value, note }` (`kind` = `Tip` /
+  `Correction`, camelCase names as stored).
+- Unconfirmed rows and the `apply` scope are never in a snapshot (`apply` memory
+  is assistant-only). The worker never writes memory; `POST /ai/verdict` has no
+  `memory[]` field.
+
 ### `POST /ai/verdict?jobid=`
 Idempotent upsert. Body is the call-1 JSON (snake_case extraction fields). An absent `delta` is ignored.
 
@@ -164,6 +182,62 @@ Idempotent upsert. Body is the call-1 JSON (snake_case extraction fields). An ab
     reason in `job.Log`), never a 400. The raw delta is appended to `job.Log`.
 - **404** if the job is gone; **400** `{ error: "validation", message }` if the payload is rejected.
 
+## Apply-assistant API — `AssistantController`
+
+Assistant-only (`Auth:ApiKeys:Assistant`). The assistant extension (phase 5,
+AI station browser) uses these plus `GET /decision/scopes`. No HTML ever
+leaves the server on this API — `resume_text` is plain text.
+
+### `GET /assistant/jobs`
+The `Attention` jobs (most recently modified first, ≤ 100) with everything the
+assistant popup needs to pick a job:
+
+- **Response**: array of `{ jobId, title, url, aiScore, pendingProposal, resumeText }`.
+  - `resumeText` — the tailored resume as plain text: rendered server-side from
+    `Views/resume.cshtml` with the selection precedence
+    (`Options.HumanEdited ? Options : (AiOptions ?? Options)`), the
+    `ResumeText.live` overlay applied to the DOM, then tag-stripped
+    (HtmlAgilityPack) and capped (16k tokens from the top). Proposals never
+    render.
+  - `pendingProposal` — `true` when any `ResumeText` slot is `pending`: the
+    assistant warns; Fill stays allowed (checking remains the user's duty).
+
+### `POST /assistant/applied?jobid=`
+Same effect as `POST /job/apply` (dual path, both idempotent): `State =
+Applied`. Appends `Applied via assistant — <date>` to `job.Log` on the first
+transition only; a repeat call is a harmless no-op. **404** when the job is
+gone. Applied is human-only — never inferred from Fill or the site submit.
+
+### Memory CRUD
+
+The unified learning memory (`Memory` table; `Scope` = `resume` / `apply` /
+`ranking` stored as enum names). Inserts always succeed — **no storage cap**;
+`memorycap` (AppSetting, default 500) caps only how many confirmed rows are
+injected. Chat tips insert with `confirmed: true`; fill-loop `memory_write`
+and submit-diff insert unconfirmed. Unconfirmed rows never enter snapshots or
+fill queries. The ranking `fieldKey` is a closed list (`visa_sponsorship`,
+`no_staffing`, `remote_only`, `salary_floor`, `seniority_floor`,
+`must_have_language`, `contract_type`, `relocation`) — unknown keys are
+rejected with 400; extend by doc change. `scope`/`kind` are enum names
+(`Resume`/`Apply`/`Ranking`, `Tip`/`Correction` — case-insensitive).
+
+| Route | Purpose |
+|-------|---------|
+| `GET /assistant/memory?scope=&confirmed=` | list rows (newest first); filters optional |
+| `POST /assistant/memorysave` (body) | insert `{ scope, domain, fieldKey, fieldLabel?, kind, confirmed?, value, note? }` → `{ id }` |
+| `POST /assistant/memoryedit?id=` (body) | patch the same fields on one row (provided fields only) |
+| `POST /assistant/memoryconfirm?id=&confirmed=` | confirm / unconfirm (confirm-then-inject) |
+| `POST /assistant/memorydelete?id=` | delete |
+
+- `domain` defaults to `*` (global); hostnames are lowercased.
+- `fieldKey`: apply/resume = the control's `name` else normalized label (the
+  assistant computes it); ranking = closed list only.
+- `UseCount` is bumped (`UseCount + 1`) only when a row's value was actually
+  applied — the typed method `MemoryBusiness.BumpUseCount` exists now and the
+  assistant calls it in phase 5.
+- Length caps: `fieldKey` ≤ 200, `domain` ≤ 200, `fieldLabel` ≤ 400,
+  `value` ≤ 4000, `note` ≤ 2000. Missing body/row → 400/404 as appropriate.
+
 ## Management API — `JobController`
 
 Human-facing job actions + an ad-hoc SQL console. Used by the dashboard.
@@ -172,7 +246,8 @@ Human-facing job actions + an ad-hoc SQL console. Used by the dashboard.
 Renders the `job-detail` view for one job (AI badges, extraction, re-queue / force revaluate / emergency promote).
 
 ### `POST /job/apply?jobid=`
-Mark a job `Applied`.
+Mark a job `Applied` (idempotent; logs `Applied via dashboard — <date>` on the
+first transition). The assistant twin is `POST /assistant/applied`.
 
 ### `POST /job/reject?jobid=`
 Drop the job's HTML/content and mark it `Rejected`.

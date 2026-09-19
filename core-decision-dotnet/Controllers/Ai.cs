@@ -30,6 +30,23 @@ public class AiController(
         }
     }
 
+    [HttpGet]
+    public IActionResult Memory()
+    {
+        try
+        {
+            var cap = database.AppSetting.MemoryCap();
+            var ranking = database.Memory.Snapshot(MemoryScope.Ranking, cap);
+            var resume = database.Memory.Snapshot(MemoryScope.Resume, cap);
+            return Ok(AiMemoryPayload.From(ranking, resume));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
     [HttpPost]
     public async Task<IActionResult> Verdict([FromQuery] long? jobid, [FromBody] AiVerdictRequest? body)
     {

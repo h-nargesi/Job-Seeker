@@ -47,6 +47,19 @@ public sealed class WorkerLoopTests
         return """{"empty": true}""";
     }
 
+    private static string MemorySnapshotJson(
+        string rankingField = "", string rankingValue = "",
+        string resumeField = "", string resumeValue = "")
+    {
+        var ranking = rankingField.Length == 0
+            ? "[]"
+            : $$"""[{"domain":"*","fieldKey":"{{rankingField}}","kind":"Tip","value":"{{rankingValue}}"}]""";
+        var resume = resumeField.Length == 0
+            ? "[]"
+            : $$"""[{"domain":"*","fieldKey":"{{resumeField}}","kind":"Correction","value":"{{resumeValue}}"}]""";
+        return $$"""{"ranking": {{ranking}}, "resume": {{resume}}}""";
+    }
+
     private static string LlmContent(string verdictJson)
     {
         var embedded = JsonSerializer.Serialize(verdictJson);
@@ -67,6 +80,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
         coreHandler.RespondJson(NextJob(11, "fp11"));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -75,8 +89,11 @@ public sealed class WorkerLoopTests
         var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
 
         Assert.Equal(WorkerLoop.ExitOk, exit);
-        Assert.Equal(3, coreHandler.Requests.Count);
+        Assert.Equal(4, coreHandler.Requests.Count);
         Assert.Single(llmHandler.Requests);
+
+        Assert.Equal("/ai/memory", coreHandler.Requests[0].RequestUri!.AbsolutePath);
+        Assert.Equal("/ai/next", coreHandler.Requests[1].RequestUri!.AbsolutePath);
 
         var verdict = JsonDocument.Parse(coreHandler.Bodies[0]).RootElement;
         Assert.Equal(11, verdict.GetProperty("jobId").GetInt64());
@@ -111,6 +128,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
         coreHandler.RespondJson(NextJob(21));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -144,6 +162,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
         coreHandler.RespondJson(NextJob(22));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -165,6 +184,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
         coreHandler.RespondJson(NextJob(23));
         llmHandler.RespondJson(LlmContent(ValidVerdict));
         llmHandler.RespondNetworkError();
@@ -172,7 +192,7 @@ public sealed class WorkerLoopTests
         var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
 
         Assert.Equal(WorkerLoop.ExitLlmUnavailable, exit);
-        Assert.Single(coreHandler.Requests);
+        Assert.Equal(2, coreHandler.Requests.Count);
         Assert.Empty(coreHandler.Bodies);
     }
 
@@ -181,6 +201,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
         coreHandler.RespondJson(NextJob(24));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -201,6 +222,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
         coreHandler.RespondJson(NextJob(12));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -222,13 +244,14 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
         coreHandler.RespondJson(NextJob(13));
         llmHandler.RespondNetworkError();
 
         var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
 
         Assert.Equal(WorkerLoop.ExitLlmUnavailable, exit);
-        Assert.Single(coreHandler.Requests);
+        Assert.Equal(2, coreHandler.Requests.Count);
         Assert.Empty(coreHandler.Bodies);
     }
 
@@ -237,13 +260,14 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
         coreHandler.RespondJson(NextJob(14));
         llmHandler.RespondJson("boom", HttpStatusCode.InternalServerError);
 
         var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
 
         Assert.Equal(WorkerLoop.ExitLlmUnavailable, exit);
-        Assert.Single(coreHandler.Requests);
+        Assert.Equal(2, coreHandler.Requests.Count);
     }
 
     [Fact]
@@ -251,6 +275,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
         coreHandler.RespondJson(NextJob(15));
         coreHandler.RespondJson("""{"error": "not found"}""", HttpStatusCode.NotFound);
         coreHandler.RespondJson(NextJob(16, passmark: 90));
@@ -263,7 +288,7 @@ public sealed class WorkerLoopTests
         var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
 
         Assert.Equal(WorkerLoop.ExitOk, exit);
-        Assert.Equal(5, coreHandler.Requests.Count);
+        Assert.Equal(6, coreHandler.Requests.Count);
         Assert.Equal(3, llmHandler.Requests.Count);
         var lastVerdict = JsonDocument.Parse(coreHandler.Bodies[1]).RootElement;
         Assert.Equal(16, lastVerdict.GetProperty("jobId").GetInt64());
@@ -274,6 +299,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
         coreHandler.RespondJson(NextJob(17));
         coreHandler.RespondJson("""{"error": "validation", "message": "bad"}""", HttpStatusCode.BadRequest);
         llmHandler.RespondJson(LlmContent(WeakVerdict));
@@ -288,6 +314,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
         coreHandler.RespondJson("oops", HttpStatusCode.InternalServerError);
 
         var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
@@ -301,11 +328,61 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
         coreHandler.RespondNetworkError("core down");
 
         var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
 
         Assert.Equal(WorkerLoop.ExitCoreAbort, exit);
         Assert.Empty(llmHandler.Requests);
+    }
+
+    [Fact]
+    public async Task MemorySnapshotFailureAbortsRun()
+    {
+        var coreHandler = new FakeHandler();
+        var llmHandler = new FakeHandler();
+        coreHandler.RespondJson("oops", HttpStatusCode.InternalServerError);
+
+        var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
+
+        Assert.Equal(WorkerLoop.ExitCoreAbort, exit);
+        Assert.Single(coreHandler.Requests);
+        Assert.Equal("/ai/memory", coreHandler.Requests[0].RequestUri!.AbsolutePath);
+        Assert.Empty(llmHandler.Requests);
+    }
+
+    [Fact]
+    public async Task MemorySnapshotIsFetchedOnceAndInjectedIntoBothCalls()
+    {
+        var coreHandler = new FakeHandler();
+        var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson(
+            rankingField: "remote_only", rankingValue: "remote roles only",
+            resumeField: "summary", resumeValue: "lead with backend scale"));
+        coreHandler.RespondJson(NextJob(31));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextEmpty());
+        llmHandler.RespondJson(LlmContent(ValidVerdict));
+        llmHandler.RespondJson(LlmContent(ValidDelta));
+
+        var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
+
+        Assert.Equal(WorkerLoop.ExitOk, exit);
+        Assert.Equal(4, coreHandler.Requests.Count);
+        Assert.Single(coreHandler.Requests, request => request.RequestUri!.AbsolutePath == "/ai/memory");
+
+        var judge_system = JsonDocument.Parse(llmHandler.Bodies[0]).RootElement
+            .GetProperty("messages").EnumerateArray().ToArray()[0].GetProperty("content").GetString()!;
+        Assert.Contains(PromptBuilder.RankingMemoryLabel, judge_system);
+        Assert.Contains("remote_only", judge_system);
+        Assert.Contains("remote roles only", judge_system);
+        Assert.DoesNotContain("lead with backend scale", judge_system);
+
+        var tailor_system = JsonDocument.Parse(llmHandler.Bodies[1]).RootElement
+            .GetProperty("messages").EnumerateArray().ToArray()[0].GetProperty("content").GetString()!;
+        Assert.Contains(PromptBuilder.ResumeMemoryLabel, tailor_system);
+        Assert.Contains("lead with backend scale", tailor_system);
+        Assert.DoesNotContain("remote roles only", tailor_system);
     }
 }

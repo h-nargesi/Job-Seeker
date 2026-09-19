@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AiWorker;
 
@@ -7,6 +8,8 @@ public sealed class PromptBuilder(string rubricTemplate, string rubricTailorTemp
     public const string KeywordsPlaceholder = "{{keywords}}";
     public const int MaxContextTokens = 16000;
     public const int CharsPerToken = 4;
+    public const int MemoryTokenCap = 1500;
+    public const string NoMemoryText = "(none confirmed yet)";
 
     public const string RankingMemoryLabel = "## RANKING MEMORY";
     public const string ResumeMemoryLabel = "## RESUME MEMORY";
@@ -17,14 +20,19 @@ public sealed class PromptBuilder(string rubricTemplate, string rubricTailorTemp
 
     private static readonly JsonSerializerOptions KeywordJson = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
+    private static readonly JsonSerializerOptions MemoryJson = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
+
     public sealed record Prompt(string System, string User);
 
-    public Prompt Compose(AiNextPayload next)
+    public Prompt Compose(AiNextPayload next, IReadOnlyList<MemorySnapshotRow>? rankingMemory = null)
     {
         var rubric = rubricTemplate.Replace(KeywordsPlaceholder, KeywordsJson(next.Keywords), StringComparison.Ordinal);
         var system = string.Join("\n\n",
             rubric,
-            $"{RankingMemoryLabel}\n(none confirmed yet)");
+            $"{RankingMemoryLabel}\n{MemoryBlock(rankingMemory)}");
         if (!string.IsNullOrEmpty(next.Resume))
             system += $"\n\n{ResumeLabel}\n{next.Resume}";
 
@@ -33,18 +41,37 @@ public sealed class PromptBuilder(string rubricTemplate, string rubricTailorTemp
         return new Prompt(system, $"{JobLabel}\n{content}");
     }
 
-    public Prompt ComposeTailor(AiNextPayload next)
+    public Prompt ComposeTailor(AiNextPayload next, IReadOnlyList<MemorySnapshotRow>? resumeMemory = null)
     {
         var rubric = rubricTailorTemplate.Replace(KeywordsPlaceholder, KeywordsJson(next.Keywords), StringComparison.Ordinal);
         var system = string.Join("\n\n",
             rubric,
-            $"{ResumeMemoryLabel}\n(none confirmed yet)",
+            $"{ResumeMemoryLabel}\n{MemoryBlock(resumeMemory)}",
             $"{InventoryLabel}\n{InventoryJson(next.Inventory)}",
             $"{SelectionLabel}\n{(string.IsNullOrEmpty(next.Options) ? "{}" : next.Options)}");
 
         var budget = MaxContextTokens - Estimate(system);
         var content = TailTruncate(next.Content ?? string.Empty, budget);
         return new Prompt(system, $"{JobLabel}\n{content}");
+    }
+
+    internal static string MemoryBlock(IReadOnlyList<MemorySnapshotRow>? rows)
+    {
+        if (rows == null || rows.Count == 0) return NoMemoryText;
+
+        var budget = MemoryTokenCap * CharsPerToken;
+        var lines = new List<string>(rows.Count);
+        var used = 0;
+
+        foreach (var row in rows)
+        {
+            var line = JsonSerializer.Serialize(row, MemoryJson);
+            if (used + line.Length > budget) break;
+            lines.Add(line);
+            used += line.Length;
+        }
+
+        return lines.Count == 0 ? NoMemoryText : string.Join("\n", lines);
     }
 
     internal static string InventoryJson(IReadOnlyList<InventoryItem>? inventory)

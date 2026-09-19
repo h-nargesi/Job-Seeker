@@ -33,8 +33,7 @@ public class JobController(Analyzer analyzer, Database database, IDatabaseFactor
     {
         try
         {
-            database.Job.ChangeState(jobid, JobState.Applied);
-            return Ok();
+            return database.Job.MarkApplied(jobid, JobBusiness.AppliedViaDashboard) ? Ok() : NotFound();
         }
         catch (Exception ex)
         {

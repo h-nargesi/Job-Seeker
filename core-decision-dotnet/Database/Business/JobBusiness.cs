@@ -4,6 +4,10 @@ namespace Photon.JobSeeker
 {
     partial class JobBusiness
     {
+        public const string AppliedViaDashboard = "Applied via dashboard";
+
+        public const string AppliedViaAssistant = "Applied via assistant";
+
         private readonly Database database;
 
         public JobBusiness(Database database) => this.database = database;
@@ -224,6 +228,21 @@ WHERE JobID = @jobId", new
         public void ChangeState(long id, JobState state)
         {
             database.Execute(Q_CHANGE_STATE, new { state = state.ToString(), now = DateTime.Now, jobId = id });
+        }
+
+        public bool MarkApplied(long id, string source)
+        {
+            var job = Fetch(id);
+            if (job == null) return false;
+            if (job.State == JobState.Applied) return true;
+
+            database.Execute(Q_MARK_APPLIED, new
+            {
+                log = AppendLog(job.Log, $"{source} — {DateTime.Now:yyyy-MM-dd}"),
+                now = DateTime.Now,
+                jobId = id,
+            });
+            return true;
         }
 
         public void RemoveHtmlContent(long id)

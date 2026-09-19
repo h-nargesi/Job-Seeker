@@ -30,8 +30,9 @@ Dictionaries.SetConfiguration(path: builder.Configuration["Database:Dictionaries
 var dashboard_key = builder.Configuration["Auth:ApiKeys:Dashboard"];
 var search_key = builder.Configuration["Auth:ApiKeys:Search"];
 var worker_key = builder.Configuration["Auth:ApiKeys:Worker"];
+var assistant_key = builder.Configuration["Auth:ApiKeys:Assistant"];
 var credential_key = builder.Configuration["Auth:CredentialKey"];
-var api_clients = ApiAuthorization.FromConfig(dashboard_key, search_key, worker_key);
+var api_clients = ApiAuthorization.FromConfig(dashboard_key, search_key, worker_key, assistant_key);
 
 var auth_enabled = !string.IsNullOrEmpty(dashboard_key);
 
@@ -48,6 +49,8 @@ else
         Log.Warning("Auth:ApiKeys:Search is not set - the search extension cannot authenticate.");
     if (string.IsNullOrEmpty(worker_key))
         Log.Warning("Auth:ApiKeys:Worker is not set - ai-worker cannot authenticate.");
+    if (string.IsNullOrEmpty(assistant_key))
+        Log.Warning("Auth:ApiKeys:Assistant is not set - the assistant extension cannot authenticate.");
 }
 
 if (string.IsNullOrEmpty(credential_key))

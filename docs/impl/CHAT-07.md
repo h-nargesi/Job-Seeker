@@ -1,6 +1,6 @@
 # Chat 7 — Phase 5 core: memory and `/assistant/*`
 
-**Status:** not started. **Depends on:** Chat 6.
+**Status:** done. **Depends on:** Chat 6.
 
 ## Goal
 

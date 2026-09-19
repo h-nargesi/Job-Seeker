@@ -9,12 +9,14 @@ class AppSettingBusiness
     public const string ScoreCapKey = "scorecap";
     public const string WRegexKey = "w_regex";
     public const string WAiKey = "w_ai";
+    public const string MemoryCapKey = "memorycap";
 
     public const int FloorDefault = 70;
     public const int AiPassmarkDefault = 60;
     public const int ScoreCapDefault = 300;
     public const double WRegexDefault = 0.35;
     public const double WAiDefault = 0.65;
+    public const int MemoryCapDefault = 500;
 
     private readonly Database database;
 
@@ -29,6 +31,8 @@ class AppSettingBusiness
     public double WRegex() => ReadDouble(WRegexKey, WRegexDefault);
 
     public double WAi() => ReadDouble(WAiKey, WAiDefault);
+
+    public int MemoryCap() => ReadInt(MemoryCapKey, MemoryCapDefault);
 
     private string? ReadValue(string key)
     {
