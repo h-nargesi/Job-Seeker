@@ -14,6 +14,8 @@
 
             var (user, pass) = GetUserPass();
 
+            if (LoginCredentialsMissing(user, pass)) return MissingCredentialsCommands();
+
             return new Command[] {
                 Command.Fill(@"[name=""email""]", user),
                 Command.Fill(@"[name=""password""]", pass),

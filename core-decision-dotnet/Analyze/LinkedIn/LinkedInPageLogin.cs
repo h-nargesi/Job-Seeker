@@ -11,10 +11,8 @@ class LinkedInPageLogin : LoginPage, LinkedInPage
         return !LinkedInPage.reg_login_but.IsMatch(content);
     }
 
-    protected override Command[] LoginCommands()
+    protected override Command[] LoginCommands(string user, string pass)
     {
-        var (user, pass) = GetUserPass();
-
         return new Command[] {
             Command.Fill(@"#session_key", user),
             Command.Fill(@"#session_password", pass),

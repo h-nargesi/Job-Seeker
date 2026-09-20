@@ -11,10 +11,8 @@ class IamExpatPageLogin : LoginPage, IamExpatPage
         return !IamExpatPage.reg_login_url.IsMatch(content);
     }
 
-    protected override Command[] LoginCommands()
+    protected override Command[] LoginCommands(string user, string pass)
     {
-        var (user, pass) = GetUserPass();
-
         return new Command[]
         {
             Command.Fill(@"#edit-name", user),

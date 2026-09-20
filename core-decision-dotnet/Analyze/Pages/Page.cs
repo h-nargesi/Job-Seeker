@@ -1,3 +1,5 @@
+using Serilog;
+
 namespace Photon.JobSeeker.Analyze.Pages;
 
 public abstract class Page : IComparable<Page>
@@ -31,4 +33,18 @@ public abstract class Page : IComparable<Page>
         using var database = Parent.DatabaseFactory.Open();
         return database.Agency.GetUserPass(Parent.Name);
     }
+
+    protected static bool LoginCredentialsMissing(string user, string pass)
+    {
+        return string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(pass);
+    }
+
+    protected Command[] MissingCredentialsCommands()
+    {
+        Log.Warning("Agency ({0}): login credentials missing", Parent.Name);
+
+        return [Command.Wait(MissingCredentialsWaitMs), Command.Recheck()];
+    }
+
+    private const int MissingCredentialsWaitMs = 30_000;
 }

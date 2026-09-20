@@ -9,10 +9,8 @@ class IndeedPageLogin(Indeed parent) : LoginPage(parent), IndeedPage
         return !IndeedPage.reg_login_url.IsMatch(url);
     }
 
-    protected override Command[] LoginCommands()
+    protected override Command[] LoginCommands(string user, string pass)
     {
-        var (user, pass) = GetUserPass();
-
         return [
             Command.Fill(@"#ifl-InputFormField-3", user),
             Command.Click(@"#auth-page-google-password-fallback"),

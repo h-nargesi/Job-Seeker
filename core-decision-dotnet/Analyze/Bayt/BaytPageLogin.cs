@@ -9,10 +9,8 @@ class BaytPageLogin(Bayt parent) : LoginPage(parent), BaytPage
         return !BaytPage.reg_login_url.IsMatch(url);
     }
 
-    protected override Command[] LoginCommands()
+    protected override Command[] LoginCommands(string user, string pass)
     {
-        var (user, pass) = GetUserPass();
-
         return [
             Command.Fill(@"#LoginForm_username", user),
             Command.Fill(@"#LoginForm_password", pass),

@@ -12,8 +12,12 @@ public abstract class LoginPage : PageBase
     {
         if (CheckInvalidUrl(url, content)) return null;
 
-        return LoginCommands();
+        var (user, pass) = GetUserPass();
+
+        if (LoginCredentialsMissing(user, pass)) return MissingCredentialsCommands();
+
+        return LoginCommands(user, pass);
     }
 
-    protected abstract Command[] LoginCommands();
+    protected abstract Command[] LoginCommands(string user, string pass);
 }
