@@ -57,10 +57,20 @@ public class SalaryScoreTests
     [Fact]
     public void Production_pattern_month_group_is_used()
     {
-        const string pattern = @"\bsalary\b.*?(\d[\d,]*(000|k))(.+?\b(month|year)\b)?";
+        const string pattern = @"\bsalary\b[\s\S]*?(\d[\d.,]*(000|k))([\s\S]+?\b(month|year)\b)?";
 
         Assert.Equal(5, Evaluate("salary 5000/month", 1, pattern, 1, 4));
         Assert.Equal(10, Evaluate("salary 120k a year package", 1, pattern, 1, 4));
+    }
+
+    [Fact]
+    public void Production_pattern_supports_european_thousands_decimal_k_and_line_breaks()
+    {
+        const string pattern = @"\bsalary\b[\s\S]*?(\d[\d.,]*(000|k))([\s\S]+?\b(month|year)\b)?";
+
+        Assert.Equal(3, Evaluate("salary 3.000", 1, pattern, 1, 4));
+        Assert.Equal(3, Evaluate("salary:\n3.000 per month", 1, pattern, 1, 4));
+        Assert.Equal(3, Evaluate("salary 3.5k", 1, pattern, 1, 4));
     }
 
     [Fact]

@@ -7,6 +7,8 @@ public class JobEligibilityHelper : IDisposable
 {
     private readonly static Regex words = new(@"[a-zA-Z]{3,}");
 
+    private readonly static Regex thousands_dot = new(@"\.\d{3}$");
+
     private readonly Dictionaries dictionaries;
     private readonly Database database;
     private readonly JobOption[] options;
@@ -340,11 +342,18 @@ public class JobEligibilityHelper : IDisposable
             return 1; // have the min score
 
         var salary_text = money_matched.Value;
-        if (salary_text.ToLower().EndsWith("k"))
-            salary_text = salary_text[0..^1] + "000";
+        var k_suffix = salary_text.ToLower().EndsWith("k");
 
-        if (!double.TryParse(salary_text.Replace(",", ""), out double salary))
+        if (k_suffix) salary_text = salary_text[0..^1];
+
+        salary_text = salary_text.Replace(",", "");
+
+        if (thousands_dot.IsMatch(salary_text)) salary_text = salary_text.Replace(".", "");
+
+        if (!double.TryParse(salary_text, out double salary))
             return 1; // have the min score
+
+        if (k_suffix) salary *= 1000;
 
         string? period = null;
 
