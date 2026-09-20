@@ -17,7 +17,12 @@ class AgencyBusiness
     public void SaveState(Agency agency)
     {
         var settings = database.ExecuteScalar<string?>(Q_LOAD_SETTING, new { agency = agency.ID });
-        if (settings == null) return;
+
+        if (settings == null)
+        {
+            database.Execute(Q_UPDATE_STATUS, new { active = (long)agency.Status, id = agency.ID });
+            return;
+        }
 
         settings = Regex.Replace(settings, @"(""running"":)\s*\d+,", @$"$1 {agency.CurrentMethodIndex},");
 
@@ -137,4 +142,7 @@ UPDATE Agency SET Password = @pass WHERE AgencyID = @agency";
 
     private const string Q_UPDATE_SETTINGS = @"
 UPDATE Agency SET Settings = @settings, Active = @active WHERE AgencyID = @id";
+
+    private const string Q_UPDATE_STATUS = @"
+UPDATE Agency SET Active = @active WHERE AgencyID = @id";
 }

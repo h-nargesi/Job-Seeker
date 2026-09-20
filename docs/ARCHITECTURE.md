@@ -77,7 +77,9 @@ Two entry points trigger analysis:
 - `Analyze(context)` → `AnalyzeContent` (finds the agency, runs its pages) →
   hands the `Result` to `TrendsCheckpoint` for state bookkeeping.
 - `ReloadSettings()` re-reads agency config from the DB without a restart
-  (invoked from `JobController.Setting` with `Query == "reload"`).
+  (invoked from `JobController.Setting` with `Query == "reload"`, and from the
+  dashboard endpoints `POST /decision/running` / `POST /decision/status` to
+  sync active-cache membership after a status change).
 
 ### `Agency` (abstract base, one subclass per platform)
 
@@ -93,15 +95,20 @@ class under `Analyze/<Platform>/`. Key members:
   locales/countries (a "searching method" = one locale). `Settings.methods[]`
   in `agency.sql` defines them; `Running` tracks the current index. When a
   method is exhausted, the agency auto-advances to the next, then flips
-  `ActiveSeeking` off when all are done.
+  `ActiveSeeking` off when all are done. The dashboard drives the two
+  `AgencyStatus` bits per agency: Search/Analyze switches →
+  `ApplyStatus` (`POST /decision/status`), country buttons → `ApplyRunning`
+  (`POST /decision/running`). Turning a bit back on deletes that trend row
+  type so the checkpoint resumes immediately instead of waiting for expiry.
 - `GetSubPages()` — returns that platform's `Page` subclasses (also reflection
   discovered). Pages are sorted by `Order`.
 
 `AnalyzeContent(url, content)` walks its pages in `Order`; the **first** page
 whose `IssueCommand` returns non-null wins and its commands become the result.
 
-Concurrency: `AnalyzeContent`, `ApplyRunning` and `LoadSettings` run under a
-per-instance lock (`agency_lock`) — analyses of one agency are serialized while
+Concurrency: `AnalyzeContent`, `ApplyRunning`, `ApplyStatus` and
+`LoadSettings` run under a per-instance lock (`agency_lock`) — analyses of one
+agency are serialized while
 different agencies stay parallel. Lock-order rule: the agency lock is
 leaf-level; never hold it while entering `TrendsCheckpoint.CheckCurrentTrends`.
 The only allowed nesting is Analyzer-wide lock → agency lock (the

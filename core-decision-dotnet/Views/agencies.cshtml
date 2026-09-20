@@ -3,8 +3,9 @@
 @foreach (var agency in Model)
 {
     var index = -1;
+    var muted = agency.Seeking || agency.Analyzing ? "" : " text-muted";
     <div class="agency mt-3" aria-title="@agency.Name">
-    <h4><a href="@agency.SearchLink">@agency.Name</a></h4>
+    <h4 class="@muted"><a href="@agency.SearchLink">@agency.Name</a></h4>
     <p>
         <span title="Applied">(<small>Applied:</small> @agency.Applied)</span> -
         <span title="Accepted">@agency.Accepted</span> <small title="Accepting Rate">(@agency.AcceptingRate %)</small> /
@@ -13,6 +14,21 @@
     </p>
     @if (agency.Running is int running)
     {
+        <div class="d-flex flex-row align-items-center mb-1">
+            @if (agency.Methods.Length > 0)
+            {
+                <div class="form-check form-switch me-3">
+                    <input id="SS-@agency.Name" class="form-check-input" type="checkbox" role="switch"
+                        checked="@agency.Seeking" onchange="change_status('@agency.Name', 'seeking', this.checked)" />
+                    <label class="form-check-label" for="SS-@agency.Name">Search</label>
+                </div>
+            }
+            <div class="form-check form-switch">
+                <input id="SA-@agency.Name" class="form-check-input" type="checkbox" role="switch"
+                    checked="@agency.Analyzing" onchange="change_status('@agency.Name', 'analyzing', this.checked)" />
+                <label class="form-check-label" for="SA-@agency.Name">Analyze</label>
+            </div>
+        </div>
         @foreach (var method in agency.Methods)
         {
             index += 1;

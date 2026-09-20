@@ -154,11 +154,25 @@ public class DecisionControllerTests
         var controller = Controller(db);
 
         Assert.IsType<BadRequestResult>(controller.Running(new RunningMethodContext()));
-        Assert.IsType<NotFoundResult>(controller.Running(new RunningMethodContext { Agency = "Nope" }));
+        Assert.IsType<NotFoundResult>(controller.Running(new RunningMethodContext { Agency = "Nope", Running = 0 }));
     }
 
     [Fact]
-    public void Running_sets_the_method_clears_search_trends_and_stops_cleanly()
+    public void Running_guards_a_null_or_out_of_range_index()
+    {
+        using var db = new CheckpointDatabase();
+        var controller = Controller(db);
+
+        Assert.IsType<BadRequestResult>(controller.Running(
+            new RunningMethodContext { Agency = "CheckpointAgency" }));
+
+        var body = BadBody(controller.Running(
+            new RunningMethodContext { Agency = "CheckpointAgency", Running = 3 }));
+        Assert.Equal("running-out-of-range", body.GetProperty("error").GetString());
+    }
+
+    [Fact]
+    public void Running_sets_the_method_clears_search_trends_and_turns_seeking_on()
     {
         using var db = new CheckpointDatabase();
         db.Database.Trend.CreateTrend(new Trend { AgencyID = 1, State = TrendState.Seeking });
@@ -169,9 +183,157 @@ public class DecisionControllerTests
         Assert.Equal(2, db.Agency.CurrentMethodIndex);
         Assert.True(db.Agency.IsActiveSeeking);
         Assert.Null(db.Database.Trend.Get(1, TrendType.Search));
+    }
 
-        Assert.IsType<OkResult>(controller.Running(new RunningMethodContext { Agency = "CheckpointAgency" }));
+    [Fact]
+    public void Status_guards_a_missing_or_unknown_agency()
+    {
+        using var db = new CheckpointDatabase();
+        var controller = Controller(db);
 
+        Assert.IsType<BadRequestResult>(controller.Status(null));
+        Assert.IsType<BadRequestResult>(controller.Status(new AgencyStatusContext()));
+        Assert.IsType<NotFoundResult>(controller.Status(new AgencyStatusContext { Agency = "Nope" }));
+    }
+
+    [Fact]
+    public void Status_rejects_seeking_without_any_searching_method()
+    {
+        using var db = new CheckpointDatabase(no_settings: true);
+        var controller = Controller(db);
+
+        var body = BadBody(controller.Status(
+            new AgencyStatusContext { Agency = "CheckpointAgency", Seeking = true }));
+        Assert.Equal("no-methods", body.GetProperty("error").GetString());
+    }
+
+    [Fact]
+    public void Status_toggles_analyzing_and_persists_the_active_column()
+    {
+        using var db = new CheckpointDatabase();
+        var controller = Controller(db);
+
+        Assert.IsType<OkResult>(controller.Status(
+            new AgencyStatusContext { Agency = "CheckpointAgency", Analyzing = false }));
+
+        Assert.False(db.Agency.IsActiveAnalyzing);
+        Assert.Equal(1L, db.Database.ExecuteScalar<long>("SELECT Active FROM Agency WHERE AgencyID = 1"));
+
+        Assert.IsType<OkResult>(controller.Status(
+            new AgencyStatusContext { Agency = "CheckpointAgency", Analyzing = true }));
+
+        Assert.True(db.Agency.IsActiveAnalyzing);
+        Assert.Equal(3L, db.Database.ExecuteScalar<long>("SELECT Active FROM Agency WHERE AgencyID = 1"));
+    }
+
+    [Fact]
+    public void Status_persists_the_active_column_even_without_settings()
+    {
+        using var db = new CheckpointDatabase(no_settings: true);
+        var controller = Controller(db);
+
+        Assert.IsType<OkResult>(controller.Status(
+            new AgencyStatusContext { Agency = "CheckpointAgency", Analyzing = false }));
+
+        Assert.False(db.AgencyById.IsActiveAnalyzing);
+        Assert.Equal(1L, db.Database.ExecuteScalar<long>("SELECT Active FROM Agency WHERE AgencyID = 1"));
+    }
+
+    [Fact]
+    public void Status_turning_seeking_back_on_deletes_the_blocked_search_trend_and_keeps_the_index()
+    {
+        using var db = new CheckpointDatabase();
+        var controller = Controller(db);
+
+        Assert.IsType<OkResult>(controller.Running(
+            new RunningMethodContext { Agency = "CheckpointAgency", Running = 2 }));
+
+        Assert.IsType<OkResult>(controller.Status(
+            new AgencyStatusContext { Agency = "CheckpointAgency", Seeking = false }));
         Assert.False(db.Agency.IsActiveSeeking);
+
+        db.Database.Trend.Block(1, TrendType.Search);
+        Assert.NotNull(db.Database.Trend.Get(1, TrendType.Search));
+
+        Assert.IsType<OkResult>(controller.Status(
+            new AgencyStatusContext { Agency = "CheckpointAgency", Seeking = true }));
+
+        Assert.True(db.Agency.IsActiveSeeking);
+        Assert.Equal(2, db.Agency.CurrentMethodIndex);
+        Assert.Null(db.Database.Trend.Get(1, TrendType.Search));
+    }
+
+    [Fact]
+    public void Status_turning_analyzing_back_on_deletes_the_blocked_job_trend()
+    {
+        using var db = new CheckpointDatabase();
+        var controller = Controller(db);
+
+        Assert.IsType<OkResult>(controller.Status(
+            new AgencyStatusContext { Agency = "CheckpointAgency", Analyzing = false }));
+
+        db.Database.Trend.Block(1, TrendType.Job);
+        Assert.NotNull(db.Database.Trend.Get(1, TrendType.Job));
+
+        Assert.IsType<OkResult>(controller.Status(
+            new AgencyStatusContext { Agency = "CheckpointAgency", Analyzing = true }));
+
+        Assert.True(db.Agency.IsActiveAnalyzing);
+        Assert.Null(db.Database.Trend.Get(1, TrendType.Job));
+    }
+
+    [Fact]
+    public void Status_turning_analyzing_on_when_already_on_keeps_the_live_trend()
+    {
+        using var db = new CheckpointDatabase();
+        db.Database.Trend.CreateTrend(new Trend { AgencyID = 1, State = TrendState.Analyzing });
+        var controller = Controller(db);
+
+        Assert.IsType<OkResult>(controller.Status(
+            new AgencyStatusContext { Agency = "CheckpointAgency", Analyzing = true }));
+
+        Assert.NotNull(db.Database.Trend.Get(1, TrendType.Job));
+    }
+
+    [Fact]
+    public void Status_turning_both_bits_off_removes_the_agency_from_the_active_cache()
+    {
+        using var db = new CheckpointDatabase();
+        var controller = Controller(db);
+
+        Assert.Contains("CheckpointAgency", db.Analyzer.Agencies.Keys);
+
+        Assert.IsType<OkResult>(controller.Status(
+            new AgencyStatusContext { Agency = "CheckpointAgency", Seeking = false, Analyzing = false }));
+
+        Assert.DoesNotContain("CheckpointAgency", db.Analyzer.Agencies.Keys);
+        Assert.Contains(1L, db.Analyzer.AgenciesByID.Keys);
+    }
+
+    [Fact]
+    public void Inactive_agencies_load_into_the_id_cache_but_stay_out_of_scopes()
+    {
+        using var db = new CheckpointDatabase(active: 0);
+
+        Assert.DoesNotContain("CheckpointAgency", db.Analyzer.Agencies.Keys);
+        Assert.False(db.AgencyById.IsActiveSeeking);
+        Assert.False(db.AgencyById.IsActiveAnalyzing);
+
+        var scopes = OkBody(Controller(db).Scopes());
+        Assert.Empty(scopes.EnumerateArray());
+    }
+
+    [Fact]
+    public void An_inactive_agency_can_be_re_enabled_from_the_dashboard()
+    {
+        using var db = new CheckpointDatabase(active: 0);
+        var controller = Controller(db);
+
+        Assert.IsType<OkResult>(controller.Status(
+            new AgencyStatusContext { Agency = "CheckpointAgency", Analyzing = true }));
+
+        Assert.Contains("CheckpointAgency", db.Analyzer.Agencies.Keys);
+        Assert.True(db.AgencyById.IsActiveAnalyzing);
+        Assert.Equal(2L, db.Database.ExecuteScalar<long>("SELECT Active FROM Agency WHERE AgencyID = 1"));
     }
 }

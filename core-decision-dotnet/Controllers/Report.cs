@@ -99,11 +99,10 @@ public class ReportController(Analyzer analyzer, Database database) : Controller
     private AgencyDashboardItem[] GetAgencies(Database database)
     {
         var report = database.Agency.JobRateReport();
-        var agencies = analyzer.Agencies;
 
         return report.Select(r =>
             {
-                agencies.TryGetValue(r.Title, out Agency? agency);
+                analyzer.AgenciesByID.TryGetValue(r.AgencyID, out Agency? agency);
                 return new AgencyDashboardItem(
                     r.AgencyID,
                     Name: r.Title,
@@ -114,6 +113,8 @@ public class ReportController(Analyzer analyzer, Database database) : Controller
                     r.Applied,
                     r.AnalyzingRate,
                     r.AcceptingRate,
+                    Seeking: agency != null && agency.IsActiveSeeking,
+                    Analyzing: agency != null && agency.IsActiveAnalyzing,
                     Running: agency == null ? null : agency.Status.HasFlag(AgencyStatus.ActiveSeeking) ? agency.CurrentMethodIndex : (int?)-1,
                     Methods: agency?.EnabledSearchingMethod ?? []);
             })

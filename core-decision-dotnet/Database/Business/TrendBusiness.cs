@@ -98,9 +98,9 @@ namespace Photon.JobSeeker
             database.Execute(Q_BLOCK_BY_ID, new { trendId = trend_id });
         }
 
-        public void ClearSearching(long agency_id)
+        public void Clear(long agency_id, TrendType type)
         {
-            database.Execute(Q_DELETE_AGENCY, new { agencyid = agency_id });
+            database.Execute(Q_DELETE_TYPE, new { agencyid = agency_id, type = type.ToString() });
         }
 
         public void Delete(long id)
@@ -156,8 +156,8 @@ DELETE FROM Trend WHERE Reserved = 1 AND DATETIME(LastActivity) <= @cutoff";
         private const string Q_TOUCH = @"
 UPDATE Trend SET LastActivity = @now WHERE TrendID = @trendId";
 
-        private readonly static string Q_DELETE_AGENCY = @$"
-DELETE FROM Trend WHERE AgencyID = @agencyid AND Type = '{nameof(TrendType.Search)}'";
+        private readonly static string Q_DELETE_TYPE = @"
+DELETE FROM Trend WHERE AgencyID = @agencyid AND Type = @type";
 
         private readonly static string Q_BLOCK = $@"
 INSERT INTO Trend (AgencyID, Type, State)

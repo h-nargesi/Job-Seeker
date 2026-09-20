@@ -121,14 +121,46 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
     }
 
     [HttpPost]
-    public IActionResult Running([FromBody] RunningMethodContext context)
+    public IActionResult Running([FromBody] RunningMethodContext? context)
     {
         try
         {
-            if (context.Agency == null) return BadRequest();
-            if (!analyzer.Agencies.TryGetValue(context.Agency, out var agency)) return NotFound();
+            if (context?.Agency == null || context.Running == null) return BadRequest();
 
-            agency.ApplyRunning(context.Running, database);
+            var agency = analyzer.FindAgency(context.Agency);
+            if (agency == null) return NotFound();
+
+            if (context.Running.Value < 0 || context.Running.Value >= agency.SearchingMethodCount)
+                return BadRequest(new { error = "running-out-of-range" });
+
+            agency.ApplyRunning(context.Running.Value, database);
+            analyzer.ReloadSettings();
+
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
+    [HttpPost]
+    public IActionResult Status([FromBody] AgencyStatusContext? context)
+    {
+        try
+        {
+            if (context?.Agency == null) return BadRequest();
+
+            var agency = analyzer.FindAgency(context.Agency);
+            if (agency == null) return NotFound();
+
+            if (context.Seeking == true && agency.SearchingMethodCount == 0)
+                return BadRequest(new { error = "no-methods" });
+
+            agency.ApplyStatus(context.Seeking, context.Analyzing, database);
+            analyzer.ReloadSettings();
+
             return Ok();
         }
         catch (Exception ex)

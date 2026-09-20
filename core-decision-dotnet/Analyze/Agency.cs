@@ -111,19 +111,45 @@ public abstract class Agency
         }
     }
 
-    public void ApplyRunning(int? running, Database database)
+    public void ApplyRunning(int running, Database database)
     {
         lock (agency_lock)
         {
-            if (running.HasValue)
+            CurrentMethodIndex = running;
+            Status |= AgencyStatus.ActiveSeeking;
+            database.Trend.Clear(ID, TrendType.Search);
+            database.Agency.SaveState(this);
+        }
+    }
+
+    public void ApplyStatus(bool? seeking, bool? analyzing, Database database)
+    {
+        lock (agency_lock)
+        {
+            if (seeking.HasValue)
             {
-                CurrentMethodIndex = running.Value;
-                Status |= AgencyStatus.ActiveSeeking;
-                database.Trend.ClearSearching(ID);
+                if (seeking.Value)
+                {
+                    if (!IsActiveSeeking)
+                    {
+                        Status |= AgencyStatus.ActiveSeeking;
+                        database.Trend.Clear(ID, TrendType.Search);
+                    }
+                }
+                else Status &= ~AgencyStatus.ActiveSeeking;
             }
-            else
+
+            if (analyzing.HasValue)
             {
-                Status &= ~AgencyStatus.ActiveSeeking;
+                if (analyzing.Value)
+                {
+                    if (!IsActiveAnalyzing)
+                    {
+                        Status |= AgencyStatus.ActiveAnalyzing;
+                        database.Trend.Clear(ID, TrendType.Job);
+                    }
+                }
+                else Status &= ~AgencyStatus.ActiveAnalyzing;
             }
 
             database.Agency.SaveState(this);
@@ -136,7 +162,6 @@ public abstract class Agency
         if (agency_info == null) return;
 
         Status = (AgencyStatus)agency_info.Active;
-        if (Status == AgencyStatus.None) return;
 
         ID = agency_info.AgencyID;
         Domain = agency_info.Domain;

@@ -92,12 +92,7 @@ async function promote(jobid) {
 
 async function change_running(agency, running) {
     try {
-        const current_element = document.getElementById(`RM-${agency}-${running}`);
-        if (!current_element) return;
-
-        const enabled = current_element.classList.contains('btn-success');
-
-        const data = {
+        await fetch("/decision/running", {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -105,15 +100,32 @@ async function change_running(agency, running) {
             },
             body: JSON.stringify({
                 agency: agency,
-                running: enabled ? null : running
+                running: running
             })
-        }
-        await fetch("/decision/running", data);
-
-        document.querySelectorAll(`button[id^="RM-${agency}"]`).forEach((button) => {
-            button.className = 'btn btn-outline-info mt-1';
         });
-        if (!enabled) current_element.className = 'btn btn-success mt-1';
+
+        await LoadAgencies();
+
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function change_status(agency, field, value) {
+    try {
+        const body = { agency: agency };
+        body[field] = value;
+
+        await fetch("/decision/status", {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+
+        await LoadAgencies();
 
     } catch (e) {
         console.error(e);

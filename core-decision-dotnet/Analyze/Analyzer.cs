@@ -7,6 +7,7 @@ public class Analyzer(IDatabaseFactory database_factory)
     private readonly object @lock = new();
     private readonly Dictionary<string, Agency> agencies_by_name = [];
     private readonly Dictionary<long, Agency> agencies_by_id = [];
+    private bool loaded;
 
     internal IDatabaseFactory DatabaseFactory => database_factory;
 
@@ -14,16 +15,11 @@ public class Analyzer(IDatabaseFactory database_factory)
     {
         get
         {
-            if (agencies_by_name.Count == 0)
+            lock (@lock)
             {
-                lock (@lock)
-                {
-                    if (agencies_by_name.Count == 0)
-                        LoadAgencies();
-                }
+                if (!loaded) LoadAgencies();
+                return agencies_by_name;
             }
-
-            return agencies_by_name;
         }
     }
 
@@ -31,16 +27,20 @@ public class Analyzer(IDatabaseFactory database_factory)
     {
         get
         {
-            if (agencies_by_id.Count == 0)
+            lock (@lock)
             {
-                lock (@lock)
-                {
-                    if (agencies_by_id.Count == 0)
-                        LoadAgencies();
-                }
+                if (!loaded) LoadAgencies();
+                return agencies_by_id;
             }
+        }
+    }
 
-            return agencies_by_id;
+    public Agency? FindAgency(string name)
+    {
+        lock (@lock)
+        {
+            if (!loaded) LoadAgencies();
+            return agencies_by_id.Values.FirstOrDefault(a => a.Name == name);
         }
     }
 
@@ -59,6 +59,7 @@ public class Analyzer(IDatabaseFactory database_factory)
         {
             agencies_by_name.Clear();
             agencies_by_id.Clear();
+            loaded = false;
         }
     }
 
@@ -67,6 +68,12 @@ public class Analyzer(IDatabaseFactory database_factory)
         using var database = database_factory.Open();
         lock (@lock)
         {
+            if (!loaded)
+            {
+                LoadAgencies();
+                return;
+            }
+
             foreach (var agency in agencies_by_id.Values)
             {
                 agency.LoadFromDatabase(database);
@@ -109,6 +116,7 @@ public class Analyzer(IDatabaseFactory database_factory)
     {
         agencies_by_name.Clear();
         agencies_by_id.Clear();
+        loaded = true;
         Log.Debug("loading agencies");
 
         var types = TypeHelper.GetSubTypes(typeof(Agency));

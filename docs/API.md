@@ -123,12 +123,40 @@ Wipes all trend rows instantly — expired and reserved alike
 in-memory agency cache so it reloads from the DB on next access.
 
 ### `POST /decision/running`
-Start/stop an agency's active seeking, or set its current locale index.
+Set an agency's current searching-method (locale) index and turn its seeking
+on. Method selection only — turning seeking off is `/decision/status`.
 
 - **Request body** (`RunningMethodContext`): `{ "agency": "LinkedIn", "running": 2 }`.
-  - `running` present → set `CurrentMethodIndex`, enable `ActiveSeeking`, clear
-    that agency's search trends.
-  - `running` null/omitted → disable `ActiveSeeking` for the agency.
+  - `running` **required** (null/omitted → 400; the dashboard switch owns
+    stop). Out-of-range index → 400 (`running-out-of-range`).
+  - On success: sets `CurrentMethodIndex`, enables `ActiveSeeking`, clears
+    that agency's Search trend rows, saves, and refreshes cache membership —
+    so it also works for a fully inactive agency (re-enables it at that
+    locale).
+  - Unknown agency → 404 (looked up across all agencies, including inactive).
+
+### `POST /decision/status`
+Toggle the per-agency `AgencyStatus` bits — the dashboard's Search/Analyze
+switches. A null/omitted field leaves that bit unchanged (the UI sends only
+the changed field).
+
+- **Request body** (`AgencyStatusContext`):
+  `{ "agency": "LinkedIn", "seeking": false, "analyzing": true }`.
+  - `seeking: true` → enable `ActiveSeeking` and delete the agency's blocked
+    Search trend row (immediate resume; keeping the row would stall resumption
+    until its 5-min expiry). Rejected with 400 (`no-methods`) when the agency
+    has no searching methods (null `Settings`).
+  - `seeking: false` → clear the bit; the checkpoint blocks the Search trend
+    on its next cycle (~30 s).
+  - `analyzing: true` → enable `ActiveAnalyzing` and delete the blocked Job
+    trend row; the checkpoint reopens the first pending job.
+  - `analyzing: false` → clear the bit; the checkpoint blocks the Job trend.
+  - Setting a bit that is already on is a no-op (live trend rows are kept).
+  - Turning both bits off fully deactivates the agency: it leaves the active
+    cache, `GET /decision/scopes` stops advertising its domain, and an open
+    tab gets the usual "not found" on its next `take`.
+  - Always persists the `Active` column (also for agencies with null
+    `Settings`) and refreshes cache membership. Unknown agency → 404.
 
 ## AI worker API — `AiController`
 

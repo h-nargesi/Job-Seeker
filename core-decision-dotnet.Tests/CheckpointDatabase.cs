@@ -37,7 +37,7 @@ internal sealed class CheckpointDatabase : IDisposable
 {
     private readonly SQLiteConnection keeper;
 
-    public CheckpointDatabase(int active = 3)
+    public CheckpointDatabase(int active = 3, bool no_settings = false)
     {
         var connection_string = $"Data Source=file:checkpoint{Guid.NewGuid():N}?mode=memory&cache=shared;Pooling=False";
 
@@ -51,7 +51,7 @@ internal sealed class CheckpointDatabase : IDisposable
         Database.Execute(@"
 INSERT INTO Agency (AgencyID, Title, Active, Domain, Link, Settings)
 VALUES (1, 'CheckpointAgency', @active, 'cp\.example\.com$', 'https://cp.example.com/', @settings)",
-            new { active, settings = SettingsJson() });
+            new { active, settings = no_settings ? null : SettingsJson() });
 
         Analyzer = new Analyzer(new SharedDatabaseFactory(connection_string));
         _ = Analyzer.Agencies;
@@ -62,6 +62,8 @@ VALUES (1, 'CheckpointAgency', @active, 'cp\.example\.com$', 'https://cp.example
     public Analyzer Analyzer { get; }
 
     public CheckpointAgency Agency => (CheckpointAgency)Analyzer.Agencies["CheckpointAgency"];
+
+    public CheckpointAgency AgencyById => (CheckpointAgency)Analyzer.AgenciesByID[1];
 
     public void Dispose()
     {

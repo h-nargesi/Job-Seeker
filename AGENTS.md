@@ -236,7 +236,10 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
   `JobBusiness` builds queries with `nameof(JobState.X)` to stay in sync.
 - **`Agency.Active` is a bitfield** (`AgencyStatus`: 1=Seeking, 2=Analyzing,
   3=both). `0` means inactive and the agency is excluded from `Agencies` (the
-  name-keyed dict) but kept in `AgenciesByID`.
+  name-keyed dict) but kept in `AgenciesByID`. The dashboard toggles both bits
+  per agency — even for fully inactive ones — via Search/Analyze switches
+  (`POST /decision/status`) and country buttons (`POST /decision/running`,
+  which also re-enables seeking); both refresh active-cache membership.
 - **`job-seeker.sh` hardcodes a Linux publish path.** Don't trust it on Windows;
   use `dotnet run` instead.
 - The dashboard SQL in `JobBusiness.Q_INDEX` ranks jobs with a time-decay curve.
