@@ -16,8 +16,6 @@ interface IndeedPage
 
     protected static readonly Regex reg_job_view = new(@"/(?:m/)?viewjob\?jk=(\w+)", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_job_title = new(@"<h1[^>]*>([^<]*<span[^>]*>)?([^<]*)(</span>[^<]*)?</h1>", RegexOptions.IgnoreCase);
-
     protected static readonly Regex reg_job_adding = new(@"<a[^>]+href=[""']#[""'][^>]+rel=[""']nofollow[""'][^>]+title=[""'][^""']*Add to favourites[""'][^>]*>", RegexOptions.IgnoreCase);
 
     public static readonly Regex reg_job_acceptability_checker = new(@"\bThis job has expired on Indeed\b", RegexOptions.IgnoreCase);

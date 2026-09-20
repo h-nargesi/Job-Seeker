@@ -1,7 +1,6 @@
 ﻿using HtmlAgilityPack;
 using Photon.JobSeeker.Pages;
 using Serilog;
-using System.Web;
 
 namespace Photon.JobSeeker.Indeed;
 
@@ -35,9 +34,7 @@ class IndeedPageJob(Indeed parent) : JobPage(parent), IndeedPage
     {
         apply = null;
         code = null;
-
-        var title_match = IndeedPage.reg_job_title.Match(html);
-        title = title_match.Success ? HttpUtility.HtmlDecode(title_match.Groups[2].Value).Trim() : null;
+        title = IndeedJob.ExtractTitle(html);
     }
 
     protected override void ChceckJob(Job job)
