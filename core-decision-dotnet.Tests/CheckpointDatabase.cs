@@ -155,6 +155,7 @@ create table Trend (
     State           text        not null,
     LastActivity    timestamp   not null    default current_timestamp,
     Reserved        bit         not null    default 0,
+    Challenge       bit         not null    default 0,
     unique (AgencyID, Type)
 )";
 }

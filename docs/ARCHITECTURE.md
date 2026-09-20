@@ -21,22 +21,22 @@ The whole system is a poll loop. There is no WebSocket; each navigation triggers
 one HTTP round-trip.
 
 ```
-┌─────────────────────┐                         ┌──────────────────────────┐
-│  Chrome extension   │                         │  .NET server             │
-│  (agent-extension)  │                         │  (core-decision-dotnet)  │
-└──────────┬──────────┘                         └────────────┬─────────────┘
+┌─────────────────────┐                           ┌──────────────────────────┐
+│  Chrome extension   │                           │  .NET server             │
+│  (agent-extension)  │                           │  (core-decision-dotnet)  │
+└──────────┬──────────┘                           └────────────┬─────────────┘
            │ page loads                                        │
            ▼                                                   │
   check-page.js                                                │
   fetch /decision/scopes  ─────────────────────────►  GET Scopes()
   (agency list + domain regexes) ◄───────────────────  return [{Name,Domain,Waiting}]
            │                                                   │
-  match window.location.hostname against a Domain            │
-           │ matched                                          │
+  match window.location.hostname against a Domain              │
+           │ matched                                           │
            ▼                                                   │
   POST /decision/take  ──────────────────────────────►  POST Take(PageContext)
-    { agency, url, content: fullHTML }                       │
-                                                             ▼
+    { agency, url, content: fullHTML }                         │
+                                                               ▼
                                                Analyzer.Analyze(context)
                                                ├─ Agency.AnalyzeContent(url, content)
                                                │    └─ first Page with IssueCommand() != null
@@ -63,6 +63,34 @@ Two entry points trigger analysis:
    page") get acted on even when no user-triggered navigation is happening.
    The dashboard is a human control/monitor console only — no extension code
    runs on it.
+
+### Challenge hold (Cloudflare / CAPTCHA)
+
+When a page shows a Cloudflare interstitial/Turnstile box or a visible CAPTCHA
+widget, the extension stops and waits for a human instead of letting the flow
+spin:
+
+1. `challenge-detector.js` (content script) matches a conservative selector
+   list on page load; invisible widgets
+   (`[data-size="invisible"]`) are deliberately excluded — the bot can still
+   submit those forms, and a failed submit reloads with a *visible* challenge.
+2. `check-page.js` sends the normal `POST /decision/take` with
+   `challenge: true`. The server skips page analysis and the slept-trend scan
+   (`TrendsCheckpoint.HoldForChallenge`): it binds the tab's trend (by tab
+   trend id → latest holdable agency row → creates one if none), sets the
+   trend's `Challenge` bit, and answers `commands: []` with
+   `close_timeout_ms = 24 h` — so the tab is not closed and **no new page is
+   opened** for that agency (its trend row stays alive).
+3. While held, the heartbeat ignores `document.visibilityState` and keeps
+   touching the trend (challenge-flagged rows are swept only after 30 min
+   without a heartbeat instead of the usual 5).
+4. A 5 s watcher re-checks the DOM. When the box disappears (solved without
+   navigation) the page is re-sent normally and the next checkpoint update
+   clears the `Challenge` bit; a post-solve navigation re-enters the normal
+   loop through `load`.
+5. The dashboard trend list (polled every 15 s) overlays the state as
+   `Challenge` with an orange row.
+
 
 ## Server internals
 

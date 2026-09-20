@@ -13,4 +13,6 @@ public class Trend
     public DateTime LastActivity { get; set; } = DateTime.Now;
 
     public bool Reserved { get; set; }
+
+    public bool Challenge { get; set; }
 }

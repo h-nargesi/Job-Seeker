@@ -11,6 +11,7 @@ function fresh(options = {}) {
 	env.load('controllers/storage-handler.js');
 	env.load('controllers/background-messaging.js');
 	env.load('controllers/action-handler.js');
+	env.load('controllers/challenge-detector.js');
 	env.load('controllers/check-page.js');
 	return {
 		env,
@@ -219,12 +220,121 @@ test('a failed heartbeat logs a warning', async () => {
 	));
 });
 
+const challengeResponder = () => {
+	return message => {
+		if (message.title === 'scopes') return [{ name: 'A', domain: 'linkedin\\.com' }];
+		if (message.title === 'send')
+			return message.params.challenge
+				? { commands: [], close_timeout_ms: 86400000 }
+				: { commands: [{ action: 'reload' }], close_timeout_ms: 700 };
+		return { ok: true };
+	};
+};
+
+test('a challenge page sends challenge:true, arms the long close timer and holds', async () => {
+	const { env, onPageLoad } = fresh();
+	env.sandbox.document.body.innerHTML = '<div id="challenge-form"></div>';
+	env.chrome.runtime.respondWith(challengeResponder());
+
+	onPageLoad();
+	await env.advance(1000);
+
+	assert.deepStrictEqual(sentTitles(env), ['scopes', 'send']);
+	assert.strictEqual(env.chrome.runtime.sent[1].params.challenge, true);
+	assert.ok(env.clock.pending().some(t => t.due === 86400000));
+	assert.ok(env.clock.pending().some(t => t.interval === 30000));
+	assert.ok(env.clock.pending().some(t => t.interval === 5000));
+	assert.ok(env.console.entries.some(e => e.level === 'warn' && e.args.includes('challenge hold')));
+});
+
+test('a clean page is sent without the challenge flag', async () => {
+	const { env, onPageLoad } = fresh();
+	env.sandbox.document.body.innerHTML = '<div class="jobs-list"></div>';
+	env.chrome.runtime.respondWith(challengeResponder());
+
+	onPageLoad();
+	await env.advance(1000);
+
+	assert.strictEqual(env.chrome.runtime.sent[1].params.challenge, undefined);
+	assert.ok(env.clock.pending().some(t => t.due === 700));
+	assert.ok(!env.clock.pending().some(t => t.interval === 5000));
+});
+
+test('the heartbeat keeps beating on a hidden tab while the challenge holds', async () => {
+	const { env, onPageLoad } = fresh();
+	env.sandbox.document.body.innerHTML = '<div id="challenge-form"></div>';
+	env.chrome.runtime.respondWith(challengeResponder());
+
+	onPageLoad();
+	await env.advance(1000);
+
+	Object.defineProperty(env.sandbox.document, 'visibilityState', {
+		value: 'hidden',
+		configurable: true,
+	});
+	await env.advance(30000);
+
+	assert.ok(sentTitles(env).includes('heartbeat'));
+});
+
+test('the watcher resumes the flow once the challenge box disappears', async () => {
+	const { env, onPageLoad } = fresh();
+	env.sandbox.document.body.innerHTML = '<div id="challenge-form"></div>';
+	env.chrome.runtime.respondWith(challengeResponder());
+
+	onPageLoad();
+	await env.advance(1000);
+	assert.strictEqual(env.chrome.runtime.sent.filter(m => m.title === 'send').length, 1);
+
+	env.sandbox.document.body.innerHTML = '<div class="jobs-list"></div>';
+	await env.advance(5000);
+
+	const sends = env.chrome.runtime.sent.filter(m => m.title === 'send');
+	assert.strictEqual(sends.length, 2);
+	assert.strictEqual(sends[1].params.challenge, undefined);
+	assert.strictEqual(env.sandbox.location.reloadCalls, 1);
+	assert.strictEqual(env.grab('challenge_hold'), false);
+	assert.ok(!env.clock.pending().some(t => t.interval === 5000));
+});
+
+test('the watcher keeps waiting while the challenge box stays', async () => {
+	const { env, onPageLoad } = fresh();
+	env.sandbox.document.body.innerHTML = '<div id="challenge-form"></div>';
+	env.chrome.runtime.respondWith(challengeResponder());
+
+	onPageLoad();
+	await env.advance(1000);
+	await env.advance(15000);
+
+	assert.strictEqual(env.chrome.runtime.sent.filter(m => m.title === 'send').length, 1);
+	assert.strictEqual(env.grab('challenge_hold'), true);
+});
+
+test('OnPageLoad clears an existing challenge hold before running again', async () => {
+	const { env, onPageLoad } = fresh();
+	env.sandbox.document.body.innerHTML = '<div id="challenge-form"></div>';
+	env.chrome.runtime.respondWith(challengeResponder());
+
+	onPageLoad();
+	await env.advance(1000);
+	assert.strictEqual(env.grab('challenge_hold'), true);
+
+	onPageLoad();
+	assert.strictEqual(env.grab('challenge_hold'), false);
+	assert.ok(!env.clock.pending().some(t => t.interval === 5000));
+
+	await env.advance(1000);
+	assert.strictEqual(env.grab('challenge_hold'), true);
+	assert.ok(env.clock.pending().some(t => t.interval === 5000));
+});
+
 test('the load event triggers OnPageLoad', async () => {
 	const env = createEnv({ dom: true, url: 'https://www.example.com/', autoLoadGate: false });
 	await env.sandbox.happyDOM.waitUntilComplete();
 	env.load('controllers/storage-handler.js');
 	env.load('controllers/background-messaging.js');
 	env.load('controllers/action-handler.js');
+	env.load('controllers/challenge-detector.js');
 	env.load('controllers/check-page.js');
 	env.chrome.runtime.respondWith(message =>
 		message.title === 'scopes' ? [] : { commands: [] });

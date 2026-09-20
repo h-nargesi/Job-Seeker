@@ -65,6 +65,61 @@ namespace Photon.JobSeeker
             return result;
         }
 
+        public Result HoldForChallenge(Agency agency, long? trend_id, string url)
+        {
+            checkpoint_lock.Wait();
+            try
+            {
+                database.BeginTransaction(immediate: true);
+                try
+                {
+                    database.Trend.DeleteExpired();
+                    database.Trend.DeleteExpiredReservations();
+
+                    var trend = trend_id.HasValue ? database.Trend.GetById(trend_id.Value) : null;
+
+                    if (trend != null && (trend.AgencyID != agency.ID || trend.Type == TrendType.Blocked))
+                        trend = null;
+
+                    trend ??= database.Trend.FindHoldable(agency.ID);
+
+                    if (trend == null)
+                    {
+                        var state = MatchesSearchLink(agency, url) ? TrendState.Seeking : TrendState.Auth;
+                        trend = GenerateNewTrend(agency.ID, state);
+                    }
+
+                    database.Trend.MarkChallenge(trend.TrendID);
+
+                    result.TrendID = trend.TrendID;
+                    result.AgencyID = agency.ID;
+                    result.State = trend.State;
+                    result.Commands = [];
+
+                    database.Commit();
+                }
+                catch
+                {
+                    database.Rollback();
+                    throw;
+                }
+            }
+            finally
+            {
+                checkpoint_lock.Release();
+            }
+
+            Log.Information("Trend (id:{0}) Agency({1}) challenge hold - {2}", result.TrendID, agency.ID, url);
+
+            return result;
+        }
+
+        private static bool MatchesSearchLink(Agency agency, string url)
+        {
+            var link = agency.SearchLink;
+            return !string.IsNullOrEmpty(link) && url.StartsWith(link, StringComparison.OrdinalIgnoreCase);
+        }
+
         private void LoadAndUpdateCurrentTrend()
         {
             if (result.AgencyID.HasValue)

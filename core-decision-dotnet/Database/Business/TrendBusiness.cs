@@ -6,7 +6,10 @@ namespace Photon.JobSeeker
     {
         public const int TREND_EXPIRATION_MINUTES = 5;
         public const int AUTH_EXPIRATION_MINUTES = 10;
+        public const int CHALLENGE_EXPIRATION_MINUTES = 30;
         public const int RESERVATION_LEASE_SECONDS = 30;
+
+        public const string CHALLENGE_STATE = "Challenge";
 
         private readonly Database database;
 
@@ -15,6 +18,28 @@ namespace Photon.JobSeeker
         public Trend? Get(long agency_id, TrendType type)
         {
             return database.Query<Trend>(Q_GET, new { agency = agency_id, type = type.ToString() }).FirstOrDefault();
+        }
+
+        public Trend? GetById(long trend_id)
+        {
+            return database.Query<Trend>(Q_GET_BY_ID, new { trendId = trend_id }).FirstOrDefault();
+        }
+
+        public Trend? FindHoldable(long agency_id)
+        {
+            return database.Query<Trend>(Q_FIND_HOLDABLE,
+                new { agency = agency_id, blocked = TrendType.Blocked.ToString() }).FirstOrDefault();
+        }
+
+        public static void MigrateChallengeColumn(Database database)
+        {
+            var columns = database.ReadAll("PRAGMA table_info(Trend)");
+            if (columns.Count == 0) return;
+
+            if (columns.Any(c => c.TryGetValue("name", out var name) && name is string column_name && column_name == "Challenge"))
+                return;
+
+            database.Execute(Q_ADD_CHALLENGE_COLUMN);
         }
 
         public List<TrendReportItem> Report()
@@ -44,6 +69,7 @@ namespace Photon.JobSeeker
                 state = trend.State.ToString(),
                 lastActivity = trend.LastActivity,
                 reserved = trend.Reserved,
+                challenge = trend.Challenge,
             });
 
             if (database.Changes() == 1)
@@ -64,12 +90,19 @@ namespace Photon.JobSeeker
             });
         }
 
+        public void MarkChallenge(long trend_id)
+        {
+            database.Execute(Q_MARK_CHALLENGE, new { trendId = trend_id, now = DateTime.Now });
+        }
+
         public void DeleteExpired(double minutes = TREND_EXPIRATION_MINUTES)
         {
             var auth_minutes = minutes * AUTH_EXPIRATION_MINUTES / TREND_EXPIRATION_MINUTES;
+            var challenge_minutes = minutes * CHALLENGE_EXPIRATION_MINUTES / TREND_EXPIRATION_MINUTES;
 
             database.Execute(Q_DELETE_EXPIRED, new { cutoff = DateTime.Now.AddMinutes(-minutes) });
             database.Execute(Q_DELETE_EXPIRED_AUTH, new { cutoff = DateTime.Now.AddMinutes(-auth_minutes) });
+            database.Execute(Q_DELETE_EXPIRED_CHALLENGE, new { cutoff = DateTime.Now.AddMinutes(-challenge_minutes) });
         }
 
         public void DeleteExpiredReservations(double seconds = RESERVATION_LEASE_SECONDS)
@@ -128,27 +161,45 @@ SELECT * FROM Trend";
 
         private readonly static string Q_REPORT = @$"
 SELECT a.Title AS Agency, a.Link, t.TrendID, t.Type
-    , CASE a.Active WHEN 0 THEN '{nameof(TrendState.Blocked)}' ELSE t.State END AS State
+    , CASE WHEN t.Challenge = 1 THEN '{CHALLENGE_STATE}'
+           WHEN a.Active = 0 THEN '{nameof(TrendState.Blocked)}' ELSE t.State END AS State
     , STRFTIME('%Y-%m-%d %H:%M:%S', t.LastActivity) AS LastActivity
 FROM Agency a LEFT JOIN Trend t ON t.AgencyID = a.AgencyID";
 
         private const string Q_GET = Q_INDEX + @"
 WHERE AgencyID = @agency AND Type = @type";
 
+        private const string Q_GET_BY_ID = Q_INDEX + @"
+WHERE TrendID = @trendId";
+
+        private readonly static string Q_FIND_HOLDABLE = Q_INDEX + @"
+WHERE AgencyID = @agency AND Type != @blocked
+ORDER BY LastActivity DESC LIMIT 1";
+
+        private const string Q_ADD_CHALLENGE_COLUMN = @"
+ALTER TABLE Trend ADD COLUMN Challenge bit NOT NULL DEFAULT 0";
+
         private const string Q_INSERT = @"
-INSERT INTO Trend (AgencyID, Type, State, LastActivity, Reserved)
-VALUES (@agencyId, @type, @state, @lastActivity, @reserved)
+INSERT INTO Trend (AgencyID, Type, State, LastActivity, Reserved, Challenge)
+VALUES (@agencyId, @type, @state, @lastActivity, @reserved, @challenge)
 ON CONFLICT(AgencyID, Type) DO NOTHING;";
 
         private const string Q_UPDATE_ACTIVITY = @"
-UPDATE Trend SET State = @state, Type = @type, LastActivity = @lastActivity, Reserved = @reserved
+UPDATE Trend SET State = @state, Type = @type, LastActivity = @lastActivity, Reserved = @reserved, Challenge = 0
+WHERE TrendID = @trendId";
+
+        private const string Q_MARK_CHALLENGE = @"
+UPDATE Trend SET Challenge = 1, LastActivity = @now
 WHERE TrendID = @trendId";
 
         private readonly static string Q_DELETE_EXPIRED = $@"
-DELETE FROM Trend WHERE Reserved = 0 AND State != '{nameof(TrendState.Auth)}' AND DATETIME(LastActivity) <= @cutoff";
+DELETE FROM Trend WHERE Reserved = 0 AND Challenge = 0 AND State != '{nameof(TrendState.Auth)}' AND DATETIME(LastActivity) <= @cutoff";
 
         private readonly static string Q_DELETE_EXPIRED_AUTH = $@"
-DELETE FROM Trend WHERE Reserved = 0 AND State = '{nameof(TrendState.Auth)}' AND DATETIME(LastActivity) <= @cutoff";
+DELETE FROM Trend WHERE Reserved = 0 AND Challenge = 0 AND State = '{nameof(TrendState.Auth)}' AND DATETIME(LastActivity) <= @cutoff";
+
+        private readonly static string Q_DELETE_EXPIRED_CHALLENGE = $@"
+DELETE FROM Trend WHERE Reserved = 0 AND Challenge = 1 AND DATETIME(LastActivity) <= @cutoff";
 
         private const string Q_DELETE_EXPIRED_RESERVATIONS = @"
 DELETE FROM Trend WHERE Reserved = 1 AND DATETIME(LastActivity) <= @cutoff";

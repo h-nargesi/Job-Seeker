@@ -24,6 +24,18 @@ async function LoadAgencies() {
     job_seeker_agencies.innerHTML = await response.text();
 }
 
+async function LoadTrends() {
+    if (!job_seeker_trends) return;
+    try {
+        const response = await fetch("/report/trends", { method: 'GET' });
+        job_seeker_trends.innerHTML = await response.text();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+if (job_seeker_trends) setInterval(LoadTrends, 15000);
+
 async function apply(jobid) {
     try {
         await fetch("/job/apply?jobid=" + jobid, { method: 'POST' });
@@ -49,7 +61,7 @@ async function reject(jobid) {
 async function reset() {
     try {
         await fetch("/decision/reset", { method: 'POST' });
-        job_seeker_trends.innerHTML = "";
+        await LoadTrends();
     } catch (e) {
         console.error(e);
     }

@@ -8,6 +8,7 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
 {
     private const int CLOSE_TIMEOUT_MS = 90_000;
     private const int AUTH_CLOSE_TIMEOUT_MS = 600_000;
+    private const int CHALLENGE_CLOSE_TIMEOUT_MS = 86_400_000;
 
     private readonly Analyzer analyzer = analyzer;
     private readonly Database database = database;
@@ -29,7 +30,8 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
             {
                 trend = result.TrendID,
                 commands = result.Commands,
-                close_timeout_ms = result.State == TrendState.Auth ? AUTH_CLOSE_TIMEOUT_MS : CLOSE_TIMEOUT_MS,
+                close_timeout_ms = context.Challenge ? CHALLENGE_CLOSE_TIMEOUT_MS
+                    : result.State == TrendState.Auth ? AUTH_CLOSE_TIMEOUT_MS : CLOSE_TIMEOUT_MS,
             });
         }
         catch (BadJobRequest bd)

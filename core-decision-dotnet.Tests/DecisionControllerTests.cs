@@ -90,6 +90,40 @@ public class DecisionControllerTests
     }
 
     [Fact]
+    public void Take_with_a_challenge_holds_the_trend_and_extends_the_close_timeout()
+    {
+        using var db = new CheckpointDatabase();
+        var context = new PageContext
+        {
+            Agency = "CheckpointAgency",
+            Url = "https://cp.example.com/jobs",
+            Content = "<html></html>",
+            Challenge = true,
+        };
+
+        var body = OkBody(Controller(db).Take(context));
+
+        Assert.True(body.GetProperty("trend").GetInt64() > 0);
+        Assert.Equal(86_400_000, body.GetProperty("close_timeout_ms").GetInt64());
+        Assert.Empty(body.GetProperty("commands").EnumerateArray());
+
+        var row = db.Database.Trend.Get(1, TrendType.Search);
+        Assert.NotNull(row);
+        Assert.True(row!.Challenge);
+    }
+
+    [Fact]
+    public void Take_with_a_challenge_on_an_unknown_agency_is_a_bad_job_request()
+    {
+        using var db = new CheckpointDatabase();
+        var context = new PageContext { Agency = "Nope", Url = "https://cp.example.com/", Challenge = true };
+
+        var body = BadBody(Controller(db).Take(context));
+
+        Assert.Equal("bad-job-request", body.GetProperty("error").GetString());
+    }
+
+    [Fact]
     public void Heartbeat_touches_a_live_trend_and_answers_null_for_unknown_ids()
     {
         using var db = new CheckpointDatabase();

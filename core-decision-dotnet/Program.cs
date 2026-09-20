@@ -70,6 +70,11 @@ else
     }
 }
 
+using (var database = database_factory.Open())
+{
+    TrendBusiness.MigrateChallengeColumn(database);
+}
+
 builder.Services.AddRazorPages();
 builder.Services.AddSingleton<IDatabaseFactory>(database_factory);
 builder.Services.AddScoped(sp => sp.GetRequiredService<IDatabaseFactory>().Open());

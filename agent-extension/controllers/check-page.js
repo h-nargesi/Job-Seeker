@@ -1,7 +1,11 @@
 console.log("AGENT", "check-page");
 
+let challenge_hold = false;
+let challenge_watch = null;
+
 ActionHandler.OnPageLoad = function () {
     console.log("AGENT", 'Page', 'loaded');
+    ClearChallengeHold();
     setTimeout(async function () {
         if (await OnDashboard()) return;
 
@@ -19,7 +23,7 @@ ActionHandler.OnPageLoad = function () {
         for (let s in scopes) {
             if (host.match(new RegExp(scopes[s].domain, 'i'))) {
                 console.log("AGENT", 'Page', "matched", scopes[s].domain);
-                SendingPageInfo(scopes[s]);
+                SendingPageInfo(scopes[s], ChallengeDetector.Detect(document));
                 StartHeartbeat();
                 break;
             }
@@ -38,7 +42,7 @@ async function OnDashboard() {
     return document.getElementById('job-seeker-trend-list') != null;
 }
 
-async function SendingPageInfo(scope) {
+async function SendingPageInfo(scope, challenge_kind) {
     if (scope.waiting) await ActionHandler.OnWait({ miliseconds: scope.waiting });
 
     console.log("AGENT", 'Page', "sending", window.location.hostname, scope);
@@ -48,6 +52,7 @@ async function SendingPageInfo(scope) {
         url: window.location.href,
         content: document.documentElement.outerHTML,
     };
+    if (challenge_kind) params.challenge = true;
 
     for (let attempt = 1; attempt <= 3; attempt++) {
         const result = await BackgroundMessaging.Send(params);
@@ -56,6 +61,7 @@ async function SendingPageInfo(scope) {
             console.log("AGENT", 'Page', "commands", result);
             ActionHandler.SetCloseTimer(result?.close_timeout_ms);
             ActionHandler.Handle(result?.commands, false);
+            if (challenge_kind) EnterChallengeHold(scope, challenge_kind);
             return;
         }
 
@@ -64,6 +70,32 @@ async function SendingPageInfo(scope) {
         if (!RetryableError(result)) break;
 
         if (attempt < 3) await ActionHandler.OnWait({ miliseconds: attempt * 5000 });
+    }
+}
+
+function EnterChallengeHold(scope, kind) {
+    if (challenge_hold) return;
+
+    challenge_hold = true;
+    console.warn("AGENT", 'Page', "challenge hold", kind, "- waiting for a human");
+
+    challenge_watch = setInterval(function () { WatchChallenge(scope); }, 5000);
+}
+
+function WatchChallenge(scope) {
+    if (ChallengeDetector.Detect(document)) return;
+
+    console.log("AGENT", 'Page', "challenge cleared - resuming");
+    ClearChallengeHold();
+    SendingPageInfo(scope);
+}
+
+function ClearChallengeHold() {
+    challenge_hold = false;
+
+    if (challenge_watch != null) {
+        clearInterval(challenge_watch);
+        challenge_watch = null;
     }
 }
 
@@ -81,7 +113,7 @@ function StartHeartbeat() {
 }
 
 async function Heartbeat() {
-    if (document.visibilityState !== 'visible') return;
+    if (document.visibilityState !== 'visible' && !challenge_hold) return;
 
     const result = await BackgroundMessaging.Heartbeat();
 
@@ -93,6 +125,7 @@ if (window.addEventListener) {
     window.addEventListener("load", ActionHandler.OnPageLoad, false);
     window.addEventListener("unload", function () {
         if (heartbeat_interval != null) clearInterval(heartbeat_interval);
+        ClearChallengeHold();
     }, false);
 }
 // else if (window.attachEvent) window.attachEvent("onload", ActionHandler.OnPageLoad);

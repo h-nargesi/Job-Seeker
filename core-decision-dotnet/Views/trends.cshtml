@@ -6,11 +6,21 @@
 }
 @foreach(var trend in Model)
 {
-    <tr>
+    var challenged = trend.State == "Challenge";
+    <tr class="@(challenged ? "table-warning" : null)">
         <td scope="row">@(++index)</td>
         <td><a href="@trend.Link" target="_blank">@trend.Agency</a></td>
         <td><span>@trend.Type</span></td>
-        <td><span>@trend.State</span></td>
+        <td><span>
+            @if (challenged)
+            {
+                <span class="badge bg-warning text-dark">Challenge</span>
+            }
+            else
+            {
+                <span>@trend.State</span>
+            }
+        </span></td>
         <td><span>@trend.LastActivity</span></td>
     </tr>
 }
