@@ -134,18 +134,6 @@ create table Job (
         Assert.Equal(1, AttemptsOf(1));
     }
 
-    [Fact]
-    public void Stepstone_reset_reopens_the_job()
-    {
-        InsertJob(1, "u1", "4: a", 4);
-
-        database.Job.UpdateStepstoneJob(new Job { JobID = 1, Title = "t", Html = "h", Content = "c" });
-
-        Assert.Equal("u1", database.Job.GetFirstJob(1));
-        Assert.Equal(1, AttemptsOf(1));
-        Assert.StartsWith("1: ", TriesOf(1));
-    }
-
     private void InsertJob(long id, string url, string? tries, int attempts, long agency = 1)
     {
         database.Execute(@"

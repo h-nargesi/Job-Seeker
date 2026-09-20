@@ -1,26 +1,21 @@
-﻿namespace Photon.JobSeeker.Stepstone
+﻿using Photon.JobSeeker.Pages;
+
+namespace Photon.JobSeeker.Stepstone;
+
+class StepstonePageLogin(Stepstone parent) : LoginPage(parent), StepstonePage
 {
-    class StepstonePageLogin : StepstonePage
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        public override int Order => 1;
+        return !StepstonePage.reg_login_url.IsMatch(url);
+    }
 
-        public override TrendState TrendState => TrendState.Login;
-
-        public StepstonePageLogin(Stepstone parent) : base(parent) { }
-
-        public override Command[]? IssueCommand(string url, string content)
-        {
-            if (!reg_login_url.IsMatch(url)) return null;
-
-            var (user, pass) = GetUserPass();
-
-            if (LoginCredentialsMissing(user, pass)) return MissingCredentialsCommands();
-
-            return new Command[] {
-                Command.Fill(@"[name=""email""]", user),
-                Command.Fill(@"[name=""password""]", pass),
-                Command.Click(@"button[type=""submit""]")
-            };
-        }
+    protected override Command[] LoginCommands(string user, string pass)
+    {
+        return
+        [
+            Command.Fill(@"[name=""email""]", user),
+            Command.Fill(@"[name=""password""]", pass),
+            Command.Click(@"button[type=""submit""]"),
+        ];
     }
 }

@@ -1,43 +1,40 @@
-﻿using System.Text.RegularExpressions;
+﻿using Photon.JobSeeker.Pages;
+using System.Text.RegularExpressions;
 
 namespace Photon.JobSeeker.Stepstone;
 
-class StepstonePageSearch(Stepstone parent) : StepstonePage(parent)
+class StepstonePageSearch(Stepstone parent) : SearchPage(parent), StepstonePage
 {
-    public override int Order => 20;
-
-    public override TrendState TrendState => TrendState.Seeking;
-
-    public override Command[]? IssueCommand(string url, string content)
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        if (!reg_search_url.IsMatch(url)) return null;
+        return !StepstonePage.reg_search_url.IsMatch(url);
+    }
 
-        if (!reg_search_keywords_url_title.IsMatch(url) ||
-            !reg_search_keywords_url_en.IsMatch(url) ||
-            !reg_search_keywords_url_type.IsMatch(url))
+    protected override bool CheckInvalidSearchTitle(string url, string content, out Command[]? commands)
+    {
+        if (StepstonePage.reg_search_keywords_url_title.IsMatch(url) &&
+            StepstonePage.reg_search_keywords_url_en.IsMatch(url) &&
+            StepstonePage.reg_search_keywords_url_type.IsMatch(url))
         {
-            return
-            [
-                Command.Go(parent.SearchLink),
-            ];
+            commands = null;
+            return false;
         }
 
-        var codes = new HashSet<string>();
-        using var database = parent.DatabaseFactory.Open();
+        commands = [Command.Go(Parent.SearchLink)];
+        return true;
+    }
 
-        foreach (Match job_match in reg_job_url.Matches(content).Cast<Match>())
-        {
-            var code = job_match.Groups[1].Value;
+    protected override IEnumerable<(string url, string code)> GetJobUrls(string content)
+    {
+        foreach (Match job_match in StepstonePage.reg_job_url.Matches(content).Cast<Match>())
+            yield return (string.Join("", Parent.BaseUrl, job_match.Value), job_match.Groups[1].Value);
+    }
 
-            if (codes.Contains(code)) continue;
-            codes.Add(code);
+    protected override Command[] CheckNextButton(string url, string content)
+    {
+        if (!StepstonePage.reg_search_end.IsMatch(content)) return [];
 
-            database.Job.InsertFromSearch(parent.ID, parent.CurrentMethod.Title,
-                string.Join("", parent.BaseUrl, job_match.Value), code);
-        }
-
-        if (reg_search_end.IsMatch(content)) return Array.Empty<Command>();
-        else return
+        return
         [
             Command.Click(@"a[aria-label=""Next""]"),
             Command.Wait(3000),

@@ -167,36 +167,6 @@ public class PhaseBNewApiTests
     }
 
     [Fact]
-    public void UpdateStepstoneJob_preserves_tries_null_behavior()
-    {
-        using var db = new GoldenDatabase();
-        var job = new Job
-        {
-            AgencyID = GoldenDatabase.AgencyId,
-            Country = "DE",
-            Code = "ss1",
-            State = JobState.Saved,
-            Url = "https://example.com/ss1",
-            Title = "Old",
-        };
-        db.Database.Job.InsertJob(job);
-        db.ExecuteRaw("UPDATE Job SET Tries = '1: prev', Attempts = 2, Html = '<html>old</html>', Content = 'old' WHERE Code = 'ss1'");
-
-        job.Title = "Stepstone Title";
-        job.Html = "<div>stepstone html</div>";
-        job.Content = "stepstone content";
-        job.Tries = "2: should be dropped";
-
-        db.Database.Job.UpdateStepstoneJob(job);
-
-        Assert.Equal("Stepstone Title", db.Scalar("SELECT Title FROM Job"));
-        Assert.Equal("<div>stepstone html</div>", db.Scalar("SELECT Html FROM Job"));
-        Assert.Equal("stepstone content", db.Scalar("SELECT Content FROM Job"));
-        Assert.Equal(DBNull.Value, db.Scalar("SELECT Tries FROM Job"));
-        Assert.Equal(0L, db.Scalar("SELECT Attempts FROM Job"));
-    }
-
-    [Fact]
     public void UpdateActivity_keeps_agencyid_and_writes_state_type_lastactivity_reserved()
     {
         using var db = new GoldenDatabase();

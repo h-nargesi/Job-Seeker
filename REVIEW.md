@@ -84,14 +84,15 @@
 >
 > مورد ۳.۳ (`Database.Open()` دستی همه‌جا — نقض DI) در ۱۴۰۵/۰۶/۱۸ (2026-09-09) با حذف کامل
 > `Open`/`SetConfiguration` استاتیک و جایگزینی با `IDatabaseFactory` (Singleton) + `Database` اسکوپ‌شده
-> در DI رفع و به [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شد — به همراه فیکس اتصال مرده در
+> در DI رفع و به [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شد — به‌همراه فیکس اتصال مرده در
 > `Page.GetUserPass`؛ نیمهٔ باز ماندهٔ مورد ۲.۸ آرشیوشده نیز بسته شد.
-
-### ۳.۴ تکرار کد `LoadJob` در Stepstone
-**فایل:** `Analyze/Stepstone/StepstonePageJob.cs`
-
-به‌جای ارث‌بری از `JobPage`، تمام `IssueCommand`/`LoadJob` بازنویسی شده. الگوی پایه را
-بی‌اثر می‌کند. Stepstone باید از `JobPage` مشتق شود و `StepstonePage` از `PageBase`.
+>
+> مورد ۳.۴ (تکرار کد `LoadJob` در Stepstone) در ۱۴۰۵/۰۶/۲۹ (2026-09-20) با یکسان‌سازی کامل
+> Stepstone با الگوی استاندارد صفحات پایه (`LoginPage`/`AuthPage`/`SearchPage`/`JobPage`/
+> `OtherPages` + `interface StepstonePage`) رفع و به
+> [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شد — به‌همراه پنج تغییر
+> رفتاری مصوب (حذف ریست Tries/Attempts ری‌اسکرپ، حذف ریدایرکت پروفایل، اصلاح قطبیت
+> صفحه‌بندی، seed متد DE، فعال‌شدن `GetMainHtml`).
 
 ### ۳.۵ تکرار منطق `Save` (BaseBusiness در برابر JobBusiness/TrendBusiness)
 **فایل:** `BaseBusiness.cs` در برابر `JobBusiness.cs` — استخراج `id` یکسان

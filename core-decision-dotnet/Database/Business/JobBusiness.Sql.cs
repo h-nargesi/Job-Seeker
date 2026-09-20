@@ -12,10 +12,6 @@ INSERT INTO Job (AgencyID, Country, Code, Title, State, Score, Url, Html, Conten
 VALUES (@agencyId, @country, @code, @title, @state, @score, @url, @html, @content, @link, @log, @options, @tries)
 ON CONFLICT(AgencyID, Code) DO NOTHING;";
 
-        private readonly static string Q_UPDATE_STEPSTONE = @"
-UPDATE Job SET Title = @title, Html = @html, Content = @content, Tries = NULL, Attempts = 0, ModifiedOn = @now
-WHERE JobID = @jobId";
-
         private readonly static string Q_UPDATE_CONTENT = @"
 UPDATE Job SET Html = @html, Content = @content, ModifiedOn = @now
 WHERE JobID = @jobId";

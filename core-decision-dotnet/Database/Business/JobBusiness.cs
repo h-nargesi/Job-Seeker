@@ -177,18 +177,6 @@ WHERE JobID = @jobId", new
             });
         }
 
-        public void UpdateStepstoneJob(Job job)
-        {
-            database.Execute(Q_UPDATE_STEPSTONE, new
-            {
-                title = job.Title,
-                html = job.Html,
-                content = job.Content,
-                now = DateTime.Now,
-                jobId = job.JobID,
-            });
-        }
-
         public void UpdateJobContent(Job job)
         {
             database.Execute(Q_UPDATE_CONTENT, new

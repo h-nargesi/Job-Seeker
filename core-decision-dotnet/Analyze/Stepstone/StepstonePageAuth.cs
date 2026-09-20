@@ -1,26 +1,16 @@
-﻿namespace Photon.JobSeeker.Stepstone
+﻿using Photon.JobSeeker.Pages;
+
+namespace Photon.JobSeeker.Stepstone;
+
+class StepstonePageAuth(Stepstone parent) : AuthPage(parent), StepstonePage
 {
-    class StepstonePageAuth : StepstonePage
+    protected override bool CheckInvalidUrl(string url, string content)
     {
-        public override int Order => 2;
+        return !StepstonePage.reg_login_but.IsMatch(content);
+    }
 
-        public override TrendState TrendState => TrendState.Auth;
-
-        public StepstonePageAuth(Stepstone parent) : base(parent) { }
-
-        public override Command[]? IssueCommand(string url, string content)
-        {
-            if (reg_login_profile.IsMatch(url))
-            {
-                return new Command[] { Command.Go(parent.SearchLink) };
-            }
-
-            if (!reg_login_but.IsMatch(content))
-            {
-                return null;
-            }
-
-            return new Command[] { Command.Go(@"/candidate/login") };
-        }
+    protected override Command[] LoginUrl()
+    {
+        return [Command.Go(@"/candidate/login")];
     }
 }

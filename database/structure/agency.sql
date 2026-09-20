@@ -50,7 +50,11 @@ values
 						{ "Title": "QA", "Url": "qatar" }]
 					}'),
 
-	('Stepstone',	'(.+\.)?stepstone\.de$',			'https://stepstone.de',	null)
+	('Stepstone',	'(.+\.)?stepstone\.de$',			'https://stepstone.de',
+					'{ "running": 0, "methods": [
+						{ "Title": "DE", "Url": "" }]
+					}')
+
 on conflict (Title) do update set
 	Domain = excluded.Domain,
 	Link = excluded.Link,
