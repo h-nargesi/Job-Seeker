@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using System.Web;
 using Photon.JobSeeker.Pages;
 
 namespace Photon.JobSeeker.IamExpat;
@@ -32,7 +33,7 @@ class IamExpatPageSearch(IamExpat parent) : SearchPage(parent), IamExpatPage
         foreach (Match job_match in job_matches)
         {
             var code = IamExpatPage.GetJobCode(job_match);
-            var url = string.Join("", Parent.BaseUrl, job_match.Value);
+            var url = string.Join("", Parent.BaseUrl, HttpUtility.HtmlDecode(job_match.Groups[1].Value));
             result.Add((url, code));
         }
 

@@ -24,7 +24,9 @@ interface LinkedInPage
 
     protected static readonly Regex reg_search_other_page = new(@"<button[^>]+aria-label=[""']([^""']+)[""'][^>]*>", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_job_url = new(@"/jobs/view/(\d+)/", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_job_url = new(@"/jobs/view/(\d+)/?", RegexOptions.IgnoreCase);
+
+    protected static readonly Regex reg_search_job_href = new(@"href=[""'](/jobs/view/(\d+)/?[^""']*)[""']", RegexOptions.IgnoreCase);
 
     protected static readonly Regex reg_job_title = new(@"<h1[^>]*>([^<]*)</h1>", RegexOptions.IgnoreCase);
 

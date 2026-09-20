@@ -14,7 +14,7 @@ interface IamExpatPage
 
     protected static readonly Regex reg_search_end = new(@"<a[^>]+title=[""']Go to next page[""']", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_job_url = new(@"/career/jobs-[\w-]+(/[\w-]+)*/it-technology/([\w-]+)(/(\d+))?", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_job_url = new(@"href=[""'](/career/jobs-[\w-]+(/[\w-]+)*/it-technology/([\w-]+)(/(\d+))?[^""']*)[""']", RegexOptions.IgnoreCase);
 
     protected static readonly Regex reg_job_shortlink = new(@"<link\s+rel=[""']shortlink[""'] href=[""']/node/(\d+)[""']>", RegexOptions.IgnoreCase);
 

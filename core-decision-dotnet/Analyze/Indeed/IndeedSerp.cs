@@ -1,22 +1,29 @@
 using System.Text.RegularExpressions;
+using System.Web;
 
 namespace Photon.JobSeeker.Indeed;
 
 public static class IndeedSerp
 {
-    public static readonly Regex reg_job_url =
-        new(@"(?:/rc/clk\?jk=|/(?:m/)?viewjob\?jk=|data-jk="")(\w+)", RegexOptions.IgnoreCase);
+    public static readonly Regex reg_viewjob_link =
+        new(@"href=[""'](/(?:m/)?viewjob\?jk=(\w+)[^""']*)[""']", RegexOptions.IgnoreCase);
 
-    public static IEnumerable<string> ExtractJobCodes(string html)
+    public static readonly Regex reg_clk_link =
+        new(@"href=[""'](/rc/clk\?jk=(\w+)[^""']*)[""']", RegexOptions.IgnoreCase);
+
+    public static IEnumerable<(string url, string code)> ExtractJobLinks(string html)
     {
         var codes = new HashSet<string>();
 
-        foreach (Match match in reg_job_url.Matches(html))
+        foreach (var (url, code) in Extract(reg_viewjob_link, html).Concat(Extract(reg_clk_link, html)))
         {
-            var code = match.Groups[1].Value;
-            if (!string.IsNullOrEmpty(code)) codes.Add(code);
+            if (codes.Add(code)) yield return (url, code);
         }
+    }
 
-        return codes;
+    private static IEnumerable<(string url, string code)> Extract(Regex regex, string html)
+    {
+        foreach (Match match in regex.Matches(html))
+            yield return (HttpUtility.HtmlDecode(match.Groups[1].Value), match.Groups[2].Value);
     }
 }

@@ -25,8 +25,8 @@ class IndeedPageSearch(Indeed parent) : SearchPage(parent), IndeedPage
 
     protected override IEnumerable<(string url, string code)> GetJobUrls(string content)
     {
-        foreach (var code in IndeedSerp.ExtractJobCodes(content))
-            yield return (string.Join("", Parent.BaseUrl, "/viewjob?jk=", code), code);
+        foreach (var (link, code) in IndeedSerp.ExtractJobLinks(content))
+            yield return (string.Join("", Parent.BaseUrl, link), code);
     }
 
     protected override Command[] CheckNextButton(string url, string text)
