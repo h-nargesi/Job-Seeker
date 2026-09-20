@@ -322,9 +322,10 @@ namespace Photon.JobSeeker
 
                         if (result.AgencyID == agency.ID && result.Type == type)
                         {
-                            commands.Add(Command.Go(url));
+                            commands.Add(Command.Open(url));
                             commands = commands.Where(c => c.page_action != PageAction.close)
                                                .ToList();
+                            commands.Add(Command.Close());
                         }
                         else
                         {

@@ -69,7 +69,7 @@ public class TrendsCheckpointTests
     }
 
     [Fact]
-    public void Matched_analyzing_result_adopts_the_db_trend_and_goes_to_the_next_job()
+    public void Matched_analyzing_result_adopts_the_db_trend_and_opens_the_next_job_in_a_new_tab()
     {
         using var db = new CheckpointDatabase();
         db.Database.Job.InsertFromSearch(1, "NL", "https://cp.example.com/jobs/j3", "j3");
@@ -78,17 +78,43 @@ public class TrendsCheckpointTests
 
         var result = Check(db, new Result { AgencyID = 1, State = TrendState.Analyzing, Commands = [] });
 
-        Assert.Equal(2, result.Commands.Length);
+        Assert.Equal(3, result.Commands.Length);
         Assert.Equal("open", result.Commands[0].Action);
         Assert.Equal("https://cp.example.com/jobs", result.Commands[0].Params!["url"]);
-        Assert.Equal("go", result.Commands[1].Action);
+        Assert.Equal("open", result.Commands[1].Action);
         Assert.Equal("https://cp.example.com/jobs/j3", result.Commands[1].Params!["url"]);
+        Assert.Equal("close", result.Commands[^1].Action);
 
         var job = db.Database.Trend.Get(1, TrendType.Job);
         Assert.NotNull(job);
         Assert.Equal(TrendState.Analyzing, job!.State);
         Assert.False(job.Reserved);
         Assert.Equal(job.TrendID, result.TrendID);
+    }
+
+    [Fact]
+    public void Matched_result_with_fallow_commands_keeps_them_and_closes_the_old_tab()
+    {
+        using var db = new CheckpointDatabase();
+        db.Database.Job.InsertFromSearch(1, "NL", "https://cp.example.com/jobs/j4", "j4");
+        db.Database.Trend.CreateTrend(new Trend { AgencyID = 1, State = TrendState.Analyzing, Reserved = true });
+        db.AgeTrend(1, DateTime.Now.AddDays(-1));
+
+        var result = Check(db, new Result
+        {
+            AgencyID = 1,
+            State = TrendState.Analyzing,
+            Commands = [Command.Click("button.jobs-save-button"), Command.Wait(3000)],
+        });
+
+        Assert.Equal(5, result.Commands.Length);
+        Assert.Equal("open", result.Commands[0].Action);
+        Assert.Equal("https://cp.example.com/jobs", result.Commands[0].Params!["url"]);
+        Assert.Equal("click", result.Commands[1].Action);
+        Assert.Equal("wait", result.Commands[2].Action);
+        Assert.Equal("open", result.Commands[3].Action);
+        Assert.Equal("https://cp.example.com/jobs/j4", result.Commands[3].Params!["url"]);
+        Assert.Equal("close", result.Commands[^1].Action);
     }
 
     [Fact]
