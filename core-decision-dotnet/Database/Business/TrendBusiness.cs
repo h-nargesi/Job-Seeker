@@ -31,6 +31,17 @@ namespace Photon.JobSeeker
                 new { agency = agency_id, blocked = TrendType.Blocked.ToString() }).FirstOrDefault();
         }
 
+        public Trend? FindChallenged(long agency_id)
+        {
+            return database.Query<Trend>(Q_FIND_CHALLENGED,
+                new { agency = agency_id, blocked = TrendState.Blocked.ToString() }).FirstOrDefault();
+        }
+
+        public int ReleaseChallenges(long agency_id)
+        {
+            return database.Execute(Q_RELEASE_CHALLENGES, new { agencyId = agency_id });
+        }
+
         public static void MigrateChallengeColumn(Database database)
         {
             var columns = database.ReadAll("PRAGMA table_info(Trend)");
@@ -175,6 +186,14 @@ WHERE TrendID = @trendId";
         private readonly static string Q_FIND_HOLDABLE = Q_INDEX + @"
 WHERE AgencyID = @agency AND Type != @blocked
 ORDER BY LastActivity DESC LIMIT 1";
+
+    private readonly static string Q_FIND_CHALLENGED = $@"
+SELECT * FROM Trend
+WHERE AgencyID = @agency AND Challenge = 1 AND State != '{nameof(TrendState.Blocked)}'
+ORDER BY LastActivity DESC LIMIT 1";
+
+    private const string Q_RELEASE_CHALLENGES = @"
+UPDATE Trend SET Challenge = 0 WHERE AgencyID = @agencyId AND Challenge = 1";
 
         private const string Q_ADD_CHALLENGE_COLUMN = @"
 ALTER TABLE Trend ADD COLUMN Challenge bit NOT NULL DEFAULT 0";

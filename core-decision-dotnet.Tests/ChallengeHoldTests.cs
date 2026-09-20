@@ -109,6 +109,29 @@ public class ChallengeHoldTests
     }
 
     [Fact]
+    public void Job_page_after_a_released_hold_adopts_the_trend_and_opens_the_next_job()
+    {
+        using var db = new CheckpointDatabase(active: 2);
+        db.Database.Trend.CreateTrend(new Trend { AgencyID = 1, State = TrendState.Auth });
+        db.Database.Trend.MarkChallenge(db.Database.Trend.Get(1, TrendType.Login)!.TrendID);
+        db.Database.Job.InsertFromSearch(1, "NL", "https://cp.example.com/jobs/j5", "j5");
+
+        var result = Check(db, new Result { AgencyID = 1, State = TrendState.Analyzing, Commands = [] });
+
+        var job = db.Database.Trend.Get(1, TrendType.Job);
+        Assert.NotNull(job);
+        Assert.Equal(TrendState.Analyzing, job!.State);
+        Assert.False(job.Challenge);
+        Assert.Equal(job.TrendID, result.TrendID);
+        Assert.Null(db.Database.Trend.Get(1, TrendType.Login));
+
+        Assert.Equal(2, result.Commands.Length);
+        Assert.Equal("open", result.Commands[0].Action);
+        Assert.Equal("https://cp.example.com/jobs/j5", result.Commands[0].Params!["url"]);
+        Assert.Equal("close", result.Commands[^1].Action);
+    }
+
+    [Fact]
     public void Sweep_keeps_a_challenged_trend_until_thirty_minutes()
     {
         using var db = new CheckpointDatabase();

@@ -124,7 +124,14 @@ namespace Photon.JobSeeker
         {
             if (result.AgencyID.HasValue)
             {
-                var trend = database.Trend.Get(result.AgencyID.Value, result.State.GetTrendType());
+                var agency_id = result.AgencyID.Value;
+
+                var trend = database.Trend.Get(agency_id, result.State.GetTrendType())
+                    ?? database.Trend.FindChallenged(agency_id);
+
+                if (database.Trend.ReleaseChallenges(agency_id) > 0)
+                    Log.Debug("Trend challenge released: Agency({0})", agency_id);
+
                 if (trend != null)
                 {
                     string binding;
