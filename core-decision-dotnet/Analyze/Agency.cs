@@ -64,7 +64,13 @@ public abstract class Agency
 
     public string GetMainHtml(string html)
     {
-        return jobPage?.GetHtmlContent(html) ?? string.Empty;
+        if (jobPage == null)
+        {
+            Log.Error("Agency ({0}): no job page registered for content extraction", Name);
+            return string.Empty;
+        }
+
+        return jobPage.GetHtmlContent(html);
     }
 
     public Result AnalyzeContent(string url, string content)

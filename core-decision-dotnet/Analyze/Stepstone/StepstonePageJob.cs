@@ -1,5 +1,6 @@
 ﻿using HtmlAgilityPack;
 using Photon.JobSeeker.Pages;
+using Serilog;
 using System.Web;
 
 namespace Photon.JobSeeker.Stepstone;
@@ -44,6 +45,9 @@ class StepstonePageJob(Stepstone parent) : JobPage(parent), StepstonePage
 
         var main_content = doc.DocumentNode.SelectNodes("//div[contains(@class,'reb-main')]")?
                                            .FirstOrDefault();
+
+        if (main_content == null)
+            Log.Warning("Main job content not found ({0}), using full page", Parent.Name);
 
         return main_content?.OuterHtml ?? html;
     }

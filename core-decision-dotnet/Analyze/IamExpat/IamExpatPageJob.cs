@@ -1,5 +1,6 @@
 ﻿using System.Web;
 using Photon.JobSeeker.Pages;
+using Serilog;
 
 namespace Photon.JobSeeker.IamExpat;
 
@@ -33,9 +34,13 @@ class IamExpatPageJob : JobPage, IamExpatPage
     {
         var code_matched = IamExpatPage.reg_job_shortlink.Match(html);
         code = code_matched.Success ? code_matched.Groups[1].Value : null;
+        if (code == null)
+            Log.Warning("Job shortlink not found ({0})", Parent.Name);
 
         var apply_match = IamExpatPage.reg_job_apply.Match(html);
         apply = apply_match.Success ? apply_match.Groups[1].Value : null;
+        if (apply == null)
+            Log.Warning("Apply link not found ({0})", Parent.Name);
 
         var title_match = IamExpatPage.reg_job_title.Match(html);
         title = title_match.Success ? HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim() : null;
@@ -44,18 +49,34 @@ class IamExpatPageJob : JobPage, IamExpatPage
     public override string GetHtmlContent(string html)
     {
         var start_match = IamExpatPage.reg_job_content_start.Match(html);
-        if (!start_match.Success) return html;
+        if (!start_match.Success)
+        {
+            Log.Warning("Job content start marker not found ({0}), using full page", Parent.Name);
+            return html;
+        }
 
         var end_match = IamExpatPage.reg_job_content_end.Match(html);
-        if (!end_match.Success) return html;
+        if (!end_match.Success)
+        {
+            Log.Warning("Job content end marker not found ({0}), using full page", Parent.Name);
+            return html;
+        }
 
         html = html[start_match.Index..(end_match.Index + end_match.Length)];
 
         start_match = IamExpatPage.reg_job_content_apply_start.Match(html);
-        if (!start_match.Success) return html;
+        if (!start_match.Success)
+        {
+            Log.Warning("Job apply block start marker not found ({0})", Parent.Name);
+            return html;
+        }
 
         end_match = IamExpatPage.reg_job_content_apply_end.Match(html);
-        if (!end_match.Success) return html;
+        if (!end_match.Success)
+        {
+            Log.Warning("Job apply block end marker not found ({0})", Parent.Name);
+            return html;
+        }
 
         return html.Remove(start_match.Index, end_match.Index + end_match.Length - start_match.Index);
     }

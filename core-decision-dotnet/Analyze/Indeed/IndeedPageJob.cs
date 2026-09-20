@@ -57,6 +57,9 @@ class IndeedPageJob(Indeed parent) : JobPage(parent), IndeedPage
         var main_content = doc.DocumentNode.SelectNodes("//div[contains(@class,'jobsearch-ViewJobLayout-jobDisplay')]")?
                                             .FirstOrDefault();
 
+        if (main_content == null)
+            Log.Warning("Main job content not found ({0}), using full page", Parent.Name);
+
         return main_content?.OuterHtml ?? html;
     }
 }

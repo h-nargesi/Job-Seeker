@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
+using Serilog;
 
 namespace Photon.JobSeeker;
 
@@ -41,12 +42,16 @@ public static partial class ResumeHtml
 
     public static string RenderText(string html, Dictionary<string, string> liveText)
     {
-        return CapFromTop(JobContent.GetTextContent(ApplyLiveText(html, liveText)));
+        var text = CapFromTop(JobContent.GetTextContent(ApplyLiveText(html, liveText)));
+        if (string.IsNullOrEmpty(text)) Log.Warning("RenderText: no text extracted from HTML");
+        return text;
     }
 
     public static string PruneStripCap(string html)
     {
-        return CapFromTop(JobContent.GetTextContent(html));
+        var text = CapFromTop(JobContent.GetTextContent(html));
+        if (string.IsNullOrEmpty(text)) Log.Warning("PruneStripCap: no text extracted from HTML");
+        return text;
     }
 
     public static string CapFromTop(string text, int tokenCap = TokenCap)

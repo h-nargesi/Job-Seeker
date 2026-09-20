@@ -1,5 +1,6 @@
 ﻿using HtmlAgilityPack;
 using Photon.JobSeeker.Pages;
+using Serilog;
 using System.Web;
 
 namespace Photon.JobSeeker.LinkedIn;
@@ -44,10 +45,17 @@ class LinkedInPageJob(LinkedIn parent) : JobPage(parent), LinkedInPage
         var main_content = doc.DocumentNode.SelectNodes("//article")?
                                            .FirstOrDefault();
 
-        if (main_content == null) return html;
+        if (main_content == null)
+        {
+            Log.Warning("Main job content not found ({0}), using full page", Parent.Name);
+            return html;
+        }
 
         var title_content = doc.DocumentNode.SelectNodes("//div[contains(@class,'jobs-unified-top-card')]")?
                                             .FirstOrDefault();
+
+        if (title_content == null)
+            Log.Warning("Job top card not found ({0})", Parent.Name);
 
         return string.Join("\n", title_content?.OuterHtml, main_content.OuterHtml);
     }

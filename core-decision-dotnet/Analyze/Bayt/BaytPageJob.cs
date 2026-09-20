@@ -1,5 +1,6 @@
 ﻿using HtmlAgilityPack;
 using Photon.JobSeeker.Pages;
+using Serilog;
 using System.Web;
 
 namespace Photon.JobSeeker.Bayt;
@@ -38,6 +39,9 @@ class BaytPageJob(Bayt parent) : JobPage(parent), BaytPage
 
         var main_content = doc.DocumentNode.SelectNodes("//div[contains(@id,'job_card')]")?
                                            .FirstOrDefault();
+
+        if (main_content == null)
+            Log.Warning("Main job content not found ({0}), using full page", Parent.Name);
 
         return main_content?.OuterHtml ?? html;
     }

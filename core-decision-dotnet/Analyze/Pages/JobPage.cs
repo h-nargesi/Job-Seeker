@@ -117,6 +117,8 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
 
         var html_content = GetHtmlContent(html);
         var incoming_text = JobContent.GetTextContent(html_content);
+        if (string.IsNullOrWhiteSpace(incoming_text))
+            Log.Error("Job content is empty ({0}, {1})", Parent.Name, code);
         var content_changed = JobContent.HasChanged(job.Content, incoming_text);
         job.Html = html_content;
         job.Content = incoming_text;

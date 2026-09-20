@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
+using Serilog;
 
 namespace Photon.JobSeeker;
 
@@ -77,6 +78,9 @@ public static partial class ResumeInventoryParser
                     [key.name],
                     key.excerpt));
 
+        if (items.Count == 0)
+            Log.Error("Resume inventory: no items extracted from resume HTML");
+
         return new ResumeInventory(items);
     }
 
@@ -91,7 +95,12 @@ public static partial class ResumeInventoryParser
 
     private static void AddSlot(List<ResumeInventoryItem> items, string slot, HtmlNode? node)
     {
-        if (node == null) return;
+        if (node == null)
+        {
+            Log.Warning("Resume inventory: slot {0} not found", slot);
+            return;
+        }
+
         items.Add(new ResumeInventoryItem(slot, ResumeInventoryItem.SlotType, [], node.InnerText.Trim()));
     }
 
