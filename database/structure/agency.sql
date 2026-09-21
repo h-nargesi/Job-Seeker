@@ -19,8 +19,8 @@ values
 						{ "Title": "AU", "Url": "https://au.indeed.com/" },
 						{ "Title": "DE", "Url": "https://de.indeed.com/" },
 						{ "Title": "SE", "Url": "https://se.indeed.com/" },
-						{ "Title": "OM", "Url": "https://om.indeed.com/" },
-						{ "Title": "QA", "Url": "https://qa.indeed.com/" },
+						{ "Title": "OM", "Url": "https://om.indeed.com/", "Enabled": false },
+						{ "Title": "QA", "Url": "https://qa.indeed.com/", "Enabled": false },
 						{ "Title": "UK", "Url": "https://uk.indeed.com/" }]
 					}'),
 
@@ -38,8 +38,8 @@ values
 						{ "Title": "DE", "Url": "&f_WT=2&f_E=3%2C4&location=Germany" },
 						{ "Title": "SE", "Url": "&f_WT=2&f_E=3%2C4&location=Sweden" },
 						{ "Title": "AM", "Url": "&f_WT=2&f_E=3%2C4&location=Armenia" },
-						{ "Title": "OM", "Url": "&f_WT=2&f_E=3%2C4&location=Oman" },
-						{ "Title": "QA", "Url": "&f_WT=2&f_E=3%2C4&location=Qatar" },
+						{ "Title": "OM", "Url": "&f_WT=2&f_E=3%2C4&location=Oman", "Enabled": false },
+						{ "Title": "QA", "Url": "&f_WT=2&f_E=3%2C4&location=Qatar", "Enabled": false },
 						{ "Title": "UK", "Url": "&f_WT=2&f_E=3%2C4&location=United Kingdom" },
 						{ "Title": "EU", "Url": "&f_WT=2&f_E=3%2C4&geoId=91000002" }]
 					}'),
