@@ -10,27 +10,23 @@ interface IamExpatPage
 
     internal static Regex reg_search_url = new(@"^https?://[^/]*iamexpat\.[\w]{2,3}/career/jobs-netherlands", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_search_title = new(@"<h1>[^<]*IT[^<]*Technology[^<]*</h1>", RegexOptions.IgnoreCase);
+    internal const string search_category_path = "/it-technology-positions";
 
-    protected static readonly Regex reg_search_end = new(@"<a[^>]+title=[""']Go to next page[""']", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_search_category_url = new(@"/it-technology-positions([/?#]|$)", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_job_url = new(@"/career/jobs-[\w-]+(/[\w-]+)*/it-technology/([\w-]+)(/(\d+))?", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_search_page_param = new(@"[?&]page=(\d+)", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_job_shortlink = new(@"<link\s+rel=[""']shortlink[""'] href=[""']/node/(\d+)[""']>", RegexOptions.IgnoreCase);
+    internal static readonly Regex reg_job_url = new(@"/career/jobs-[\w-]+/it-technology-positions/([\w-]+)/([A-Za-z0-9]{8,})", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_job_title = new(@"<h1[^>]+class=[""'][^""']*article__title[^""']*[""'][^>]*>([^<]*)</h1>", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_job_title = new(@"<h1[^>]*>([^<]*)</h1>", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_job_apply = new(@"<a[^>]+href=[""']([^""']+)[""'][^>]*>Apply\s+Now</a>", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_job_apply = new(@"<a\s+href=[""'](https?://[^""']+)[""'][^>]*>\s*Apply\s+for\s+this\s+position", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_job_adding = new(@"<a[^>]+href=[""']#[""'][^>]+rel=[""']nofollow[""'][^>]+title=[""'][^""']*Add to favourites[""'][^>]*>", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_job_content_start = new(@"<div\s+class=""BodyCenter_main__[\w-]+"">", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_job_content_start = new(@"<article[^>]*>", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_job_content_end = new(@"<h2[^>]*>\s*Similar\s+jobs\s*</h2>", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_job_content_end = new(@"</article>", RegexOptions.IgnoreCase);
-
-    protected static readonly Regex reg_job_content_apply_start = new(@"<form[^>]*>", RegexOptions.IgnoreCase);
-
-    protected static readonly Regex reg_job_content_apply_end = new(@"</form>", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_job_content_end_fallback = new(@"LATEST\s+CAREER\s+NEWS", RegexOptions.IgnoreCase);
 
     protected static string GetJobCode(Match match)
     {

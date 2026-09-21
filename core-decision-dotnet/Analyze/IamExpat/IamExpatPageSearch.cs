@@ -13,46 +13,38 @@ class IamExpatPageSearch(IamExpat parent) : SearchPage(parent), IamExpatPage
 
     protected override bool CheckInvalidSearchTitle(string url, string content, out Command[]? commands)
     {
-        if (IamExpatPage.reg_search_title.IsMatch(content))
+        if (IamExpatPage.reg_search_category_url.IsMatch(url))
         {
             commands = null;
             return false;
         }
         else
         {
-            commands = FillSearchCommands();
+            commands = [Command.Go(string.Concat(Parent.SearchLink, IamExpatPage.search_category_path))];
             return true;
         }
     }
 
     protected override IEnumerable<(string url, string code)> GetJobUrls(string content)
     {
-        var result = new List<(string url, string code)>();
         var job_matches = IamExpatPage.reg_job_url.Matches(content).Cast<Match>();
 
         foreach (Match job_match in job_matches)
         {
             var code = IamExpatPage.GetJobCode(job_match);
-            var url = string.Join("", Parent.BaseUrl, HttpUtility.HtmlDecode(job_match.Value));
-            result.Add((url, code));
+            var url = string.Concat(Parent.BaseUrl, HttpUtility.HtmlDecode(job_match.Value));
+            yield return (url, code);
         }
-
-        return result;
     }
 
-    protected override Command[] CheckNextButton(string url, string text)
+    protected override Command[] CheckNextButton(string url, string content)
     {
-        if (!IamExpatPage.reg_search_end.IsMatch(text)) return Array.Empty<Command>();
-        return FillSearchCommands();
-    }
+        if (!IamExpatPage.reg_job_url.IsMatch(content)) return Array.Empty<Command>();
 
-    private static Command[] FillSearchCommands() =>
-    [
-        Command.Click(@"label[for=""industry-260""]"), // it-technology
-        Command.Click(@"label[for=""ccareer-level-19926""]"), // entry-level
-        Command.Click(@"label[for=""career-level-19928""]"), // experienced
-        Command.Click(@"label[for=""contract-19934""]"),
-        Command.Wait(3000),
-        Command.Click(@"input[type=""submit""][value=""Search""]"),
-    ];
+        var page = 1;
+        var page_match = IamExpatPage.reg_search_page_param.Match(url);
+        if (page_match.Success) page = int.Parse(page_match.Groups[1].Value);
+
+        return [Command.Go(@$"{Parent.SearchLink}{IamExpatPage.search_category_path}?page={page + 1}")];
+    }
 }
