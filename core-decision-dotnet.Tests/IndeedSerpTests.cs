@@ -6,38 +6,79 @@ public class IndeedSerpTests
 {
     private const string SerpSnippet =
         """
-        <div class="jobsearch-ResultsList">
-          <a href="/rc/clk?jk=aaaaaaaa&amp;fccid=8c2f1f0e0d1b2a3f">Senior .NET Developer</a>
-          <a href="/rc/clk?jk=bbbbbbbb&amp;fccid=8c2f1f0e0d1b2a3f">Backend Engineer</a>
-          <a href="/viewjob?jk=bbbbbbbb&amp;from=serpso&amp;tk=1a2b3c4d">Backend Engineer</a>
-          <a href="/m/viewjob?jk=cccccccc">Fullstack Developer</a>
-          <div class="cardOutline" data-jk="eeeeeeee">DevOps Engineer</div>
-        </div>
+        window.mosaic.providerData["mosaic-provider-jobcards-1"] = {
+          metaData: {
+            isIndeedPro: false,
+            mosaicProviderJobCardsModel: {
+              baseUrl: "https://nl.indeed.com",
+              jobSeenLogParameters: {
+                jobKeyToFeedTkMapForHomepage: {
+                  "0e07a30c28494de3": "1k319iq0phabh800",
+                  "96ace364606b9b9b": "1k319iq0phabh800",
+                },
+              },
+              results: [
+                {
+                  jobkey: "0e07a30c28494de3",
+                  displayTitle: "Tijdelijke CRA positie in Nederland",
+                  company: "Syneos - Clinical and Corporate - Prod",
+                  sponsored: true,
+                  link: "/pagead/clk?mo=r&ad=-6NYlbfkN0CgLV01otWyadW_0bbvTXVl&xkcb=SoAq6_M2ehbEmpTCRx0EbzkdCdPP&jsa=8472&camk=C3EPSzFlQw9-8YWqhGvJHQ%3D%3D&from=hp.jobsForYou&tk=1k319iq0phabh800&vjs=3&mtk=1k319ipp3hc32800",
+                  thirdPartyApplyUrl: "https://nl.indeed.com/applystart?jk=0e07a30c28494de3&from=homepage&mvj=0&jobsearchTk=1k319iq0phabh800&spon=1&adid=467111948",
+                  viewJobLink:
+                    "/viewjob?jk=0e07a30c28494de3&from=hp&tk=1k319iq0phabh800&viewtype=embedded&advn=6942524633806610&adid=467111948&ad=-6NYlbfkN0CgLV01otWyadW&xkcb=SoAq6_M2ehbEmpTCRx0EbzkdCdPP",
+                },
+                {
+                  jobkey: "96ace364606b9b9b",
+                  displayTitle: "PHP Maintenance Engineer | 2/3 dagen thuiswerk",
+                  company: "MatchMatters BV",
+                  sponsored: false,
+                  link: "/rc/clk?jk=96ace364606b9b9b&from=hp.jobsForYou&tk=1k319iq0phabh800&bb=GyUdUPx6psFDdznv473d8k%3D%3D&xkcb=SoDV67M2ehbEmoTCRx0JbzkdCdPP&mtk=1k319ipp3hc32800",
+                  viewJobLink:
+                    "/viewjob?jk=96ace364606b9b9b&from=hp&tk=1k319iq0phabh800&viewtype=embedded&xkcb=SoDV67M2ehbEmoTCRx0JbzkdCdPP",
+                },
+              ],
+            },
+          },
+        };
         """;
 
     [Fact]
-    public void ExtractJobLinks_Returns_Decoded_Anchor_Hrefs_With_Viewjob_Preference()
+    public void ExtractJobLinks_From_Mosaic_Jobcards_Prefers_ViewjobLink()
     {
         var links = IndeedSerp.ExtractJobLinks(SerpSnippet);
 
         Assert.Equal(
         new[]
         {
-            ("/viewjob?jk=bbbbbbbb&from=serpso&tk=1a2b3c4d", "bbbbbbbb"),
-            ("/m/viewjob?jk=cccccccc", "cccccccc"),
-            ("/rc/clk?jk=aaaaaaaa&fccid=8c2f1f0e0d1b2a3f", "aaaaaaaa"),
+            ("/viewjob?jk=0e07a30c28494de3&from=hp&tk=1k319iq0phabh800&viewtype=embedded&advn=6942524633806610&adid=467111948&ad=-6NYlbfkN0CgLV01otWyadW&xkcb=SoAq6_M2ehbEmpTCRx0EbzkdCdPP", "0e07a30c28494de3"),
+            ("/viewjob?jk=96ace364606b9b9b&from=hp&tk=1k319iq0phabh800&viewtype=embedded&xkcb=SoDV67M2ehbEmoTCRx0JbzkdCdPP", "96ace364606b9b9b"),
         }, links);
     }
 
     [Fact]
-    public void ExtractJobLinks_Ignores_DataJk_Only_Cards()
+    public void ExtractJobLinks_Keeps_RcClk_Link_When_No_Viewjob_Exists()
     {
         const string html =
             """
-            <div class="cardOutline" data-jk="abcdef12">Job A card</div>
+            window.mosaic.providerData["mosaic-provider-jobcards-1"] = {
+              results: [
+                {
+                  jobkey: "074b26363501302a",
+                  displayTitle: "Recruitment Assistant - Italian Speaker (M/F/X)",
+                  link: "/rc/clk?jk=074b26363501302a&from=hp.jobsForYou&tk=1k319iq0phabh800&bb=GyUdUPx6psFDdznv473d8n%3D%3D&xkcb=SoC567M2ehbEmozCRx0LbzkdCdPP&mtk=1k319ipp3hc32800",
+                },
+              ],
+            };
             """;
 
-        Assert.Empty(IndeedSerp.ExtractJobLinks(html));
+        var links = IndeedSerp.ExtractJobLinks(html);
+
+        Assert.Equal(
+        new[]
+        {
+            ("/rc/clk?jk=074b26363501302a&from=hp.jobsForYou&tk=1k319iq0phabh800&bb=GyUdUPx6psFDdznv473d8n%3D%3D&xkcb=SoC567M2ehbEmozCRx0LbzkdCdPP&mtk=1k319ipp3hc32800", "074b26363501302a"),
+        }, links);
     }
 
     [Fact]
@@ -45,13 +86,42 @@ public class IndeedSerpTests
     {
         const string html =
             """
-            <a href="/viewjob?jk=abcdef12">Job A</a>
-            <a href="/m/viewjob?jk=abcdef12&amp;mobile=1">Job A again</a>
+            <a href="/viewjob?jk=acd2093819ba6af0&from=hp&tk=1k319iq0phabh800&viewtype=embedded">Quality Coach</a>
+            <a href="/m/viewjob?jk=acd2093819ba6af0&from=serpso&mobile=1">Quality Coach (mobile)</a>
             """;
 
         var links = IndeedSerp.ExtractJobLinks(html);
 
-        Assert.Equal(new[] { ("/viewjob?jk=abcdef12", "abcdef12") }, links);
+        Assert.Equal(
+        new[] { ("/viewjob?jk=acd2093819ba6af0&from=hp&tk=1k319iq0phabh800&viewtype=embedded", "acd2093819ba6af0") },
+        links);
+    }
+
+    [Fact]
+    public void ExtractJobLinks_Decodes_Html_Escaped_Hrefs()
+    {
+        const string html =
+            """
+            <a href="/viewjob?jk=d735bb712daf5d3a&amp;from=hp&amp;tk=1k319iq0phabh800&amp;viewtype=embedded">PHP Maintenance Engineer</a>
+            """;
+
+        var links = IndeedSerp.ExtractJobLinks(html);
+
+        Assert.Equal(
+        new[] { ("/viewjob?jk=d735bb712daf5d3a&from=hp&tk=1k319iq0phabh800&viewtype=embedded", "d735bb712daf5d3a") },
+        links);
+    }
+
+    [Fact]
+    public void ExtractJobLinks_Ignores_Bare_Jobkeys_Without_Links()
+    {
+        const string html =
+            """
+            <div class="cardOutline" data-jk="abcdef12">Job A card</div>
+            <script>window.mosaic = { results: [{ jobkey: "abcdef12", displayTitle: "Job A" }] };</script>
+            """;
+
+        Assert.Empty(IndeedSerp.ExtractJobLinks(html));
     }
 
     [Fact]

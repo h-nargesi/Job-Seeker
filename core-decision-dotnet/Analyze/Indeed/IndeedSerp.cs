@@ -6,16 +6,21 @@ namespace Photon.JobSeeker.Indeed;
 public static class IndeedSerp
 {
     public static readonly Regex reg_viewjob_link =
-        new(@"href=[""'](/(?:m/)?viewjob\?jk=(\w+)[^""']*)[""']", RegexOptions.IgnoreCase);
+        new(@"[""'](/(?:m/)?viewjob\?jk=(\w+)[^""']*)[""']", RegexOptions.IgnoreCase);
 
     public static readonly Regex reg_clk_link =
-        new(@"href=[""'](/rc/clk\?jk=(\w+)[^""']*)[""']", RegexOptions.IgnoreCase);
+        new(@"[""'](/rc/clk\?jk=(\w+)[^""']*)[""']", RegexOptions.IgnoreCase);
 
     public static IEnumerable<(string url, string code)> ExtractJobLinks(string html)
     {
         var codes = new HashSet<string>();
 
-        foreach (var (url, code) in Extract(reg_viewjob_link, html).Concat(Extract(reg_clk_link, html)))
+        foreach (var (url, code) in Extract(reg_viewjob_link, html))
+        {
+            if (codes.Add(code)) yield return (url, code);
+        }
+
+        foreach (var (url, code) in Extract(reg_clk_link, html))
         {
             if (codes.Add(code)) yield return (url, code);
         }

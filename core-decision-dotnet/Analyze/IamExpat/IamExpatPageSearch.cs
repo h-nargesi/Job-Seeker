@@ -33,7 +33,7 @@ class IamExpatPageSearch(IamExpat parent) : SearchPage(parent), IamExpatPage
         foreach (Match job_match in job_matches)
         {
             var code = IamExpatPage.GetJobCode(job_match);
-            var url = string.Join("", Parent.BaseUrl, HttpUtility.HtmlDecode(job_match.Groups[1].Value));
+            var url = string.Join("", Parent.BaseUrl, HttpUtility.HtmlDecode(job_match.Value));
             result.Add((url, code));
         }
 

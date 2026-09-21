@@ -34,12 +34,12 @@ class LinkedInPageSearch(LinkedIn parent) : SearchPage(parent), LinkedInPage
     protected override IEnumerable<(string url, string code)> GetJobUrls(string content)
     {
         var result = new List<(string url, string code)>();
-        var job_matches = LinkedInPage.reg_search_job_href.Matches(content).Cast<Match>();
+        var job_matches = LinkedInPage.reg_job_url.Matches(content).Cast<Match>();
 
         foreach (Match job_match in job_matches)
         {
-            var code = job_match.Groups[2].Value;
-            var url = string.Join("", Parent.BaseUrl, HttpUtility.HtmlDecode(job_match.Groups[1].Value));
+            var code = job_match.Groups[1].Value;
+            var url = string.Join("", Parent.BaseUrl, HttpUtility.HtmlDecode(job_match.Value));
             result.Add((url, code));
         }
 
