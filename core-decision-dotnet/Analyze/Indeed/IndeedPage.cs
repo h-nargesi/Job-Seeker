@@ -12,8 +12,6 @@ interface IndeedPage
 
     protected static readonly Regex reg_search_keywords_url = new(@$"(^|&|\?)q={Agency.SearchTitle}(&|$)", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_search_end = new(@"<a[^>]+aria-label=[""']Next Page[""']", RegexOptions.IgnoreCase);
-
     protected static readonly Regex reg_job_view = new(@"(?:/rc/clk\?jk=|/(?:m/)?viewjob\?jk=)(\w+)", RegexOptions.IgnoreCase);
 
     protected static readonly Regex reg_job_adding = new(@"<a[^>]+href=[""']#[""'][^>]+rel=[""']nofollow[""'][^>]+title=[""'][^""']*Add to favourites[""'][^>]*>", RegexOptions.IgnoreCase);

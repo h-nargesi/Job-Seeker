@@ -137,4 +137,93 @@ public class IndeedSerpTests
 
         Assert.Empty(IndeedSerp.ExtractJobLinks(html));
     }
+
+    [Fact]
+    public void NextPageLink_Prefers_Link_Rel_Next_From_Head()
+    {
+        const string html =
+            """
+            <head>
+              <link rel="preconnect" href="https://js.dtxhq.jp">
+              <link rel="next" href="/jobs?q=developer&amp;l=&amp;forceLocation=-1&amp;start=10">
+              <link rel="canonical" href="https://nl.indeed.com/q-developer-vacatures.html">
+            </head>
+            """;
+
+        Assert.Equal("/jobs?q=developer&l=&forceLocation=-1&start=10", IndeedSerp.FindNextPageLink(html));
+    }
+
+    [Fact]
+    public void NextPageLink_Ignores_Href_Anchor_And_Other_Rels()
+    {
+        const string html =
+            """
+            <link rel="canonical" href="https://nl.indeed.com/q-developer-vacatures.html">
+            <link rel="alternate" href="android-app://com.indeed.android.jobsearch/https/nl.indeed.com/m/jobs?q=developer">
+            <link rel="next" href="#">
+            """;
+
+        Assert.Null(IndeedSerp.FindNextPageLink(html));
+    }
+
+    [Fact]
+    public void NextPageSelector_Matches_Dutch_Localized_Pagination_Anchor()
+    {
+        const string html =
+            """
+            <li class="serp-page-8umzvb eu4oa1w0"><a data-testid="pagination-page-next" aria-label="Volgende pagina" href="/jobs?q=developer&amp;start=10" class="serp-page-1v7ptvg e71d0lh0"><svg aria-hidden="true"></svg></a></li>
+            """;
+
+        Assert.Equal(IndeedSerp.next_page_selector, IndeedSerp.FindNextPageSelector(html));
+    }
+
+    [Fact]
+    public void NextPageSelector_Matches_Renamed_Next_Testid()
+    {
+        const string html =
+            """
+            <a data-testid="pagination-next-page" aria-label="Volgende" href="/jobs?q=developer&amp;start=10">Volgende</a>
+            """;
+
+        Assert.Equal(IndeedSerp.next_page_selector, IndeedSerp.FindNextPageSelector(html));
+    }
+
+    [Fact]
+    public void NextPageSelector_Matches_English_Aria_Label_Fallback()
+    {
+        const string html =
+            """
+            <a aria-label="Next Page" href="/jobs?q=developer&amp;start=10">Next</a>
+            """;
+
+        Assert.Equal(IndeedSerp.next_page_selector, IndeedSerp.FindNextPageSelector(html));
+    }
+
+    [Fact]
+    public void NextPageSelector_Uses_Localized_Label_From_Translations_When_Testid_Missing()
+    {
+        const string html =
+            """
+            <script>window._translations = {"Moved to Offered":[null,"Verplaatst"],"Next Page":[null,"Volgende pagina"],"Next page":[null,"Volgende pagina"]};</script>
+            <ul><li><a aria-label="Volgende pagina" href="/jobs?q=developer&amp;start=10"><svg></svg></a></li></ul>
+            """;
+
+        Assert.Equal(@"a[aria-label=""Volgende pagina""]", IndeedSerp.FindNextPageSelector(html));
+    }
+
+    [Fact]
+    public void NextPageSelector_Null_On_Last_Page_Without_Next_Anchor()
+    {
+        const string html =
+            """
+            <script>window._translations = {"Next Page":[null,"Volgende pagina"]};</script>
+            <nav>
+              <a data-testid="pagination-page-current" aria-current="page" href="#">1</a>
+              <a data-testid="pagination-page-2" aria-label="2" href="/jobs?q=developer&amp;start=10">2</a>
+              <a aria-label="Page 3" href="/jobs?q=developer&amp;start=20">3</a>
+            </nav>
+            """;
+
+        Assert.Null(IndeedSerp.FindNextPageSelector(html));
+    }
 }
