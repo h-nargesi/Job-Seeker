@@ -219,6 +219,7 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | Change what the browser does (new command) | `Result/Command.cs` + `PageAction` enum + `action-handler.js` |
 | Add a country/locale to a platform | `agency.sql` → that platform's `Settings.methods[]` |
 | Resume generation | `Views/resume.cshtml` + `ResumeContext` + `Job.ResumeText` + `JobController.Resume` / `Resume64`; printing is manual from the browser (CloudConvert retired) |
+| Dashboard charts / stats page (planned) | [`docs/DASHBOARD_CHARTS.md`](docs/DASHBOARD_CHARTS.md) (design only, not implemented) |
 | Add an AI-assisted (local LLM) stage | Design: [`docs/AI_INTEGRATION.md`](docs/AI_INTEGRATION.md) + [`docs/AI_RESUME_TAILORING.md`](docs/AI_RESUME_TAILORING.md). **Implement in numbered chats:** [`docs/AI_IMPLEMENTATION.md`](docs/AI_IMPLEMENTATION.md) |
 | Fill apply forms with the assistant (planned) | [`docs/AI_APPLY_ASSISTANT.md`](docs/AI_APPLY_ASSISTANT.md) (design only, not implemented; second extension on the AI station) |
 | AI / memory terms | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) (English); chat translations in [`GLOSSARY.fa.md`](GLOSSARY.fa.md) |
