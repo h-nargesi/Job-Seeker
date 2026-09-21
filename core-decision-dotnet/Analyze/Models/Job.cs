@@ -50,6 +50,8 @@
 
         public AiWorkModel? AiWorkModel { get; set; }
 
+        public AiRelocation? AiRelocation { get; set; }
+
         public AiContract? AiContract { get; set; }
 
         public int? AiExperienceYears { get; set; }

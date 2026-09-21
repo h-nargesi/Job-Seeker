@@ -34,12 +34,18 @@ namespace Photon.JobSeeker
             if (!string.IsNullOrEmpty(where))
                 where = "WHERE" + where.Substring(4);
 
-            var rows = database.Query<Job, long, string, (Job Job, bool Relocation, string AgencyName)>(
+            var remoteHybrid = database.AppSetting.RemoteHybrid() == 1;
+            var rows = database.Query<Job, long, long, string,
+                (Job Job, long Relocation, long Remote, string AgencyName)>(
                 Q_INDEX.Replace("@where@", where),
-                (job, relocation, agency) => (job, relocation != 0, agency),
-                parameters, splitOn: "Relocation,AgencyName");
+                (job, relocation, remote, agency) => (job, relocation, remote, agency),
+                parameters, splitOn: "Relocation,Remote,AgencyName");
 
-            return rows.Select(r => new JobListItem(r.Job, r.Relocation, r.AgencyName)).ToList();
+            return rows.Select(r => new JobListItem(
+                r.Job,
+                FlagCell.ForRelocation(r.Job.AiRelocation, (int)r.Relocation),
+                FlagCell.ForRemote(r.Job.AiWorkModel, remoteHybrid, (int)r.Remote),
+                r.AgencyName)).ToList();
         }
 
         public long FetchFromCount(DateTime time)

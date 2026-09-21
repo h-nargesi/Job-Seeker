@@ -38,6 +38,7 @@ public class Chat1AiModelTests
     [InlineData(typeof(AiVerdict), "StrongMatch,Match,Possible,NoMatch,Error")]
     [InlineData(typeof(AiSeniority), "Junior,Mid,Senior,Lead,Unknown")]
     [InlineData(typeof(AiWorkModel), "Onsite,Hybrid,Remote,Unknown")]
+    [InlineData(typeof(AiRelocation), "Yes,No,Unknown")]
     [InlineData(typeof(AiContract), "Permanent,B2B,Temporary,Unknown")]
     [InlineData(typeof(AiPeriod), "Hour,Day,Month,Year,Unknown")]
     public void Extraction_enums_store_locked_names(Type enumType, string names)
@@ -155,6 +156,7 @@ public class Chat1AiModelTests
             AiCurrency = "EUR",
             AiPeriod = AiPeriod.Year,
             AiWorkModel = AiWorkModel.Hybrid,
+            AiRelocation = AiRelocation.Yes,
             AiContract = AiContract.B2B,
             AiExperienceYears = 5,
             AiSkills = [".NET", "C#"],
@@ -176,6 +178,7 @@ public class Chat1AiModelTests
         Assert.Equal("Senior", db.Scalar("SELECT AiSeniority FROM Job"));
         Assert.Equal("Year", db.Scalar("SELECT AiPeriod FROM Job"));
         Assert.Equal("Hybrid", db.Scalar("SELECT AiWorkModel FROM Job"));
+        Assert.Equal("Yes", db.Scalar("SELECT AiRelocation FROM Job"));
         Assert.Equal("B2B", db.Scalar("SELECT AiContract FROM Job"));
         Assert.Contains("pending", Assert.IsType<string>(db.Scalar("SELECT ResumeText FROM Job")));
 
@@ -190,6 +193,7 @@ public class Chat1AiModelTests
         Assert.Equal("EUR", fetched.AiCurrency);
         Assert.Equal(AiPeriod.Year, fetched.AiPeriod);
         Assert.Equal(AiWorkModel.Hybrid, fetched.AiWorkModel);
+        Assert.Equal(AiRelocation.Yes, fetched.AiRelocation);
         Assert.Equal(AiContract.B2B, fetched.AiContract);
         Assert.Equal(5, fetched.AiExperienceYears);
         Assert.Equal([".NET", "C#"], fetched.AiSkills);
@@ -210,8 +214,8 @@ public class Chat1AiModelTests
         foreach (var column in new[]
         {
             "AiScore", "AiVerdict", "AiReason", "AiSeniority", "AiSalaryMin", "AiSalaryMax",
-            "AiCurrency", "AiPeriod", "AiWorkModel", "AiContract", "AiExperienceYears",
-            "AiSkills", "AiOptions", "ResumeText",
+            "AiCurrency", "AiPeriod", "AiWorkModel", "AiRelocation", "AiContract",
+            "AiExperienceYears", "AiSkills", "AiOptions", "ResumeText",
         })
             Assert.Contains(column, job_sql);
 
@@ -223,6 +227,7 @@ public class Chat1AiModelTests
         Assert.Contains("scorecap", app_sql);
         Assert.Contains("w_regex", app_sql);
         Assert.Contains("w_ai", app_sql);
+        Assert.Contains("remotehybrid", app_sql);
 
         Assert.Contains("structure/app-setting.sql", install);
         Assert.DoesNotContain("structure/*", install);
@@ -235,6 +240,7 @@ UPDATE Job SET
     AiScore = @AiScore, AiVerdict = @AiVerdict, AiReason = @AiReason,
     AiSeniority = @AiSeniority, AiSalaryMin = @AiSalaryMin, AiSalaryMax = @AiSalaryMax,
     AiCurrency = @AiCurrency, AiPeriod = @AiPeriod, AiWorkModel = @AiWorkModel,
+    AiRelocation = @AiRelocation,
     AiContract = @AiContract, AiExperienceYears = @AiExperienceYears,
     AiSkills = @AiSkills, AiOptions = @AiOptions, ResumeText = @ResumeText
 WHERE JobID = @JobID", new
@@ -249,6 +255,7 @@ WHERE JobID = @JobID", new
             job.AiCurrency,
             AiPeriod = job.AiPeriod?.ToString(),
             AiWorkModel = job.AiWorkModel?.ToString(),
+            AiRelocation = job.AiRelocation?.ToString(),
             AiContract = job.AiContract?.ToString(),
             job.AiExperienceYears,
             job.AiSkills,

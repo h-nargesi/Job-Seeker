@@ -29,6 +29,7 @@ LIMIT {limit}").ToList();
             job.AiCurrency = update.AiCurrency;
             job.AiPeriod = update.AiPeriod;
             job.AiWorkModel = update.AiWorkModel;
+            job.AiRelocation = update.AiRelocation;
             job.AiContract = update.AiContract;
             job.AiExperienceYears = update.AiExperienceYears;
             job.AiSkills = update.AiSkills;
@@ -109,6 +110,7 @@ LIMIT {limit}").ToList();
                 aiCurrency = job.AiCurrency,
                 aiPeriod = job.AiPeriod?.ToString(),
                 aiWorkModel = job.AiWorkModel?.ToString(),
+                aiRelocation = job.AiRelocation?.ToString(),
                 aiContract = job.AiContract?.ToString(),
                 aiExperienceYears = job.AiExperienceYears,
                 aiSkills = job.AiSkills,
@@ -151,6 +153,7 @@ UPDATE Job SET
     AiSalaryMin = @aiSalaryMin,
     AiSalaryMax = @aiSalaryMax,
     AiWorkModel = @aiWorkModel,
+    AiRelocation = @aiRelocation,
     AiContract = @aiContract,
     AiPeriod = @aiPeriod,
     AiCurrency = @aiCurrency,

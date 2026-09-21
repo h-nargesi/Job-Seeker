@@ -8,6 +8,7 @@ public static class VerdictParser
     public static readonly string[] Seniorities = ["Junior", "Mid", "Senior", "Lead", "Unknown"];
     public static readonly string[] Periods = ["Hour", "Day", "Month", "Year", "Unknown"];
     public static readonly string[] WorkModels = ["Onsite", "Hybrid", "Remote", "Unknown"];
+    public static readonly string[] RelocationSupports = ["Yes", "No", "Unknown"];
     public static readonly string[] Contracts = ["Permanent", "B2B", "Temporary", "Unknown"];
 
     public static VerdictPayload Parse(string content, long jobId, string fingerprint)
@@ -31,6 +32,7 @@ public static class VerdictParser
         var seniority = OptionalEnum(root, "seniority", Seniorities);
         var period = OptionalEnum(root, "period", Periods);
         var workModel = OptionalEnum(root, "work_model", WorkModels);
+        var relocationSupport = OptionalEnum(root, "relocation_support", RelocationSupports);
         var contract = OptionalEnum(root, "contract", Contracts);
         var currency = OptionalString(root, "currency");
 
@@ -51,6 +53,7 @@ public static class VerdictParser
             Currency = currency,
             Period = period,
             WorkModel = workModel,
+            RelocationSupport = relocationSupport,
             Contract = contract,
             ExperienceYears = experience,
             Skills = skills,

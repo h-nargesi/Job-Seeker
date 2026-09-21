@@ -23,6 +23,7 @@ internal static class SqliteTypeHandlers
             Add(new EnumNameTypeHandler<AiVerdict>());
             Add(new EnumNameTypeHandler<AiSeniority>());
             Add(new EnumNameTypeHandler<AiWorkModel>());
+            Add(new EnumNameTypeHandler<AiRelocation>());
             Add(new EnumNameTypeHandler<AiContract>());
             Add(new EnumNameTypeHandler<AiPeriod>());
             Add(new EnumNameTypeHandler<MemoryScope>());

@@ -195,7 +195,7 @@ worker calls this at run start — never per job.
 Idempotent upsert. Body is the call-1 JSON (snake_case extraction fields). An absent `delta` is ignored.
 
 - **Required**: `relevance` (0–100), `verdict` (AiVerdict name), `fingerprint`.
-- **Optional**: `reason` (≤ 2000), `skills` (≤ 20), `seniority` / `period` / `work_model` / `contract` (enum names), `salary_min` / `salary_max` (≥ 0), `experience_years` (0–50), `currency`, `delta`.
+- **Optional**: `reason` (≤ 2000), `skills` (≤ 20), `seniority` / `period` / `work_model` / `relocation_support` (`Yes`/`No`/`Unknown`) / `contract` (enum names), `salary_min` / `salary_max` (≥ 0), `experience_years` (0–50), `currency`, `delta`.
 - `delta` (call-2 tailoring, validated by the core independently of the verdict):
   `{ keys: [...], included: [...], notIncluded: [...], length: 1|2, texts: { slot: "..." } }`.
   - Applied only when the verdict promotes the job to `Attention` (queued,

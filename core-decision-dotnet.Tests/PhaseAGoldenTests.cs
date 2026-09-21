@@ -104,8 +104,9 @@ CREATE TABLE Job (
     AiSalaryMax         integer     null,
     AiCurrency          text        null,
     AiPeriod            text        null,
-    AiWorkModel         text        null,
-    AiContract          text        null,
+    AiWorkModel         text    null,
+    AiRelocation        text    null,
+    AiContract          text    null,
     AiExperienceYears   integer     null,
     AiSkills            text        null,
     AiOptions           text        null,
@@ -509,7 +510,89 @@ public class PhaseAGoldenTests
         Assert.Equal(2, list.Count);
         var top = list[0];
         Assert.Equal("Golden", top.AgencyName);
-        Assert.False(top.Relocation);
+        Assert.Equal("—", top.Relocation.Text);
+        Assert.Equal("—", top.Remote.Text);
+        Assert.Equal(string.Empty, top.Relocation.CssClass);
         Assert.NotNull(top.Job);
+    }
+
+    private static void SeedFlagJob(
+        GoldenDatabase db, string code, string? log,
+        string? aiWorkModel = null, string? aiRelocation = null)
+    {
+        db.SaveSearchJob(code, $"https://example.com/jobs/{code}");
+        db.ExecuteRaw(
+            @"UPDATE Job SET State = 'Attention', Log = $log, AiWorkModel = $wm, AiRelocation = $rel
+WHERE Code = $code",
+            ("$log", (object?)log ?? DBNull.Value),
+            ("$wm", (object?)aiWorkModel ?? DBNull.Value),
+            ("$rel", (object?)aiRelocation ?? DBNull.Value),
+            ("$code", code));
+    }
+
+    private static string ScoredLog(params string[] benefitLines)
+    {
+        return "English: (95%)\n*Benefit:*\n" + string.Join("\n", benefitLines);
+    }
+
+    [Fact]
+    public void Fetch_relocation_flag_is_ai_first_with_regex_fallback()
+    {
+        using var db = new GoldenDatabase();
+        SeedFlagJob(db, "r-agree-yes", ScoredLog("**(+140) Relocation**"), aiRelocation: "Yes");
+        SeedFlagJob(db, "r-disagree-yes", ScoredLog(), aiRelocation: "Yes");
+        SeedFlagJob(db, "r-agree-no", ScoredLog(), aiRelocation: "No");
+        SeedFlagJob(db, "r-disagree-no", ScoredLog("**(+140) Relocation**"), aiRelocation: "No");
+        SeedFlagJob(db, "r-unknown-marker", ScoredLog("**(+140) Relocation**"), aiRelocation: "Unknown");
+        SeedFlagJob(db, "r-null-plain", ScoredLog());
+        SeedFlagJob(db, "r-not-scored", null);
+
+        var cells = db.Database.Job.Fetch([], [])
+            .ToDictionary(x => x.Job.Code!, x => x.Relocation);
+
+        Assert.Equal(new FlagCell("true", "text-success fw-bold"), cells["r-agree-yes"]);
+        Assert.Equal(new FlagCell("true", "text-warning"), cells["r-disagree-yes"]);
+        Assert.Equal(new FlagCell("false", "fw-bold"), cells["r-agree-no"]);
+        Assert.Equal(new FlagCell("false", "text-warning"), cells["r-disagree-no"]);
+        Assert.Equal(new FlagCell("true", string.Empty), cells["r-unknown-marker"]);
+        Assert.Equal(new FlagCell("false", string.Empty), cells["r-null-plain"]);
+        Assert.Equal(new FlagCell("—", string.Empty), cells["r-not-scored"]);
+    }
+
+    [Fact]
+    public void Fetch_remote_flag_defaults_to_fully_remote_only()
+    {
+        using var db = new GoldenDatabase();
+        SeedFlagJob(db, "w-agree-remote", ScoredLog("**(+170) Remote**"), aiWorkModel: "Remote");
+        SeedFlagJob(db, "w-disagree-onsite", ScoredLog("**(+170) Remote**"), aiWorkModel: "Onsite");
+        SeedFlagJob(db, "w-unknown-plain", ScoredLog(), aiWorkModel: "Unknown");
+        SeedFlagJob(db, "w-null-marker", ScoredLog("**(+170) Remote**"));
+        SeedFlagJob(db, "w-hybrid-is-onsite", ScoredLog("**(+170) Remote**"), aiWorkModel: "Hybrid");
+        SeedFlagJob(db, "w-not-scored", null);
+
+        var cells = db.Database.Job.Fetch([], [])
+            .ToDictionary(x => x.Job.Code!, x => x.Remote);
+
+        Assert.Equal(new FlagCell("true", "text-success fw-bold"), cells["w-agree-remote"]);
+        Assert.Equal(new FlagCell("false", "text-warning"), cells["w-disagree-onsite"]);
+        Assert.Equal(new FlagCell("false", string.Empty), cells["w-unknown-plain"]);
+        Assert.Equal(new FlagCell("true", string.Empty), cells["w-null-marker"]);
+        Assert.Equal(new FlagCell("false", "text-warning"), cells["w-hybrid-is-onsite"]);
+        Assert.Equal(new FlagCell("—", string.Empty), cells["w-not-scored"]);
+    }
+
+    [Fact]
+    public void Fetch_remote_flag_counts_hybrid_when_remotehybrid_enabled()
+    {
+        using var db = new GoldenDatabase();
+        db.ExecuteRaw("INSERT INTO AppSetting (Key, Value) VALUES ('remotehybrid', '1')");
+        SeedFlagJob(db, "h-agree", ScoredLog("**(+170) Remote**"), aiWorkModel: "Hybrid");
+        SeedFlagJob(db, "h-disagree", ScoredLog(), aiWorkModel: "Hybrid");
+
+        var cells = db.Database.Job.Fetch([], [])
+            .ToDictionary(x => x.Job.Code!, x => x.Remote);
+
+        Assert.Equal(new FlagCell("true", "text-success fw-bold"), cells["h-agree"]);
+        Assert.Equal(new FlagCell("true", "text-warning"), cells["h-disagree"]);
     }
 }

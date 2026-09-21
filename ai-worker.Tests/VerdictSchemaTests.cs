@@ -64,6 +64,8 @@ public sealed class VerdictSchemaTests
             Property("period").GetProperty("enum").EnumerateArray().Select(v => v.GetString()));
         Assert.Equal(["Onsite", "Hybrid", "Remote", "Unknown"],
             Property("work_model").GetProperty("enum").EnumerateArray().Select(v => v.GetString()));
+        Assert.Equal(["Yes", "No", "Unknown"],
+            Property("relocation_support").GetProperty("enum").EnumerateArray().Select(v => v.GetString()));
         Assert.Equal(["Permanent", "B2B", "Temporary", "Unknown"],
             Property("contract").GetProperty("enum").EnumerateArray().Select(v => v.GetString()));
     }

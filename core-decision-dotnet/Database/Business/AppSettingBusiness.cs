@@ -10,6 +10,7 @@ class AppSettingBusiness
     public const string WRegexKey = "w_regex";
     public const string WAiKey = "w_ai";
     public const string MemoryCapKey = "memorycap";
+    public const string RemoteHybridKey = "remotehybrid";
 
     public const int FloorDefault = 70;
     public const int AiPassmarkDefault = 60;
@@ -17,6 +18,7 @@ class AppSettingBusiness
     public const double WRegexDefault = 0.35;
     public const double WAiDefault = 0.65;
     public const int MemoryCapDefault = 500;
+    public const int RemoteHybridDefault = 0;
 
     private readonly Database database;
 
@@ -33,6 +35,8 @@ class AppSettingBusiness
     public double WAi() => ReadDouble(WAiKey, WAiDefault);
 
     public int MemoryCap() => ReadInt(MemoryCapKey, MemoryCapDefault);
+
+    public int RemoteHybrid() => ReadInt(RemoteHybridKey, RemoteHybridDefault);
 
     private string? ReadValue(string key)
     {

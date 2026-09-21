@@ -38,6 +38,9 @@ public sealed class VerdictPayload
     [JsonPropertyName("work_model")]
     public string? WorkModel { get; set; }
 
+    [JsonPropertyName("relocation_support")]
+    public string? RelocationSupport { get; set; }
+
     [JsonPropertyName("contract")]
     public string? Contract { get; set; }
 

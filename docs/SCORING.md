@@ -36,7 +36,7 @@ content.
 | `reject` | **Disqualifying.** Any match rejects the job (e.g. commented-out `react`). |
 | `tech` | Supporting technologies (bonus points). |
 | `production` | Domain products (e.g. ERP). |
-| `benefit` | Perks — notably `Relocation` (170) is also surfaced as a flag on the dashboard. |
+| `benefit` | Perks — notably `Relocation` (140) and `Remote` (170) are also surfaced as flag columns on the dashboard. |
 | `salary` | Special-cased: score is derived from the parsed amount, not a flat value. |
 | `keywords` | Role-level keywords (full-stack, backend, mid-level). |
 | `reumse` | Resume-only keywords (AWS, CI/CD); score 0 — they feed the resume context, not the rank. |
@@ -133,7 +133,8 @@ but it stays in `AgenciesByID` for reporting. `1` = actively searching new jobs;
    — the clock is the **newest scrape in the table**, so ages don't advance
    while the system is idle. `NULL` Score → NULL EffectiveScore → sorts last
    under `DESC` (unchanged).
-3. Flags `Relocation` jobs by matching the log marker `%) Relocation**%`.
+3. Flags `Relocation` / `Remote` jobs by matching the log markers
+   `%) Relocation**%` / `%) Remote**%` (tri-state: `Log` NULL/empty → not scored).
 4. Partitions by `(AgencyID, State)`, keeps the top N per bucket via an
    explicit CASE cap (`Attention→12, NotApproved→6, Applied/Rejected→3,
    else→1`; the Category 4 bucket orders by `ModifiedOn DESC` first), and
@@ -148,9 +149,22 @@ Ranking only demotes — real expiry (deleting old jobs) stays exclusively in
 (``{n}: {date} (age {N}d)``), which keeps the `'%4: %'` tries-cap pattern
 intact and makes the early-application hypothesis measurable later.
 
+### Dashboard flag columns (Relocation / Remote)
+
+Both columns are **AI-first**: the AI verdict decides the value when it has an
+opinion (`AiRelocation` `Yes`/`No`; `AiWorkModel` `Remote`/`Onsite`); otherwise
+the regex log-marker provides a plain fallback value (`true`/`false`, no
+color). Jobs that never went through regex scoring show `—`. When the AI is
+determined, agreement with the regex marker is bolded (`text-success` when
+true) and disagreement is shown in `text-warning` — which surfaces regex false
+positives. `Hybrid` counts as determined: remote under the `remotehybrid`
+`AppSetting` (`0`/`1`, default `0` = fully-remote only, no UI — edit the DB),
+onsite otherwise. The log-marker `LIKE` patterns feed only this fallback and
+stay fragile (see the warning above).
+
 Treat this query with care: it references enum names as string literals and the
-`Relocation` log format. If you change scoring log output or enum names, the
-ranking and the Relocation flag will silently break.
+`Relocation`/`Remote` log markers. If you change scoring log output or enum
+names, the ranking and the flag fallback will silently break.
 
 ## Maintenance operations
 

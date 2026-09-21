@@ -62,9 +62,9 @@ values
 
 	--	Company Benefits
 
-	,	(170,	'benefit',	'Relocation',		'(?<!no |without )\brelocation(\s+(support|package|assistance))?\b|(?<!no |without )\bvisa\s+(support|sponsorship)\b',
+	,	(140,	'benefit',	'Relocation',		'(?<!no |without )\brelocation(\s+(support|package|assistance))?\b|(?<!no |without )\bvisa\s+(support|sponsorship)\b',
 												'{ "resume": null }')
-	,	(150,	'benefit',	'Remote',			'\b(remote(ly)?|work(ing)? from home|home[- ]office|(?-i)WFH)\b',
+	,	(170,	'benefit',	'Remote',			'\b(remote(ly)?|work(ing)? from home|home[- ]office|(?-i)WFH)\b',
 												'{ "resume": null }')
 	,	(02,	'salary',	'Salary',			'\bsalary\b[\s\S]*?(\d[\d.,]*(000|k))([\s\S]+?\b(month|year)\b)?',
 												'{ "resume": null , "money": 1, "period": 4}')

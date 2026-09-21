@@ -50,6 +50,7 @@ WITH date_diff AS (
     FROM (
         SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
              , Job.State, Job.Score, Job.AiScore, job.Country, Job.Url, Job.Link
+             , Job.AiRelocation, Job.AiWorkModel
              , Agency.Title AS AgencyName
              , CASE State
                WHEN '{nameof(JobState.Attention)}' THEN 1
@@ -62,7 +63,10 @@ WITH date_diff AS (
                ELSE 12
                END AS Category
              , SUBSTR(Job.RegTime, 1, 10) AS RegDate
-             , CASE WHEN Job.Log LIKE '%) Relocation**%' THEN 1 ELSE 0 END AS Relocation
+             , CASE WHEN Job.Log IS NULL OR Job.Log = ''
+                    THEN -1 WHEN Job.Log LIKE '%) Relocation**%' THEN 1 ELSE 0 END AS Relocation
+             , CASE WHEN Job.Log IS NULL OR Job.Log = ''
+                    THEN -1 WHEN Job.Log LIKE '%) Remote**%' THEN 1 ELSE 0 END AS Remote
         FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
         @where@
     ) job
@@ -72,7 +76,8 @@ WITH date_diff AS (
 
 ), ranking AS (
     SELECT job.JobID, job.RegTime, job.ModifiedOn, job.AgencyID, job.Code, job.Title
-         , job.State, job.Score, job.AiScore, job.Country, job.Url, job.Link, job.Relocation
+         , job.State, job.Score, job.AiScore, job.Country, job.Url, job.Link
+         , job.AiRelocation, job.AiWorkModel, job.Relocation, job.Remote
          , job.AgencyName, job.Category, job.RegDate
          -- Mirror of JobRanking.Weight (Analyze/JobRanking.cs). Keep in sync.
          , {JobRanking.SqlRankScore} * CASE

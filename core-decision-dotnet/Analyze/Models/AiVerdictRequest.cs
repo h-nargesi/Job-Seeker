@@ -39,6 +39,9 @@ public sealed class AiVerdictRequest
     [JsonPropertyName("work_model")]
     public string? WorkModel { get; set; }
 
+    [JsonPropertyName("relocation_support")]
+    public string? RelocationSupport { get; set; }
+
     [JsonPropertyName("contract")]
     public string? Contract { get; set; }
 
@@ -104,6 +107,7 @@ public sealed class AiVerdictRequest
         if (!TryOptionalEnum(Seniority, out AiSeniority? seniority) ||
             !TryOptionalEnum(Period, out AiPeriod? period) ||
             !TryOptionalEnum(WorkModel, out AiWorkModel? work_model) ||
+            !TryOptionalEnum(RelocationSupport, out AiRelocation? relocation) ||
             !TryOptionalEnum(Contract, out AiContract? contract))
         {
             error = "extraction enums must use locked names";
@@ -119,6 +123,7 @@ public sealed class AiVerdictRequest
         update.AiCurrency = Currency;
         update.AiPeriod = period;
         update.AiWorkModel = work_model;
+        update.AiRelocation = relocation;
         update.AiContract = contract;
         update.AiExperienceYears = ExperienceYears;
         update.AiSkills = Skills;

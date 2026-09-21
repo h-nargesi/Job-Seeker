@@ -77,6 +77,12 @@ namespace Photon.JobSeeker
             return connection.Query(query, map, param, transaction: transaction, splitOn: splitOn);
         }
 
+        public IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TFourth, TReturn>(string query,
+            Func<TFirst, TSecond, TThird, TFourth, TReturn> map, object? param = null, string splitOn = "Id")
+        {
+            return connection.Query(query, map, param, transaction: transaction, splitOn: splitOn);
+        }
+
         public T? ExecuteScalar<T>(string query, object? param = null)
         {
             return connection.ExecuteScalar<T>(query, param, transaction: transaction);

@@ -13,6 +13,7 @@ public sealed class VerdictParserTests
       "currency": "EUR",
       "period": "Year",
       "work_model": "Hybrid",
+      "relocation_support": "Yes",
       "contract": "Permanent",
       "experience_years": 5,
       "skills": [".NET", "C#", "Azure"]
@@ -33,6 +34,7 @@ public sealed class VerdictParserTests
         Assert.Equal("EUR", payload.Currency);
         Assert.Equal("Year", payload.Period);
         Assert.Equal("Hybrid", payload.WorkModel);
+        Assert.Equal("Yes", payload.RelocationSupport);
         Assert.Equal("Permanent", payload.Contract);
         Assert.Equal(5, payload.ExperienceYears);
         Assert.Equal([".NET", "C#", "Azure"], payload.Skills);
@@ -46,6 +48,7 @@ public sealed class VerdictParserTests
     [InlineData("""{"relevance": 82, "verdict": "match", "reason": "x", "skills": []}""")]
     [InlineData("""{"relevance": 82, "verdict": "Match", "reason": "x", "seniority": "Principal", "skills": []}""")]
     [InlineData("""{"relevance": 82, "verdict": "Match", "reason": "x", "work_model": "WFH", "skills": []}""")]
+    [InlineData("""{"relevance": 82, "verdict": "Match", "reason": "x", "relocation_support": "Maybe", "skills": []}""")]
     [InlineData("""{"relevance": 82, "verdict": "Match", "reason": "x", "salary_min": -1, "skills": []}""")]
     [InlineData("""{"relevance": 82, "verdict": "Match", "reason": "x", "experience_years": 51, "skills": []}""")]
     [InlineData("""{"verdict": "Match", "reason": "x", "skills": []}""")]
@@ -60,7 +63,8 @@ public sealed class VerdictParserTests
         const string content = """
             {"relevance": 40, "verdict": "Possible", "reason": null, "seniority": null,
              "salary_min": null, "salary_max": null, "currency": null, "period": "Unknown",
-             "work_model": null, "contract": null, "experience_years": null, "skills": null}
+             "work_model": null, "relocation_support": "Unknown", "contract": null,
+             "experience_years": null, "skills": null}
             """;
 
         var payload = VerdictParser.Parse(content, 3, "fp");
@@ -69,6 +73,7 @@ public sealed class VerdictParserTests
         Assert.Null(payload.Seniority);
         Assert.Null(payload.SalaryMin);
         Assert.Equal("Unknown", payload.Period);
+        Assert.Equal("Unknown", payload.RelocationSupport);
         Assert.Null(payload.Skills);
     }
 
