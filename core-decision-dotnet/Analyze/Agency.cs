@@ -59,6 +59,8 @@ public abstract class Agency
 
     public virtual string BaseUrl => Link;
 
+    public virtual string NormalizeJobUrl(string url) => url;
+
     public abstract string SearchLink { get; }
 
 

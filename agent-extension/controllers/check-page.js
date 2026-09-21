@@ -1,7 +1,22 @@
 console.log("AGENT", "check-page");
 
+const WAITING_JITTER = 0.25;
+const CHALLENGE_COOLDOWN_MS = 45000;
+
 let challenge_hold = false;
 let challenge_watch = null;
+let challenge_seen_at = null;
+
+function JitteredWaiting(base) {
+    const delta = Math.round(base * WAITING_JITTER);
+    return base - delta + Math.floor(Math.random() * (2 * delta + 1));
+}
+
+function CooldownRemaining() {
+    if (challenge_seen_at === null) return 0;
+    const remaining = CHALLENGE_COOLDOWN_MS - (Date.now() - challenge_seen_at);
+    return remaining > 0 ? remaining : 0;
+}
 
 ActionHandler.OnPageLoad = function () {
     console.log("AGENT", 'Page', 'loaded');
@@ -43,7 +58,11 @@ async function OnDashboard() {
 }
 
 async function SendingPageInfo(scope, challenge_kind) {
-    if (scope.waiting) await ActionHandler.OnWait({ miliseconds: scope.waiting });
+    const wait = challenge_kind
+        ? (scope.waiting ? JitteredWaiting(scope.waiting) : 0)
+        : Math.max(scope.waiting ? JitteredWaiting(scope.waiting) : 0, CooldownRemaining());
+
+    if (wait > 0) await ActionHandler.OnWait({ miliseconds: wait });
 
     console.log("AGENT", 'Page', "sending", window.location.hostname, scope);
 
@@ -77,6 +96,7 @@ function EnterChallengeHold(scope, kind) {
     if (challenge_hold) return;
 
     challenge_hold = true;
+    challenge_seen_at = Date.now();
     console.warn("AGENT", 'Page', "challenge hold", kind, "- waiting for a human");
 
     challenge_watch = setInterval(function () { WatchChallenge(scope); }, 5000);

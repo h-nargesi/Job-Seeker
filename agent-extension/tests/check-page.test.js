@@ -88,7 +88,7 @@ test('OnPageLoad sends the page for a case-insensitive scope match and starts th
 	assert.ok(env.clock.pending().some(t => t.due === 1500));
 });
 
-test('OnPageLoad honors scope.waiting before sending', async () => {
+test('OnPageLoad honors scope.waiting with jitter before sending', async () => {
 	const { env, onPageLoad } = fresh();
 	env.chrome.runtime.respondWith(message => {
 		if (message.title === 'scopes') {
@@ -99,9 +99,9 @@ test('OnPageLoad honors scope.waiting before sending', async () => {
 	onPageLoad();
 	await env.advance(1000);
 	assert.deepStrictEqual(sentTitles(env), ['scopes']);
-	await env.advance(2499);
+	await env.advance(1874);
 	assert.strictEqual(env.chrome.runtime.sent.length, 1);
-	await env.advance(1);
+	await env.advance(3126 - 1874 + 1);
 	assert.strictEqual(env.chrome.runtime.sent.length, 2);
 });
 
@@ -277,7 +277,7 @@ test('the heartbeat keeps beating on a hidden tab while the challenge holds', as
 	assert.ok(sentTitles(env).includes('heartbeat'));
 });
 
-test('the watcher resumes the flow once the challenge box disappears', async () => {
+test('the watcher resumes the flow once the challenge box disappears, after the cooldown', async () => {
 	const { env, onPageLoad } = fresh();
 	env.sandbox.document.body.innerHTML = '<div id="challenge-form"></div>';
 	env.chrome.runtime.respondWith(challengeResponder());
@@ -288,6 +288,11 @@ test('the watcher resumes the flow once the challenge box disappears', async () 
 
 	env.sandbox.document.body.innerHTML = '<div class="jobs-list"></div>';
 	await env.advance(5000);
+	assert.strictEqual(env.chrome.runtime.sent.filter(m => m.title === 'send').length, 1);
+
+	await env.advance(39999);
+	assert.strictEqual(env.chrome.runtime.sent.filter(m => m.title === 'send').length, 1);
+	await env.advance(1);
 
 	const sends = env.chrome.runtime.sent.filter(m => m.title === 'send');
 	assert.strictEqual(sends.length, 2);
@@ -295,6 +300,29 @@ test('the watcher resumes the flow once the challenge box disappears', async () 
 	assert.strictEqual(env.sandbox.location.reloadCalls, 1);
 	assert.strictEqual(env.grab('challenge_hold'), false);
 	assert.ok(!env.clock.pending().some(t => t.interval === 5000));
+});
+
+test('a fresh page load right after a challenge waits out the cooldown before sending', async () => {
+	const { env, onPageLoad } = fresh();
+	env.sandbox.document.body.innerHTML = '<div id="challenge-form"></div>';
+	env.chrome.runtime.respondWith(challengeResponder());
+
+	onPageLoad();
+	await env.advance(1000);
+	assert.strictEqual(env.chrome.runtime.sent.filter(m => m.title === 'send').length, 1);
+
+	env.sandbox.document.body.innerHTML = '<div class="jobs-list"></div>';
+	onPageLoad();
+	await env.advance(1000);
+	assert.strictEqual(env.chrome.runtime.sent.filter(m => m.title === 'send').length, 1);
+
+	await env.advance(43999);
+	assert.strictEqual(env.chrome.runtime.sent.filter(m => m.title === 'send').length, 1);
+	await env.advance(1);
+
+	const sends = env.chrome.runtime.sent.filter(m => m.title === 'send');
+	assert.strictEqual(sends.length, 2);
+	assert.strictEqual(sends[1].params.challenge, undefined);
 });
 
 test('the watcher keeps waiting while the challenge box stays', async () => {
