@@ -32,16 +32,9 @@ class IndeedPageSearch(Indeed parent) : SearchPage(parent), IndeedPage
     protected override Command[] CheckNextButton(string url, string text)
     {
         var link = IndeedSerp.FindNextPageLink(text);
-        if (link != null) return [Command.Go(ResolveLink(url, link))];
+        if (link != null) return [Command.Go(IndeedSerp.ResolveLink(url, link))];
 
         var selector = IndeedSerp.FindNextPageSelector(text);
         return selector == null ? [] : [Command.Click(selector)];
-    }
-
-    private static string ResolveLink(string baseUrl, string href)
-    {
-        return Uri.TryCreate(href, UriKind.Absolute, out var absolute)
-            ? absolute.ToString()
-            : new Uri(new Uri(baseUrl), href).ToString();
     }
 }

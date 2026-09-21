@@ -167,6 +167,45 @@ public class IndeedSerpTests
     }
 
     [Fact]
+    public void ResolveLink_Does_Not_Turn_Root_Relative_Href_Into_File_Url()
+    {
+        const string baseUrl = "https://www.indeed.com/jobs?q=developer&l=&forceLocation=-1&start=0";
+
+        var resolved = IndeedSerp.ResolveLink(baseUrl, "/jobs?q=developer&l=&forceLocation=-1&start=10");
+
+        Assert.Equal("https://www.indeed.com/jobs?q=developer&l=&forceLocation=-1&start=10", resolved);
+    }
+
+    [Fact]
+    public void ResolveLink_Merges_Relative_Href_Against_Base_Url()
+    {
+        const string baseUrl = "https://nl.indeed.com/jobs?q=developer&start=0";
+
+        var resolved = IndeedSerp.ResolveLink(baseUrl, "/jobs?q=developer&start=10");
+
+        Assert.Equal("https://nl.indeed.com/jobs?q=developer&start=10", resolved);
+    }
+
+    [Fact]
+    public void ResolveLink_Keeps_Absolute_Http_Url_As_Is()
+    {
+        const string baseUrl = "https://nl.indeed.com/jobs?q=developer&start=0";
+        const string href = "https://www.indeed.com/jobs?q=developer&start=10";
+
+        Assert.Equal(href, IndeedSerp.ResolveLink(baseUrl, href));
+    }
+
+    [Fact]
+    public void ResolveLink_Resolves_Protocol_Relative_Href_Against_Https()
+    {
+        const string baseUrl = "https://de.indeed.com/jobs?q=developer&start=0";
+
+        var resolved = IndeedSerp.ResolveLink(baseUrl, "//www.indeed.com/jobs?q=developer&start=10");
+
+        Assert.Equal("https://www.indeed.com/jobs?q=developer&start=10", resolved);
+    }
+
+    [Fact]
     public void NextPageSelector_Matches_Dutch_Localized_Pagination_Anchor()
     {
         const string html =

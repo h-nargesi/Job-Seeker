@@ -28,6 +28,15 @@ public static class IndeedSerp
         return match.Success ? HttpUtility.HtmlDecode(match.Groups[1].Value) : null;
     }
 
+    public static string ResolveLink(string baseUrl, string href)
+    {
+        if (Uri.TryCreate(href, UriKind.Absolute, out var absolute) &&
+            (absolute.Scheme == Uri.UriSchemeHttp || absolute.Scheme == Uri.UriSchemeHttps))
+            return absolute.ToString();
+
+        return new Uri(new Uri(baseUrl), href).ToString();
+    }
+
     public static string? FindNextPageSelector(string html)
     {
         if (reg_next_page_anchor.IsMatch(html)) return next_page_selector;
