@@ -109,7 +109,7 @@ public class ChallengeHoldTests
     }
 
     [Fact]
-    public void Job_page_after_a_released_hold_adopts_the_trend_and_opens_the_next_job()
+    public void Job_page_after_a_released_hold_adopts_the_trend_and_navigates_to_the_next_job()
     {
         using var db = new CheckpointDatabase(active: 2);
         db.Database.Trend.CreateTrend(new Trend { AgencyID = 1, State = TrendState.Auth });
@@ -125,10 +125,9 @@ public class ChallengeHoldTests
         Assert.Equal(job.TrendID, result.TrendID);
         Assert.Null(db.Database.Trend.Get(1, TrendType.Login));
 
-        Assert.Equal(2, result.Commands.Length);
-        Assert.Equal("open", result.Commands[0].Action);
+        Assert.Single(result.Commands);
+        Assert.Equal("go", result.Commands[0].Action);
         Assert.Equal("https://cp.example.com/jobs/j5", result.Commands[0].Params!["url"]);
-        Assert.Equal("close", result.Commands[^1].Action);
     }
 
     [Fact]
