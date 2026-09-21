@@ -28,7 +28,7 @@ public abstract class Agency
 
     public string Link { get; private set; } = string.Empty;
 
-    public virtual int Waiting => 0;
+    public virtual int Waiting => 1000;
 
     public AgencyStatus Status { get; set; }
 

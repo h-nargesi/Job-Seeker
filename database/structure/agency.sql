@@ -33,15 +33,15 @@ values
 
 	('LinkedIn',	'(.+\.)?linkedin\.com$',			'https://linkedin.com',
 					'{ "running": 0, "methods": [
-						{ "Title": "NL", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Netherlands" },
-						{ "Title": "AU", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Australia" },
-						{ "Title": "DE", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Germany" },
-						{ "Title": "SE", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Sweden" },
-						{ "Title": "AM", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Armenia" },
-						{ "Title": "OM", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Oman" },
-						{ "Title": "QA", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=Qatar" },
-						{ "Title": "UK", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&location=United Kingdom" },
-						{ "Title": "EU", "Url": "&f_AL=true&f_WT=2&f_E=3%2C4&geoId=91000002" }]
+						{ "Title": "NL", "Url": "&f_WT=2&f_E=3%2C4&location=Netherlands" },
+						{ "Title": "AU", "Url": "&f_WT=2&f_E=3%2C4&location=Australia" },
+						{ "Title": "DE", "Url": "&f_WT=2&f_E=3%2C4&location=Germany" },
+						{ "Title": "SE", "Url": "&f_WT=2&f_E=3%2C4&location=Sweden" },
+						{ "Title": "AM", "Url": "&f_WT=2&f_E=3%2C4&location=Armenia" },
+						{ "Title": "OM", "Url": "&f_WT=2&f_E=3%2C4&location=Oman" },
+						{ "Title": "QA", "Url": "&f_WT=2&f_E=3%2C4&location=Qatar" },
+						{ "Title": "UK", "Url": "&f_WT=2&f_E=3%2C4&location=United Kingdom" },
+						{ "Title": "EU", "Url": "&f_WT=2&f_E=3%2C4&geoId=91000002" }]
 					}'),
 
 	('Bayt',		'(.+\.)?bayt\.com$',				'https://www.bayt.com/',

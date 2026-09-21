@@ -23,4 +23,9 @@
     <ProjectReference Include="..\core-decision-dotnet\core-decision.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\examples\linkedin.search.html" CopyToOutputDirectory="PreserveNewest" Link="examples\linkedin.search.html" />
+    <Content Include="..\examples\linkedin.details.html" CopyToOutputDirectory="PreserveNewest" Link="examples\linkedin.details.html" />
+  </ItemGroup>
+
 </Project>

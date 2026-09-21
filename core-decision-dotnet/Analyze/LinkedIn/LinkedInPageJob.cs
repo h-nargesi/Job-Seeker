@@ -33,6 +33,8 @@ class LinkedInPageJob(LinkedIn parent) : JobPage(parent), LinkedInPage
         apply = null;
 
         var title_match = LinkedInPage.reg_job_title.Match(html);
+        if (!title_match.Success) title_match = LinkedInPage.reg_job_title_fallback.Match(html);
+
         title = title_match.Success ? HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim() : null;
 
     }
@@ -43,6 +45,8 @@ class LinkedInPageJob(LinkedIn parent) : JobPage(parent), LinkedInPage
         doc.LoadHtml(html);
 
         var main_content = doc.DocumentNode.SelectNodes("//article")?
+                                           .FirstOrDefault()
+                               ?? doc.DocumentNode.SelectNodes("//span[@data-testid='expandable-text-box']")?
                                            .FirstOrDefault();
 
         if (main_content == null)

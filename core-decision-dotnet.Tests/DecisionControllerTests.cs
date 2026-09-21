@@ -164,7 +164,7 @@ public class DecisionControllerTests
         var scope = Assert.Single(body.EnumerateArray());
         Assert.Equal("CheckpointAgency", scope.GetProperty("name").GetString());
         Assert.Equal("cp\\.example\\.com$", scope.GetProperty("domain").GetString());
-        Assert.Equal(0, scope.GetProperty("waiting").GetInt64());
+        Assert.Equal(1000, scope.GetProperty("waiting").GetInt64());
     }
 
     [Fact]

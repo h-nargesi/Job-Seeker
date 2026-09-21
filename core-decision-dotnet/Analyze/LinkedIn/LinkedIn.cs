@@ -14,10 +14,14 @@ class LinkedIn : Agency
 
     protected override void RunningSearchingMethodChanged(int value)
     {
-        var location = Uri.EscapeDataString(RunningUrl);
+        var match = Regex.Match(RunningUrl, @"(?:^|&)(location|geoId)=([^&]+)", RegexOptions.IgnoreCase);
+        if (!match.Success) return;
+
+        var parameter = match.Groups[1].Value.ToLowerInvariant();
+        var location = Regex.Escape(Uri.EscapeDataString(Uri.UnescapeDataString(match.Groups[2].Value)));
 
         LinkedInPage.reg_search_location_url = new Regex(
-            @$"(^|&)location={location}(&|$)", RegexOptions.IgnoreCase);
+            @$"(^|[?&]){parameter}={location}(&|$)", RegexOptions.IgnoreCase);
     }
 
     protected override IEnumerable<Type> GetSubPages()
