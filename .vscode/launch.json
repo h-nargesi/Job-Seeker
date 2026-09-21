@@ -10,7 +10,7 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/core-decision-dotnet/bin/Debug/net6.0/job-seeker.dll",
+            "program": "${workspaceFolder}/core-decision-dotnet/bin/Debug/net8.0/job-seeker.dll",
             "args": [],
             "cwd": "${workspaceFolder}/core-decision-dotnet",
             "stopAtEntry": false,
@@ -32,29 +32,6 @@
             "name": ".NET Core Attach",
             "type": "coreclr",
             "request": "attach"
-        },
-        {
-            "name": "Python: Core Decision",
-            "type": "python",
-            "request": "launch",
-            "cwd": "${workspaceFolder}/core-decision/",
-            "program": "manage.py",
-            "args": [
-                "runserver",
-                "0.0.0.0:8081",
-            ],
-            "django": true,
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "Python: Current File",
-            "type": "python",
-            "request": "launch",
-            "cwd": "${fileDirname}",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": true
         }
     ]
 }

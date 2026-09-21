@@ -80,7 +80,7 @@ builder.Services.AddSingleton<IDatabaseFactory>(database_factory);
 builder.Services.AddScoped(sp => sp.GetRequiredService<IDatabaseFactory>().Open());
 builder.Services.AddScoped<TrendsCheckpoint>();
 builder.Services.AddSingleton<Analyzer>();
-builder.Services.AddScoped<IViewRenderService, ViewRenderService>();
+builder.Services.AddSingleton<IViewRenderService, ViewRenderService>();
 builder.Services.AddSingleton<MasterResumeCache>();
 builder.Services.AddSingleton<ResumeInventoryCache>();
 builder.Services.AddDataProtection();
