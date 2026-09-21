@@ -17,12 +17,12 @@ public static class IndeedSerp
 
         foreach (var (url, code) in Extract(reg_viewjob_link, html))
         {
-            if (codes.Add(code)) yield return (url, code);
+            if (codes.Add(code)) yield return ($"/viewjob?jk={code}", code);
         }
 
         foreach (var (url, code) in Extract(reg_clk_link, html))
         {
-            if (codes.Add(code)) yield return (url, code);
+            if (codes.Add(code)) yield return ($"/viewjob?jk={code}", code);
         }
     }
 

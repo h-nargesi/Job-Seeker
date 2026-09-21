@@ -44,20 +44,20 @@ public class IndeedSerpTests
         """;
 
     [Fact]
-    public void ExtractJobLinks_From_Mosaic_Jobcards_Prefers_ViewjobLink()
+    public void ExtractJobLinks_From_Mosaic_Jobcards_Builds_Canonical_Viewjob_Urls()
     {
         var links = IndeedSerp.ExtractJobLinks(SerpSnippet);
 
         Assert.Equal(
         new[]
         {
-            ("/viewjob?jk=0e07a30c28494de3&from=hp&tk=1k319iq0phabh800&viewtype=embedded&advn=6942524633806610&adid=467111948&ad=-6NYlbfkN0CgLV01otWyadW&xkcb=SoAq6_M2ehbEmpTCRx0EbzkdCdPP", "0e07a30c28494de3"),
-            ("/viewjob?jk=96ace364606b9b9b&from=hp&tk=1k319iq0phabh800&viewtype=embedded&xkcb=SoDV67M2ehbEmoTCRx0JbzkdCdPP", "96ace364606b9b9b"),
+            ("/viewjob?jk=0e07a30c28494de3", "0e07a30c28494de3"),
+            ("/viewjob?jk=96ace364606b9b9b", "96ace364606b9b9b"),
         }, links);
     }
 
     [Fact]
-    public void ExtractJobLinks_Keeps_RcClk_Link_When_No_Viewjob_Exists()
+    public void ExtractJobLinks_Converts_RcClk_Link_To_Canonical_Viewjob()
     {
         const string html =
             """
@@ -77,7 +77,7 @@ public class IndeedSerpTests
         Assert.Equal(
         new[]
         {
-            ("/rc/clk?jk=074b26363501302a&from=hp.jobsForYou&tk=1k319iq0phabh800&bb=GyUdUPx6psFDdznv473d8n%3D%3D&xkcb=SoC567M2ehbEmozCRx0LbzkdCdPP&mtk=1k319ipp3hc32800", "074b26363501302a"),
+            ("/viewjob?jk=074b26363501302a", "074b26363501302a"),
         }, links);
     }
 
@@ -93,12 +93,12 @@ public class IndeedSerpTests
         var links = IndeedSerp.ExtractJobLinks(html);
 
         Assert.Equal(
-        new[] { ("/viewjob?jk=acd2093819ba6af0&from=hp&tk=1k319iq0phabh800&viewtype=embedded", "acd2093819ba6af0") },
+        new[] { ("/viewjob?jk=acd2093819ba6af0", "acd2093819ba6af0") },
         links);
     }
 
     [Fact]
-    public void ExtractJobLinks_Decodes_Html_Escaped_Hrefs()
+    public void ExtractJobLinks_Matches_Html_Escaped_Hrefs()
     {
         const string html =
             """
@@ -108,7 +108,7 @@ public class IndeedSerpTests
         var links = IndeedSerp.ExtractJobLinks(html);
 
         Assert.Equal(
-        new[] { ("/viewjob?jk=d735bb712daf5d3a&from=hp&tk=1k319iq0phabh800&viewtype=embedded", "d735bb712daf5d3a") },
+        new[] { ("/viewjob?jk=d735bb712daf5d3a", "d735bb712daf5d3a") },
         links);
     }
 
