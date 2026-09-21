@@ -8,7 +8,7 @@ class Indeed : Agency
 
     public override string BaseUrl => CurrentMethod.Url.TrimEnd('/');
 
-    public override int Waiting => 8000;
+    public override int Waiting => 16000;
 
     public override string NormalizeJobUrl(string url)
     {
