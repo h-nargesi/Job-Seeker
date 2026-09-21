@@ -24,7 +24,7 @@ values
 						{ "Title": "UK", "Url": "https://uk.indeed.com/" }]
 					}'),
 
-	('IamExpat',	'(.+\.)?iamexpat\.(nl|de|ch|com)$',	'http://iamexpat.nl',
+	('IamExpat',	'(.+\.)?iamexpat\.(nl|de|ch|com)$',	'https://www.iamexpat.nl',
 					'{ "running": 0, "methods": [
 						{ "Title": "NL", "Url": "nl/career/jobs-netherlands" },
 						{ "Title": "DE", "Url": "de/career/jobs-germany" },
