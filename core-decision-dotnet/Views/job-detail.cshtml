@@ -81,7 +81,15 @@
           var dom_id = DomId(slot);
           <div class="mb-3">
             <label for="@dom_id" class="form-label">@slot</label>
-            <textarea id="@dom_id" class="codes">@Html.Raw(value?.Live)</textarea>
+            @if (slot == "title")
+            {
+              <input id="@dom_id" type="text" class="codes code-single" value="@value?.Live"
+                     onkeydown="if (event.key === 'Enter') text_op(@job.JobID, 'title', 'live', '@dom_id')" />
+            }
+            else
+            {
+              <textarea id="@dom_id" class="codes">@Html.Raw(value?.Live)</textarea>
+            }
             <button onclick="text_op(@job.JobID, '@slot', 'live', '@dom_id')" type="button" class="btn btn-outline-primary btn-sm">Save live</button>
             @if (value?.Proposal != null && value.Status == ResumeTextSlotStatus.Pending)
             {

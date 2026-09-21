@@ -5,6 +5,10 @@
     font-family: Consolas,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New, monospace;
 }
 
+.code-single {
+    height: auto;
+}
+
 .ai-extract {
     display: grid;
     grid-template-columns: 8rem 1fr;
