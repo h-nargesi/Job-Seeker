@@ -1,9 +1,21 @@
 using AiWorker;
 using Microsoft.Extensions.Configuration;
 
+#if DEBUG
+const string default_environment = "Development";
+#else
+const string default_environment = "Production";
+#endif
+var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+    ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+    ?? default_environment;
+
+Console.WriteLine($"[worker] environment: {environment}");
+
 var config = new ConfigurationBuilder()
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: false)
+    .AddJsonFile($"appsettings.{environment}.json", optional: true)
     .AddEnvironmentVariables()
     .Build();
 
