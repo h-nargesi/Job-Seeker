@@ -7,6 +7,7 @@ class CoreMessaging {
     static SCOPES;
     static SCOPES_AT = 0;
     static SCOPES_TTL = 60000;
+    static SCOPES_CACHE_KEY = "SCOPES_CACHE";
     static REQUEST_TIMEOUT = 30000;
     static HEADERS = {
         'Accept': 'application/json',
@@ -101,19 +102,25 @@ class CoreMessaging {
             const fresh = CoreMessaging.SCOPES !== undefined && Date.now() - CoreMessaging.SCOPES_AT < CoreMessaging.SCOPES_TTL;
 
             if (!fresh) {
+                let scopes = await CoreMessaging.ReadScopesCache();
 
-                const server_url = await this.CheckServerUrl() + "decision/scopes";
+                if (scopes === undefined) {
+                    const server_url = await this.CheckServerUrl() + "decision/scopes";
 
-                const result = await this.FetchJson(server_url, {
-                    method: 'GET',
-                    headers: await this.BuildHeaders()
-                });
+                    const result = await this.FetchJson(server_url, {
+                        method: 'GET',
+                        headers: await this.BuildHeaders()
+                    });
 
-                if (result.error !== undefined) return result;
+                    if (result.error !== undefined) return result;
 
-                CoreMessaging.SCOPES = result;
+                    scopes = result;
+                    await CoreMessaging.WriteScopesCache(scopes);
+                    console.log("AGENT", "CoreMessaging", "Scopes", scopes);
+                }
+
+                CoreMessaging.SCOPES = scopes;
                 CoreMessaging.SCOPES_AT = Date.now();
-                console.log("AGENT", "CoreMessaging", "Scopes", CoreMessaging.SCOPES);
             }
 
             return CoreMessaging.SCOPES;
@@ -122,6 +129,25 @@ class CoreMessaging {
             console.error("AGENT", "CoreMessaging", "Scopes", e);
             return { error: "client", status: 0 };
         }
+    }
+
+    static async ReadScopesCache() {
+        try {
+            const items = await chrome.storage.session.get(CoreMessaging.SCOPES_CACHE_KEY);
+            const cached = items && items[CoreMessaging.SCOPES_CACHE_KEY];
+
+            if (cached && typeof cached === "object" && Date.now() - cached.at < CoreMessaging.SCOPES_TTL) {
+                return cached.scopes;
+            }
+        } catch (e) { }
+
+        return undefined;
+    }
+
+    static async WriteScopesCache(scopes) {
+        try {
+            await chrome.storage.session.set({ [CoreMessaging.SCOPES_CACHE_KEY]: { at: Date.now(), scopes: scopes } });
+        } catch (e) { }
     }
 
     async Orders() {

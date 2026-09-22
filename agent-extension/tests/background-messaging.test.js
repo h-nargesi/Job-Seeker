@@ -38,6 +38,23 @@ test('a response with a matching id resolves the pending message', async () => {
 	assert.deepStrictEqual(jsonOf(await promise), { ok: true });
 });
 
+test('a successful response clears the response timeout', async () => {
+	const { env, BM } = fresh();
+	const promise = BM.Send({ x: 1 });
+	env.chrome.runtime.onMessage.emit({ id: 1, body: { ok: true } });
+	await promise;
+	assert.strictEqual(env.clock.pending().length, 0);
+	assert.deepStrictEqual(Object.keys(env.grab('BackgroundMessaging.CURRENT_TIMERS')), []);
+});
+
+test('a synchronously resolved response leaves no timeout armed', async () => {
+	const { env, BM } = fresh();
+	env.chrome.runtime.respondWith(() => ({ ok: true }));
+	await BM.Send({ x: 1 });
+	assert.strictEqual(env.clock.pending().length, 0);
+	assert.deepStrictEqual(Object.keys(env.grab('BackgroundMessaging.CURRENT_TIMERS')), []);
+});
+
 test('responses with unknown ids and falsy bodies are ignored', async () => {
 	const { env, BM } = fresh();
 	let settled = false;

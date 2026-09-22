@@ -65,6 +65,7 @@ test('OnPageLoad stops when the scopes call fails', async () => {
 	await env.advance(1000);
 	assert.deepStrictEqual(sentTitles(env), ['scopes']);
 	assert.ok(env.console.entries.some(e => e.level === 'error' && e.args.includes('scopes failed')));
+	assert.ok(!env.clock.pending().some(t => t.interval === 0));
 });
 
 test('OnPageLoad sends the page for a case-insensitive scope match and starts the heartbeat', async () => {
@@ -113,7 +114,18 @@ test('OnPageLoad does nothing for a non-matching hostname', async () => {
 	await env.advance(1000);
 	assert.deepStrictEqual(sentTitles(env), ['scopes']);
 	assert.ok(!env.clock.pending().some(t => t.interval === 30000));
-	assert.ok(env.clock.pending().some(t => t.due > 80000 && t.interval === 0));
+	assert.ok(!env.clock.pending().some(t => t.interval === 0));
+});
+
+test('a matching hostname arms the default close timer', async () => {
+	const { env, onPageLoad } = fresh();
+	env.chrome.runtime.respondWith(message => {
+		if (message.title === 'scopes') return [{ name: 'LinkedIn', domain: 'linkedin\\.com' }];
+		return { commands: [] };
+	});
+	onPageLoad();
+	await env.advance(1000);
+	assert.ok(env.clock.pending().some(t => t.interval === 0 && t.due > 80000));
 });
 
 test('SendingPageInfo retries retryable failures with 5s/10s backoff and stops on success', async () => {

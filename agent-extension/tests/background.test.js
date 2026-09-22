@@ -14,8 +14,10 @@ const tabMessages = env =>
 const ordersFetches = env =>
 	env.fetchStub.calls.filter(c => c.url.includes('decision/orders')).length;
 
-test('the service worker imports its dependencies and creates the orders alarm', async () => {
-	const { env } = fresh();
+test('the service worker imports its dependencies and creates the orders alarm when ordering is on', async () => {
+	const env = createEnv({ importScripts: true });
+	env.chrome.storage.local.set({ ORDERING: true });
+	env.load('controllers/background.js');
 	await env.flush();
 	assert.strictEqual(typeof env.grab('CoreMessaging'), 'function');
 	assert.strictEqual(typeof env.grab('StorageHandler'), 'function');
@@ -25,15 +27,42 @@ test('the service worker imports its dependencies and creates the orders alarm',
 	]);
 });
 
+test('no orders alarm is created while ordering is off', async () => {
+	const { env } = fresh();
+	await env.flush();
+	assert.deepStrictEqual(env.chrome.alarms.created, []);
+});
+
 test('EnsureOrdersAlarm only creates the alarm when it is missing', async () => {
 	const { env } = fresh();
+	env.chrome.storage.local.set({ ORDERING: true });
 	await env.flush();
 	env.chrome.alarms.getBehavior = () => ({ name: 'trend-orders' });
 	await env.grab('EnsureOrdersAlarm')();
-	assert.strictEqual(env.chrome.alarms.created.length, 1);
+	assert.strictEqual(env.chrome.alarms.created.length, 0);
 	env.chrome.alarms.getBehavior = () => null;
 	await env.grab('EnsureOrdersAlarm')();
-	assert.strictEqual(env.chrome.alarms.created.length, 2);
+	assert.strictEqual(env.chrome.alarms.created.length, 1);
+});
+
+test('EnsureOrdersAlarm does not create the alarm while ordering is off', async () => {
+	const { env } = fresh();
+	await env.flush();
+	env.chrome.alarms.getBehavior = () => null;
+	await env.grab('EnsureOrdersAlarm')();
+	assert.strictEqual(env.chrome.alarms.created.length, 0);
+});
+
+test('turning ordering off clears the orders alarm', async () => {
+	const env = createEnv({ importScripts: true });
+	env.chrome.storage.local.set({ ORDERING: true });
+	env.load('controllers/background.js');
+	await env.flush();
+	assert.ok(env.chrome.alarms.map.has('trend-orders'));
+	env.chrome.storage.onChanged.emit({ ORDERING: { newValue: false } }, 'local');
+	await env.settle();
+	assert.deepStrictEqual(env.chrome.alarms.cleared, ['trend-orders']);
+	assert.ok(!env.chrome.alarms.map.has('trend-orders'));
 });
 
 test('a send message is answered with the reduced body and persists the trend', async () => {

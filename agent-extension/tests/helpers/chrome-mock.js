@@ -132,6 +132,7 @@ export function createChrome() {
 
 	const alarms = {
 		created: [],
+		cleared: [],
 		map: new Map(),
 		getBehavior: null,
 		onAlarm: createEvent(),
@@ -142,6 +143,10 @@ export function createChrome() {
 		async create(name, alarmInfo) {
 			alarms.created.push({ name, alarmInfo });
 			alarms.map.set(name, { name, ...alarmInfo });
+		},
+		async clear(name) {
+			alarms.cleared.push(name);
+			alarms.map.delete(name);
 		},
 	};
 

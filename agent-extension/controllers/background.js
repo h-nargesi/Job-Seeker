@@ -58,6 +58,7 @@ chrome.storage.onChanged.addListener(function (changes, area) {
     if (area !== "local" || !changes[StorageHandler.ORDERING]) return;
 
     if (changes[StorageHandler.ORDERING].newValue === true) ResumeOrdering();
+    else PauseOrdering();
 });
 
 EnsureOrdersAlarm();
@@ -67,8 +68,19 @@ function ResumeOrdering() {
     CheckNewOrders();
 }
 
+async function PauseOrdering() {
+    try {
+        await chrome.alarms.clear(ORDERS_ALARM);
+        console.log("AGENT", "Orders", "ordering off - alarm cleared");
+    } catch (e) {
+        console.error("AGENT", "PauseOrdering", e);
+    }
+}
+
 async function EnsureOrdersAlarm() {
     try {
+        if (!(await StorageHandler.OrderingAsync())) return;
+
         const existing = await chrome.alarms.get(ORDERS_ALARM);
         if (!existing) await chrome.alarms.create(ORDERS_ALARM, { periodInMinutes: 0.5 });
     } catch (e) {

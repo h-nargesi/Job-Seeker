@@ -4,12 +4,14 @@ class BackgroundMessaging {
 
     static MESSAGE_ID = 0;
     static CURRENT_REQUESTS;
+    static CURRENT_TIMERS;
     static RESPONSE_TIMEOUT = 45000;
 
     static RunListener() {
         if (BackgroundMessaging.CURRENT_REQUESTS) return;
 
         BackgroundMessaging.CURRENT_REQUESTS = {};
+        BackgroundMessaging.CURRENT_TIMERS = {};
         chrome.runtime.onMessage.addListener(
             function (response) {
                 if (chrome.runtime.lastError)
@@ -26,6 +28,13 @@ class BackgroundMessaging {
         if (id in BackgroundMessaging.CURRENT_REQUESTS) {
             const respond = BackgroundMessaging.CURRENT_REQUESTS[id];
             delete BackgroundMessaging.CURRENT_REQUESTS[id];
+
+            const timer = BackgroundMessaging.CURRENT_TIMERS[id];
+            if (timer !== undefined) {
+                clearTimeout(timer);
+                delete BackgroundMessaging.CURRENT_TIMERS[id];
+            }
+
             respond(response);
         }
     }
@@ -34,15 +43,19 @@ class BackgroundMessaging {
         BackgroundMessaging.RunListener();
         return new Promise(function (resolve) {
             message.id = ++BackgroundMessaging.MESSAGE_ID;
+            const id = message.id;
             try {
-                BackgroundMessaging.CURRENT_REQUESTS[message.id] = resolve;
+                BackgroundMessaging.CURRENT_REQUESTS[id] = resolve;
                 chrome.runtime.sendMessage(message);
 
-                setTimeout(function () {
-                    BackgroundMessaging.CheckRequests(message.id, { error: "no-response", status: 0 });
+                if (!(id in BackgroundMessaging.CURRENT_REQUESTS)) return;
+
+                BackgroundMessaging.CURRENT_TIMERS[id] = setTimeout(function () {
+                    delete BackgroundMessaging.CURRENT_TIMERS[id];
+                    BackgroundMessaging.CheckRequests(id, { error: "no-response", status: 0 });
                 }, BackgroundMessaging.RESPONSE_TIMEOUT);
             } catch (e) {
-                delete BackgroundMessaging.CURRENT_REQUESTS[message.id];
+                delete BackgroundMessaging.CURRENT_REQUESTS[id];
                 console.error("AGENT", "BackgroundMessaging", e);
                 resolve({ error: "no-response", status: 0 });
             }

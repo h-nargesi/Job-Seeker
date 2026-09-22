@@ -169,6 +169,28 @@ test('Scopes does not cache error results', async () => {
 	assert.strictEqual(env.grab('CoreMessaging.SCOPES'), undefined);
 });
 
+test('Scopes reuses the session cache after a service worker restart', async () => {
+	const { env, cm, CoreMessaging } = fresh();
+	env.fetchStub.route('decision/scopes', { status: 200, body: [{ name: 'A', domain: 'a\\.com' }] });
+	await cm.Scopes();
+	assert.strictEqual(scopeFetchCount(env), 1);
+	CoreMessaging.SCOPES = undefined;
+	CoreMessaging.SCOPES_AT = 0;
+	await cm.Scopes();
+	assert.strictEqual(scopeFetchCount(env), 1);
+});
+
+test('Scopes ignores a session cache older than the TTL', async () => {
+	const { env, cm, CoreMessaging } = fresh();
+	env.fetchStub.route('decision/scopes', { status: 200, body: [{ name: 'A', domain: 'a\\.com' }] });
+	await cm.Scopes();
+	CoreMessaging.SCOPES = undefined;
+	CoreMessaging.SCOPES_AT = 0;
+	await env.advance(60000);
+	await cm.Scopes();
+	assert.strictEqual(scopeFetchCount(env), 2);
+});
+
 test('Scopes maps a sync throw to {error:"client", status:0}', async () => {
 	const { env, cm } = fresh();
 	env.chrome.storage.local.errors.get = 'boom';

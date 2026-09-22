@@ -57,6 +57,12 @@
 >
 > ۱۴۰۵/۰۶/۲۱ (2026-09-12): با راه‌اندازی سوئیت تست JS اکستنشن
 > (`agent-extension/tests/` — `npm test`)، مورد جدید **۲.۲۳** ثبت شد.
+>
+> ۱۴۰۵/۰۶/۳۱ (2026-09-22): مرور پرفورمنسی `agent-extension` — موارد **۲.۲۴**
+> (مسلح‌شدن تایمر بستن تب پیش از تطبیق دامنه — بستن تب‌های بی‌ربط بعد از ۹۰s)
+> و **۲.۲۵** (نشت حافظهٔ ۴۵ ثانیه‌ای تایم‌اوت `BackgroundMessaging` با
+> نگه‌داشتن HTML کامل صفحه در کلوژر) ثبت و در همان تاریخ رفع و به
+> [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شدند.
 
 ### ۲.۲۳ فرمان recheck بدون OnPageLoad منجر به TypeError می‌شود
 **فایل:** `agent-extension/controllers/action-handler.js` (متد `Execute`، case "recheck")
@@ -93,6 +99,15 @@
 > [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شد — به‌همراه پنج تغییر
 > رفتاری مصوب (حذف ریست Tries/Attempts ری‌اسکرپ، حذف ریدایرکت پروفایل، اصلاح قطبیت
 > صفحه‌بندی، seed متد DE، فعال‌شدن `GetMainHtml`).
+>
+> ۱۴۰۵/۰۶/۳۱ (2026-09-22): در مرور پرفورمنسی `agent-extension`، موارد **۳.۲۹** (کش scopes
+> فقط در static سرویس‌ورکر — fetch تکراری `decision/scopes` پس از هر ری‌استارت SW روی هر
+> لود صفحهٔ دلخواه) و **۳.۳۰** (آلارم `trend-orders` همیشه‌فعال — بیدار کردن SW هر
+> ۳۰ ثانیه حتی با ordering خاموش) رفع و به
+> [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شدند؛ موارد باز جدید
+> **۳.۳۱–۳.۳۳** در ادامهٔ همین بخش ثبت شدند. ضمناً اسکریپت `test` پکیج
+> (`node --test tests/`) که روی Windows/Node 22.9 با `MODULE_NOT_FOUND` می‌شکست
+> به الگوی glob تغییر کرد تا دستور مستندشدهٔ `npm test` واقعاً پاس شود.
 
 ### ۳.۵ تکرار منطق `Save` (BaseBusiness در برابر JobBusiness/TrendBusiness)
 **فایل:** `BaseBusiness.cs` در برابر `JobBusiness.cs` — استخراج `id` یکسان
@@ -235,6 +250,47 @@ popup تا ری‌استارت بعدی Service Worker بی‌اثر می‌ما
 می‌شوند ولی در بازهٔ عمرشان با تنظیمات کهنه کار می‌کنند. تأییدشده با
 `tests/core-messaging.test.js` («caches the URL after the first storage read»).
 **اقدام:** TTL کوتاه برای کش یا پاکسازی با `chrome.storage.onChanged`.
+
+> ۱۴۰۵/۰۶/۳۱ (2026-09-22): موارد ۳.۲۹–۳.۳۰ (fetch تکراری scopes و آلارم
+> همیشه‌فعال orders) رفع و آرشیو شدند — رجوع کنید به یادداشت ابتدای همین بخش.
+
+### ۳.۳۱ تأخیرهای ثابت در حلقهٔ scrape
+**فایل:** `agent-extension/controllers/check-page.js` (`setTimeout(..., 1000)` در `OnPageLoad`)،
+`agent-extension/controllers/action-handler.js` (`OnWait({ miliseconds: 300 })` بعد از fill/click)
+
+هر لود صفحه ۱ ثانیه تأخیر خالص می‌گیرد (پیش از هر بررسی‌ای) و بعد از هر fill/click
+مهم نیست عمل چقدر سریع بوده ۳۰۰ms صبر می‌شود؛ `recheck` هم کل چرخه را با تأخیر
+۱ ثانیه‌ای تکرار می‌کند. در مقیاس حلقهٔ scrape (صدها لود صفحه) دقیقه‌ها تأخیر
+تجمعی صرفاً از این دو ثابت حاصل می‌شود. تأخیر ۱s به‌ظاهر برای جاافتادن SPA است
+ولی برای همهٔ صفحات حتی استاتیک پرداخت می‌شود.
+**اقدام:** نگه‌داشتن تأخیر فقط برای حالت challenge/SPA؛ ارسال صفحات عادی بلافاصله
+بعد از `load`؛ رویدادمحور کردن انتظار بعد از fill/click (MutationObserver/event
+به‌جای timer ثابت). نیازمند سنجش خطر anti-bot است — هم‌خانوادهٔ ۳.۲۵.
+
+### ۳.۳۲ حجم payload صفحه: `outerHTML` کامل + ۳–۴ کپی رشته
+**فایل:** `agent-extension/controllers/check-page.js` (`content: document.documentElement.outerHTML`)
+تا `agent-extension/controllers/core-messaging.js` (`JSON.stringify(params)`)
+
+صفحه‌های LinkedIn/Indeed به‌راحتی ۱–۳MB HTML دارند و در مسیر ارسال چند بار
+کپی می‌شود: serialize `outerHTML` (مسدودکنندهٔ main thread صفحهٔ سایت — خطر jank
+و تشخیص bot)، structured clone به SW، `JSON.stringify` و serialization بدنهٔ
+fetch. هر کپی CPU واقعی مصرف می‌کند.
+**اقدام:** اگر سرور فقط body را scrape می‌کند ارسال `document.body.outerHTML`؛
+گزینهٔ بعدی فشرده‌سازی با `CompressionStream('gzip')` در SW + پشتیبانی سمت سرور.
+مرز سمت سرور همان `[RequestSizeLimit(5_000_000)]` (مورد آرشیوشدهٔ ۱.۷) است.
+
+### ۳.۳۳ ریزمصرف‌های مسیر داغ content script
+**فایل:** `agent-extension/controllers/check-page.js`، `core-messaging.js`، `background-messaging.js`
+
+- `new RegExp(scopes[s].domain, 'i')` داخل حلقهٔ تطبیق در هر لود صفحه کامپایل
+  می‌شود → regex های کامپایل‌شده همراه کش scopes نگه داشته شوند.
+- لاگ‌های سنگین روی مسیر داغ: `CoreMessaging.Send` کل response و `SendingPageInfo`
+  کل scope را لاگ می‌کنند؛ هر ۵ اسکریپت هم در include-time روی همهٔ سایت‌ها
+  `console.log` می‌زنند → پشت فلگ DEBUG برود.
+- پارامتر مردهٔ `reset` در `BackgroundMessaging.Scopes` که به `CoreMessaging.Scopes`
+  نمی‌رسد (پاک‌سازی شود یا به invalidation کش وصل شود).
+- heartbeat هر ۳۰s به‌ازای هر تبِ match (برای زنده‌نگه‌داشتن SW طراحی‌شده؛
+  با تعداد تب زیاد بازبینی شود).
 
 ---
 

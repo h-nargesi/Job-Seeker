@@ -24,8 +24,6 @@ ActionHandler.OnPageLoad = function () {
     setTimeout(async function () {
         if (await OnDashboard()) return;
 
-        ActionHandler.SetCloseTimer();
-
         const scopes = await BackgroundMessaging.Scopes();
 
         if (!scopes || scopes.error !== undefined) {
@@ -38,6 +36,7 @@ ActionHandler.OnPageLoad = function () {
         for (let s in scopes) {
             if (host.match(new RegExp(scopes[s].domain, 'i'))) {
                 console.log("AGENT", 'Page', "matched", scopes[s].domain);
+                ActionHandler.SetCloseTimer();
                 SendingPageInfo(scopes[s], ChallengeDetector.Detect(document));
                 StartHeartbeat();
                 break;
