@@ -44,13 +44,12 @@ public class Analyzer(IDatabaseFactory database_factory)
         }
     }
 
-    public Result Analyze(PageContext context)
+    public Result Analyze(PageContext context, Database database)
     {
-        if (context.Challenge) return HoldChallenge(context);
+        if (context.Challenge) return HoldChallenge(context, database);
 
         var result = AnalyzeContent(context);
         result.TrendID = context.Trend;
-        using var database = database_factory.Open();
         var trends_checkpoint = new TrendsCheckpoint(this, database, result);
         return trends_checkpoint.CheckCurrentTrends();
     }
@@ -95,7 +94,7 @@ public class Analyzer(IDatabaseFactory database_factory)
         }
     }
 
-    private Result HoldChallenge(PageContext context)
+    private Result HoldChallenge(PageContext context, Database database)
     {
         if (context.Agency == null)
             throw new BadJobRequest("Bad request (empty agency)");
@@ -109,7 +108,6 @@ public class Analyzer(IDatabaseFactory database_factory)
             throw new BadJobRequest($"{context.Agency} had empty url");
 
         var agency = Agencies[context.Agency];
-        using var database = database_factory.Open();
         var result = new Result();
         var trends_checkpoint = new TrendsCheckpoint(this, database, result);
         return trends_checkpoint.HoldForChallenge(agency, context.Trend, context.Url);

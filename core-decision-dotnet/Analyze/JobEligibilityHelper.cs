@@ -12,6 +12,7 @@ public class JobEligibilityHelper : IDisposable
     private readonly Dictionaries dictionaries;
     private readonly Database database;
     private readonly JobOption[] options;
+    private readonly bool owns_database;
 
     private static readonly object revaluation_lock = new();
     private static readonly object options_lock = new();
@@ -22,7 +23,16 @@ public class JobEligibilityHelper : IDisposable
     {
         dictionaries = Dictionaries.Open();
         database = database_factory.Open();
-        options = GetOptions(database_factory);
+        owns_database = true;
+        options = GetOptions(database);
+    }
+
+    public JobEligibilityHelper(Database database)
+    {
+        dictionaries = Dictionaries.Open();
+        this.database = database;
+        owns_database = false;
+        options = GetOptions(database);
     }
 
     internal JobEligibilityHelper(Dictionaries dictionaries, Database database, JobOption[] options)
@@ -30,9 +40,19 @@ public class JobEligibilityHelper : IDisposable
         this.dictionaries = dictionaries;
         this.database = database;
         this.options = options;
+        owns_database = true;
     }
 
-    private static JobOption[] GetOptions(IDatabaseFactory database_factory)
+    private static JobOption[] GetOptions(Database database)
+    {
+        lock (options_lock)
+        {
+            cached_options ??= database.JobOption.FetchAll();
+            return cached_options;
+        }
+    }
+
+    internal static JobOption[] SharedOptions(IDatabaseFactory database_factory)
     {
         lock (options_lock)
         {
@@ -45,8 +65,6 @@ public class JobEligibilityHelper : IDisposable
             return cached_options;
         }
     }
-
-    internal static JobOption[] SharedOptions(IDatabaseFactory database_factory) => GetOptions(database_factory);
 
     public static void InvalidateOptionsCache()
     {
@@ -179,7 +197,8 @@ public class JobEligibilityHelper : IDisposable
 
     public void Dispose()
     {
-        database.Dispose();
+        dictionaries.Dispose();
+        if (owns_database) database.Dispose();
         GC.SuppressFinalize(this);
     }
 

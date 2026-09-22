@@ -68,7 +68,7 @@ namespace Photon.JobSeeker
             database.BeginTransaction();
             try
             {
-                var result = database.Query<Job>(Q_FETCH_FROM, new { date = time }).FirstOrDefault();
+                var result = database.QueryFirstOrDefault<Job>(Q_FETCH_FROM, new { date = time });
                 if (result == null) return default;
 
                 ChangeState(result.JobID, JobState.Revaluation);
@@ -150,7 +150,8 @@ namespace Photon.JobSeeker
             if (database.Changes() == 1)
                 job.JobID = database.LastInsertRowId();
             else
-                job.JobID = Fetch(job.AgencyID, job.Code!)?.JobID ?? 0;
+                job.JobID = database.ExecuteScalar<long?>(Q_GET_ID_BY_CODE,
+                    new { agency = job.AgencyID, code = job.Code }) ?? 0;
         }
 
         public void UpdateScrapedJob(Job job, bool codeChanged, bool linkFound, bool includeState)
@@ -226,7 +227,7 @@ WHERE JobID = @jobId", new
 
         public bool MarkApplied(long id, string source)
         {
-            var job = Fetch(id);
+            var job = database.QueryFirstOrDefault<MetaRow>(Q_FETCH_META, new { job = id });
             if (job == null) return false;
             if (job.State == JobState.Applied) return true;
 
@@ -287,6 +288,15 @@ WHERE JobID = @jobId", new
             public int Attempts { get; set; }
 
             public DateTime RegTime { get; set; }
+        }
+
+        private sealed class MetaRow
+        {
+            public long JobID { get; set; }
+
+            public JobState State { get; set; }
+
+            public string? Log { get; set; }
         }
     }
 }

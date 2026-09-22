@@ -63,6 +63,14 @@
 > و **۲.۲۵** (نشت حافظهٔ ۴۵ ثانیه‌ای تایم‌اوت `BackgroundMessaging` با
 > نگه‌داشتن HTML کامل صفحه در کلوژر) ثبت و در همان تاریخ رفع و به
 > [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شدند.
+>
+> ۱۴۰۵/۰۶/۳۱ (2026-09-22): مرور پرفورمنسی `core-decision-dotnet` — موارد
+> **۲.۲۶** (حلقهٔ Revaluation با انتقال دادهٔ درجه‌دو)، **۲.۲۷** (INSERT های
+> autocommit پی‌درپی در SearchPage) و **۲.۲۸** (اتصال‌سازی پرتعداد مسیر داغ +
+> نشت اتصال Dictionaries) در همان تاریخ رفع و به
+> [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شدند؛
+> **۲.۲۹** (نبود ایندکس ثانویه) در همین بخش باز ثبت شد و نکات درجه‌دو/سهٔ
+> همان مرور در بخش ۳ (۳.۳۴–۳.۳۹).
 
 ### ۲.۲۳ فرمان recheck بدون OnPageLoad منجر به TypeError می‌شود
 **فایل:** `agent-extension/controllers/action-handler.js` (متد `Execute`، case "recheck")
@@ -73,6 +81,29 @@
 می‌کند، ولی هر مسیر دیگری (مثلاً فرمان recheck از مسیر سفارش‌ها) کرش می‌کند.
 تأییدشده با `tests/action-handler.test.js` («recheck with OnPageLoad unset ...»).
 **اقدام:** `if (ActionHandler.OnPageLoad) ActionHandler.OnPageLoad(); else console.warn(...)`.
+
+### ۲.۲۹ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) نبود ایندکس ثانویه روی Job (و LastActivity روی Trend)
+**فایل:** `database/structure/job.sql`، `database/structure/trend.sql`
+
+روی جدول Job به‌جز PK و <code dir="ltr">unique(AgencyID, Code)</code> هیچ
+ایندکسی وجود ندارد؛ این کوئری‌های مسیر داغ/نگهداشت full-scan می‌شوند و با
+رشد جدول (هر ردیف با متن کامل `Html`/`Content`) خطی بدتر می‌شوند:
+
+- `Q_FETCH_FIRST` (`State = 'Saved' AND AgencyID AND Attempts < 4`) — داخل قفل
+  سراسری چک‌پوینت صدا زده می‌شود؛ مرتب‌سازی عبارتی‌اش (`ORDER BY Attempts = 0
+  DESC, Attempts DESC, JobID`) نیز اساساً ایندکس‌پذیر نیست.
+- `RevaluationScope` (`State IN (...) AND ModifiedOn <= @date`) — حلقهٔ Revaluation.
+- `Q_CLEAN`/`Q_CLEAN_ATTENTION`/`Q_CLEAN_NOT_APPROVED` (شرط روی `RegTime`/`State`).
+- برای Trend: شرط `DATETIME(LastActivity) <= @cutoff` در سه دستور `DeleteExpired`
+  (جدول کوچک است ولی ایندکس ساده ارزان تمام می‌شود).
+
+**اقدام:** افزودن به `database/structure/job.sql` + migration در
+`installation.sh` (هم‌الگوی backfill مورد آرشیوشدهٔ ۲.۲۱):
+<code dir="ltr">ix_job_state_modified ON Job(State, ModifiedOn)</code>،
+<code dir="ltr">ix_job_agency_state ON Job(AgencyID, State, Attempts)</code> و
+<code dir="ltr">ix_job_reg ON Job(RegTime)</code>؛ برای Trend ایندکس روی
+`LastActivity`. سپس بازنگری `Q_FETCH_FIRST` برای مرتب‌سازی ایندکس‌پذیر (مثلاً
+نگه‌داشتن اولین سطر با یک MAX ساده یا ستون کمکی).
 
 ---
 
@@ -108,6 +139,10 @@
 > **۳.۳۱–۳.۳۳** در ادامهٔ همین بخش ثبت شدند. ضمناً اسکریپت `test` پکیج
 > (`node --test tests/`) که روی Windows/Node 22.9 با `MODULE_NOT_FOUND` می‌شکست
 > به الگوی glob تغییر کرد تا دستور مستندشدهٔ `npm test` واقعاً پاس شود.
+>
+> ۱۴۰۵/۰۶/۳۱ (2026-09-22): مرور پرفورمنسی `core-decision-dotnet` — موارد باز
+> جدید **۳.۳۴–۳.۳۹** در ادامهٔ همین بخش ثبت شدند (موارد بحرانی همان مرور رفع
+> و آرشیو شدند — رجوع کنید به یادداشت ابتدای بخش ۲).
 
 ### ۳.۵ تکرار منطق `Save` (BaseBusiness در برابر JobBusiness/TrendBusiness)
 **فایل:** `BaseBusiness.cs` در برابر `JobBusiness.cs` — استخراج `id` یکسان
@@ -291,6 +326,83 @@ fetch. هر کپی CPU واقعی مصرف می‌کند.
   نمی‌رسد (پاک‌سازی شود یا به invalidation کش وصل شود).
 - heartbeat هر ۳۰s به‌ازای هر تبِ match (برای زنده‌نگه‌داشتن SW طراحی‌شده؛
   با تعداد تب زیاد بازبینی شود).
+
+### ۳.۳۴ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) کوئری رتبه‌بندی داشبورد سنگین است
+**فایل:** `Database/Business/JobBusiness.Sql.cs` (`Q_INDEX`)
+
+دو لایهٔ تودرتو از `ROW_NUMBER` روی **کل** جدول Job در هر بارگذاری صفحهٔ jobs
+داشبورد محاسبه می‌شود + <code dir="ltr">Log LIKE '%) Relocation**%'</code>
+غیرقابل ایندکس برای هر ردیف + `JulianDay(latest) - JulianDay(job.RegTime)`
+سطر به سطر. با رشد جدول هزینهٔ این کوئری خطی بدتر می‌شود (خودِ CTE ستون‌های
+`Html`/`Content` را نمی‌خواند، پس بار اصلی CPU/sort است نه I/O متن).
+**اقدام:** ستون‌های precomputed برای EffectiveScore و flag های Relocation/Remote
+که هنگام write (همان `UpdateEvaluation`) پر شوند؛ یا محدودکردن CTE به subset
+پیش از window function (فیلتر State/date پیش از رتبه‌بندی). هماهنگ با آینهٔ
+`JobRanking.SqlRankScore` نگه داشته شود.
+
+### ۳.۳۵ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) تشخیص زبان با رفت‌وبرگشت DB به‌ازای هر شغل
+**فایل:** `Analyze/JobEligibilityHelper.cs` (`LanguageIsMatch`)، `Database/Dictionaries.cs`
+
+واژه‌های محتوا با `OrderBy` (برای مجموعه بی‌نیاز از ترتیب) استخراج، به
+دسته‌های ۱۰۰تایی شکسته و برای هر دسته یک `IN ('a','b',…)` با literal می‌سازد —
+چند کوئری per job و متن SQL متفاوت هر بار (بی‌اثر با statement cache).
+دیکشنری <code dir="ltr">en_US</code> چند صد هزار واژه است و به‌راحتی در RAM جا
+می‌شود.
+**اقدام:** یک <code dir="ltr">HashSet&lt;string&gt;</code> سینگلتون از دیکشنری در
+startup (پیش‌نیاز: health-check مورد ۳.۲۴ تا غیبت فایل بی‌صدا نماند)؛ حذف
+`OrderBy` و مجموعه‌های میانی LINQ (چانک کردن فقط برای کوئری بود، با HashSet
+کل آن حذف می‌شود). این هم ضربهٔ CPU و هم رفت‌وبرگشت DB را از مسیر ارزیابی هر
+شغل برمی‌دارد.
+
+### ۳.۳۶ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) Regex های interpreted روی مسیر HTML های بزرگ
+**فایل:** `Analyze/LinkedIn/LinkedInPage.cs` و همتاهایش در هر پوشهٔ پلتفرم،
+`Database/Business/JobOptionBusiness.cs`، `Analyze/JobEligibilityHelper.cs`
+
+هیچ‌یک از الگوها با `RegexOptions.Compiled` ساخته نشده‌اند (و static ها از
+<code dir="ltr">[GeneratedRegex]</code> که در NET 8 در دسترس است استفاده
+نمی‌کنند) در حالی که روی HTML های چند‌مگابایتی و متن کامل آگهی‌ها اجرا
+می‌شوند — در هر بار تحلیل صفحه.
+**اقدام:** مهاجرت الگوهای static صفحات به <code dir="ltr">[GeneratedRegex]</code>
+(نیازمند partial type؛ فیلد static با متد تولیدشده جایگزین شود) و `Compiled`
+برای الگوهای خوانده‌شده از DB در `JobOptionBusiness.FetchAll`. سنجش قبل/بعد
+با یک snapshot واقعی (همان fixture های `LinkedInMarkupTests`).
+
+### ۳.۳۷ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) `agency_lock` در طول کل تحلیل HTML نگه داشته می‌شود
+**فایل:** `Analyze/Agency.cs` (`AnalyzeContent`)
+
+قفل per-agency کل حلقهٔ `page.IssueCommand` را پوشش می‌دهد — یعنی تطبیق regex
+روی HTML کامل، پارس HtmlAgilityPack و نوشتن DB همه زیر قفل؛ دو تب همزمانِ یک
+آژانس پشت هم صف می‌شوند. قفل برای جهش وضعیت (`CurrentMethodIndex`/`Status`) و
+پیشروی متد جستجو لازم است (مورد ۲.۲۰ آرشیوشده)، نه برای کل تحلیل.
+**اقدام:** کوچک‌کردن ناحیهٔ بحرانی به mutation وضعیت و تصمیم پیشروی متد؛
+تحلیل صفحه بیرون قفل. هم‌راستا با بازآرایی تک‌نویسندهٔ مورد ۳.۲۶ انجام شود
+(جهت لانه‌شدن قفل‌ها: `checkpoint_lock` → قفل آژانس).
+
+### ۳.۳۸ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) console sink با سطح Debug در production
+**فایل:** `Program.cs` (ساخت LoggerConfiguration)
+
+سطح فایل به environment وابسته است ولی `WriteTo.Console` همیشه `Debug` است —
+در production همهٔ رخدادهای Debug فرمت و نوشته می‌شوند (I/O بی‌دلیل روی
+مسیر داغ؛ هر `Take` چند رخداد Debug دارد).
+**اقدام:** سطح کنسول همان `file_event_level` شود (یا در Production حذف کامل
+console sink).
+
+### ۳.۳۹ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) ریزمصرف‌های پایدار سمت سرور
+
+- `PRAGMA synchronous=NORMAL` در کنار WAL: پیش‌فرض FULL است؛ برای این workload
+  (نوشتار زیاد، تحمل از‌دست‌رفتن آخرین لحظه‌ها) throughput نوشتن را محسوس
+  بالا می‌برد — یک خط در `DatabaseFactory` پس از WAL.
+- `Analyzer.FindAgency` با `FirstOrDefault` خطی روی مقادیر دیکشنری جستجو
+  می‌کند در حالی که `agencies_by_name` برای همین هست (فقط آژانس‌های غیرفعال
+  باید از `by_id` جستجو شوند تا endpoint های داشبورد آنها را پیدا کنند).
+- `Q_FETCH_ID` و `Fetch` با <code dir="ltr">SELECT *</code> در مسیرهایی که متن کامل `Html`/`Content`
+  لازم نیست (بخش عمدهٔ آن در ۲.۲۶ آرشیوشده رفع شد؛ بازبینی موارد باقی‌مانده
+  مثل `JobController.Get` که به کل ردیف نیاز دارد واقعاً دارد، پس فقط موارد
+  Log-only هدف باشند).
+- payload سمت سرور: <code dir="ltr">[RequestSizeLimit(20_000_000)]</code>
+  روی `Take` — قرینهٔ مورد ۳.۳۲ سمت اکستنشن؛ رشتهٔ JSON پس از deserialize
+  دوبرابر (UTF-16) و روی LOH می‌نشیند. اگر فشار memory دیدیم، همان راهکار
+  ۳.۳۲ (body-only/فشرده‌سازی) بار سرور را هم کم می‌کند.
 
 ---
 

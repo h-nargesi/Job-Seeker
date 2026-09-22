@@ -120,6 +120,12 @@ SELECT * FROM Job WHERE JobID = @job";
         private const string Q_FETCH_BY_CODE = @"
 SELECT * FROM Job WHERE AgencyID = @agency and Code = @code";
 
+        private const string Q_FETCH_META = @"
+SELECT JobID, State, Log FROM Job WHERE JobID = @job";
+
+        private const string Q_GET_ID_BY_CODE = @"
+SELECT JobID FROM Job WHERE AgencyID = @agency and Code = @code";
+
         private readonly static string RevaluationScope = $@"
 State IN (
     '{nameof(JobState.Attention)}',
@@ -129,7 +135,7 @@ State IN (
 ) AND Content IS NOT NULL AND ModifiedOn <= @date";
 
         private readonly static string Q_FETCH_FROM = $@"
-SELECT * FROM Job WHERE {RevaluationScope}";
+SELECT * FROM Job WHERE {RevaluationScope} ORDER BY JobID LIMIT 1";
 
         private readonly static string Q_FETCH_FROM_COUNT = $@"
 SELECT COUNT(*) FROM Job WHERE {RevaluationScope}";

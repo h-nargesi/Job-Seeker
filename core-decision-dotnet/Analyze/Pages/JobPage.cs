@@ -13,11 +13,12 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
     {
         if (CheckInvalidUrl(url, content)) return null;
 
-        var job = LoadJob(url, content);
+        using var database = Parent.DatabaseFactory.Open();
+        var job = LoadJob(url, content, database);
 
         if (job.State == JobState.NotApprovedRegex) return [];
 
-        using var evaluator = new JobEligibilityHelper(Parent.DatabaseFactory);
+        using var evaluator = new JobEligibilityHelper(database);
         var state = evaluator.EvaluateJobEligibility(job, Parent.JobAcceptabilityChecker);
 
         var commands = new List<Command>();
@@ -46,10 +47,8 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
 
     protected virtual void ChceckJob(Job job) { }
 
-    private Job LoadJob(string url, string html)
+    private Job LoadJob(string url, string html, Database database)
     {
-        using var database = Parent.DatabaseFactory.Open();
-
         var code = GetJobCode(url);
         if (string.IsNullOrEmpty(code)) throw new Exception($"Invalid job url ({Parent.Name}).");
 

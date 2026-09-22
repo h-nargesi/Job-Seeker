@@ -6,36 +6,36 @@ namespace Photon.JobSeeker
 {
     public class Database : IDisposable
     {
-    private readonly SQLiteConnection connection;
-    private SQLiteTransaction? transaction;
+        private readonly SQLiteConnection connection;
+        private SQLiteTransaction? transaction;
 
-    private TrendBusiness? trend_business;
-    private JobBusiness? job_business;
-    private AgencyBusiness? agency_business;
-    private JobOptionBusiness? job_option_business;
-    private AppSettingBusiness? app_setting_business;
-    private MemoryBusiness? memory_business;
+        private TrendBusiness? trend_business;
+        private JobBusiness? job_business;
+        private AgencyBusiness? agency_business;
+        private JobOptionBusiness? job_option_business;
+        private AppSettingBusiness? app_setting_business;
+        private MemoryBusiness? memory_business;
 
-    static Database() => SqliteTypeHandlers.Register();
+        static Database() => SqliteTypeHandlers.Register();
 
-    public Database(SQLiteConnection connection)
-    {
-        this.connection = connection;
-    }
+        public Database(SQLiteConnection connection)
+        {
+            this.connection = connection;
+        }
 
-    public bool InTransaction => transaction != null;
+        public bool InTransaction => transaction != null;
 
-    public void BeginTransaction()
-    {
-        transaction = connection.BeginTransaction();
-    }
+        public void BeginTransaction()
+        {
+            transaction = connection.BeginTransaction();
+        }
 
-    public void BeginTransaction(bool immediate)
-    {
-        transaction = immediate
-            ? connection.BeginTransaction(IsolationLevel.Serializable)
-            : connection.BeginTransaction(IsolationLevel.ReadCommitted);
-    }
+        public void BeginTransaction(bool immediate)
+        {
+            transaction = immediate
+                ? connection.BeginTransaction(IsolationLevel.Serializable)
+                : connection.BeginTransaction(IsolationLevel.ReadCommitted);
+        }
 
         public void Commit()
         {
@@ -69,6 +69,11 @@ namespace Photon.JobSeeker
         public IEnumerable<T> Query<T>(string query, object? param = null)
         {
             return connection.Query<T>(query, param, transaction: transaction);
+        }
+
+        public T? QueryFirstOrDefault<T>(string query, object? param = null)
+        {
+            return connection.QueryFirstOrDefault<T>(query, param, transaction: transaction);
         }
 
         public IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TReturn>(string query,
@@ -118,6 +123,6 @@ namespace Photon.JobSeeker
 
         internal AppSettingBusiness AppSetting => app_setting_business ??= new AppSettingBusiness(this);
 
-    internal MemoryBusiness Memory => memory_business ??= new MemoryBusiness(this);
+        internal MemoryBusiness Memory => memory_business ??= new MemoryBusiness(this);
     }
 }

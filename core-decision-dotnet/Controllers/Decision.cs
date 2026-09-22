@@ -24,7 +24,7 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
         {
             Log.Debug("Taken: {0}", context.ToString());
 
-            var result = analyzer.Analyze(context);
+            var result = analyzer.Analyze(context, database);
 
             return Ok(new
             {

@@ -17,12 +17,23 @@ abstract class SearchPage(Agency parent) : PageBase(parent)
         var codes = new HashSet<string>();
         using var database = Parent.DatabaseFactory.Open();
 
-        foreach (var (link, code) in GetJobUrls(content))
+        database.BeginTransaction();
+        try
         {
-            if (string.IsNullOrEmpty(code) || codes.Contains(code)) continue;
-            codes.Add(code);
+            foreach (var (link, code) in GetJobUrls(content))
+            {
+                if (string.IsNullOrEmpty(code) || codes.Contains(code)) continue;
+                codes.Add(code);
 
-            database.Job.InsertFromSearch(Parent.ID, Parent.CurrentMethod.Title, link, code);
+                database.Job.InsertFromSearch(Parent.ID, Parent.CurrentMethod.Title, link, code);
+            }
+
+            database.Commit();
+        }
+        catch
+        {
+            database.Rollback();
+            throw;
         }
 
         if (codes.Count == 0)

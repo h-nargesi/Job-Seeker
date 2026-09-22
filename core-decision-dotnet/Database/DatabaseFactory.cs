@@ -6,6 +6,8 @@ namespace Photon.JobSeeker;
 
 public sealed class DatabaseFactory(IConfiguration configuration) : IDatabaseFactory
 {
+    private static bool wal_configured;
+
     public Database Open()
     {
         var path = configuration["Database:Path"]
@@ -14,7 +16,12 @@ public sealed class DatabaseFactory(IConfiguration configuration) : IDatabaseFac
         var connection = new SQLiteConnection($"Data Source={path};Foreign Keys=True");
         connection.Open();
 
-        connection.Execute("PRAGMA journal_mode=WAL");
+        if (!wal_configured)
+        {
+            connection.Execute("PRAGMA journal_mode=WAL");
+            wal_configured = true;
+        }
+
         connection.Execute("PRAGMA busy_timeout=5000");
 
         return new Database(connection);
