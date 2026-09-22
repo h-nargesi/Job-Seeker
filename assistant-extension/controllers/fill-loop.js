@@ -107,13 +107,30 @@ class FillLoop {
                 }),
             });
 
-            for (const call of response.tool_calls) {
-                const result = await FillLoop.Execute(loop, call);
-                messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
+            const results = await FillLoop.RunTools(loop, response.tool_calls);
+            for (let index = 0; index < response.tool_calls.length; index++) {
+                const call = response.tool_calls[index];
+                messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(results[index]) });
             }
         }
 
         return { error: "max-steps", steps: FillLoop.MAX_STEPS, filled: loop.filled, writes: loop.writes };
+    }
+
+    static async RunTools(loop, calls) {
+        const results = new Array(calls.length);
+
+        await Promise.all(calls.map(function (call, index) {
+            if (call.name !== "memory_query") return Promise.resolve();
+            return FillLoop.Execute(loop, call).then(function (result) { results[index] = result; });
+        }));
+
+        for (let index = 0; index < calls.length; index++) {
+            if (calls[index].name === "memory_query") continue;
+            results[index] = await FillLoop.Execute(loop, calls[index]);
+        }
+
+        return results;
     }
 
     static async Execute(loop, call) {
@@ -222,13 +239,30 @@ class FillLoop {
             FillLoop.Tail(loop.resume),
             "",
             "## FORM INVENTORY",
-            FillLoop.Tail(JSON.stringify(loop.inventory)),
+            FillLoop.InventoryJson(loop.inventory),
             "",
             "## SITE DOMAIN",
             loop.domain,
             "",
             "Fill the fields you can. Use memory_query first for facts that may already be remembered.",
         ].join("\n");
+    }
+
+    static InventoryJson(inventory) {
+        const parts = [];
+        let used = 2;
+
+        for (const entry of inventory) {
+            const json = JSON.stringify(entry);
+            if (parts.length && used + json.length + 1 > FillLoop.MAX_CHARS) {
+                parts.push('{"truncated":"more fields not shown"}');
+                break;
+            }
+            parts.push(json);
+            used += json.length + 1;
+        }
+
+        return "[" + parts.join(",") + "]";
     }
 
     static Tail(text) {

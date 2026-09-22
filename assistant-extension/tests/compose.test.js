@@ -165,6 +165,7 @@ test('compose drafts stay pending and never touch the page before accept', async
 
 	const chat = sw.fetchStub.calls.find(c => c.url.includes('v1/chat/completions'));
 	assert.ok(JSON.parse(chat.data.body).tools == null);
+	assert.strictEqual(JSON.parse(chat.data.body).max_tokens, sw.grab('ComposeLoop').MAX_TOKENS);
 });
 
 test('accept then fill applies the accepted draft deterministically', async () => {

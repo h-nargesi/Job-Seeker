@@ -76,6 +76,14 @@
 > (**۲.۳۰**–**۲.۳۲**) در همان تاریخ رفع و به
 > [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شدند؛ نکات
 > متوسط همان مرور در بخش ۳ (۳.۴۰–۳.۴۴).
+>
+> ۱۴۰۵/۰۶/۳۱ (2026-09-22): مرور پرفورمنسی `assistant-extension` — موارد بحرانی
+> همان مرور (**۲.۳۳**–**۲.۳۷**) در همان تاریخ رفع و به
+> [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شدند؛ نکات
+> متوسط همان مرور در بخش ۳ (۳.۴۵–۳.۴۸). همراه همین فیکس، اسکریپت `test`
+> پکیج (<code dir="ltr">node --test tests/</code>) که روی Windows/Node 22.9 با
+> `MODULE_NOT_FOUND` می‌شکست به الگوی glob تغییر کرد (قرینهٔ fix مشابه
+> `agent-extension`).
 
 ### ۲.۲۳ فرمان recheck بدون OnPageLoad منجر به TypeError می‌شود
 **فایل:** `agent-extension/controllers/action-handler.js` (متد `Execute`، case "recheck")
@@ -152,6 +160,10 @@
 > ۱۴۰۵/۰۶/۳۱ (2026-09-22): مرور پرفورمنسی `ai-worker` — موارد باز جدید
 > **۳.۴۰–۳.۴۴** در ادامهٔ همین بخش ثبت شدند (موارد بحرانی همان مرور رفع و
 > آرشیو شدند — رجوع کنید به یادداشت ابتدای بخش ۲).
+>
+> ۱۴۰۵/۰۶/۳۱ (2026-09-22): مرور پرفورمنسی `assistant-extension` — موارد باز
+> جدید **۳.۴۵–۳.۴۸** در ادامهٔ همین بخش ثبت شدند (موارد بحرانی همان مرور
+> رفع و آرشیو شدند — رجوع کنید به یادداشت ابتدای بخش ۲).
 
 ### ۳.۵ تکرار منطق `Save` (BaseBusiness در برابر JobBusiness/TrendBusiness)
 **فایل:** `BaseBusiness.cs` در برابر `JobBusiness.cs` — استخراج `id` یکسان
@@ -459,10 +471,48 @@ dispose نمی‌شود (حافظهٔ pooled دیر برمی‌گردد). هزی
   ندارد (grammar در llama.cpp سرعت decode را می‌کاهد) — اعداد را با احتیاط
   مقایسه کنید.
 - worker مقدار واقعی <code dir="ltr">n_ctx</code> اسلات خود را نمی‌داند (با
-  `--parallel 2` نصف `-c` کل است): در startup یک‌بار query/لاگ شود و
+  <code dir="ltr">--parallel 2</code> نصف `-c` کل است): در startup یک‌بار query/لاگ شود و
   <code dir="ltr">usage.prompt_tokens</code>ی که همین حالا پارس می‌شود به‌عنوان
   فیدبک تطبیقی بودجه (مکمل fix آرشیوشدهٔ ۲.۳۱) به کار رود تا سرریز واقعی
   از برآورد chars/4 قابل تشخیص باشد.
+
+### ۳.۴۵ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) `OwnLabel` با querySelector سراسری به‌ازای هر فیلد
+**فایل:** `assistant-extension/controllers/form-inventory.js` (`OwnLabel`)
+
+وقتی <code dir="ltr">element.labels</code> خالی باشد و فیلد `id` داشته باشد، برای هر فیلد
+یک <code dir="ltr">document.querySelector('label[for="…"]')</code> روی کل سند اجرا می‌شود؛
+فرم با صدها فیلدِ بدون label association (در سایت‌های اپلای رایج) یعنی صدها
+جستجوی کامل DOM در یک `Extract`.
+**اقدام:** یک پاس <code dir="ltr">document.querySelectorAll("label[for]")</code> در ابتدای
+`Extract` و ساخت Map از id به label؛ `OwnLabel` فقط از Map بخواند.
+
+### ۳.۴۶ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) بدون retry در `LlmClient.Chat`
+**فایل:** `assistant-extension/controllers/llm-client.js` (`Chat`)
+
+یک خطای گذرا (اتصال لحظه‌ای به llama-server) کل `FillLoop.Run` را با error
+می‌کشد؛ fillهای قبلاً اعمال‌شده در صفحه می‌مانند ولی حلقه abort می‌شود و
+کاربر از نو شروع می‌کند.
+**اقدام:** retry ساده با backoff کوتاه فقط برای `llm-unreachable`/`5xx` (نه
+`llm-timeout` — انتظار دوبارهٔ ۱۸۰ ثانیه‌ای بی‌معناست).
+
+### ۳.۴۷ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) حلقه‌های سریال await در `ApplyAcceptedDrafts`/`FlushDiffs`
+**فایل:** `assistant-extension/controllers/background.js`
+
+هر draft پذیره‌شده یک `TabSend` سریال و هر diff یک POST جدای سریال است. در
+مقیاس فعلی (≤۵ draft، diffهای کم) مشکلی نیست؛ فقط اگر تعداد رشد کرد:
+`Promise.all` روی فیلدهای متمایز (drafts) و/یا endpoint batch سمت سرور
+(diffs).
+
+### ۳.۴۸ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) نکات خفیف `assistant-extension`
+
+- لاگ‌های <code dir="ltr">console.log("ASSISTANT", …)</code> در هر لود صفحهٔ content script —
+  در production حذف یا شرطی شوند.
+- `FillHandler.ApplyRadio`/`Current` هر بار <code dir="ltr">querySelectorAll</code> تازه برای radio
+  group می‌زنند — قابل کش از `FormInventory.Registry` (المان اول گروه همان‌جاست).
+- `RenderMemory` با ۵۰۰+ ردیف کل DOM را rebuild می‌کند (~۲۰۰۰ نود) — در صورت
+  بزرگ‌شدن جدول، صفحه‌بندی یا رندر تدریجی.
+- `StorageHandler.Set` بدون چک callback است — ریسک از‌دست‌رفتن write هنگام
+  بسته‌شدن سریع popup (بیشتر درست‌کاری تا پرفورمنس).
 
 ---
 

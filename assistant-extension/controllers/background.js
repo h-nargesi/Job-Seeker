@@ -102,6 +102,7 @@ async function RunFill(params) {
 
     const client = await LlmClient.Create();
     const domain = state.domain;
+    const snapshot = MemoryTools.Snapshot(messaging);
 
     const result = await FillLoop.Run({
         client: client,
@@ -109,7 +110,7 @@ async function RunFill(params) {
         resume: params.resumeText || "",
         inventory: state.inventory,
         query: function (fieldKey) {
-            return MemoryTools.Query(messaging, domain, fieldKey);
+            return MemoryTools.Query(messaging, domain, fieldKey, snapshot);
         },
         write: function (fact) {
             const entry = state.inventory.find(function (item) { return item.fieldKey === fact.fieldKey; });

@@ -61,6 +61,40 @@ test('query surfaces server errors instead of an empty answer', async () => {
 	assert.deepStrictEqual(jsonOf(result.rows), []);
 });
 
+test('snapshot serves the whole fill run from one list fetch and retries after failures', async () => {
+	const { MemoryTools } = fresh(ROWS);
+	let calls = 0;
+	const fake = { MemoryList: async () => { calls++; return ROWS; } };
+
+	const load = MemoryTools.Snapshot(fake);
+	const [a, b] = await Promise.all([load(), load()]);
+	assert.strictEqual(calls, 1);
+	await load();
+	assert.strictEqual(calls, 1);
+	assert.deepStrictEqual(jsonOf(a), jsonOf(b));
+
+	let failures = 0;
+	const failing = { MemoryList: async () => { failures++; return { error: 'timeout', status: 0 }; } };
+	const retry = MemoryTools.Snapshot(failing);
+	assert.strictEqual((await retry()).error, 'timeout');
+	assert.strictEqual((await retry()).error, 'timeout');
+	assert.strictEqual(failures, 2);
+});
+
+test('query reads from a snapshot loader instead of hitting the wire per field', async () => {
+	const { MemoryTools } = fresh(ROWS);
+	let calls = 0;
+	const fake = { MemoryList: async () => { calls++; return ROWS; } };
+	const load = MemoryTools.Snapshot(fake);
+
+	const email = await MemoryTools.Query(fake, 'ats.example', 'email', load);
+	const phone = await MemoryTools.Query(fake, 'ats.example', 'phone', load);
+
+	assert.strictEqual(calls, 1);
+	assert.deepStrictEqual(jsonOf(email.rows.map(r => r.memoryID)), [2, 1, 3]);
+	assert.deepStrictEqual(jsonOf(phone.rows.map(r => r.memoryID)), [4]);
+});
+
 test('apply facts from the fill loop are stored as unconfirmed tips', async () => {
 	const { fake, MemoryTools } = fresh([]);
 	await MemoryTools.SaveApplyFact(fake, 'ats.example', 'email', 'Email', 'ryan@example.com', 'from resume');

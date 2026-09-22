@@ -10,18 +10,18 @@ function panelBodyHtml() {
 	return body.replace(/<script[\s\S]*?<\/script>/g, '');
 }
 
-function fresh(jobs = [], memory = []) {
+function fresh(jobs = [], memory = [], behavior = null) {
 	const env = createEnv({ dom: true, url: 'chrome-extension://panel/index.html' });
 	env.sandbox.document.body.innerHTML = panelBodyHtml();
 
 	env.chrome.storage.local.state.set('SERVER_URL', 'https://core.example:8081/');
 	env.chrome.storage.local.state.set('API_KEY', 'assistant-key');
-	env.chrome.runtime.behavior = message => {
+	env.chrome.runtime.behavior = behavior ?? (message => {
 		if (message.title === 'jobs') return jobs;
 		if (message.title === 'memory-list') return memory;
 		if (message.title === 'tip') return { id: 2 };
 		return { ok: true };
-	};
+	});
 
 	env.load('controllers/storage-handler.js');
 	env.load('controllers/background-messaging.js');
@@ -90,6 +90,9 @@ test('memory rows render with confirm, edit and delete actions', async () => {
 	const env = fresh([], rows);
 	await settle(env);
 
+	$(env, 'ShowMemory').click();
+	await settle(env);
+
 	const labels = Array.from($(env, 'MemoryList').querySelectorAll('button')).map(b => b.textContent);
 	assert.deepStrictEqual(labels, ['Confirm', 'Edit', 'Delete']);
 	assert.ok($(env, 'MemoryList').textContent.includes('[Apply/Correction pending]'));
@@ -100,10 +103,25 @@ test('confirm toggles post memory-confirm and refresh the list', async () => {
 	const env = fresh([], rows);
 	await settle(env);
 
+	$(env, 'ShowMemory').click();
+	await settle(env);
+
 	Array.from($(env, 'MemoryList').querySelectorAll('button')).find(b => b.textContent === 'Confirm').click();
 	await settle(env);
 
 	assert.ok(env.chrome.runtime.sent.some(m => m.title === 'memory-confirm' && m.params.id === 9 && m.params.confirmed === true));
+});
+
+test('the memory list stays lazy until the memory view is opened', async () => {
+	const env = fresh([], []);
+	await settle(env);
+
+	assert.ok(!env.chrome.runtime.sent.some(m => m.title === 'memory-list'));
+
+	$(env, 'ShowMemory').click();
+	await settle(env);
+
+	assert.ok(env.chrome.runtime.sent.some(m => m.title === 'memory-list'));
 });
 
 test('the memorycap warning appears beyond 500 confirmed rows', async () => {
@@ -194,15 +212,14 @@ test('accepting a draft posts the edited text and shows the accepted state', asy
 		id: 'ats.example::cover', domain: 'ats.example', fieldId: 'f2',
 		fieldKey: 'cover', fieldLabel: 'Cover letter', text: 'Dear team', accepted: false,
 	};
-	const env = fresh([], []);
-	env.chrome.runtime.behavior = message => {
+	const env = fresh([], [], message => {
 		if (message.title === 'compose-list') return { drafts: [current] };
 		if (message.title === 'compose-accept') {
 			current = { ...current, accepted: true, text: message.params.text };
 			return { ok: true };
 		}
 		return { ok: true };
-	};
+	});
 	await settle(env);
 
 	const area = $(env, 'ComposeList').querySelector('textarea');

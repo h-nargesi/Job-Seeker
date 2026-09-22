@@ -42,7 +42,7 @@ class ComposeUI {
             jobId: job.jobId,
             resumeText: job.resumeText ?? "",
             guidance: guidance,
-        });
+        }, BackgroundMessaging.LONG_TIMEOUT);
 
         if (result?.error) {
             ComposeUI.Status("compose error: " + result.error);

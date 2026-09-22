@@ -33,7 +33,7 @@ const els = {
     chatLog: document.getElementById("ChatLog"),
 };
 
-const state = { pageState: null, override: "auto", jobs: [] };
+const state = { pageState: null, override: "auto", jobs: [], memoryLoaded: false };
 
 els.modeOverride.addEventListener("change", async function () {
     state.override = els.modeOverride.value;
@@ -68,6 +68,11 @@ function SwitchView(jobs) {
     els.memoryView.style.display = jobs ? "none" : "";
     els.showJobs.classList.toggle("active", jobs);
     els.showMemory.classList.toggle("active", !jobs);
+
+    if (!jobs && !state.memoryLoaded) {
+        state.memoryLoaded = true;
+        RefreshMemory();
+    }
 }
 
 function EffectiveMode() {
@@ -195,7 +200,7 @@ async function FillCurrentTab(job) {
         tabId: tabId,
         jobId: job.jobId,
         resumeText: job.resumeText ?? "",
-    });
+    }, BackgroundMessaging.LONG_TIMEOUT);
 
     if (result?.error) {
         els.jobsStatus.textContent = "fill error: " + result.error
@@ -312,7 +317,7 @@ async function SaveTip() {
     els.chatLog.textContent = result?.error ? "lesson error: " + result.error : `saved ${scope} lesson`;
     els.tipValue.value = "";
     els.tipNote.value = "";
-    RefreshMemory();
+    if (state.memoryLoaded) RefreshMemory();
 }
 
 async function LoadChatLog() {
@@ -323,13 +328,14 @@ async function LoadChatLog() {
 }
 
 async function LoadData() {
-    await LoadSettings();
-    await LoadMode();
-    await ComposeUI.Init();
     BackgroundMessaging.Message("flush-diffs");
-    await RefreshJobs();
-    await RefreshMemory();
-    await LoadChatLog();
+    await Promise.all([
+        LoadSettings(),
+        LoadMode(),
+        ComposeUI.Init(),
+        LoadChatLog(),
+        RefreshJobs(),
+    ]);
 }
 
 LoadData();

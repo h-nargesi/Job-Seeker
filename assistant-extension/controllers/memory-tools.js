@@ -2,8 +2,28 @@ console.log("ASSISTANT", "memory-tools");
 
 class MemoryTools {
 
-    static async Query(messaging, domain, fieldKey) {
-        const rows = await messaging.MemoryList("Apply", true);
+    static Snapshot(messaging) {
+        let cached = null;
+
+        return function () {
+            if (!cached) {
+                cached = messaging.MemoryList("Apply", true).then(
+                    function (rows) {
+                        if (!Array.isArray(rows)) cached = null;
+                        return rows;
+                    },
+                    function () {
+                        cached = null;
+                        return { error: "memory-query-failed" };
+                    },
+                );
+            }
+            return cached;
+        };
+    }
+
+    static async Query(messaging, domain, fieldKey, load) {
+        const rows = await (load ? load() : messaging.MemoryList("Apply", true));
         if (!Array.isArray(rows)) return { error: rows.error ?? "memory-query-failed", rows: [] };
 
         const key = String(fieldKey).toLowerCase();

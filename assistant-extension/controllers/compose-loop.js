@@ -6,6 +6,7 @@ class ComposeLoop {
     static MAX_GUIDANCE = 2000;
     static MAX_DRAFT = 8000;
     static MAX_DRAFTS = 5;
+    static MAX_TOKENS = 16384;
 
     static SYSTEM_PROMPT = [
         "You draft long-form answers (cover letters, screening essays) for job application forms.",
@@ -54,7 +55,7 @@ class ComposeLoop {
         });
         if (!fields.length) return { error: "no-long-fields" };
 
-        const response = await opts.client.Chat(ComposeLoop.Messages(opts), null);
+        const response = await opts.client.Chat(ComposeLoop.Messages(opts), null, { max_tokens: ComposeLoop.MAX_TOKENS });
         if (response.error) return { error: response.error };
 
         return ComposeLoop.Parse(response.content, fields);

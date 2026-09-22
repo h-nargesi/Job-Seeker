@@ -3,8 +3,9 @@ console.log("ASSISTANT", "background-messaging");
 class BackgroundMessaging {
 
     static RESPONSE_TIMEOUT = 120000;
+    static LONG_TIMEOUT = 600000;
 
-    static async Message(title, params) {
+    static async Message(title, params, timeout) {
         const request = { title: title };
         if (params !== undefined) request.params = params;
 
@@ -20,7 +21,7 @@ class BackgroundMessaging {
                     : (response ?? { error: "no-response", status: 0 }));
             };
 
-            const timer = setTimeout(function () { finish("timeout"); }, BackgroundMessaging.RESPONSE_TIMEOUT);
+            const timer = setTimeout(function () { finish("timeout"); }, timeout || BackgroundMessaging.RESPONSE_TIMEOUT);
 
             try {
                 chrome.runtime.sendMessage(request, function (response) {

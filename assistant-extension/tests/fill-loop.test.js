@@ -222,3 +222,47 @@ test('llm failures surface as errors instead of fills', async () => {
 
 	assert.strictEqual(result.error, 'llm-unreachable');
 });
+
+test('a batch of tool calls keeps message order and resolves queries before fills', async () => {
+	const { FillLoop } = fresh();
+	const client = scriptClient([
+		response([
+			toolCall('q1', 'memory_query', { field_key: 'email' }),
+			toolCall('q2', 'memory_query', { field_key: 'other' }),
+			toolCall('f1c', 'fill', { field_id: 'f1', value: 'x@example.com' }),
+		]),
+		response([], 'done'),
+	]);
+
+	const result = await FillLoop.Run({
+		client,
+		domain: 'd',
+		resume: '',
+		inventory,
+		query: async key => ({ rows: [{ memoryID: 1, fieldKey: key, value: 'v', kind: 'Tip', agencyDomain: 'd' }] }),
+		write: async () => ({ id: 1 }),
+		fill: async () => ({ ok: true }),
+	});
+
+	assert.strictEqual(result.done, true);
+	const toolMessages = client.seen.at(-1).messages.filter(m => m.role === 'tool');
+	assert.deepStrictEqual(toolMessages.map(m => m.tool_call_id), ['q1', 'q2', 'f1c']);
+});
+
+test('the inventory stays valid JSON under the size cap with a truncation marker', () => {
+	const { FillLoop } = fresh();
+	const big = Array.from({ length: 500 }, (_, i) => ({
+		fieldId: 'f' + i, tag: 'input', type: 'text', name: 'field_' + i,
+		label: 'L'.repeat(100), fieldKey: 'k' + i, required: false,
+	}));
+
+	const json = FillLoop.InventoryJson(big);
+	assert.ok(json.length <= FillLoop.MAX_CHARS + 60, json.length);
+
+	const parsed = JSON.parse(json);
+	assert.ok(parsed.length > 1 && parsed.length < big.length);
+	assert.strictEqual(parsed[0].fieldId, 'f0');
+	assert.ok(parsed.at(-1).truncated);
+
+	assert.strictEqual(FillLoop.InventoryJson([]), '[]');
+});

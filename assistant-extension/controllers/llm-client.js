@@ -3,6 +3,7 @@ console.log("ASSISTANT", "llm-client");
 class LlmClient {
 
     static REQUEST_TIMEOUT = 180000;
+    static MAX_TOKENS = 8192;
 
     constructor(url, model) {
         this.url = url;
@@ -13,7 +14,7 @@ class LlmClient {
         return new LlmClient(await StorageHandler.LlamaUrlAsync(), await StorageHandler.LlamaModelAsync());
     }
 
-    async Chat(messages, tools) {
+    async Chat(messages, tools, options) {
         const controller = new AbortController();
         const timer = setTimeout(function () { controller.abort(); }, LlmClient.REQUEST_TIMEOUT);
 
@@ -28,6 +29,7 @@ class LlmClient {
                     tools: tools,
                     temperature: 0.2,
                     stream: false,
+                    max_tokens: (options && options.max_tokens) || LlmClient.MAX_TOKENS,
                 })
             });
 
