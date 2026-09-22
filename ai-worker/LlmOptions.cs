@@ -3,6 +3,8 @@ namespace AiWorker;
 public sealed class LlmOptions
 {
     public const double DefaultTemperature = 0.2;
+    public const int DefaultTimeoutSeconds = 120;
+    public const int DefaultMaxCompletionTokens = 2048;
 
     public string BaseUrl { get; set; } = string.Empty;
 
@@ -22,6 +24,10 @@ public sealed class LlmOptions
 
     public int Seed { get; set; }
 
+    public int TimeoutSeconds { get; set; } = DefaultTimeoutSeconds;
+
+    public int MaxCompletionTokens { get; set; } = DefaultMaxCompletionTokens;
+
     public string? Validate()
     {
         if (string.IsNullOrWhiteSpace(BaseUrl)) return "Llm:BaseUrl is required";
@@ -35,6 +41,8 @@ public sealed class LlmOptions
         if (!RubricTailor.Contains(PromptBuilder.KeywordsPlaceholder, StringComparison.Ordinal))
             return $"Llm:RubricTailor must contain {PromptBuilder.KeywordsPlaceholder}";
         if (Temperature is < 0 or > 2) return "Llm:Temperature must be within 0-2";
+        if (TimeoutSeconds is < 5 or > 3600) return "Llm:TimeoutSeconds must be 5-3600";
+        if (MaxCompletionTokens is < 128 or > 8192) return "Llm:MaxCompletionTokens must be 128-8192";
         return null;
     }
 }

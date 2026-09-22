@@ -9,6 +9,7 @@ internal sealed class RunStats
     public int ErrorVerdicts;
     public int Gone;
     public int Retries;
+    public int LlmFailures;
     public long PromptTokens;
     public long CompletionTokens;
     public long CallMs;

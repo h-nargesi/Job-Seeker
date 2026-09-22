@@ -3,6 +3,17 @@ namespace AiWorker.Tests;
 public sealed class LlmClientTests
 {
     [Fact]
+    public void TimeoutComesFromOptions()
+    {
+        var http = FakeHttp.Client(new FakeHandler(), "http://llm.test/v1/");
+        var options = new LlmOptions { TimeoutSeconds = 150 };
+
+        _ = new LlmClient(http, options);
+
+        Assert.Equal(TimeSpan.FromSeconds(150), http.Timeout);
+    }
+
+    [Fact]
     public void ExtractParsesUsageAndFinishReason()
     {
         var body = """

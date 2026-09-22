@@ -11,6 +11,7 @@ public sealed class WorkerLoop
     public const int ExitUnexpected = 5;
 
     public const int MaxModelAttempts = 2;
+    public const int MaxConsecutiveLlmFailures = 3;
 
     private readonly CoreClient core;
     private readonly LlmClient llm;
@@ -60,6 +61,7 @@ public sealed class WorkerLoop
         }
 
         var number = 0;
+        var consecutive_llm_failures = 0;
         while (true)
         {
             AiNextPayload next;
@@ -89,12 +91,41 @@ public sealed class WorkerLoop
 
             try
             {
-                var verdict = await JudgeAsync(next, job_id, memory.Ranking, stats, ct);
+                VerdictPayload verdict;
+                try
+                {
+                    verdict = await JudgeAsync(next, job_id, memory.Ranking, stats, ct);
+                    consecutive_llm_failures = 0;
+                }
+                catch (LlmCallException ex)
+                {
+                    consecutive_llm_failures++;
+                    stats.LlmFailures++;
+                    if (consecutive_llm_failures >= MaxConsecutiveLlmFailures)
+                        return Abort(ExitLlmUnavailable,
+                            $"model failed on {consecutive_llm_failures} consecutive jobs, aborting run: {ex.Message}");
+                    WorkerLog.Warn("job {JobId}: model call failed: {Message} - posting Error verdict and continuing",
+                        job_id, ex.Message);
+                    verdict = VerdictPayload.Error(job_id, next.Fingerprint!, $"model call failed: {ex.Message}");
+                }
 
                 if (Promotes(next, verdict))
                 {
                     stats.Promoted++;
-                    verdict.Delta = await TailorAsync(next, job_id, memory.Resume, stats, ct);
+                    try
+                    {
+                        verdict.Delta = await TailorAsync(next, job_id, memory.Resume, stats, ct);
+                    }
+                    catch (LlmCallException ex)
+                    {
+                        consecutive_llm_failures++;
+                        stats.LlmFailures++;
+                        if (consecutive_llm_failures >= MaxConsecutiveLlmFailures)
+                            return Abort(ExitLlmUnavailable,
+                                $"model failed on {consecutive_llm_failures} consecutive calls, aborting run: {ex.Message}");
+                        WorkerLog.Warn("job {JobId}: tailoring call failed: {Message} - posting verdict without delta",
+                            job_id, ex.Message);
+                    }
                 }
 
                 if (verdict.Verdict == "Error") stats.ErrorVerdicts++;
@@ -146,7 +177,8 @@ public sealed class WorkerLoop
             LlmResult? result = null;
             try
             {
-                result = await llm.CompleteAsync(message.System, message.User, ct);
+                result = await llm.CompleteAsync(message.System, message.User,
+                    VerdictSchema.ResponseFormat, attempt - 1, ct);
                 LogCall(jobId, 1, result, stats);
                 return VerdictParser.Parse(result.Content, jobId, next.Fingerprint!);
             }
@@ -180,7 +212,8 @@ public sealed class WorkerLoop
             LlmResult? result = null;
             try
             {
-                result = await llm.CompleteAsync(message.System, message.User, VerdictSchema.TailorResponseFormat, ct);
+                result = await llm.CompleteAsync(message.System, message.User,
+                    VerdictSchema.TailorResponseFormat, attempt - 1, ct);
                 LogCall(jobId, 2, result, stats);
                 return TailorParser.Parse(result.Content);
             }
@@ -206,9 +239,12 @@ public sealed class WorkerLoop
     {
         WorkerLog.Info("run starting: model {Model}, temperature {Temperature}, seed {Seed}",
             options?.Model ?? "n/a", options?.Temperature ?? LlmOptions.DefaultTemperature, options?.Seed ?? 0);
-        WorkerLog.Info("endpoints: core {Core}, llm {Llm}; context {MaxContextTokens} tok, memory cap {MemoryTokenCap} tok",
+        WorkerLog.Info(
+            "endpoints: core {Core}, llm {Llm}; context {MaxContextTokens} tok, memory cap {MemoryTokenCap} tok, timeout {TimeoutSeconds}s, max completion {MaxCompletionTokens} tok",
             options?.Core ?? "n/a", options?.BaseUrl ?? "n/a",
-            PromptBuilder.MaxContextTokens, PromptBuilder.MemoryTokenCap);
+            PromptBuilder.MaxContextTokens, PromptBuilder.MemoryTokenCap,
+            options?.TimeoutSeconds ?? LlmOptions.DefaultTimeoutSeconds,
+            options?.MaxCompletionTokens ?? LlmOptions.DefaultMaxCompletionTokens);
     }
 
     private static void LogPrompt(long jobId, int callNo, PromptBuilder.Prompt message)
@@ -259,9 +295,9 @@ public sealed class WorkerLoop
     private static void Summary(string outcome, int code, RunStats stats)
     {
         WorkerLog.Info(
-            "run {Outcome} exit {Code}: jobs {Jobs}, promoted {Promoted}, errors {Errors}, 404 {Gone}, retries {Retries}, wall {Wall:F1}s, avg {Avg:F1}s/job, tokens in {PromptTokens} / out {CompletionTokens}",
+            "run {Outcome} exit {Code}: jobs {Jobs}, promoted {Promoted}, errors {Errors}, 404 {Gone}, retries {Retries}, llm failures {LlmFailures}, wall {Wall:F1}s, avg {Avg:F1}s/job, tokens in {PromptTokens} / out {CompletionTokens}",
             outcome, code, stats.Jobs, stats.Promoted, stats.ErrorVerdicts, stats.Gone, stats.Retries,
-            stats.WallSeconds, stats.AvgSecondsPerJob, stats.PromptTokens, stats.CompletionTokens);
+            stats.LlmFailures, stats.WallSeconds, stats.AvgSecondsPerJob, stats.PromptTokens, stats.CompletionTokens);
     }
 
     private static int Abort(int code, string message)

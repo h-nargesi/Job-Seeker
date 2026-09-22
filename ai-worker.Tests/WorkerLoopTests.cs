@@ -124,6 +124,7 @@ public sealed class WorkerLoopTests
         Assert.Equal("test-model", chat.GetProperty("model").GetString());
         Assert.Equal(0.2, chat.GetProperty("temperature").GetDouble());
         Assert.Equal(42, chat.GetProperty("seed").GetInt32());
+        Assert.Equal(LlmOptions.DefaultMaxCompletionTokens, chat.GetProperty("max_tokens").GetInt32());
         Assert.Equal("json_schema", chat.GetProperty("response_format").GetProperty("type").GetString());
         Assert.False(chat.GetProperty("stream").GetBoolean());
 
@@ -268,18 +269,115 @@ public sealed class WorkerLoopTests
     }
 
     [Fact]
-    public async Task ModelHttp500AbortsRun()
+    public async Task ModelHttp500PostsErrorVerdictAndContinues()
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
         coreHandler.RespondJson(MemorySnapshotJson());
         coreHandler.RespondJson(NextJob(14));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextJob(15, passmark: 90));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextEmpty());
         llmHandler.RespondJson("boom", HttpStatusCode.InternalServerError);
+        llmHandler.RespondJson(LlmContent(WeakVerdict));
+
+        var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
+
+        Assert.Equal(WorkerLoop.ExitOk, exit);
+        Assert.Equal(2, llmHandler.Requests.Count);
+        var first = JsonDocument.Parse(coreHandler.Bodies[0]).RootElement;
+        Assert.Equal("Error", first.GetProperty("verdict").GetString());
+        Assert.Contains("model endpoint returned 500", first.GetProperty("reason").GetString());
+        var second = JsonDocument.Parse(coreHandler.Bodies[1]).RootElement;
+        Assert.Equal("NoMatch", second.GetProperty("verdict").GetString());
+    }
+
+    [Fact]
+    public async Task ModelTimeoutPostsErrorVerdictAndContinues()
+    {
+        var coreHandler = new FakeHandler();
+        var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(NextJob(18));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextJob(19));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextEmpty());
+        llmHandler.RespondTimeout();
+        llmHandler.RespondJson(LlmContent(WeakVerdict));
+
+        var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
+
+        Assert.Equal(WorkerLoop.ExitOk, exit);
+        Assert.Equal(2, llmHandler.Requests.Count);
+        var first = JsonDocument.Parse(coreHandler.Bodies[0]).RootElement;
+        Assert.Equal("Error", first.GetProperty("verdict").GetString());
+        Assert.Contains("timed out after 120s", first.GetProperty("reason").GetString());
+    }
+
+    [Fact]
+    public async Task PersistentModel5xxAbortsRunAfterConsecutiveJobs()
+    {
+        var coreHandler = new FakeHandler();
+        var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(NextJob(20));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextJob(21));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextJob(22));
+        for (var i = 0; i < 3; i++) llmHandler.RespondJson("boom", HttpStatusCode.InternalServerError);
 
         var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
 
         Assert.Equal(WorkerLoop.ExitLlmUnavailable, exit);
-        Assert.Equal(2, coreHandler.Requests.Count);
+        Assert.Equal(3, llmHandler.Requests.Count);
+        Assert.Equal(2, coreHandler.Bodies.Count);
+        Assert.All(coreHandler.Bodies, body =>
+            Assert.Equal("Error", JsonDocument.Parse(body).RootElement.GetProperty("verdict").GetString()));
+    }
+
+    [Fact]
+    public async Task TailorCallFailurePostsVerdictWithoutDelta()
+    {
+        var coreHandler = new FakeHandler();
+        var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(NextJob(25));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextEmpty());
+        llmHandler.RespondJson(LlmContent(ValidVerdict));
+        llmHandler.RespondJson("boom", HttpStatusCode.InternalServerError);
+
+        var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
+
+        Assert.Equal(WorkerLoop.ExitOk, exit);
+        Assert.Equal(2, llmHandler.Requests.Count);
+        var verdict = JsonDocument.Parse(coreHandler.Bodies[0]).RootElement;
+        Assert.Equal("Match", verdict.GetProperty("verdict").GetString());
+        Assert.False(verdict.TryGetProperty("delta", out _));
+    }
+
+    [Fact]
+    public async Task ModelOutputRetryUsesDifferentSeed()
+    {
+        var coreHandler = new FakeHandler();
+        var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(NextJob(26));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextEmpty());
+        llmHandler.RespondJson(LlmContent("oops not json"));
+        llmHandler.RespondJson(LlmContent(WeakVerdict));
+
+        var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
+
+        Assert.Equal(WorkerLoop.ExitOk, exit);
+        var first_seed = JsonDocument.Parse(llmHandler.Bodies[0]).RootElement.GetProperty("seed").GetInt32();
+        var second_seed = JsonDocument.Parse(llmHandler.Bodies[1]).RootElement.GetProperty("seed").GetInt32();
+        Assert.Equal(42, first_seed);
+        Assert.Equal(43, second_seed);
     }
 
     [Fact]

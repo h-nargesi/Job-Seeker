@@ -26,6 +26,12 @@ public sealed class FakeHandler : HttpMessageHandler
         script.Enqueue(_ => throw new HttpRequestException(message));
     }
 
+    public void RespondTimeout()
+    {
+        script.Enqueue(_ => throw new TaskCanceledException("request canceled",
+            new TimeoutException("the operation timed out")));
+    }
+
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken ct)
     {

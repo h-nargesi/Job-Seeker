@@ -7,6 +7,14 @@ public sealed class PromptBuilderTests
 
     private static PromptBuilder Builder() => new(Rubric, RubricTailor);
 
+    private static int BudgetTokens(string system)
+    {
+        return Math.Max(PromptBuilder.MaxContextTokens
+            - PromptBuilder.DefaultCompletionReserveTokens
+            - PromptBuilder.EstimateSlackTokens
+            - PromptBuilder.Estimate(system), 0);
+    }
+
     private static AiNextPayload Payload(string content = "Senior .NET role with Angular.", string? resume = "RESUME TEXT")
     {
         return new AiNextPayload
@@ -70,8 +78,7 @@ public sealed class PromptBuilderTests
 
         var content = prompt.User[(prompt.User.IndexOf(PromptBuilder.JobLabel, StringComparison.Ordinal)
             + PromptBuilder.JobLabel.Length)..].TrimStart();
-        var expectedChars = Math.Max(PromptBuilder.MaxContextTokens - PromptBuilder.Estimate(prompt.System), 0)
-            * PromptBuilder.CharsPerToken;
+        var expectedChars = BudgetTokens(prompt.System) * PromptBuilder.CharsPerToken;
 
         Assert.True(content.Length <= expectedChars, $"JD {content.Length} chars exceeds budget {expectedChars}");
         Assert.StartsWith(new string('x', 100), content, StringComparison.Ordinal);
@@ -141,8 +148,7 @@ public sealed class PromptBuilderTests
 
         var content = prompt.User[(prompt.User.IndexOf(PromptBuilder.JobLabel, StringComparison.Ordinal)
             + PromptBuilder.JobLabel.Length)..].TrimStart();
-        var expectedChars = Math.Max(PromptBuilder.MaxContextTokens - PromptBuilder.Estimate(prompt.System), 0)
-            * PromptBuilder.CharsPerToken;
+        var expectedChars = BudgetTokens(prompt.System) * PromptBuilder.CharsPerToken;
 
         Assert.True(content.Length <= expectedChars, $"JD {content.Length} chars exceeds budget {expectedChars}");
         Assert.DoesNotContain("UNIQUE TAIL MARKER", content, StringComparison.Ordinal);
@@ -200,12 +206,27 @@ public sealed class PromptBuilderTests
         var huge = new string('x', 400_000);
         var prompt = Builder().Compose(Payload(content: huge, resume: "short"));
 
-        var expectedChars = Math.Max(PromptBuilder.MaxContextTokens - PromptBuilder.Estimate(prompt.System), 0)
-            * PromptBuilder.CharsPerToken;
+        var expectedChars = BudgetTokens(prompt.System) * PromptBuilder.CharsPerToken;
 
         Assert.Equal(huge.Length, prompt.ContentOriginalChars);
         Assert.Equal(huge.Length - expectedChars, prompt.ContentTruncatedChars);
         Assert.True(prompt.ContentTruncatedChars > 0);
+    }
+
+    [Fact]
+    public void CustomCompletionReserveShrinksContentBudget()
+    {
+        var huge = new string('x', 400_000);
+        var prompt = new PromptBuilder(Rubric, RubricTailor, 4096)
+            .Compose(Payload(content: huge, resume: "short"));
+
+        var content = prompt.User[(prompt.User.IndexOf(PromptBuilder.JobLabel, StringComparison.Ordinal)
+            + PromptBuilder.JobLabel.Length)..].TrimStart();
+        var expectedChars = Math.Max(PromptBuilder.MaxContextTokens
+            - 4096 - PromptBuilder.EstimateSlackTokens
+            - PromptBuilder.Estimate(prompt.System), 0) * PromptBuilder.CharsPerToken;
+
+        Assert.True(content.Length <= expectedChars, $"JD {content.Length} chars exceeds budget {expectedChars}");
     }
 
     [Fact]

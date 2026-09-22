@@ -71,6 +71,11 @@
 > [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شدند؛
 > **۲.۲۹** (نبود ایندکس ثانویه) در همین بخش باز ثبت شد و نکات درجه‌دو/سهٔ
 > همان مرور در بخش ۳ (۳.۳۴–۳.۳۹).
+>
+> ۱۴۰۵/۰۶/۳۱ (2026-09-22): مرور پرفورمنسی `ai-worker` — موارد بحرانی همان مرور
+> (**۲.۳۰**–**۲.۳۲**) در همان تاریخ رفع و به
+> [`archive/review-2026-09.md`](archive/review-2026-09.md) منتقل شدند؛ نکات
+> متوسط همان مرور در بخش ۳ (۳.۴۰–۳.۴۴).
 
 ### ۲.۲۳ فرمان recheck بدون OnPageLoad منجر به TypeError می‌شود
 **فایل:** `agent-extension/controllers/action-handler.js` (متد `Execute`، case "recheck")
@@ -143,6 +148,10 @@
 > ۱۴۰۵/۰۶/۳۱ (2026-09-22): مرور پرفورمنسی `core-decision-dotnet` — موارد باز
 > جدید **۳.۳۴–۳.۳۹** در ادامهٔ همین بخش ثبت شدند (موارد بحرانی همان مرور رفع
 > و آرشیو شدند — رجوع کنید به یادداشت ابتدای بخش ۲).
+>
+> ۱۴۰۵/۰۶/۳۱ (2026-09-22): مرور پرفورمنسی `ai-worker` — موارد باز جدید
+> **۳.۴۰–۳.۴۴** در ادامهٔ همین بخش ثبت شدند (موارد بحرانی همان مرور رفع و
+> آرشیو شدند — رجوع کنید به یادداشت ابتدای بخش ۲).
 
 ### ۳.۵ تکرار منطق `Save` (BaseBusiness در برابر JobBusiness/TrendBusiness)
 **فایل:** `BaseBusiness.cs` در برابر `JobBusiness.cs` — استخراج `id` یکسان
@@ -403,6 +412,57 @@ console sink).
   روی `Take` — قرینهٔ مورد ۳.۳۲ سمت اکستنشن؛ رشتهٔ JSON پس از deserialize
   دوبرابر (UTF-16) و روی LOH می‌نشیند. اگر فشار memory دیدیم، همان راهکار
   ۳.۳۲ (body-only/فشرده‌سازی) بار سرور را هم کم می‌کند.
+
+### ۳.۴۰ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) بهره‌گیری صریح از prefix caching در `ai-worker`
+
+System prompt هر دو call در سراسر یک run بایت‌به‌بایت ثابت است (تست
+`SystemPromptIsStableAcrossJobs` پین کرده) و بخش ثابت **قبل از** JD متغیر
+می‌آید — شکل درست برای KV-prefix reuse در llama-server که prefill چند-KB-توکنی
+را برای هر job تقریباً رایگان می‌کند؛ ولی قطعات ثابت per-run کش نمی‌شوند:
+`rubricTemplate.Replace` و serialize ردیف‌های `MemoryBlock` به‌ازای هر job
+تکرار می‌شود و `Estimate(system)` دو بار محاسبه می‌شود (نتایج الان یکسان‌اند،
+پس فقط CPU جزئی).
+**اقدام:** کش per-run قطعات ثابت؛ فعال‌سازی/سنجش cache-reuse اسلات llama-server
+و اندازه‌گیری اثرش روی زمان prefill؛ قاعدهٔ صریح که هیچ فیلد per-job (مثل
+job id) به system prompt اضافه نشود — چنین چیزی reuse را کامل می‌کشد.
+
+### ۳.۴۱ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) console sink با سطح Debug در production در `ai-worker`
+
+قرینهٔ ۳.۳۸ برای worker: سطح فایل تابع environment است ولی
+<code dir="ltr">WriteTo.Console(LogEventLevel.Debug)</code> همیشه Debug است و
+`LogPrompt` کل بدنهٔ system/user prompt (تا ~۱۶k کاراکتر × ۲ به‌ازای هر call،
+دو call در هر job) را در Debug لاگ می‌کند → در production تمام آن به stdout
+می‌رود.
+**اقدام:** سطح کنسول مثل `FileLevel` تابع environment شود (یا در Production
+حذف کامل).
+
+### ۳.۴۲ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) parse مجدد `response_format` در هر call
+
+<code dir="ltr">JsonDocument.Parse(responseFormat).RootElement.Clone()</code>
+به‌ازای هر call LLM روی دو ثابت رشته‌ای اجرا می‌شود؛ `JsonDocument` اصلی هم
+dispose نمی‌شود (حافظهٔ pooled دیر برمی‌گردد). هزینهٔ CPU جزئی ولی رایگان
+رفع‌شدنی.
+**اقدام:** کش static (دو کلید شناخته‌شده)؛ بهبود بعدی: ساخت بدنهٔ درخواست با
+`JsonNode` به‌جای `Dictionary&lt;string, object?&gt;` + serialize دومرحله‌ای.
+
+### ۳.۴۳ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) ریزمصرف‌های `ai-worker`
+
+- `RunStats.CallMs` جمع می‌شود ولی هرگز در Summary گزارش نمی‌شود (متریک مرده
+  — یا به Summary اضافه شود یا حذف).
+- تخصیص‌های LOH (رشته‌های ~64KB ای prompt به‌ازای هر job) — در نرخ فعلی
+  (~۱ job در چند ده ثانیه) ناچیز؛ فقط اگر روزی pipelining/هم‌پوشانی اضافه شد
+  بازبینی شود.
+
+### ۳.۴۴ (مرور پرفورمنسی ۱۴۰۵/۰۶/۳۱) نکات سنجش `ai-worker`
+
+- آمار tok/s در `LogCall` زیر json-schema constrained decode معیار خوانایی
+  ندارد (grammar در llama.cpp سرعت decode را می‌کاهد) — اعداد را با احتیاط
+  مقایسه کنید.
+- worker مقدار واقعی <code dir="ltr">n_ctx</code> اسلات خود را نمی‌داند (با
+  `--parallel 2` نصف `-c` کل است): در startup یک‌بار query/لاگ شود و
+  <code dir="ltr">usage.prompt_tokens</code>ی که همین حالا پارس می‌شود به‌عنوان
+  فیدبک تطبیقی بودجه (مکمل fix آرشیوشدهٔ ۲.۳۱) به کار رود تا سرریز واقعی
+  از برآورد chars/4 قابل تشخیص باشد.
 
 ---
 

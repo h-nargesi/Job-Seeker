@@ -3,12 +3,15 @@ using System.Text.Json.Serialization;
 
 namespace AiWorker;
 
-public sealed class PromptBuilder(string rubricTemplate, string rubricTailorTemplate)
+public sealed class PromptBuilder(string rubricTemplate, string rubricTailorTemplate,
+    int completionReserveTokens = 2048)
 {
     public const string KeywordsPlaceholder = "{{keywords}}";
     public const int MaxContextTokens = 16000;
     public const int CharsPerToken = 4;
     public const int MemoryTokenCap = 1500;
+    public const int DefaultCompletionReserveTokens = 2048;
+    public const int EstimateSlackTokens = 512;
     public const string NoMemoryText = "(none confirmed yet)";
 
     public const string RankingMemoryLabel = "## RANKING MEMORY";
@@ -45,7 +48,7 @@ public sealed class PromptBuilder(string rubricTemplate, string rubricTailorTemp
         if (!string.IsNullOrEmpty(next.Resume))
             system += $"\n\n{ResumeLabel}\n{next.Resume}";
 
-        var budget = MaxContextTokens - Estimate(system);
+        var budget = ContentBudgetTokens(system);
         return BuildPrompt(system, next.Content, budget, dropped, total);
     }
 
@@ -59,8 +62,13 @@ public sealed class PromptBuilder(string rubricTemplate, string rubricTailorTemp
             $"{InventoryLabel}\n{InventoryJson(next.Inventory)}",
             $"{SelectionLabel}\n{(string.IsNullOrEmpty(next.Options) ? "{}" : next.Options)}");
 
-        var budget = MaxContextTokens - Estimate(system);
+        var budget = ContentBudgetTokens(system);
         return BuildPrompt(system, next.Content, budget, dropped, total);
+    }
+
+    private int ContentBudgetTokens(string system)
+    {
+        return MaxContextTokens - completionReserveTokens - EstimateSlackTokens - Estimate(system);
     }
 
     private static Prompt BuildPrompt(string system, string? content, int budgetTokens, int droppedRows, int totalRows)

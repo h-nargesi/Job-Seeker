@@ -13,8 +13,6 @@ public sealed record LlmResult(
 
 public sealed class LlmClient
 {
-    public const int TimeoutSeconds = 120;
-
     private readonly HttpClient http;
     private readonly LlmOptions options;
 
@@ -22,17 +20,17 @@ public sealed class LlmClient
     {
         this.http = http;
         this.options = options;
-        http.Timeout = TimeSpan.FromSeconds(TimeoutSeconds);
+        http.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         if (!string.IsNullOrEmpty(options.ApiKey))
             http.DefaultRequestHeaders.Add("Authorization", $"Bearer {options.ApiKey}");
     }
 
     public Task<LlmResult> CompleteAsync(string system, string user, CancellationToken ct)
     {
-        return CompleteAsync(system, user, VerdictSchema.ResponseFormat, ct);
+        return CompleteAsync(system, user, VerdictSchema.ResponseFormat, 0, ct);
     }
 
-    public async Task<LlmResult> CompleteAsync(string system, string user, string responseFormat, CancellationToken ct)
+    public async Task<LlmResult> CompleteAsync(string system, string user, string responseFormat, int seedOffset, CancellationToken ct)
     {
         var request = new Dictionary<string, object?>
         {
@@ -43,8 +41,9 @@ public sealed class LlmClient
                 new Dictionary<string, object?> { ["role"] = "user", ["content"] = user },
             },
             ["temperature"] = options.Temperature,
-            ["seed"] = options.Seed,
+            ["seed"] = options.Seed + seedOffset,
             ["stream"] = false,
+            ["max_tokens"] = options.MaxCompletionTokens,
             ["response_format"] = JsonDocument.Parse(responseFormat).RootElement.Clone(),
         };
         var body = JsonSerializer.Serialize(request);
@@ -56,13 +55,21 @@ public sealed class LlmClient
             response = await http.PostAsync("chat/completions",
                 new StringContent(body, Encoding.UTF8, "application/json"), ct);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        catch (TaskCanceledException) when (!ct.IsCancellationRequested)
+        {
+            throw new LlmCallException($"model generation timed out after {options.TimeoutSeconds}s");
+        }
+        catch (OperationCanceledException)
         {
             throw;
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             throw new LlmUnavailableException($"model endpoint unreachable: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            throw new LlmCallException($"model call failed before a response: {ex.Message}");
         }
 
         using (response)
@@ -78,13 +85,13 @@ public sealed class LlmClient
             }
             catch (Exception ex)
             {
-                throw new LlmUnavailableException($"model response read failed: {ex.Message}");
+                throw new LlmCallException($"model response read failed: {ex.Message}");
             }
 
             watch.Stop();
 
             if (!response.IsSuccessStatusCode)
-                throw new LlmUnavailableException(
+                throw new LlmCallException(
                     $"model endpoint returned {(int)response.StatusCode}: {Snippet(raw)}");
 
             return Extract(raw) with { ElapsedMs = watch.ElapsedMilliseconds };
