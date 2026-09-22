@@ -12,5 +12,10 @@ public sealed class LlmUnavailableException : Exception
 
 public sealed class ModelOutputException : Exception
 {
-    public ModelOutputException(string message) : base(message) { }
+    public string? Raw { get; }
+
+    public ModelOutputException(string message, string? raw = null) : base(message)
+    {
+        Raw = raw;
+    }
 }

@@ -195,6 +195,50 @@ public sealed class PromptBuilderTests
     }
 
     [Fact]
+    public void OverLongJobTextReportsTruncationMetrics()
+    {
+        var huge = new string('x', 400_000);
+        var prompt = Builder().Compose(Payload(content: huge, resume: "short"));
+
+        var expectedChars = Math.Max(PromptBuilder.MaxContextTokens - PromptBuilder.Estimate(prompt.System), 0)
+            * PromptBuilder.CharsPerToken;
+
+        Assert.Equal(huge.Length, prompt.ContentOriginalChars);
+        Assert.Equal(huge.Length - expectedChars, prompt.ContentTruncatedChars);
+        Assert.True(prompt.ContentTruncatedChars > 0);
+    }
+
+    [Fact]
+    public void ShortJobTextReportsZeroTruncation()
+    {
+        var prompt = Builder().Compose(Payload(content: "Short posting."));
+
+        Assert.Equal(0, prompt.ContentTruncatedChars);
+    }
+
+    [Fact]
+    public void OversizedMemoryListReportsDroppedRows()
+    {
+        var rows = new List<MemorySnapshotRow>();
+        for (var i = 0; i < 100; i++)
+            rows.Add(new MemorySnapshotRow
+            {
+                Domain = "*",
+                FieldKey = $"key_{i}",
+                Kind = "Tip",
+                Value = new string('v', 200),
+            });
+
+        PromptBuilder.MemoryBlock(rows, out var dropped, out var total);
+        Assert.Equal(100, total);
+        Assert.True(dropped > 0);
+
+        var prompt = Builder().Compose(Payload(), rows);
+        Assert.Equal(dropped, prompt.DroppedMemoryRows);
+        Assert.Equal(total, prompt.TotalMemoryRows);
+    }
+
+    [Fact]
     public void MemoryBlockKeepsWholeRowsWithinTokenCap()
     {
         var rows = new List<MemorySnapshotRow>();
@@ -207,7 +251,7 @@ public sealed class PromptBuilderTests
                 Value = new string('v', 200),
             });
 
-        var block = PromptBuilder.MemoryBlock(rows);
+        var block = PromptBuilder.MemoryBlock(rows, out _, out _);
 
         Assert.DoesNotContain(PromptBuilder.NoMemoryText, block);
         Assert.True(block.Length <= PromptBuilder.MemoryTokenCap * PromptBuilder.CharsPerToken,

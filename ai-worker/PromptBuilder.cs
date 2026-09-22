@@ -25,39 +25,62 @@ public sealed class PromptBuilder(string rubricTemplate, string rubricTailorTemp
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    public sealed record Prompt(string System, string User);
+    public sealed record Prompt(
+        string System,
+        string User,
+        int EstSystemTokens,
+        int EstContentTokens,
+        int ContentOriginalChars,
+        int ContentTruncatedChars,
+        int DroppedMemoryRows,
+        int TotalMemoryRows);
 
     public Prompt Compose(AiNextPayload next, IReadOnlyList<MemorySnapshotRow>? rankingMemory = null)
     {
         var rubric = rubricTemplate.Replace(KeywordsPlaceholder, KeywordsJson(next.Keywords), StringComparison.Ordinal);
+        var memory = MemoryBlock(rankingMemory, out var dropped, out var total);
         var system = string.Join("\n\n",
             rubric,
-            $"{RankingMemoryLabel}\n{MemoryBlock(rankingMemory)}");
+            $"{RankingMemoryLabel}\n{memory}");
         if (!string.IsNullOrEmpty(next.Resume))
             system += $"\n\n{ResumeLabel}\n{next.Resume}";
 
         var budget = MaxContextTokens - Estimate(system);
-        var content = TailTruncate(next.Content ?? string.Empty, budget);
-        return new Prompt(system, $"{JobLabel}\n{content}");
+        return BuildPrompt(system, next.Content, budget, dropped, total);
     }
 
     public Prompt ComposeTailor(AiNextPayload next, IReadOnlyList<MemorySnapshotRow>? resumeMemory = null)
     {
         var rubric = rubricTailorTemplate.Replace(KeywordsPlaceholder, KeywordsJson(next.Keywords), StringComparison.Ordinal);
+        var memory = MemoryBlock(resumeMemory, out var dropped, out var total);
         var system = string.Join("\n\n",
             rubric,
-            $"{ResumeMemoryLabel}\n{MemoryBlock(resumeMemory)}",
+            $"{ResumeMemoryLabel}\n{memory}",
             $"{InventoryLabel}\n{InventoryJson(next.Inventory)}",
             $"{SelectionLabel}\n{(string.IsNullOrEmpty(next.Options) ? "{}" : next.Options)}");
 
         var budget = MaxContextTokens - Estimate(system);
-        var content = TailTruncate(next.Content ?? string.Empty, budget);
-        return new Prompt(system, $"{JobLabel}\n{content}");
+        return BuildPrompt(system, next.Content, budget, dropped, total);
     }
 
-    internal static string MemoryBlock(IReadOnlyList<MemorySnapshotRow>? rows)
+    private static Prompt BuildPrompt(string system, string? content, int budgetTokens, int droppedRows, int totalRows)
     {
-        if (rows == null || rows.Count == 0) return NoMemoryText;
+        var original = content ?? string.Empty;
+        var truncated = TailTruncate(original, budgetTokens);
+        return new Prompt(system, $"{JobLabel}\n{truncated}",
+            Estimate(system), Estimate(truncated),
+            original.Length, original.Length - truncated.Length,
+            droppedRows, totalRows);
+    }
+
+    internal static string MemoryBlock(IReadOnlyList<MemorySnapshotRow>? rows, out int droppedRows, out int totalRows)
+    {
+        totalRows = rows?.Count ?? 0;
+        if (rows == null || rows.Count == 0)
+        {
+            droppedRows = 0;
+            return NoMemoryText;
+        }
 
         var budget = MemoryTokenCap * CharsPerToken;
         var lines = new List<string>(rows.Count);
@@ -71,6 +94,7 @@ public sealed class PromptBuilder(string rubricTemplate, string rubricTailorTemp
             used += line.Length;
         }
 
+        droppedRows = rows.Count - lines.Count;
         return lines.Count == 0 ? NoMemoryText : string.Join("\n", lines);
     }
 

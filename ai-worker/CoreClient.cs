@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 
@@ -24,6 +25,7 @@ public sealed class CoreClient
 
     public async Task<AiNextPayload> FetchNextAsync(CancellationToken ct)
     {
+        var watch = Stopwatch.StartNew();
         HttpResponseMessage response;
         try
         {
@@ -40,8 +42,13 @@ public sealed class CoreClient
 
         using (response)
         {
+            watch.Stop();
+            WorkerLog.Debug("core GET /ai/next -> {Status} in {ElapsedMs} ms",
+                (int)response.StatusCode, watch.ElapsedMilliseconds);
+
             if (!response.IsSuccessStatusCode)
-                throw new CoreAbortException($"GET /ai/next returned {(int)response.StatusCode}");
+                throw new CoreAbortException(
+                    $"GET /ai/next returned {(int)response.StatusCode}: {await ErrorSnippetAsync(response, ct)}");
 
             var body = await ReadAsync(response, ct);
             AiNextPayload? payload;
@@ -59,6 +66,7 @@ public sealed class CoreClient
 
     public async Task<MemorySnapshot> FetchMemorySnapshotAsync(CancellationToken ct)
     {
+        var watch = Stopwatch.StartNew();
         HttpResponseMessage response;
         try
         {
@@ -75,8 +83,13 @@ public sealed class CoreClient
 
         using (response)
         {
+            watch.Stop();
+            WorkerLog.Debug("core GET /ai/memory -> {Status} in {ElapsedMs} ms",
+                (int)response.StatusCode, watch.ElapsedMilliseconds);
+
             if (!response.IsSuccessStatusCode)
-                throw new CoreAbortException($"GET /ai/memory returned {(int)response.StatusCode}");
+                throw new CoreAbortException(
+                    $"GET /ai/memory returned {(int)response.StatusCode}: {await ErrorSnippetAsync(response, ct)}");
 
             var body = await ReadAsync(response, ct);
             MemorySnapshot? snapshot;
@@ -95,6 +108,7 @@ public sealed class CoreClient
     public async Task<PostVerdictResult> PostVerdictAsync(long jobId, VerdictPayload verdict, CancellationToken ct)
     {
         var body = JsonSerializer.Serialize(verdict, Json);
+        var watch = Stopwatch.StartNew();
         HttpResponseMessage response;
         try
         {
@@ -112,13 +126,33 @@ public sealed class CoreClient
 
         using (response)
         {
+            watch.Stop();
+            WorkerLog.Debug("core POST /ai/verdict -> {Status} in {ElapsedMs} ms",
+                (int)response.StatusCode, watch.ElapsedMilliseconds);
+
             var status = (int)response.StatusCode;
             if (status == 404) return PostVerdictResult.JobMissing;
             if (response.IsSuccessStatusCode) return PostVerdictResult.Accepted;
 
-            var detail = await ReadAsync(response, ct);
+            var detail = await ErrorSnippetAsync(response, ct);
             throw new CoreAbortException(
-                $"POST /ai/verdict returned {status} for job {jobId}{(status == 400 ? $" (worker bug): {detail}" : string.Empty)}");
+                $"POST /ai/verdict returned {status} for job {jobId}: {detail}{(status == 400 ? " (worker bug)" : string.Empty)}");
+        }
+    }
+
+    private static async Task<string> ErrorSnippetAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        try
+        {
+            return WorkerLog.Snippet(await response.Content.ReadAsStringAsync(ct), 200);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return $"(body unreadable: {ex.Message})";
         }
     }
 

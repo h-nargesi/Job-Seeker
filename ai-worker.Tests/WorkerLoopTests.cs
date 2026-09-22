@@ -66,6 +66,18 @@ public sealed class WorkerLoopTests
         return "{\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": " + embedded + "}}]}";
     }
 
+    private static string LlmContentWithMeta(string verdictJson,
+        int? promptTokens = null, int? completionTokens = null, string? finishReason = null)
+    {
+        var embedded = JsonSerializer.Serialize(verdictJson);
+        var usage = promptTokens is null || completionTokens is null
+            ? "null"
+            : $$"""{"prompt_tokens": {{promptTokens}}, "completion_tokens": {{completionTokens}}}""";
+        var finish = finishReason is null ? "null" : $"\"{finishReason}\"";
+        return "{\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": " + embedded
+            + "}, \"finish_reason\": " + finish + "}], \"usage\": " + usage + "}";
+    }
+
     private const string ValidVerdict =
         """{"relevance": 82, "verdict": "Match", "reason": "ok", "seniority": "Senior", "salary_min": 60000, "salary_max": 80000, "currency": "EUR", "period": "Year", "work_model": "Hybrid", "contract": "Permanent", "experience_years": 5, "skills": [".NET"]}""";
 
@@ -350,6 +362,46 @@ public sealed class WorkerLoopTests
         Assert.Single(coreHandler.Requests);
         Assert.Equal("/ai/memory", coreHandler.Requests[0].RequestUri!.AbsolutePath);
         Assert.Empty(llmHandler.Requests);
+    }
+
+    [Fact]
+    public async Task UsageAndFinishReasonAreCarriedThrough()
+    {
+        var coreHandler = new FakeHandler();
+        var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(NextJob(41));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextEmpty());
+        llmHandler.RespondJson(LlmContentWithMeta(ValidVerdict, 1500, 220, "stop"));
+        llmHandler.RespondJson(LlmContentWithMeta(ValidDelta, 3000, 350, "stop"));
+
+        var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
+
+        Assert.Equal(WorkerLoop.ExitOk, exit);
+        var verdict = JsonDocument.Parse(coreHandler.Bodies[0]).RootElement;
+        Assert.Equal("Match", verdict.GetProperty("verdict").GetString());
+    }
+
+    [Fact]
+    public async Task FinishReasonLengthWithInvalidOutputStillYieldsErrorVerdict()
+    {
+        var coreHandler = new FakeHandler();
+        var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(NextJob(42));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextEmpty());
+        llmHandler.RespondJson(LlmContentWithMeta("oops not json", 100, 4000, "length"));
+        llmHandler.RespondJson(LlmContentWithMeta("""{"verdict": "Match"}""", 100, 4000, "length"));
+
+        var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
+
+        Assert.Equal(WorkerLoop.ExitOk, exit);
+        Assert.Equal(2, llmHandler.Requests.Count);
+        var verdict = JsonDocument.Parse(coreHandler.Bodies[0]).RootElement;
+        Assert.Equal("Error", verdict.GetProperty("verdict").GetString());
+        Assert.False(verdict.TryGetProperty("delta", out _));
     }
 
     [Fact]

@@ -1,7 +1,15 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 
 namespace AiWorker;
+
+public sealed record LlmResult(
+    string Content,
+    int? PromptTokens,
+    int? CompletionTokens,
+    string? FinishReason,
+    long ElapsedMs);
 
 public sealed class LlmClient
 {
@@ -19,12 +27,12 @@ public sealed class LlmClient
             http.DefaultRequestHeaders.Add("Authorization", $"Bearer {options.ApiKey}");
     }
 
-    public Task<string> CompleteAsync(string system, string user, CancellationToken ct)
+    public Task<LlmResult> CompleteAsync(string system, string user, CancellationToken ct)
     {
         return CompleteAsync(system, user, VerdictSchema.ResponseFormat, ct);
     }
 
-    public async Task<string> CompleteAsync(string system, string user, string responseFormat, CancellationToken ct)
+    public async Task<LlmResult> CompleteAsync(string system, string user, string responseFormat, CancellationToken ct)
     {
         var request = new Dictionary<string, object?>
         {
@@ -40,6 +48,7 @@ public sealed class LlmClient
             ["response_format"] = JsonDocument.Parse(responseFormat).RootElement.Clone(),
         };
         var body = JsonSerializer.Serialize(request);
+        var watch = Stopwatch.StartNew();
 
         HttpResponseMessage response;
         try
@@ -72,15 +81,17 @@ public sealed class LlmClient
                 throw new LlmUnavailableException($"model response read failed: {ex.Message}");
             }
 
+            watch.Stop();
+
             if (!response.IsSuccessStatusCode)
                 throw new LlmUnavailableException(
                     $"model endpoint returned {(int)response.StatusCode}: {Snippet(raw)}");
 
-            return ExtractContent(raw);
+            return Extract(raw) with { ElapsedMs = watch.ElapsedMilliseconds };
         }
     }
 
-    internal static string ExtractContent(string raw)
+    internal static LlmResult Extract(string raw)
     {
         try
         {
@@ -91,19 +102,37 @@ public sealed class LlmClient
                 choices.ValueKind == JsonValueKind.Array &&
                 choices.GetArrayLength() > 0)
             {
-                var message = choices[0];
-                if (message.ValueKind == JsonValueKind.Object &&
-                    message.TryGetProperty("message", out var header) &&
+                var choice = choices[0];
+                if (choice.ValueKind == JsonValueKind.Object &&
+                    choice.TryGetProperty("message", out var header) &&
                     header.ValueKind == JsonValueKind.Object &&
                     header.TryGetProperty("content", out var content) &&
                     content.ValueKind == JsonValueKind.String)
-                    return content.GetString()!;
+                {
+                    return new LlmResult(
+                        content.GetString()!,
+                        TokenCount(root, "prompt_tokens"),
+                        TokenCount(root, "completion_tokens"),
+                        choice.TryGetProperty("finish_reason", out var finish) && finish.ValueKind == JsonValueKind.String
+                            ? finish.GetString()
+                            : null,
+                        0);
+                }
             }
         }
         catch (JsonException)
         {
         }
-        throw new ModelOutputException("chat response missing choices[0].message.content");
+        throw new ModelOutputException("chat response missing choices[0].message.content", raw);
+    }
+
+    private static int? TokenCount(JsonElement root, string property)
+    {
+        if (!root.TryGetProperty("usage", out var usage) || usage.ValueKind != JsonValueKind.Object)
+            return null;
+        if (!usage.TryGetProperty(property, out var value) || value.ValueKind != JsonValueKind.Number)
+            return null;
+        return value.TryGetInt32(out var tokens) ? tokens : null;
     }
 
     private static string Snippet(string text)
