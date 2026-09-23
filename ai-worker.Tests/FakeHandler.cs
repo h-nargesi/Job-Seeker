@@ -13,6 +13,18 @@ public sealed class FakeHandler : HttpMessageHandler
 
     public int Remaining => script.Count;
 
+    public string BodyOf(HttpRequestMessage request)
+    {
+        var index = Requests.IndexOf(request);
+        var body_index = Requests.Take(index + 1).Count(r => r.Content is not null) - 1;
+        return Bodies[body_index];
+    }
+
+    public void Respond(Func<HttpRequestMessage, HttpResponseMessage> handler)
+    {
+        script.Enqueue(handler);
+    }
+
     public void RespondJson(string body, HttpStatusCode status = HttpStatusCode.OK)
     {
         script.Enqueue(_ => new HttpResponseMessage(status)

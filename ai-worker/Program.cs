@@ -24,10 +24,13 @@ var log_path = config["Logging:FilePath"] ?? "logs/worker.log";
 var log_directory = Path.GetDirectoryName(log_path);
 if (!string.IsNullOrEmpty(log_directory)) Directory.CreateDirectory(log_directory);
 
+WorkerLog.StartRun(Path.Combine(string.IsNullOrEmpty(log_directory) ? "." : log_directory, "runs"));
+
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .WriteTo.Console(LogEventLevel.Debug)
     .WriteTo.File(log_path, file_level, rollingInterval: RollingInterval.Day)
+    .WriteTo.File(Path.Combine(WorkerLog.RunsDirectory, WorkerLog.RunId + ".log"), LogEventLevel.Debug)
     .CreateLogger();
 
 try

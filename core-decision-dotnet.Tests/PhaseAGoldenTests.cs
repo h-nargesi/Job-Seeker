@@ -19,6 +19,7 @@ internal sealed class GoldenDatabase : IDisposable
         ExecuteRaw(DDL_TREND);
         ExecuteRaw(DDL_APP_SETTING);
         ExecuteRaw(DDL_MEMORY);
+        ExecuteRaw(DDL_AI_RUN);
         ExecuteRaw("INSERT INTO Agency (AgencyID, Title, Active, Domain, Link) VALUES (1, 'Golden', 3, 'example.com', 'https://example.com')");
         Database = new Database(Connection);
     }
@@ -146,6 +147,33 @@ CREATE TABLE Memory (
     UseCount        integer     not null    default 0,
     CreatedAt       timestamp   not null    default current_timestamp,
     UpdatedAt       timestamp   not null    default current_timestamp
+)";
+
+    public const string DDL_AI_RUN = @"
+CREATE TABLE AiRun (
+    RunID               text    not null    primary key,
+    StartedUtc          text    not null,
+    FinishedUtc         text    not null,
+    ExitCode            integer not null,
+    Model               text        null,
+    Temperature         real    not null    default 0.2,
+    Seed                integer not null    default 0,
+    RubricHash          text        null,
+    RubricTailorHash    text        null,
+    Jobs                integer not null    default 0,
+    Promoted            integer not null    default 0,
+    ErrorVerdicts       integer not null    default 0,
+    Gone404             integer not null    default 0,
+    Retries             integer not null    default 0,
+    LlmFailures         integer not null    default 0,
+    PromptTokens        integer not null    default 0,
+    CompletionTokens    integer not null    default 0,
+    CallMs              integer not null    default 0,
+    WallSeconds         real    not null    default 0,
+    FinishReasonLength  integer not null    default 0,
+    TruncatedJobs       integer not null    default 0,
+    DroppedMemoryRows   integer not null    default 0,
+    ErrorJobIds         text        null
 )";
 }
 

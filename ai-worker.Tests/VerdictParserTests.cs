@@ -50,6 +50,7 @@ public sealed class VerdictParserTests
     [InlineData("""{"relevance": 82, "verdict": "Match", "reason": "x", "work_model": "WFH", "skills": []}""")]
     [InlineData("""{"relevance": 82, "verdict": "Match", "reason": "x", "relocation_support": "Maybe", "skills": []}""")]
     [InlineData("""{"relevance": 82, "verdict": "Match", "reason": "x", "salary_min": -1, "skills": []}""")]
+    [InlineData("""{"relevance": 82, "verdict": "Match", "reason": "x", "salary_min": 90000, "salary_max": 60000, "skills": []}""")]
     [InlineData("""{"relevance": 82, "verdict": "Match", "reason": "x", "experience_years": 51, "skills": []}""")]
     [InlineData("""{"verdict": "Match", "reason": "x", "skills": []}""")]
     public void InvalidOutputFails(string content)

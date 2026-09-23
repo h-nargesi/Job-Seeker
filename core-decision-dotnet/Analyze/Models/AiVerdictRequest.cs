@@ -92,6 +92,12 @@ public sealed class AiVerdictRequest
             return false;
         }
 
+        if (SalaryMin is not null && SalaryMax is not null && SalaryMin > SalaryMax)
+        {
+            error = "salary_min must be <= salary_max";
+            return false;
+        }
+
         if (ExperienceYears is int years && (years < 0 || years > ExperienceMaxYears))
         {
             error = $"experience_years must be 0-{ExperienceMaxYears}";

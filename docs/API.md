@@ -195,7 +195,7 @@ worker calls this at run start — never per job.
 Idempotent upsert. Body is the call-1 JSON (snake_case extraction fields). An absent `delta` is ignored.
 
 - **Required**: `relevance` (0–100), `verdict` (AiVerdict name), `fingerprint`.
-- **Optional**: `reason` (≤ 2000), `skills` (≤ 20), `seniority` / `period` / `work_model` / `relocation_support` (`Yes`/`No`/`Unknown`) / `contract` (enum names), `salary_min` / `salary_max` (≥ 0), `experience_years` (0–50), `currency`, `delta`.
+- **Optional**: `reason` (≤ 2000), `skills` (≤ 20), `seniority` / `period` / `work_model` / `relocation_support` (`Yes`/`No`/`Unknown`) / `contract` (enum names), `salary_min` / `salary_max` (≥ 0, min ≤ max when both present), `experience_years` (0–50), `currency`, `delta`.
 - `delta` (call-2 tailoring, validated by the core independently of the verdict):
   `{ keys: [...], included: [...], notIncluded: [...], length: 1|2, texts: { slot: "..." } }`.
   - Applied only when the verdict promotes the job to `Attention` (queued,
@@ -209,6 +209,18 @@ Idempotent upsert. Body is the call-1 JSON (snake_case extraction fields). An ab
   - The halves validate independently; an invalid half is dropped (with the
     reason in `job.Log`), never a 400. The raw delta is appended to `job.Log`.
 - **404** if the job is gone; **400** `{ error: "validation", message }` if the payload is rejected.
+
+### `POST /ai/run-report`
+Telemetry upsert (monitoring program, 2026-09-23). One row per worker *run* in
+the `AiRun` table, `INSERT OR REPLACE` by `runId` — re-posts are harmless. See
+[`AI_MONITORING.md`](AI_MONITORING.md) for the field list and the local log
+layout.
+
+- **Body**: the Tier-1 aggregate payload (`runId`, `startedUtc`, `finishedUtc`
+  ISO text, `exitCode` 0–255, `model`, `temperature` 0–2, `seed`, rubric
+  hashes ≤ 32 chars, non-negative counters, `errorJobIds` ≤ 50 ids).
+- **400** `{ error: "validation", message }` on invalid payloads; otherwise
+  `200`. The worker treats a failed POST as warn + one retry, never an abort.
 
 ## Apply-assistant API — `AssistantController`
 

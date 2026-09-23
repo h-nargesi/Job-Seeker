@@ -140,6 +140,43 @@ public sealed class CoreClient
         }
     }
 
+    public const int RunReportAttempts = 2;
+
+    public async Task PostRunReportAsync(RunReport report, CancellationToken ct = default)
+    {
+        var body = JsonSerializer.Serialize(report, Json);
+        for (var attempt = 1; attempt <= RunReportAttempts; attempt++)
+        {
+            var watch = Stopwatch.StartNew();
+            try
+            {
+                using var response = await http.PostAsync("ai/run-report",
+                    new StringContent(body, Encoding.UTF8, "application/json"), ct);
+                watch.Stop();
+                WorkerLog.Debug("core POST /ai/run-report -> {Status} in {ElapsedMs} ms",
+                    (int)response.StatusCode, watch.ElapsedMilliseconds);
+
+                if (response.IsSuccessStatusCode) return;
+
+                var detail = await ErrorSnippetAsync(response, ct);
+                WorkerLog.Warn("POST /ai/run-report returned {Status}: {Detail}",
+                    (int)response.StatusCode, detail);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                WorkerLog.Warn("POST /ai/run-report failed: {Message}", ex.Message);
+            }
+
+            if (attempt < RunReportAttempts)
+                WorkerLog.Warn("retrying POST /ai/run-report (attempt {Attempt} of {Attempts})",
+                    attempt + 1, RunReportAttempts);
+        }
+    }
+
     private static async Task<string> ErrorSnippetAsync(HttpResponseMessage response, CancellationToken ct)
     {
         try

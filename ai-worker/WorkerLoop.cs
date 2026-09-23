@@ -34,17 +34,32 @@ public sealed class WorkerLoop
         {
             var code = await RunQueueAsync(stats, ct);
             Summary(code == ExitOk ? "complete" : "aborted", code, stats);
+            await PostReportAsync(code, stats);
             return code;
         }
         catch (OperationCanceledException)
         {
             Summary("aborted", ExitInterrupted, stats);
+            await PostReportAsync(ExitInterrupted, stats);
             throw;
         }
         catch (Exception)
         {
             Summary("aborted", ExitUnexpected, stats);
+            await PostReportAsync(ExitUnexpected, stats);
             throw;
+        }
+    }
+
+    private async Task PostReportAsync(int code, RunStats stats)
+    {
+        try
+        {
+            await core.PostRunReportAsync(RunReport.From(WorkerLog.RunId, code, options, stats));
+        }
+        catch (Exception ex)
+        {
+            WorkerLog.Warn("run report POST failed: {Message}", ex.Message);
         }
     }
 
@@ -128,7 +143,11 @@ public sealed class WorkerLoop
                     }
                 }
 
-                if (verdict.Verdict == "Error") stats.ErrorVerdicts++;
+                if (verdict.Verdict == "Error")
+                {
+                    stats.ErrorVerdicts++;
+                    stats.RecordErrorJob(job_id);
+                }
 
                 var outcome = await core.PostVerdictAsync(job_id, verdict, ct);
                 if (outcome == PostVerdictResult.JobMissing)
@@ -170,6 +189,7 @@ public sealed class WorkerLoop
     {
         var message = prompt.Compose(next, rankingMemory);
         LogPrompt(jobId, 1, message);
+        stats.RecordTruncationIfAny(jobId, message);
         Exception? last = null;
 
         for (var attempt = 1; attempt <= MaxModelAttempts; attempt++)
@@ -206,6 +226,7 @@ public sealed class WorkerLoop
     {
         var message = prompt.ComposeTailor(next, resumeMemory);
         LogPrompt(jobId, 2, message);
+        stats.RecordTruncationIfAny(jobId, message);
 
         for (var attempt = 1; attempt <= MaxModelAttempts; attempt++)
         {
@@ -237,8 +258,12 @@ public sealed class WorkerLoop
 
     private void Banner()
     {
-        WorkerLog.Info("run starting: model {Model}, temperature {Temperature}, seed {Seed}",
-            options?.Model ?? "n/a", options?.Temperature ?? LlmOptions.DefaultTemperature, options?.Seed ?? 0);
+        WorkerLog.Info("run {RunId} starting: model {Model}, temperature {Temperature}, seed {Seed}",
+            WorkerLog.RunId, options?.Model ?? "n/a", options?.Temperature ?? LlmOptions.DefaultTemperature,
+            options?.Seed ?? 0);
+        WorkerLog.Info("rubric {RubricHash}, rubric-tailor {RubricTailorHash}",
+            options == null ? "n/a" : RunReport.ShortHash(options.Rubric),
+            options == null ? "n/a" : RunReport.ShortHash(options.RubricTailor));
         WorkerLog.Info(
             "endpoints: core {Core}, llm {Llm}; context {MaxContextTokens} tok, memory cap {MemoryTokenCap} tok, timeout {TimeoutSeconds}s, max completion {MaxCompletionTokens} tok",
             options?.Core ?? "n/a", options?.BaseUrl ?? "n/a",
@@ -292,12 +317,17 @@ public sealed class WorkerLoop
         WorkerLog.WriteFailureDump(jobId, callNo, attempt, raw);
     }
 
-    private static void Summary(string outcome, int code, RunStats stats)
+    private void Summary(string outcome, int code, RunStats stats)
     {
         WorkerLog.Info(
-            "run {Outcome} exit {Code}: jobs {Jobs}, promoted {Promoted}, errors {Errors}, 404 {Gone}, retries {Retries}, llm failures {LlmFailures}, wall {Wall:F1}s, avg {Avg:F1}s/job, tokens in {PromptTokens} / out {CompletionTokens}",
-            outcome, code, stats.Jobs, stats.Promoted, stats.ErrorVerdicts, stats.Gone, stats.Retries,
-            stats.LlmFailures, stats.WallSeconds, stats.AvgSecondsPerJob, stats.PromptTokens, stats.CompletionTokens);
+            "run {RunId} {Outcome} exit {Code}: jobs {Jobs}, promoted {Promoted}, errors {Errors}, 404 {Gone}, retries {Retries}, llm failures {LlmFailures}, wall {Wall:F1}s, avg {Avg:F1}s/job, tokens in {PromptTokens} / out {CompletionTokens}, length-finishes {FinishReasonLength}, truncated jobs {TruncatedJobs}, dropped memory rows {DroppedMemoryRows}",
+            WorkerLog.RunId, outcome, code, stats.Jobs, stats.Promoted, stats.ErrorVerdicts, stats.Gone,
+            stats.Retries, stats.LlmFailures, stats.WallSeconds, stats.AvgSecondsPerJob,
+            stats.PromptTokens, stats.CompletionTokens, stats.FinishReasonLength,
+            stats.TruncatedJobs, stats.DroppedMemoryRows);
+
+        var report = RunReport.From(WorkerLog.RunId, code, options, stats);
+        WorkerLog.WriteRunSummary(report.ToJson());
     }
 
     private static int Abort(int code, string message)

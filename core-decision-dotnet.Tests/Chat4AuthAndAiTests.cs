@@ -16,6 +16,7 @@ public class Chat4AuthAndAiTests
     [InlineData("search-secret", "/job/promote", "POST", false)]
     [InlineData("worker-secret", "/ai/next", "GET", true)]
     [InlineData("worker-secret", "/ai/verdict", "POST", true)]
+    [InlineData("worker-secret", "/ai/run-report", "POST", true)]
     [InlineData("worker-secret", "/decision/take", "POST", false)]
     [InlineData("dash-secret", "/ai/next", "GET", true)]
     [InlineData("dash-secret", "/job/promote", "POST", true)]
@@ -90,6 +91,7 @@ public class Chat4AuthAndAiTests
     [InlineData("""{"relevance":80,"verdict":"Match"}""", "fingerprint")]
     [InlineData("""{"relevance":80,"verdict":"Match","fingerprint":"abc","experience_years":51}""", "experience")]
     [InlineData("""{"relevance":80,"verdict":"Match","fingerprint":"abc","salary_min":-1}""", "salary")]
+    [InlineData("""{"relevance":80,"verdict":"Match","fingerprint":"abc","salary_min":90000,"salary_max":60000}""", "salary_min must be <= salary_max")]
     public void Verdict_rejects_invalid_fields(string json, string hint)
     {
         var body = JsonSerializer.Deserialize<AiVerdictRequest>(json)!;

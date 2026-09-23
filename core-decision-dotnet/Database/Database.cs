@@ -9,12 +9,13 @@ namespace Photon.JobSeeker
         private readonly SQLiteConnection connection;
         private SQLiteTransaction? transaction;
 
-        private TrendBusiness? trend_business;
-        private JobBusiness? job_business;
-        private AgencyBusiness? agency_business;
-        private JobOptionBusiness? job_option_business;
-        private AppSettingBusiness? app_setting_business;
-        private MemoryBusiness? memory_business;
+    private TrendBusiness? trend_business;
+    private JobBusiness? job_business;
+    private AgencyBusiness? agency_business;
+    private JobOptionBusiness? job_option_business;
+    private AppSettingBusiness? app_setting_business;
+    private MemoryBusiness? memory_business;
+    private AiRunBusiness? ai_run_business;
 
         static Database() => SqliteTypeHandlers.Register();
 
@@ -124,5 +125,7 @@ namespace Photon.JobSeeker
         internal AppSettingBusiness AppSetting => app_setting_business ??= new AppSettingBusiness(this);
 
         internal MemoryBusiness Memory => memory_business ??= new MemoryBusiness(this);
+
+    internal AiRunBusiness AiRun => ai_run_business ??= new AiRunBusiness(this);
     }
 }

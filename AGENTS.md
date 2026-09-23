@@ -51,7 +51,7 @@ Job-Seeker/
 │   ├── structure/             # agency.sql, job.sql, job-option.sql, trend.sql
 │   ├── installation.sh        # creates/reseeds the schema
 │   └── data.sqlite3           # main DB (gitignored)
-├── Job Seeker.sln            # VS solution (contains only core-decision;
+├── core-decision.sln          # VS solution (contains only core-decision;
 │                             # run tests on core-decision-dotnet.Tests directly)
 └── job-seeker.sh              # runs the published binary on port 8081
 ```
@@ -63,7 +63,7 @@ The server is .NET 8. There is **no JS build step**. Tests live in
 
 ```bash
 # Build (from repo root)
-dotnet build "Job Seeker.sln"
+dotnet build core-decision.sln
 
 # Run the server (development)
 dotnet run --project core-decision-dotnet
@@ -126,12 +126,12 @@ with the **Assistant** key — never both extensions in one browser.
 
 | Check        | Command | Notes |
 |--------------|---------|-------|
-| Compile      | `dotnet build "Job Seeker.sln"` | Primary validation gate. Warnings are treated seriously (`<Nullable>enable</Nullable>`). |
+| Compile      | `dotnet build core-decision.sln` | Primary validation gate. Warnings are treated seriously (`<Nullable>enable</Nullable>`). |
 | Extension JS | `cd agent-extension && npm test` | node:test + happy-dom; sources stay classic scripts loaded via `node:vm` (no build step). Also verify manually by loading the unpacked extension and watching the `AGENT` console logs. |
 | Assistant JS | `cd assistant-extension && npm test` | same node:test + happy-dom pattern for the apply assistant (`ASSISTANT` logs). |
 | Tests        | `dotnet test core-decision-dotnet.Tests/core-decision-dotnet.Tests.csproj` | xUnit project `core-decision-dotnet.Tests` — not in the solution, run it directly. |
 
-After editing C#, **always run `dotnet build "Job Seeker.sln"`** before declaring done.
+After editing C#, **always run `dotnet build core-decision.sln`** before declaring done.
 
 ## 4. How the pieces talk (the request loop)
 
@@ -225,6 +225,7 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | AI / memory terms | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) (English); chat translations in [`GLOSSARY.fa.md`](GLOSSARY.fa.md) |
 | API surface | [`docs/API.md`](docs/API.md) |
 | Scoring & state machines | [`docs/SCORING.md`](docs/SCORING.md) |
+| Monitor AI worker runs / panel at `/monitor` | [`docs/AI_MONITORING.md`](docs/AI_MONITORING.md) |
 
 ## 7. Things that bite
 

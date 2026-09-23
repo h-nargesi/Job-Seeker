@@ -38,6 +38,8 @@ public static class VerdictParser
 
         var salaryMin = OptionalInt(root, "salary_min", 0, int.MaxValue);
         var salaryMax = OptionalInt(root, "salary_max", 0, int.MaxValue);
+        if (salaryMin is not null && salaryMax is not null && salaryMin > salaryMax)
+            throw new ModelOutputException("salary_min must be <= salary_max");
         var experience = OptionalInt(root, "experience_years", 0, 50);
         var skills = OptionalSkills(root);
 

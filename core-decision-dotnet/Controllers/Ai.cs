@@ -74,4 +74,25 @@ public class AiController(
             throw;
         }
     }
+
+    [HttpPost("/ai/run-report")]
+    public IActionResult RunReport([FromBody] AiRunReportRequest? body)
+    {
+        try
+        {
+            if (body == null)
+                return BadRequest(new { error = "validation", message = "missing body" });
+
+            if (!body.TryCreate(out var run, out var error))
+                return BadRequest(new { error = "validation", message = error });
+
+            database.AiRun.Upsert(run);
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
 }
