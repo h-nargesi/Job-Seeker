@@ -13,29 +13,14 @@ public sealed class AiNextPayload
     [JsonPropertyName("content")]
     public string? Content { get; set; }
 
-    [JsonPropertyName("resume")]
-    public string? Resume { get; set; }
-
-    [JsonPropertyName("keywords")]
-    public List<JobKeyword>? Keywords { get; set; }
-
     [JsonPropertyName("fingerprint")]
     public string? Fingerprint { get; set; }
-
-    [JsonPropertyName("settings")]
-    public AiNextSettings? Settings { get; set; }
 
     [JsonPropertyName("options")]
     public string? Options { get; set; }
 
-    [JsonPropertyName("inventory")]
-    public List<InventoryItem>? Inventory { get; set; }
-}
-
-public sealed class AiNextSettings
-{
-    [JsonPropertyName("aipassmark")]
-    public int Aipassmark { get; set; }
+    [JsonPropertyName("contextVersion")]
+    public string? ContextVersion { get; set; }
 }
 
 public sealed class InventoryItem

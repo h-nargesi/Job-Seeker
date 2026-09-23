@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace AiWorker.Tests;
 
 public sealed class LlmClientTests
@@ -11,6 +13,23 @@ public sealed class LlmClientTests
         _ = new LlmClient(http, options);
 
         Assert.Equal(TimeSpan.FromSeconds(150), http.Timeout);
+    }
+
+    [Fact]
+    public async Task RequestBodyPinsSlotAndEnablesPromptCache()
+    {
+        var handler = new FakeHandler();
+        handler.RespondJson("""{"choices": [{"message": {"role": "assistant", "content": "ok"}}]}""");
+        var options = new LlmOptions { BaseUrl = "http://llm.test/v1", Model = "test-model", Slot = 3 };
+
+        await new LlmClient(FakeHttp.Client(handler, "http://llm.test/v1/"), options)
+            .CompleteAsync("system", "user", "{}", 0, CancellationToken.None);
+
+        var body = JsonDocument.Parse(handler.Bodies[0]).RootElement;
+        Assert.True(body.GetProperty("cache_prompt").GetBoolean());
+        Assert.Equal(3, body.GetProperty("id_slot").GetInt32());
+        Assert.Equal("system", body.GetProperty("messages")[0].GetProperty("role").GetString());
+        Assert.Equal("user", body.GetProperty("messages")[1].GetProperty("role").GetString());
     }
 
     [Fact]

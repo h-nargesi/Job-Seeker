@@ -64,13 +64,13 @@ public sealed class CoreClient
         }
     }
 
-    public async Task<MemorySnapshot> FetchMemorySnapshotAsync(CancellationToken ct)
+    public async Task<AiContext> FetchContextAsync(CancellationToken ct)
     {
         var watch = Stopwatch.StartNew();
         HttpResponseMessage response;
         try
         {
-            response = await http.GetAsync("ai/memory", ct);
+            response = await http.GetAsync("ai/context", ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -78,30 +78,30 @@ public sealed class CoreClient
         }
         catch (Exception ex)
         {
-            throw new CoreAbortException($"GET /ai/memory failed: {ex.Message}");
+            throw new CoreAbortException($"GET /ai/context failed: {ex.Message}");
         }
 
         using (response)
         {
             watch.Stop();
-            WorkerLog.Debug("core GET /ai/memory -> {Status} in {ElapsedMs} ms",
+            WorkerLog.Debug("core GET /ai/context -> {Status} in {ElapsedMs} ms",
                 (int)response.StatusCode, watch.ElapsedMilliseconds);
 
             if (!response.IsSuccessStatusCode)
                 throw new CoreAbortException(
-                    $"GET /ai/memory returned {(int)response.StatusCode}: {await ErrorSnippetAsync(response, ct)}");
+                    $"GET /ai/context returned {(int)response.StatusCode}: {await ErrorSnippetAsync(response, ct)}");
 
             var body = await ReadAsync(response, ct);
-            MemorySnapshot? snapshot;
+            AiContext? context;
             try
             {
-                snapshot = JsonSerializer.Deserialize<MemorySnapshot>(body, Json);
+                context = JsonSerializer.Deserialize<AiContext>(body, Json);
             }
             catch (JsonException ex)
             {
-                throw new CoreAbortException($"GET /ai/memory returned invalid JSON: {ex.Message}");
+                throw new CoreAbortException($"GET /ai/context returned invalid JSON: {ex.Message}");
             }
-            return snapshot ?? throw new CoreAbortException("GET /ai/memory returned null payload");
+            return context ?? throw new CoreAbortException("GET /ai/context returned null payload");
         }
     }
 

@@ -18,10 +18,8 @@ public class AiController(
             var job = database.Job.FetchNextAiPending();
             if (job == null) return Ok(AiNextPayload.None);
 
-            var resume = await master_resume.GetAsync(HttpContext);
-            var inventory = await inventory_cache.GetAsync(HttpContext);
-            var keywords = JobKeywords.From(JobEligibilityHelper.SharedOptions(database_factory));
-            return Ok(AiNextPayload.From(job, resume, keywords, database.AppSetting.AiPassmark(), inventory));
+            var context = await BuildContextAsync();
+            return Ok(AiNextPayload.From(job, context.ContextVersion));
         }
         catch (Exception ex)
         {
@@ -31,20 +29,28 @@ public class AiController(
     }
 
     [HttpGet]
-    public IActionResult Memory()
+    public async Task<IActionResult> Context()
     {
         try
         {
-            var cap = database.AppSetting.MemoryCap();
-            var ranking = database.Memory.Snapshot(MemoryScope.Ranking, cap);
-            var resume = database.Memory.Snapshot(MemoryScope.Resume, cap);
-            return Ok(AiMemoryPayload.From(ranking, resume));
+            return Ok(await BuildContextAsync());
         }
         catch (Exception ex)
         {
             Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
             throw;
         }
+    }
+
+    private async Task<AiContextPayload> BuildContextAsync()
+    {
+        var cap = database.AppSetting.MemoryCap();
+        var ranking = database.Memory.Snapshot(MemoryScope.Ranking, cap);
+        var resume = database.Memory.Snapshot(MemoryScope.Resume, cap);
+        var master = await master_resume.GetAsync(HttpContext);
+        var inventory = await inventory_cache.GetAsync(HttpContext);
+        var keywords = JobKeywords.From(JobEligibilityHelper.SharedOptions(database_factory));
+        return AiContextPayload.From(ranking, resume, keywords, master, inventory, database.AppSetting.AiPassmark());
     }
 
     [HttpPost]

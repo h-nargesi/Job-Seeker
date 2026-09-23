@@ -2,243 +2,260 @@ namespace AiWorker.Tests;
 
 public sealed class PromptBuilderTests
 {
-    private const string Rubric = "RUBRIC HEAD. Weight keywords: {{keywords}}. RUBRIC TAIL.";
-    private const string RubricTailor = "TAILOR HEAD. Weight keywords: {{keywords}}. TAILOR TAIL.";
+    private const string Rubric = "RANKING TASK BODY.";
+    private const string RubricTailor = "TAILORING TASK BODY.";
 
     private static PromptBuilder Builder() => new(Rubric, RubricTailor);
 
-    private static int BudgetTokens(string system)
+    private static AiContext Context(
+        string resume = "RESUME TEXT",
+        IReadOnlyList<MemorySnapshotRow>? ranking = null,
+        IReadOnlyList<MemorySnapshotRow>? resumeMemory = null)
     {
-        return Math.Max(PromptBuilder.MaxContextTokens
-            - PromptBuilder.DefaultCompletionReserveTokens
-            - PromptBuilder.EstimateSlackTokens
-            - PromptBuilder.Estimate(system), 0);
+        return new AiContext
+        {
+            RankingMemory = [.. (ranking ?? [])],
+            ResumeMemory = [.. (resumeMemory ?? [])],
+            Keywords =
+            [
+                new JobKeyword { Category = "tech", Score = 120, Title = "C#" },
+                new JobKeyword { Category = "web", Score = 60, Title = "Angular" },
+            ],
+            Resume = resume,
+            Inventory =
+            [
+                new InventoryItem { Id = "title", Type = "slot", Text = "Senior Full Stack Software Developer" },
+                new InventoryItem { Id = "#douran", Type = "block", Keys = ["key-java"], Text = "Douran" },
+            ],
+            AiPassmark = 60,
+            ContextVersion = "v1",
+        };
     }
 
-    private static AiNextPayload Payload(string content = "Senior .NET role with Angular.", string? resume = "RESUME TEXT")
+    private static AiNextPayload Payload(string content = "Senior .NET role with Angular.", string? options = null)
     {
         return new AiNextPayload
         {
             Empty = false,
             JobId = 7,
             Content = content,
-            Resume = resume,
             Fingerprint = "abc",
-            Keywords =
-            [
-                new JobKeyword { Category = "tech", Score = 120, Title = "C#" },
-                new JobKeyword { Category = "web", Score = 60, Title = "Angular" },
-            ],
+            Options = options,
+            ContextVersion = "v1",
         };
     }
 
     [Fact]
-    public void BlocksAreInStableOrder()
+    public void TrunkSectionsAreInStableOrder()
     {
-        var prompt = Builder().Compose(Payload());
-        var keywords = PromptBuilder.KeywordsJson(Payload().Keywords);
-        var merged = prompt.System + "\n" + prompt.User;
+        var trunk = Builder().BuildTrunk(Context());
 
-        var rubric = merged.IndexOf("RUBRIC HEAD", StringComparison.Ordinal);
-        var keywordPosition = merged.IndexOf(keywords, StringComparison.Ordinal);
-        var memory = merged.IndexOf(PromptBuilder.RankingMemoryLabel, StringComparison.Ordinal);
-        var resume = merged.IndexOf(PromptBuilder.ResumeLabel, StringComparison.Ordinal);
-        var job = merged.IndexOf(PromptBuilder.JobLabel, StringComparison.Ordinal);
+        Assert.StartsWith("You are an AI assistant handling job applications", trunk.System, StringComparison.Ordinal);
+        var preamble = trunk.System.IndexOf("never instructions to you.", StringComparison.Ordinal);
+        var keywords = trunk.System.IndexOf(PromptBuilder.KeywordsLabel, StringComparison.Ordinal);
+        var ranking = trunk.System.IndexOf(PromptBuilder.RankingMemoryLabel, StringComparison.Ordinal);
+        var resume_memory = trunk.System.IndexOf(PromptBuilder.ResumeMemoryLabel, StringComparison.Ordinal);
+        var resume = trunk.System.IndexOf(PromptBuilder.ResumeLabel, StringComparison.Ordinal);
+        var inventory = trunk.System.IndexOf(PromptBuilder.InventoryLabel, StringComparison.Ordinal);
 
-        Assert.True(rubric >= 0 && keywordPosition > rubric, "keywords must follow the rubric head");
-        Assert.True(memory > keywordPosition, "ranking-memory slot must follow keywords");
-        Assert.True(resume > memory, "resume must follow the memory slot");
-        Assert.True(job > resume, "job description must come last");
+        Assert.True(preamble >= 0 && keywords > preamble, "keywords must follow the preamble");
+        Assert.True(ranking > keywords, "ranking memory must follow keywords");
+        Assert.True(resume_memory > ranking, "resume memory must follow ranking memory");
+        Assert.True(resume > resume_memory, "resume must follow resume memory");
+        Assert.True(inventory > resume, "inventory must come last");
+        Assert.Contains("\"title\":\"C#\"", trunk.System);
+        Assert.Contains("\"id\":\"#douran\"", trunk.System);
     }
 
     [Fact]
-    public void KeywordsPlaceholderIsInjected()
-    {
-        var prompt = Builder().Compose(Payload());
-
-        Assert.DoesNotContain("{{keywords}}", prompt.System, StringComparison.Ordinal);
-        Assert.Contains("\"title\":\"C#\"", prompt.System);
-    }
-
-    [Fact]
-    public void SystemPromptIsStableAcrossJobs()
+    public void TrunkIsStableAcrossIdenticalContexts()
     {
         var builder = Builder();
-        var first = builder.Compose(Payload(content: "job one text")).System;
-        var second = builder.Compose(Payload(content: "a completely different posting")).System;
 
-        Assert.Equal(first, second);
+        Assert.Equal(builder.BuildTrunk(Context()).System, builder.BuildTrunk(Context()).System);
     }
 
     [Fact]
-    public void OverLongJobTextIsTailTruncated()
+    public void TrunkExposesHashAndTokenEstimate()
+    {
+        var trunk = Builder().BuildTrunk(Context());
+
+        Assert.Equal(RunReport.ShortHash(trunk.System), trunk.Hash);
+        Assert.Equal(trunk.System.Length / PromptBuilder.CharsPerToken, trunk.EstTokens);
+    }
+
+    [Fact]
+    public void VerdictUserMessagePlacesTaskAfterJob()
+    {
+        var builder = Builder();
+        var trunk = builder.BuildTrunk(Context());
+        var prompt = builder.Compose(trunk, Payload(), builder.PrepareJob(trunk, Payload()));
+
+        Assert.Equal(trunk.System, prompt.System);
+        Assert.StartsWith(PromptBuilder.JobLabel, prompt.User, StringComparison.Ordinal);
+        var job = prompt.User.IndexOf(PromptBuilder.JobLabel, StringComparison.Ordinal);
+        var task = prompt.User.IndexOf(PromptBuilder.TaskRankingLabel, StringComparison.Ordinal);
+        Assert.True(task > job, "task must follow the job posting");
+        Assert.EndsWith(Rubric, prompt.User, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TailorUserMessagePlacesSelectionBetweenJobAndTask()
+    {
+        var builder = Builder();
+        var trunk = builder.BuildTrunk(Context());
+        var payload = Payload(options: "{\"Length\": 1, \"Keys\": {\"DOTNET\": []}}");
+        var prompt = builder.ComposeTailor(trunk, payload, builder.PrepareJob(trunk, payload));
+
+        var job = prompt.User.IndexOf(PromptBuilder.JobLabel, StringComparison.Ordinal);
+        var selection = prompt.User.IndexOf(PromptBuilder.SelectionLabel, StringComparison.Ordinal);
+        var task = prompt.User.IndexOf(PromptBuilder.TaskTailoringLabel, StringComparison.Ordinal);
+        Assert.True(job == 0 && selection > job, "selection must follow the job posting");
+        Assert.True(task > selection, "task must follow the selection");
+        Assert.EndsWith(RubricTailor, prompt.User, StringComparison.Ordinal);
+        Assert.Contains(payload.Options!, prompt.User, StringComparison.Ordinal);
+        Assert.DoesNotContain(PromptBuilder.SelectionLabel, prompt.User[..selection], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MissingSelectionRendersEmptyObject()
+    {
+        var builder = Builder();
+        var trunk = builder.BuildTrunk(Context());
+        var prompt = builder.ComposeTailor(trunk, Payload(), builder.PrepareJob(trunk, Payload()));
+
+        var block = prompt.User.Split(PromptBuilder.SelectionLabel + "\n")[1].Split("\n\n")[0];
+        Assert.Equal("{}", block);
+    }
+
+    [Fact]
+    public void RubricsAreUsedVerbatimWithoutSubstitution()
+    {
+        var builder = Builder();
+        var trunk = builder.BuildTrunk(Context());
+        var payload = Payload();
+        var job = builder.PrepareJob(trunk, payload);
+
+        Assert.Contains(Rubric, builder.Compose(trunk, payload, job).User, StringComparison.Ordinal);
+        Assert.Contains(RubricTailor, builder.ComposeTailor(trunk, payload, job).User, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{keywords}}", trunk.System + builder.Compose(trunk, payload, job).User);
+    }
+
+    [Fact]
+    public void JobPostingIsTruncatedOnceAndSharedByteIdentically()
     {
         var huge = new string('x', 400_000) + " UNIQUE TAIL MARKER";
-        var prompt = Builder().Compose(Payload(content: huge, resume: "short"));
+        var builder = Builder();
+        var trunk = builder.BuildTrunk(Context(resume: "short"));
+        var payload = Payload(content: huge);
+        var job = builder.PrepareJob(trunk, payload);
+        var verdict = builder.Compose(trunk, payload, job);
+        var tailor = builder.ComposeTailor(trunk, payload, job);
 
-        var content = prompt.User[(prompt.User.IndexOf(PromptBuilder.JobLabel, StringComparison.Ordinal)
-            + PromptBuilder.JobLabel.Length)..].TrimStart();
-        var expectedChars = BudgetTokens(prompt.System) * PromptBuilder.CharsPerToken;
+        var expected_chars = job.BudgetTokens * PromptBuilder.CharsPerToken;
+        Assert.True(job.Truncated.Length <= expected_chars,
+            $"JD {job.Truncated.Length} chars exceeds budget {expected_chars}");
+        Assert.StartsWith(new string('x', 100), job.Truncated, StringComparison.Ordinal);
+        Assert.DoesNotContain("UNIQUE TAIL MARKER", job.Truncated, StringComparison.Ordinal);
 
-        Assert.True(content.Length <= expectedChars, $"JD {content.Length} chars exceeds budget {expectedChars}");
-        Assert.StartsWith(new string('x', 100), content, StringComparison.Ordinal);
-        Assert.DoesNotContain("UNIQUE TAIL MARKER", content, StringComparison.Ordinal);
+        var verdict_jd = ExtractJobPosting(verdict.User);
+        var tailor_jd = ExtractJobPosting(tailor.User);
+        Assert.Equal(job.Truncated, verdict_jd);
+        Assert.Equal(job.Truncated, tailor_jd);
+
+        Assert.Equal(huge.Length, job.OriginalChars);
+        Assert.Equal(huge.Length - job.Truncated.Length, job.TruncatedChars);
+        Assert.True(job.TruncatedChars > 0);
     }
 
     [Fact]
     public void ShortJobTextIsNotTruncated()
     {
-        var text = "Short posting.";
-        var prompt = Builder().Compose(Payload(content: text));
+        var builder = Builder();
+        var trunk = builder.BuildTrunk(Context());
+        var payload = Payload(content: "Short posting.");
+        var job = builder.PrepareJob(trunk, payload);
 
-        Assert.Contains(text, prompt.User, StringComparison.Ordinal);
+        Assert.Equal(0, job.TruncatedChars);
+        Assert.Contains("Short posting.", builder.Compose(trunk, payload, job).User, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void TailorBlocksAreInStableOrder()
-    {
-        var payload = Payload();
-        payload.Options = "{\"Length\": 1, \"Keys\": {\"DOTNET\": []}}";
-        payload.Inventory =
-        [
-            new InventoryItem { Id = "title", Type = "slot", Text = "Senior Full Stack Software Developer" },
-            new InventoryItem { Id = "#douran", Type = "block", Keys = ["key-java"], Text = "Douran" },
-            new InventoryItem { Id = "#douran li:nth-child(2)", Type = "bullet", Text = "Built services." },
-        ];
-
-        var prompt = Builder().ComposeTailor(payload);
-        var merged = prompt.System + "\n" + prompt.User;
-
-        var rubric = merged.IndexOf("TAILOR HEAD", StringComparison.Ordinal);
-        var memory = merged.IndexOf(PromptBuilder.ResumeMemoryLabel, StringComparison.Ordinal);
-        var inventory = merged.IndexOf(PromptBuilder.InventoryLabel, StringComparison.Ordinal);
-        var selection = merged.IndexOf(PromptBuilder.SelectionLabel, StringComparison.Ordinal);
-        var job = merged.IndexOf(PromptBuilder.JobLabel, StringComparison.Ordinal);
-
-        Assert.True(rubric >= 0 && memory > rubric, "resume-memory slot must follow the rubric");
-        Assert.True(inventory > memory, "inventory must follow the memory slot");
-        Assert.True(selection > inventory, "current selection must follow the inventory");
-        Assert.True(job > selection, "job description must come last");
-
-        Assert.DoesNotContain("{{keywords}}", prompt.System, StringComparison.Ordinal);
-        Assert.Contains("\"id\":\"#douran li:nth-child(2)\"", prompt.System);
-        Assert.Contains(payload.Options!, prompt.System, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void TailorSystemPromptIsStableAcrossJobs()
+    public void CacheablePrefixIsTrunkForCall1AndTrunkPlusJobForCall2()
     {
         var builder = Builder();
-        var payload = Payload(content: "job one text");
-        payload.Inventory = [new InventoryItem { Id = "title", Type = "slot", Text = "Title" }];
-        var other = Payload(content: "a completely different posting");
-        other.Inventory = payload.Inventory;
+        var trunk = builder.BuildTrunk(Context());
+        var payload = Payload();
+        var job = builder.PrepareJob(trunk, payload);
 
-        Assert.Equal(builder.ComposeTailor(payload).System, builder.ComposeTailor(other).System);
-    }
+        var verdict = builder.Compose(trunk, payload, job);
+        var tailor = builder.ComposeTailor(trunk, payload, job);
 
-    [Fact]
-    public void TailorOverLongJobTextIsTailTruncated()
-    {
-        var huge = new string('x', 400_000) + " UNIQUE TAIL MARKER";
-        var payload = Payload(content: huge, resume: "short");
-        payload.Inventory = [new InventoryItem { Id = "title", Type = "slot", Text = "Title" }];
-
-        var prompt = Builder().ComposeTailor(payload);
-
-        var content = prompt.User[(prompt.User.IndexOf(PromptBuilder.JobLabel, StringComparison.Ordinal)
-            + PromptBuilder.JobLabel.Length)..].TrimStart();
-        var expectedChars = BudgetTokens(prompt.System) * PromptBuilder.CharsPerToken;
-
-        Assert.True(content.Length <= expectedChars, $"JD {content.Length} chars exceeds budget {expectedChars}");
-        Assert.DoesNotContain("UNIQUE TAIL MARKER", content, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void EmptyMemoryKeepsPlaceholder()
-    {
-        var prompt = Builder().Compose(Payload());
-        Assert.Contains(PromptBuilder.NoMemoryText, prompt.System, StringComparison.Ordinal);
-
-        prompt = Builder().Compose(Payload(), []);
-        Assert.Contains(PromptBuilder.NoMemoryText, prompt.System, StringComparison.Ordinal);
-
-        var tailor = Builder().ComposeTailor(Payload());
-        Assert.Contains(PromptBuilder.NoMemoryText, tailor.System, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void MemoryRowsAreInjectedAsDataLines()
-    {
-        var ranking = new List<MemorySnapshotRow>
-        {
-            new() { Domain = "*", FieldKey = "remote_only", Kind = "Tip", Value = "remote roles only", Note = null },
-            new() { Domain = "linkedin.com", FieldKey = "relocation", Kind = "Correction", Value = "needs visa", Note = "2026 batch" },
-        };
-
-        var prompt = Builder().Compose(Payload(), ranking);
-        var start = prompt.System.IndexOf(PromptBuilder.RankingMemoryLabel, StringComparison.Ordinal)
-            + PromptBuilder.RankingMemoryLabel.Length;
-        var end = prompt.System.IndexOf(PromptBuilder.ResumeLabel, StringComparison.Ordinal);
-        var block = prompt.System[start..end].Trim();
-
-        Assert.DoesNotContain(PromptBuilder.NoMemoryText, block);
-        var lines = block.Split('\n');
-        Assert.Equal(2, lines.Length);
-        Assert.StartsWith("{\"domain\":\"*\",\"fieldKey\":\"remote_only\"", lines[0]);
-        Assert.StartsWith("{\"domain\":\"linkedin.com\",\"fieldKey\":\"relocation\"", lines[1]);
-        Assert.Contains("\"value\":\"needs visa\"", lines[1]);
-        Assert.Contains("\"note\":\"2026 batch\"", lines[1]);
-
-        var resume_memory = new List<MemorySnapshotRow>
-        {
-            new() { Domain = "*", FieldKey = "summary", Kind = "Tip", Value = "lead with backend scale" },
-        };
-        var tailor = Builder().ComposeTailor(Payload(), resume_memory);
-        Assert.Contains("\"fieldKey\":\"summary\"", tailor.System);
-        Assert.DoesNotContain("\"note\"", tailor.System.Split(PromptBuilder.ResumeMemoryLabel)[1]
-            .Split(PromptBuilder.InventoryLabel)[0], StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void OverLongJobTextReportsTruncationMetrics()
-    {
-        var huge = new string('x', 400_000);
-        var prompt = Builder().Compose(Payload(content: huge, resume: "short"));
-
-        var expectedChars = BudgetTokens(prompt.System) * PromptBuilder.CharsPerToken;
-
-        Assert.Equal(huge.Length, prompt.ContentOriginalChars);
-        Assert.Equal(huge.Length - expectedChars, prompt.ContentTruncatedChars);
-        Assert.True(prompt.ContentTruncatedChars > 0);
+        Assert.Equal(trunk.EstTokens, verdict.CacheablePrefixTokens);
+        Assert.Equal(trunk.EstTokens + PromptBuilder.Estimate(job.Truncated), tailor.CacheablePrefixTokens);
     }
 
     [Fact]
     public void CustomCompletionReserveShrinksContentBudget()
     {
         var huge = new string('x', 400_000);
-        var prompt = new PromptBuilder(Rubric, RubricTailor, 4096)
-            .Compose(Payload(content: huge, resume: "short"));
+        var builder = new PromptBuilder(Rubric, RubricTailor, 4096);
+        var trunk = builder.BuildTrunk(Context(resume: "short"));
+        var job = builder.PrepareJob(trunk, Payload(content: huge));
 
-        var content = prompt.User[(prompt.User.IndexOf(PromptBuilder.JobLabel, StringComparison.Ordinal)
-            + PromptBuilder.JobLabel.Length)..].TrimStart();
-        var expectedChars = Math.Max(PromptBuilder.MaxContextTokens
-            - 4096 - PromptBuilder.EstimateSlackTokens
-            - PromptBuilder.Estimate(prompt.System), 0) * PromptBuilder.CharsPerToken;
+        var overhead = Math.Max(PromptBuilder.Estimate(Rubric),
+            PromptBuilder.Estimate(RubricTailor) + PromptBuilder.Estimate("{}"));
+        var expected_budget = Math.Max(PromptBuilder.MaxContextTokens
+            - 4096 - PromptBuilder.EstimateSlackTokens - trunk.EstTokens - overhead, 0);
 
-        Assert.True(content.Length <= expectedChars, $"JD {content.Length} chars exceeds budget {expectedChars}");
+        Assert.Equal(expected_budget, job.BudgetTokens);
+        Assert.True(job.Truncated.Length <= expected_budget * PromptBuilder.CharsPerToken);
     }
 
     [Fact]
-    public void ShortJobTextReportsZeroTruncation()
+    public void EmptyMemoryKeepsPlaceholder()
     {
-        var prompt = Builder().Compose(Payload(content: "Short posting."));
+        var trunk = Builder().BuildTrunk(Context());
 
-        Assert.Equal(0, prompt.ContentTruncatedChars);
+        Assert.Contains(PromptBuilder.NoMemoryText, trunk.System, StringComparison.Ordinal);
+
+        var context = Context();
+        context.RankingMemory = [];
+        context.ResumeMemory = [];
+        Assert.Contains(PromptBuilder.NoMemoryText, Builder().BuildTrunk(context).System, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void OversizedMemoryListReportsDroppedRows()
+    public void MemoryRowsAreInjectedAsDataLinesUnderTheirLabels()
+    {
+        var ranking = new List<MemorySnapshotRow>
+        {
+            new() { Domain = "*", FieldKey = "remote_only", Kind = "Tip", Value = "remote roles only", Note = null },
+            new() { Domain = "linkedin.com", FieldKey = "relocation", Kind = "Correction", Value = "needs visa", Note = "2026 batch" },
+        };
+        var resume_memory = new List<MemorySnapshotRow>
+        {
+            new() { Domain = "*", FieldKey = "summary", Kind = "Tip", Value = "lead with backend scale" },
+        };
+
+        var trunk = Builder().BuildTrunk(Context(ranking: ranking, resumeMemory: resume_memory));
+        var ranking_block = LabelBlock(trunk.System, PromptBuilder.RankingMemoryLabel, PromptBuilder.ResumeMemoryLabel);
+        var resume_block = LabelBlock(trunk.System, PromptBuilder.ResumeMemoryLabel, PromptBuilder.ResumeLabel);
+
+        Assert.DoesNotContain(PromptBuilder.NoMemoryText, ranking_block);
+        var lines = ranking_block.Split('\n');
+        Assert.Equal(2, lines.Length);
+        Assert.StartsWith("{\"domain\":\"*\",\"fieldKey\":\"remote_only\"", lines[0]);
+        Assert.StartsWith("{\"domain\":\"linkedin.com\",\"fieldKey\":\"relocation\"", lines[1]);
+        Assert.Contains("\"value\":\"needs visa\"", lines[1]);
+        Assert.Contains("\"note\":\"2026 batch\"", lines[1]);
+
+        Assert.Contains("\"fieldKey\":\"summary\"", resume_block);
+        Assert.DoesNotContain("\"note\"", resume_block, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OversizedMemoryListReportsDroppedRowsOnTheTrunk()
     {
         var rows = new List<MemorySnapshotRow>();
         for (var i = 0; i < 100; i++)
@@ -250,13 +267,11 @@ public sealed class PromptBuilderTests
                 Value = new string('v', 200),
             });
 
-        PromptBuilder.MemoryBlock(rows, out var dropped, out var total);
-        Assert.Equal(100, total);
-        Assert.True(dropped > 0);
+        var context = Context(ranking: rows, resumeMemory: rows);
+        var trunk = Builder().BuildTrunk(context);
 
-        var prompt = Builder().Compose(Payload(), rows);
-        Assert.Equal(dropped, prompt.DroppedMemoryRows);
-        Assert.Equal(total, prompt.TotalMemoryRows);
+        Assert.Equal(200, trunk.TotalMemoryRows);
+        Assert.True(trunk.DroppedMemoryRows > 0);
     }
 
     [Fact]
@@ -280,5 +295,19 @@ public sealed class PromptBuilderTests
         foreach (var line in block.Split('\n'))
             Assert.StartsWith("{\"domain\":\"*\",\"fieldKey\":\"key_", line);
         Assert.StartsWith("{\"domain\":\"*\",\"fieldKey\":\"key_0\"", block);
+    }
+
+    private static string ExtractJobPosting(string user)
+    {
+        var after_label = user[(user.IndexOf(PromptBuilder.JobLabel, StringComparison.Ordinal)
+            + PromptBuilder.JobLabel.Length)..].TrimStart();
+        return after_label.Split("\n\n")[0];
+    }
+
+    private static string LabelBlock(string trunk, string label, string nextLabel)
+    {
+        var start = trunk.IndexOf(label, StringComparison.Ordinal) + label.Length;
+        var end = trunk.IndexOf(nextLabel, StringComparison.Ordinal);
+        return trunk[start..end].Trim();
     }
 }

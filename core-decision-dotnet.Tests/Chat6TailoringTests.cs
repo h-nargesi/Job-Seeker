@@ -321,12 +321,13 @@ public sealed class Chat6TailoringTests
         var job = new Job { JobID = 7, Content = "hello" };
         job.Options = new ResumeContext { JobTitle = "Regex title" };
 
-        var payload = AiNextPayload.From(job, "resume", [], 60, Inventory());
-
-        Assert.NotNull(payload.Options);
+        var payload = AiNextPayload.From(job, "v1");
         Assert.Contains("Regex title", payload.Options);
-        Assert.Equal(5, payload.Inventory!.Count);
-        Assert.Contains(payload.Inventory, item => item.Id == "#douran li:nth-child(2)");
+
+        var context = AiContextPayload.From([], [], [], "resume text", Inventory(), 60);
+        Assert.Equal(5, context.Inventory!.Count);
+        Assert.Contains(context.Inventory, item => item.Id == "#douran li:nth-child(2)");
+        Assert.NotNull(context.ContextVersion);
     }
 
     [Fact]

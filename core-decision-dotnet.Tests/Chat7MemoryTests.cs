@@ -22,10 +22,10 @@ public class Chat7MemoryTests
     [InlineData("asst-secret", "/decision/take", "POST", false)]
     [InlineData("asst-secret", "/decision/orders", "GET", false)]
     [InlineData("asst-secret", "/ai/next", "GET", false)]
-    [InlineData("asst-secret", "/ai/memory", "GET", false)]
+    [InlineData("asst-secret", "/ai/context", "GET", false)]
     [InlineData("search-secret", "/assistant/jobs", "GET", false)]
     [InlineData("worker-secret", "/assistant/memory", "GET", false)]
-    [InlineData("worker-secret", "/ai/memory", "GET", true)]
+    [InlineData("worker-secret", "/ai/context", "GET", true)]
     [InlineData("worker-secret", "/assistant/applied", "POST", false)]
     [InlineData("dash-secret", "/assistant/jobs", "GET", true)]
     public void Api_key_role_controls_assistant_path_table(string key, string path, string method, bool allowed)
@@ -66,30 +66,28 @@ public class Chat7MemoryTests
     }
 
     [Fact]
-    public void Snapshot_precedence_is_domain_then_usecount_then_updated()
+    public void Snapshot_ordering_is_deterministic_and_bump_immune()
     {
         using var db = new GoldenDatabase();
         var domain_tip = Insert(db, MemoryScope.Ranking, "remote_only", MemoryKind.Tip, confirmed: true, domain: "linkedin.com");
         var global_a = Insert(db, MemoryScope.Ranking, "remote_only", MemoryKind.Tip, confirmed: true, domain: "*");
-        var global_b = Insert(db, MemoryScope.Ranking, "remote_only", MemoryKind.Tip, confirmed: true, domain: "*");
-        db.ExecuteRaw("UPDATE Memory SET UpdatedAt = '2026-09-01 10:00:00' WHERE MemoryID = $id", ("$id", global_a));
-        db.ExecuteRaw("UPDATE Memory SET UpdatedAt = '2026-09-02 10:00:00' WHERE MemoryID = $id", ("$id", global_b));
+        var relocation = Insert(db, MemoryScope.Ranking, "relocation", MemoryKind.Tip, confirmed: true, domain: "*");
 
         var snapshot = db.Database.Memory.Snapshot(MemoryScope.Ranking, 10);
 
-        Assert.Equal(domain_tip, snapshot[0].MemoryID);
-        Assert.Equal(global_b, snapshot[1].MemoryID);
-        Assert.Equal(global_a, snapshot[2].MemoryID);
+        Assert.Equal(relocation, snapshot[0].MemoryID);
+        Assert.Equal(Math.Min(domain_tip, global_a), snapshot[1].MemoryID);
+        Assert.Equal(Math.Max(domain_tip, global_a), snapshot[2].MemoryID);
 
+        db.Database.Memory.BumpUseCount(relocation);
         db.Database.Memory.BumpUseCount(global_a);
 
-        snapshot = db.Database.Memory.Snapshot(MemoryScope.Ranking, 10);
-        Assert.Equal(global_a, snapshot[1].MemoryID);
-        Assert.Equal(1, snapshot.Single(row => row.MemoryID == global_a).UseCount);
+        var bumped = db.Database.Memory.Snapshot(MemoryScope.Ranking, 10);
+        Assert.Equal(snapshot.Select(row => row.MemoryID), bumped.Select(row => row.MemoryID));
     }
 
     [Fact]
-    public void Memory_endpoint_caps_confirmed_rows_by_memorycap_setting()
+    public void Snapshot_is_capped_by_memorycap_setting()
     {
         using var db = new GoldenDatabase();
         db.ExecuteRaw("INSERT INTO AppSetting (Key, Value) VALUES ('memorycap', '2')");
@@ -99,16 +97,52 @@ public class Chat7MemoryTests
         Insert(db, MemoryScope.Ranking, "salary_floor", MemoryKind.Tip, confirmed: false);
         Insert(db, MemoryScope.Resume, "summary", MemoryKind.Tip, confirmed: true);
 
-        var controller = new AiController(db.Database, null!, null!, null!);
-        var result = controller.Memory();
+        var ranking = db.Database.Memory.Snapshot(MemoryScope.Ranking, db.Database.AppSetting.MemoryCap());
+        var resume = db.Database.Memory.Snapshot(MemoryScope.Resume, db.Database.AppSetting.MemoryCap());
 
-        var payload = Assert.IsType<OkObjectResult>(result).Value as AiMemoryPayload;
-        Assert.NotNull(payload);
-        Assert.Equal(2, payload.Ranking.Count);
-        Assert.Single(payload.Resume);
-        Assert.Equal("no_staffing", payload.Ranking[0].FieldKey);
-        Assert.Equal("relocation", payload.Ranking[1].FieldKey);
-        Assert.Equal("Tip", payload.Ranking[0].Kind);
+        Assert.Equal(2, ranking.Count);
+        Assert.Single(resume);
+        Assert.Equal("no_staffing", ranking[0].FieldKey);
+        Assert.Equal("relocation", ranking[1].FieldKey);
+        Assert.Equal(MemoryKind.Tip, ranking[0].Kind);
+    }
+
+    [Fact]
+    public void Context_payload_version_tracks_run_constants_only()
+    {
+        using var db = new GoldenDatabase();
+        Insert(db, MemoryScope.Ranking, "remote_only", MemoryKind.Tip, confirmed: true);
+        var ranking = db.Database.Memory.Snapshot(MemoryScope.Ranking, db.Database.AppSetting.MemoryCap());
+        var resume = db.Database.Memory.Snapshot(MemoryScope.Resume, db.Database.AppSetting.MemoryCap());
+        var keywords = JobKeywords.From([EligibilityFixture.Option("field", 90, "c#", "C#")]);
+
+        var payload = AiContextPayload.From(ranking, resume, keywords, "resume text", null, 60);
+        var again = AiContextPayload.From(ranking, resume, keywords, "resume text", null, 60);
+
+        Assert.NotEmpty(payload.ContextVersion);
+        Assert.Equal(payload.ContextVersion, again.ContextVersion);
+        Assert.Equal(payload.ContextVersion, AiContextPayload.VersionOf(payload));
+        Assert.Single(payload.RankingMemory);
+        Assert.Equal(60, payload.AiPassmark);
+
+        db.Database.Memory.BumpUseCount(ranking[0].MemoryID);
+        var bumped = db.Database.Memory.Snapshot(MemoryScope.Ranking, db.Database.AppSetting.MemoryCap());
+        var after_bump = AiContextPayload.From(bumped, resume, keywords, "resume text", null, 60);
+        Assert.Equal(payload.ContextVersion, after_bump.ContextVersion);
+
+        var changed = AiContextPayload.From(bumped, resume, keywords, "new resume text", null, 60);
+        Assert.NotEqual(payload.ContextVersion, changed.ContextVersion);
+    }
+
+    [Fact]
+    public void Context_payload_serializes_to_the_worker_contract()
+    {
+        var payload = AiContextPayload.From([], [], [], "resume text", new ResumeInventory([]), 60);
+
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        foreach (var field in "rankingMemory resumeMemory keywords resume inventory aiPassmark contextVersion".Split(' '))
+            Assert.Contains($"\"{field}\":", json);
     }
 
     [Fact]

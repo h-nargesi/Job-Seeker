@@ -163,30 +163,39 @@ the changed field).
 Worker-only (`Auth:ApiKeys:Worker`). Payloads are data, not finished prompts.
 
 ### `GET /ai/next`
-Read-only. Oldest `AiPending` job with `Content`. Empty queue → `200` `{ "empty": true }`.
+Read-only. Oldest `AiPending` job with `Content` in dashboard rank order. Empty queue → `200` `{ "empty": true }`.
 
-- **Response** (when a job exists): `{ empty: false, jobId, content, resume, keywords: [{ category, score, title }], fingerprint, settings: { aipassmark }, options, inventory: [{ id, type, keys, text }] }`.
-- `keywords` comes from cached `JobOption.FetchAll` order with the `reject` category omitted.
+- **Response** (when a job exists): `{ empty: false, jobId, content, fingerprint, options, contextVersion }`.
 - `fingerprint` is SHA-256 hex of whitespace-normalized `Content` (not stored).
-- `resume` is the pruned/stripped master resume (16k-token cap from the top).
 - `options` is the job's current `ResumeContext` as standard JSON (never the
   dashboard's simple-JSON exchange format).
-- `inventory` is the template-derived block inventory (cached in memory like the
-  master resume): `id` = selector (`title`, `summary`, `#article`, `#article
+- `contextVersion` is a short hash (SHA-256, first 12 hex chars) of the exact
+  serialized `/ai/context` payload bytes — the worker compares it across job
+  boundaries and refetches `/ai/context` only on change.
+
+### `GET /ai/context`
+Run constants for a worker run: everything the prompt **trunk** is built from.
+Fetched once at run start; re-fetched only when `contextVersion` changes.
+
+- **Response**: `{ rankingMemory: [...], resumeMemory: [...], keywords: [...], resume, inventory: [...], aiPassmark, contextVersion }`.
+- `rankingMemory` / `resumeMemory`: **confirmed** rows only (`Scope = ranking`
+  / `Scope = resume`), capped at the `memorycap` `AppSetting` (default 500).
+  Snapshot ordering is deterministic and bump-immune: `Correction` first, then
+  `FieldKey` asc, then `MemoryID` asc — a `/assistant/memorybump` cannot
+  reorder prompt rows. (Assistant fill-time lookup keeps the richer
+  precedence: exact `domain` before `*`, `UseCount` desc, newest first.)
+- Row shape: `{ domain, fieldKey, kind, value, note }` (`kind` = `Tip` /
+  `Correction`, camelCase names as stored).
+- `keywords` comes from cached `JobOption.FetchAll` order with the `reject`
+  category omitted; `resume` is the pruned/stripped master resume; `inventory`
+  is the template-derived block inventory (cached in memory like the master
+  resume): `id` = selector (`title`, `summary`, `#article`, `#article
   li:nth-child(n)`, `.key-*`), `type` = `slot`/`block`/`bullet`/`key`, `keys` =
   the block's `key-*` classes, `text` = full template text on editable slots
   (`slot`, `bullet`), ≤ 120-char excerpt elsewhere.
-
-### `GET /ai/memory`
-Worker-run memory snapshot (F1). **Confirmed** rows only, snapshotted when the
-worker calls this at run start — never per job.
-
-- **Response**: `{ ranking: [...], resume: [...] }` — `Scope = ranking` rows
-  for call 1, `Scope = resume` rows for call 2, each capped at the `memorycap`
-  `AppSetting` (default 500) in precedence order: `correction > tip`, exact
-  `domain` before `*`, then `UseCount` desc, then newest `UpdatedAt`.
-- Row shape: `{ domain, fieldKey, kind, value, note }` (`kind` = `Tip` /
-  `Correction`, camelCase names as stored).
+- `contextVersion` covers all fields above (excluded from the hash input
+  itself); any genuine change (memory edit, keywords, resume, inventory,
+  `aipassmark`) flips it.
 - Unconfirmed rows and the `apply` scope are never in a snapshot (`apply` memory
   is assistant-only). The worker never writes memory; `POST /ai/verdict` has no
   `memory[]` field.

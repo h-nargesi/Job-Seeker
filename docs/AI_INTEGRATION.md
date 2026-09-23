@@ -118,20 +118,21 @@ Decided (2026-09-10; simplified 2026-09-11): `ai-worker` has **no polling
 loop and no scheduler** — the user runs it manually whenever unranked jobs
 should be processed. One run:
 
-1. `GET /ai/next` (`X-Client: worker`) repeatedly, in dashboard rank order
+1. `GET /ai/context`, then `GET /ai/next` (`X-Client: worker`) repeatedly, in
+   dashboard rank order
    (2026-09-23; was oldest-first by `JobID`): highest `EffectiveScore`
    first — regex score × age decay, the dashboard's `AiPending` sort —
    then newest `RegTime`. The dashboard's per-agency display cap does not
    apply to the queue: every `AiPending` job is eventually fetched.
-   The fetch is **read-only**: the response carries one `AiPending` job's
-   text, the candidate's master resume text and the JobOption-derived
-   `keywords` (2026-09-17), and changes no state. Phase 3 (2026-09-17)
-   extends the payload with `settings` (`aiPassmark`), the per-job
-   `options` as standard JSON, and the template-derived block `inventory`
-   (§3). Since 2026-09-18 (D2) the payload also carries `fingerprint` =
-   SHA-256 hex of the whitespace-normalized `Content` (the same Normalize
-   as the content-change rule) — computed per request, nothing stored (no
-   hash column). The worker stops when the core answers "empty".
+   Both fetches are **read-only**. The run constants (master resume,
+   JobOption-derived `keywords`, block `inventory`, confirmed memory
+   snapshots, `aiPassmark`) are served once by `/ai/context` (2026-09-23,
+   split from `/ai/next`); `/ai/next` carries only per-job data — one
+   `AiPending` job's text, its per-job `options` as standard JSON, the
+   content `fingerprint` (D2, §2.1: SHA-256 hex of the whitespace-normalized
+   `Content`, computed per request, nothing stored) and a `contextVersion`
+   hash of the context payload for mid-run refresh (§6). The worker stops
+   when the core answers "empty".
 2. For each job: run the local `llama-server` call(s) (§6), then
    `POST /ai/verdict` — the only write in the AI lane. Decided (2026-09-12,
    superseding the Pending-validation rule): the verdict is an **upsert** —
@@ -243,11 +244,11 @@ should be processed. One run:
   result in memory** (lazy first render; invalidated only by a process
   restart, so template changes take effect on the next deploy). The 16k
   token cap (§6) truncates from the top if needed. Served only through
-  `GET /ai/next`; no second resume artifact to keep in sync. Phase 3
-  (2026-09-17) extends the same endpoint with the call-2 inputs:
-  `settings` (`aiPassmark` — drives the tailoring-threshold decision
-  worker-side), the per-job `options` (`ResumeContext`) as **standard
-  JSON** — `Job.Options` is itself stored as standard JSON via
+  `GET /ai/context` since the 2026-09-23 payload split (was `/ai/next`);
+  no second resume artifact to keep in sync. The same endpoint serves the
+  other run constants: the per-job `options` (`ResumeContext`) travel per
+  job in `/ai/next` as **standard JSON** — `Job.Options` is itself stored
+  as standard JSON via
   `ResumeContextTypeHandler` (`SqliteTypeHandlers.cs`); the simple-JSON
   format (`SimlpeSerialize`) is only the dashboard/client exchange
   format, which the worker never sees (wording corrected 2026-09-18) —
@@ -463,14 +464,26 @@ verdict), matching the "leave the system running" usage pattern.
   tokens/sec on consumer hardware. A verdict prompt is ~2–3k tokens in,
   ~100 tokens out — a few seconds per job. Overnight batches of hundreds of
   jobs are comfortable.
-- **Prompt caching.** `llama-server` caches the shared prompt prefix. Put the
-  fixed rubric (scoring criteria + candidate profile) in the system prompt so
-  only the job description differs per call. Prefix-cache scope (2026-09-18):
-  call 1 and call 2 share **no** cached prefix — their rubrics diverge at
-  the first token — but the cache pays off **across jobs of the same call
-  type**: F1's stable block order keeps the fixed parts (rubric + master
-  resume / rubric + inventory) at the front and only the JD varies at the
-  tail.
+- **Prompt caching (2026-09-23: trunk/TASK layout).** The worker pins one
+  llama-server slot (`id_slot: 0`, `cache_prompt: true`) and prompts share a
+  run-constant **trunk** — the system message: preamble + `## KEYWORD
+  PRIORITIES` + `## RANKING MEMORY` + `## RESUME MEMORY` + `## CANDIDATE
+  RESUME` + `## BLOCK INVENTORY` (a full superset; the resume is new to call
+  2). The JD is tail-truncated **once per job** and embedded byte-identically
+  in both user messages, followed by per-call `## TASK` (rubric) suffixes —
+  call 2 adds `## CURRENT SELECTION` between JD and task. Hit pattern: call 1
+  of a job ingests only `JD + rubric1`; call 2 only `selection + rubric2`;
+  the next job rewinds to the trunk automatically (llama-server truncates the
+  slot KV to the longest common prefix). Retry attempts are full hits
+  (identical prompt, only `seed` differs). Trunk data comes from
+  `GET /ai/context` (fetched at run start); every `/ai/next` carries a
+  `contextVersion` hash, and a mismatch at a job boundary triggers exactly one
+  refetch + trunk rebuild (warn-logged; the one unavoidable re-ingest). The
+  trunk never rebuilds between call 1 and call 2 of the same job. Rubric edits
+  are worker config — restart the worker for those. Phase-5 note: the
+  assistant extension should pin its own `id_slot: 1` (the worker owns 0).
+  *(Supersedes the 2026-09-18 "call 1 and call 2 share no cached prefix"
+  scope note.)*
 - **Structured output.** Use `response_format` (JSON schema / GBNF grammar)
   so verdicts and extractions always parse. Never regex-scrape model output.
 - **Determinism (2026-09-18, D6).** Every model request carries
@@ -492,9 +505,9 @@ verdict), matching the "leave the system running" usage pattern.
   moves the job to `NotApprovedAI` as a **purge candidate**; actual deletion
   is a dashboard action (single or bulk, pre-selected by threshold), and
   the existing old-age cleanup also covers `NotApprovedRegex` and
-  `NotApprovedAI`. `GET /ai/next` carries the job text (`Job.Content`), the
-  content `fingerprint` (D2, §2.1) and, per the ranking decision (§4.1),
-  the master resume text.
+   `NotApprovedAI`. `GET /ai/next` carries the job text (`Job.Content`), the
+   content `fingerprint` (D2, §2.1) and the per-job `options`; the master
+   resume text travels in the `/ai/context` trunk (2026-09-23 split).
 - **Poison jobs (decided 2026-09-15; amended 2026-09-17 — target state).**
   A model/parse failure is retried twice within the same worker run;
   persistent failure posts an **error verdict** moving the job to
@@ -507,11 +520,12 @@ verdict), matching the "leave the system running" usage pattern.
   JSON-schema-constrained response — input: system rubric + candidate
   resume text + JD; output: `{ relevance, seniority, verdict, reason,
   salary_min/max, currency, period, work_model, contract,
-  experience_years, skills[] }`. Call 2 (conditional): the resume-tailoring
+  experience_years,   skills[] }`. Call 2 (conditional): the resume-tailoring
   delta — runs only when the same verdict promotes the job to `Attention`
-  (relevance ≥ `AiPassmark`, shipped in `/ai/next` `settings`); input:
-  rubric + block inventory + current context + JD (all from `/ai/next`;
-  the fixed candidate profile sits in the call-2 system prompt — its own
+  (relevance ≥ `AiPassmark`, shipped in `/ai/context` since the 2026-09-23
+  payload split); input: rubric + block inventory + current context + JD
+  (fixed parts from the `/ai/context` trunk, JD + selection per job; the
+  fixed candidate profile sits in the shared system-message trunk — its own
   config key `Llm:RubricTailor`, D14, draft in
   [`AI_PHASE1_NOTES.md`](AI_PHASE1_NOTES.md)); inventory: full template
   text on editable slots (title / summary / job-description bullets),

@@ -29,7 +29,6 @@ public sealed class WorkerLoop
     public async Task<int> RunAsync(CancellationToken ct)
     {
         var stats = new RunStats();
-        Banner();
         try
         {
             var code = await RunQueueAsync(stats, ct);
@@ -63,17 +62,39 @@ public sealed class WorkerLoop
         }
     }
 
-    private async Task<int> RunQueueAsync(RunStats stats, CancellationToken ct)
+    private sealed record TrunkContext(PromptBuilder.Trunk Trunk, string? Version, int Passmark);
+
+    private async Task<TrunkContext?> LoadTrunkAsync(string? previousVersion, RunStats stats, CancellationToken ct)
     {
-        MemorySnapshot memory;
+        AiContext context;
         try
         {
-            memory = await core.FetchMemorySnapshotAsync(ct);
+            context = await core.FetchContextAsync(ct);
         }
         catch (CoreAbortException ex)
         {
-            return Abort(ExitCoreAbort, $"core error, aborting run before memory snapshot: {ex.Message}");
+            WorkerLog.Error("core error, aborting run before context fetch: {Message}", ex.Message);
+            return null;
         }
+
+        if (string.IsNullOrEmpty(context.Resume) || context.Keywords == null || context.Inventory == null)
+        {
+            WorkerLog.Error("core error, aborting run: /ai/context payload is missing resume/keywords/inventory");
+            return null;
+        }
+
+        var trunk = prompt.BuildTrunk(context);
+        stats.RecordDroppedMemoryRows(trunk.DroppedMemoryRows);
+        if (previousVersion != null && !string.Equals(context.ContextVersion, previousVersion, StringComparison.Ordinal))
+            WorkerLog.Warn("context changed - trunk rebuilt (hash {Hash}); cache re-ingested once", trunk.Hash);
+        return new TrunkContext(trunk, context.ContextVersion, context.AiPassmark);
+    }
+
+    private async Task<int> RunQueueAsync(RunStats stats, CancellationToken ct)
+    {
+        var current = await LoadTrunkAsync(null, stats, ct);
+        if (current == null) return ExitCoreAbort;
+        Banner(current.Trunk, current.Version);
 
         var number = 0;
         var consecutive_llm_failures = 0;
@@ -95,21 +116,30 @@ public sealed class WorkerLoop
                 return ExitOk;
             }
 
-            if (next.JobId is not long job_id || next.Content is null || next.Resume is null || next.Fingerprint is null)
-                return Abort(ExitCoreAbort, "core error, aborting run: /ai/next payload is missing jobId/content/resume/fingerprint");
+            if (next.JobId is not long job_id || next.Content is null || next.Fingerprint is null)
+                return Abort(ExitCoreAbort, "core error, aborting run: /ai/next payload is missing jobId/content/fingerprint");
+
+            if (!string.IsNullOrEmpty(next.ContextVersion) &&
+                !string.Equals(next.ContextVersion, current.Version, StringComparison.Ordinal))
+            {
+                current = await LoadTrunkAsync(current.Version, stats, ct);
+                if (current == null) return ExitCoreAbort;
+            }
 
             number++;
             stats.Jobs++;
-            WorkerLog.Info("job {JobId} #{Number}: content {Chars} chars, keywords {Keywords}, passmark {Passmark}",
-                job_id, number, next.Content.Length, next.Keywords?.Count ?? 0,
-                next.Settings?.Aipassmark.ToString() ?? "n/a");
+            WorkerLog.Info("job {JobId} #{Number}: content {Chars} chars, passmark {Passmark}",
+                job_id, number, next.Content.Length, current.Passmark);
+
+            var job_text = prompt.PrepareJob(current.Trunk, next);
+            stats.RecordTruncation(job_id, job_text);
 
             try
             {
                 VerdictPayload verdict;
                 try
                 {
-                    verdict = await JudgeAsync(next, job_id, memory.Ranking, stats, ct);
+                    verdict = await JudgeAsync(next, job_id, prompt.Compose(current.Trunk, next, job_text), stats, ct);
                     consecutive_llm_failures = 0;
                 }
                 catch (LlmCallException ex)
@@ -124,12 +154,12 @@ public sealed class WorkerLoop
                     verdict = VerdictPayload.Error(job_id, next.Fingerprint!, $"model call failed: {ex.Message}");
                 }
 
-                if (Promotes(next, verdict))
+                if (Promotes(current.Passmark, verdict))
                 {
                     stats.Promoted++;
                     try
                     {
-                        verdict.Delta = await TailorAsync(next, job_id, memory.Resume, stats, ct);
+                        verdict.Delta = await TailorAsync(job_id, prompt.ComposeTailor(current.Trunk, next, job_text), stats, ct);
                     }
                     catch (LlmCallException ex)
                     {
@@ -177,19 +207,16 @@ public sealed class WorkerLoop
         }
     }
 
-    internal static bool Promotes(AiNextPayload next, VerdictPayload verdict)
+    internal static bool Promotes(int passmark, VerdictPayload verdict)
     {
         if (verdict.Verdict == "Error") return false;
-        var passmark = next.Settings?.Aipassmark;
-        return passmark is int mark && verdict.Relevance >= mark;
+        return verdict.Relevance >= passmark;
     }
 
     private async Task<VerdictPayload> JudgeAsync(AiNextPayload next, long jobId,
-        IReadOnlyList<MemorySnapshotRow> rankingMemory, RunStats stats, CancellationToken ct)
+        PromptBuilder.Prompt message, RunStats stats, CancellationToken ct)
     {
-        var message = prompt.Compose(next, rankingMemory);
         LogPrompt(jobId, 1, message);
-        stats.RecordTruncationIfAny(jobId, message);
         Exception? last = null;
 
         for (var attempt = 1; attempt <= MaxModelAttempts; attempt++)
@@ -221,12 +248,10 @@ public sealed class WorkerLoop
         return VerdictPayload.Error(jobId, next.Fingerprint!, last!.Message);
     }
 
-    private async Task<JsonNode?> TailorAsync(AiNextPayload next, long jobId,
-        IReadOnlyList<MemorySnapshotRow> resumeMemory, RunStats stats, CancellationToken ct)
+    private async Task<JsonNode?> TailorAsync(long jobId, PromptBuilder.Prompt message,
+        RunStats stats, CancellationToken ct)
     {
-        var message = prompt.ComposeTailor(next, resumeMemory);
         LogPrompt(jobId, 2, message);
-        stats.RecordTruncationIfAny(jobId, message);
 
         for (var attempt = 1; attempt <= MaxModelAttempts; attempt++)
         {
@@ -256,18 +281,20 @@ public sealed class WorkerLoop
         return null;
     }
 
-    private void Banner()
+    private void Banner(PromptBuilder.Trunk trunk, string? version)
     {
         WorkerLog.Info("run {RunId} starting: model {Model}, temperature {Temperature}, seed {Seed}",
             WorkerLog.RunId, options?.Model ?? "n/a", options?.Temperature ?? LlmOptions.DefaultTemperature,
             options?.Seed ?? 0);
-        WorkerLog.Info("rubric {RubricHash}, rubric-tailor {RubricTailorHash}",
+        WorkerLog.Info("trunk {TrunkHash} (~{TrunkTokens} tok, version {Version}), rubric {RubricHash}, rubric-tailor {RubricTailorHash}",
+            trunk.Hash, trunk.EstTokens, version ?? "n/a",
             options == null ? "n/a" : RunReport.ShortHash(options.Rubric),
             options == null ? "n/a" : RunReport.ShortHash(options.RubricTailor));
         WorkerLog.Info(
-            "endpoints: core {Core}, llm {Llm}; context {MaxContextTokens} tok, memory cap {MemoryTokenCap} tok, timeout {TimeoutSeconds}s, max completion {MaxCompletionTokens} tok",
+            "endpoints: core {Core}, llm {Llm}; context {MaxContextTokens} tok, memory cap {MemoryTokenCap} tok, slot {Slot}, timeout {TimeoutSeconds}s, max completion {MaxCompletionTokens} tok",
             options?.Core ?? "n/a", options?.BaseUrl ?? "n/a",
             PromptBuilder.MaxContextTokens, PromptBuilder.MemoryTokenCap,
+            options?.Slot ?? LlmOptions.DefaultSlot,
             options?.TimeoutSeconds ?? LlmOptions.DefaultTimeoutSeconds,
             options?.MaxCompletionTokens ?? LlmOptions.DefaultMaxCompletionTokens);
     }
@@ -277,7 +304,9 @@ public sealed class WorkerLoop
         WorkerLog.Info(
             "job {JobId} call {Call} prompt: system {SystemChars} chars (~{SystemTokens} tok), user {UserChars} chars (~{UserTokens} tok)",
             jobId, callNo, message.System.Length, message.EstSystemTokens,
-            message.User.Length, message.EstContentTokens);
+            message.User.Length, message.EstUserTokens);
+        WorkerLog.Debug("job {JobId} call {Call} cacheable prefix ≈ {Prefix} tok",
+            jobId, callNo, message.CacheablePrefixTokens);
         WorkerLog.Debug("job {JobId} call {Call} system prompt body:{NewLine}{System}",
             jobId, callNo, Environment.NewLine, message.System);
         WorkerLog.Debug("job {JobId} call {Call} user prompt body:{NewLine}{User}",
@@ -287,9 +316,6 @@ public sealed class WorkerLoop
             WorkerLog.Info("job {JobId} call {Call}: JD truncated {Chars} chars (~{Tokens} tok est)",
                 jobId, callNo, message.ContentTruncatedChars,
                 message.ContentTruncatedChars / PromptBuilder.CharsPerToken);
-        if (message.DroppedMemoryRows > 0)
-            WorkerLog.Info("job {JobId} call {Call}: memory rows dropped {Dropped}/{Total}",
-                jobId, callNo, message.DroppedMemoryRows, message.TotalMemoryRows);
     }
 
     private static void LogCall(long jobId, int callNo, LlmResult result, RunStats stats)

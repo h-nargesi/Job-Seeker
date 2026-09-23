@@ -140,7 +140,7 @@ UPDATE Memory SET UseCount = UseCount + 1, UpdatedAt = @now WHERE MemoryID = @id
     private const string Q_SNAPSHOT = $@"
 SELECT * FROM Memory
 WHERE Scope = @scope AND Confirmed = 1
-ORDER BY {Q_PRECEDENCE}
+ORDER BY (Kind = '{nameof(MemoryKind.Correction)}') DESC, FieldKey ASC, MemoryID ASC
 LIMIT @cap";
 
     private const string Q_QUERY = $@"

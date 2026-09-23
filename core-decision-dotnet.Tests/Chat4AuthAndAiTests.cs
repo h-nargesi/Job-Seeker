@@ -181,22 +181,16 @@ public class Chat4AuthAndAiTests
     public void Next_payload_is_data_only()
     {
         var job = new Job { JobID = 7, Content = "hello  world" };
-        var keywords = JobKeywords.From(
-        [
-            EligibilityFixture.Option("field", 90, "c#", "C#"),
-            EligibilityFixture.Option("reject", 0, "react", "react"),
-        ]);
-        var payload = AiNextPayload.From(job, "resume text", keywords, 60);
+        job.Options = new ResumeContext { JobTitle = "Regex title" };
+
+        var payload = AiNextPayload.From(job, "abc123def456");
 
         Assert.False(payload.Empty);
         Assert.Equal(7, payload.JobId);
         Assert.Equal("hello  world", payload.Content);
-        Assert.Equal("resume text", payload.Resume);
         Assert.Equal(JobContent.Fingerprint(job.Content), payload.Fingerprint);
-        Assert.Equal(60, payload.Settings!.Aipassmark);
-        Assert.Single(payload.Keywords!);
-        Assert.Equal("C#", payload.Keywords![0].Title);
-        Assert.DoesNotContain("You are", payload.Resume);
+        Assert.Equal("abc123def456", payload.ContextVersion);
+        Assert.Contains("Regex title", payload.Options);
     }
 
     [Fact]

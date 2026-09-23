@@ -44,6 +44,8 @@ public sealed class LlmClient
             ["seed"] = options.Seed + seedOffset,
             ["stream"] = false,
             ["max_tokens"] = options.MaxCompletionTokens,
+            ["cache_prompt"] = true,
+            ["id_slot"] = options.Slot,
             ["response_format"] = JsonDocument.Parse(responseFormat).RootElement.Clone(),
         };
         var body = JsonSerializer.Serialize(request);

@@ -6,8 +6,8 @@ namespace AiWorker.Tests;
 [Collection("worker-run")]
 public sealed class WorkerLoopTests
 {
-    private const string Rubric = "Judge this posting. Keywords: {{keywords}}.";
-    private const string RubricTailor = "Tailor this resume. Keywords: {{keywords}}.";
+    private const string Rubric = "Judge this posting.";
+    private const string RubricTailor = "Tailor this resume.";
 
     private static LlmOptions Options()
     {
@@ -32,13 +32,12 @@ public sealed class WorkerLoopTests
         return new WorkerLoop(core, llm, new PromptBuilder(options.Rubric, options.RubricTailor), options);
     }
 
-    private static string NextJob(long id, string fingerprint = "fp", int passmark = 60)
+    private static string NextJob(long id, string fingerprint = "fp", string contextVersion = "v1")
     {
         return $$"""
         {"empty": false, "jobId": {{id}}, "content": "Senior .NET role with Angular.",
-         "resume": "RESUME TEXT", "keywords": [{"category": "tech", "score": 120, "title": "C#"}],
-         "fingerprint": "{{fingerprint}}", "settings": {"aipassmark": {{passmark}}},
-         "options": "{\"Length\": 1}", "inventory": [{"id": "#douran", "type": "block", "keys": ["key-java"], "text": "Java role"}]
+         "fingerprint": "{{fingerprint}}", "contextVersion": "{{contextVersion}}",
+         "options": "{\"Length\": 1}"
         }
         """;
     }
@@ -46,6 +45,27 @@ public sealed class WorkerLoopTests
     private static string NextEmpty()
     {
         return """{"empty": true}""";
+    }
+
+    private static string ContextJson(
+        string contextVersion = "v1",
+        string rankingField = "", string rankingValue = "",
+        string resumeField = "", string resumeValue = "",
+        string resume = "MASTER RESUME TEXT")
+    {
+        var ranking = rankingField.Length == 0
+            ? "[]"
+            : $$"""[{"domain":"*","fieldKey":"{{rankingField}}","kind":"Tip","value":"{{rankingValue}}"}]""";
+        var resume_rows = resumeField.Length == 0
+            ? "[]"
+            : $$"""[{"domain":"*","fieldKey":"{{resumeField}}","kind":"Correction","value":"{{resumeValue}}"}]""";
+        return $$"""
+        {"rankingMemory": {{ranking}}, "resumeMemory": {{resume_rows}},
+         "keywords": [{"category": "tech", "score": 120, "title": "C#"}],
+         "resume": "{{resume}}",
+         "inventory": [{"id": "#douran", "type": "block", "keys": ["key-java"], "text": "Java role"}],
+         "aiPassmark": 60, "contextVersion": "{{contextVersion}}"}
+        """;
     }
 
     private static void RunReportOk(FakeHandler coreHandler)
@@ -57,19 +77,6 @@ public sealed class WorkerLoopTests
     {
         var report = coreHandler.Requests.Single(r => r.RequestUri!.AbsolutePath == "/ai/run-report");
         return coreHandler.BodyOf(report);
-    }
-
-    private static string MemorySnapshotJson(
-        string rankingField = "", string rankingValue = "",
-        string resumeField = "", string resumeValue = "")
-    {
-        var ranking = rankingField.Length == 0
-            ? "[]"
-            : $$"""[{"domain":"*","fieldKey":"{{rankingField}}","kind":"Tip","value":"{{rankingValue}}"}]""";
-        var resume = resumeField.Length == 0
-            ? "[]"
-            : $$"""[{"domain":"*","fieldKey":"{{resumeField}}","kind":"Correction","value":"{{resumeValue}}"}]""";
-        return $$"""{"ranking": {{ranking}}, "resume": {{resume}}}""";
     }
 
     private static string LlmContent(string verdictJson)
@@ -99,12 +106,24 @@ public sealed class WorkerLoopTests
     private const string ValidDelta =
         """{"keys": ["DOTNET"], "notIncluded": ["#douran"], "included": [], "length": 2, "texts": {"title": "Senior .NET Engineer"}}""";
 
+    private static string LlmSystem(FakeHandler llmHandler, int index)
+    {
+        return JsonDocument.Parse(llmHandler.Bodies[index]).RootElement
+            .GetProperty("messages").EnumerateArray().ToArray()[0].GetProperty("content").GetString()!;
+    }
+
+    private static string LlmUser(FakeHandler llmHandler, int index)
+    {
+        return JsonDocument.Parse(llmHandler.Bodies[index]).RootElement
+            .GetProperty("messages").EnumerateArray().ToArray()[1].GetProperty("content").GetString()!;
+    }
+
     [Fact]
     public async Task DrainsQueueAndPostsVerdictWithoutTailoringWhenBelowPassmark()
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(11, "fp11"));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -117,7 +136,7 @@ public sealed class WorkerLoopTests
         Assert.Equal(5, coreHandler.Requests.Count);
         Assert.Single(llmHandler.Requests);
 
-        Assert.Equal("/ai/memory", coreHandler.Requests[0].RequestUri!.AbsolutePath);
+        Assert.Equal("/ai/context", coreHandler.Requests[0].RequestUri!.AbsolutePath);
         Assert.Equal("/ai/next", coreHandler.Requests[1].RequestUri!.AbsolutePath);
 
         var verdict = JsonDocument.Parse(coreHandler.Bodies[0]).RootElement;
@@ -138,23 +157,36 @@ public sealed class WorkerLoopTests
         Assert.Equal(0.2, chat.GetProperty("temperature").GetDouble());
         Assert.Equal(42, chat.GetProperty("seed").GetInt32());
         Assert.Equal(LlmOptions.DefaultMaxCompletionTokens, chat.GetProperty("max_tokens").GetInt32());
+        Assert.True(chat.GetProperty("cache_prompt").GetBoolean());
+        Assert.Equal(LlmOptions.DefaultSlot, chat.GetProperty("id_slot").GetInt32());
         Assert.Equal("json_schema", chat.GetProperty("response_format").GetProperty("type").GetString());
         Assert.False(chat.GetProperty("stream").GetBoolean());
 
         var messages = chat.GetProperty("messages").EnumerateArray().ToArray();
         Assert.Equal("system", messages[0].GetProperty("role").GetString());
-        Assert.Contains("Judge this posting.", messages[0].GetProperty("content").GetString());
-        Assert.Contains("\"title\":\"C#\"", messages[0].GetProperty("content").GetString());
+        var system = messages[0].GetProperty("content").GetString()!;
+        Assert.Contains(PromptBuilder.TrunkPreamble.Split('\n')[0], system);
+        Assert.Contains(PromptBuilder.KeywordsLabel, system);
+        Assert.Contains("\"title\":\"C#\"", system);
+        Assert.Contains(PromptBuilder.RankingMemoryLabel, system);
+        Assert.Contains(PromptBuilder.ResumeLabel, system);
+        Assert.Contains("MASTER RESUME TEXT", system);
+        Assert.Contains(PromptBuilder.InventoryLabel, system);
         Assert.Equal("user", messages[1].GetProperty("role").GetString());
-        Assert.Contains("Senior .NET role with Angular.", messages[1].GetProperty("content").GetString());
+        var user = messages[1].GetProperty("content").GetString()!;
+        Assert.StartsWith(PromptBuilder.JobLabel, user);
+        Assert.Contains("Senior .NET role with Angular.", user);
+        Assert.Contains(PromptBuilder.TaskRankingLabel, user);
+        Assert.Contains(Rubric, user);
+        Assert.DoesNotContain(PromptBuilder.ResumeLabel, user);
     }
 
     [Fact]
-    public async Task PromotingVerdictRunsCall2AndPostsDelta()
+    public async Task PromotingVerdictRunsCall2WithSharedTrunkAndIdenticalJobPosting()
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(21));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -166,6 +198,7 @@ public sealed class WorkerLoopTests
 
         Assert.Equal(WorkerLoop.ExitOk, exit);
         Assert.Equal(2, llmHandler.Requests.Count);
+        Assert.Single(coreHandler.Requests, r => r.RequestUri!.AbsolutePath == "/ai/context");
 
         var verdict = JsonDocument.Parse(coreHandler.Bodies[0]).RootElement;
         Assert.True(verdict.TryGetProperty("delta", out var delta));
@@ -175,13 +208,14 @@ public sealed class WorkerLoopTests
         Assert.Equal("resume_tailoring_delta", tailor_chat.GetProperty("response_format")
             .GetProperty("json_schema").GetProperty("name").GetString());
 
-        var tailor_messages = tailor_chat.GetProperty("messages").EnumerateArray().ToArray();
-        var system = tailor_messages[0].GetProperty("content").GetString()!;
-        Assert.Contains("Tailor this resume.", system);
-        Assert.Contains(PromptBuilder.InventoryLabel, system);
-        Assert.Contains("#douran", system);
-        Assert.Contains(PromptBuilder.SelectionLabel, system);
-        Assert.Contains("Senior .NET role with Angular.", tailor_messages[1].GetProperty("content").GetString());
+        Assert.Equal(LlmSystem(llmHandler, 0), LlmSystem(llmHandler, 1));
+
+        var tailor_user = LlmUser(llmHandler, 1);
+        Assert.StartsWith(PromptBuilder.JobLabel, tailor_user);
+        Assert.Contains("Senior .NET role with Angular.", tailor_user);
+        Assert.Contains(PromptBuilder.SelectionLabel, tailor_user);
+        Assert.Contains(PromptBuilder.TaskTailoringLabel, tailor_user);
+        Assert.Contains(RubricTailor, tailor_user);
     }
 
     [Fact]
@@ -189,7 +223,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(22));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -212,7 +246,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(23));
         RunReportOk(coreHandler);
         llmHandler.RespondJson(LlmContent(ValidVerdict));
@@ -232,7 +266,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(24));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -254,7 +288,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(12));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -277,7 +311,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(13));
         RunReportOk(coreHandler);
         llmHandler.RespondNetworkError();
@@ -294,10 +328,10 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(14));
         coreHandler.RespondJson("{}");
-        coreHandler.RespondJson(NextJob(15, passmark: 90));
+        coreHandler.RespondJson(NextJob(15));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
         RunReportOk(coreHandler);
@@ -320,7 +354,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(18));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextJob(19));
@@ -344,7 +378,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(20));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextJob(21));
@@ -371,7 +405,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(25));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -393,7 +427,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(26));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -415,10 +449,10 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(15));
         coreHandler.RespondJson("""{"error": "not found"}""", HttpStatusCode.NotFound);
-        coreHandler.RespondJson(NextJob(16, passmark: 90));
+        coreHandler.RespondJson(NextJob(16));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
         RunReportOk(coreHandler);
@@ -440,7 +474,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(17));
         coreHandler.RespondJson("""{"error": "validation", "message": "bad"}""", HttpStatusCode.BadRequest);
         RunReportOk(coreHandler);
@@ -456,7 +490,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson("oops", HttpStatusCode.InternalServerError);
         RunReportOk(coreHandler);
 
@@ -471,7 +505,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondNetworkError("core down");
         RunReportOk(coreHandler);
 
@@ -482,7 +516,7 @@ public sealed class WorkerLoopTests
     }
 
     [Fact]
-    public async Task MemorySnapshotFailureAbortsRun()
+    public async Task ContextFetchFailureAbortsRun()
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
@@ -493,8 +527,22 @@ public sealed class WorkerLoopTests
 
         Assert.Equal(WorkerLoop.ExitCoreAbort, exit);
         Assert.Equal(2, coreHandler.Requests.Count);
-        Assert.Equal("/ai/memory", coreHandler.Requests[0].RequestUri!.AbsolutePath);
+        Assert.Equal("/ai/context", coreHandler.Requests[0].RequestUri!.AbsolutePath);
         Assert.Equal("/ai/run-report", coreHandler.Requests[1].RequestUri!.AbsolutePath);
+        Assert.Empty(llmHandler.Requests);
+    }
+
+    [Fact]
+    public async Task ContextWithoutResumeAbortsRun()
+    {
+        var coreHandler = new FakeHandler();
+        var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(ContextJson(resume: ""));
+        RunReportOk(coreHandler);
+
+        var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
+
+        Assert.Equal(WorkerLoop.ExitCoreAbort, exit);
         Assert.Empty(llmHandler.Requests);
     }
 
@@ -503,7 +551,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(41));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -534,7 +582,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(42));
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());
@@ -560,11 +608,11 @@ public sealed class WorkerLoopTests
     }
 
     [Fact]
-    public async Task MemorySnapshotIsFetchedOnceAndInjectedIntoBothCalls()
+    public async Task MemoryRowsAreFetchedOnceAndInjectedIntoTheTrunk()
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson(
+        coreHandler.RespondJson(ContextJson(
             rankingField: "remote_only", rankingValue: "remote roles only",
             resumeField: "summary", resumeValue: "lead with backend scale"));
         coreHandler.RespondJson(NextJob(31));
@@ -578,20 +626,74 @@ public sealed class WorkerLoopTests
 
         Assert.Equal(WorkerLoop.ExitOk, exit);
         Assert.Equal(5, coreHandler.Requests.Count);
-        Assert.Single(coreHandler.Requests, request => request.RequestUri!.AbsolutePath == "/ai/memory");
+        Assert.Single(coreHandler.Requests, request => request.RequestUri!.AbsolutePath == "/ai/context");
 
-        var judge_system = JsonDocument.Parse(llmHandler.Bodies[0]).RootElement
-            .GetProperty("messages").EnumerateArray().ToArray()[0].GetProperty("content").GetString()!;
+        var judge_system = LlmSystem(llmHandler, 0);
         Assert.Contains(PromptBuilder.RankingMemoryLabel, judge_system);
         Assert.Contains("remote_only", judge_system);
         Assert.Contains("remote roles only", judge_system);
-        Assert.DoesNotContain("lead with backend scale", judge_system);
+        Assert.Contains(PromptBuilder.ResumeMemoryLabel, judge_system);
+        Assert.Contains("lead with backend scale", judge_system);
 
-        var tailor_system = JsonDocument.Parse(llmHandler.Bodies[1]).RootElement
-            .GetProperty("messages").EnumerateArray().ToArray()[0].GetProperty("content").GetString()!;
-        Assert.Contains(PromptBuilder.ResumeMemoryLabel, tailor_system);
-        Assert.Contains("lead with backend scale", tailor_system);
-        Assert.DoesNotContain("remote roles only", tailor_system);
+        Assert.Equal(judge_system, LlmSystem(llmHandler, 1));
+    }
+
+    [Fact]
+    public async Task ContextVersionMismatchTriggersExactlyOneRefetchAtTheJobBoundary()
+    {
+        var coreHandler = new FakeHandler();
+        var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(ContextJson(rankingField: "remote_only", rankingValue: "remote roles only"));
+        coreHandler.RespondJson(NextJob(61));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextJob(62, contextVersion: "v2"));
+        coreHandler.RespondJson(ContextJson(contextVersion: "v2", rankingValue: "changed lesson",
+            rankingField: "remote_only"));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextEmpty());
+        RunReportOk(coreHandler);
+        llmHandler.RespondJson(LlmContent(WeakVerdict));
+        llmHandler.RespondJson(LlmContent(WeakVerdict));
+
+        var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
+
+        Assert.Equal(WorkerLoop.ExitOk, exit);
+        Assert.Equal(2, llmHandler.Requests.Count);
+        var paths = coreHandler.Requests.Select(r => r.RequestUri!.AbsolutePath).ToList();
+        Assert.Equal(
+        [
+            "/ai/context", "/ai/next", "/ai/verdict",
+            "/ai/next", "/ai/context", "/ai/verdict",
+            "/ai/next", "/ai/run-report",
+        ], paths);
+
+        var first_system = LlmSystem(llmHandler, 0);
+        var second_system = LlmSystem(llmHandler, 1);
+        Assert.Contains("remote roles only", first_system);
+        Assert.Contains("changed lesson", second_system);
+        Assert.NotEqual(first_system, second_system);
+    }
+
+    [Fact]
+    public async Task MatchingContextVersionNeverRefetches()
+    {
+        var coreHandler = new FakeHandler();
+        var llmHandler = new FakeHandler();
+        coreHandler.RespondJson(ContextJson());
+        coreHandler.RespondJson(NextJob(63));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextJob(64));
+        coreHandler.RespondJson("{}");
+        coreHandler.RespondJson(NextEmpty());
+        RunReportOk(coreHandler);
+        llmHandler.RespondJson(LlmContent(WeakVerdict));
+        llmHandler.RespondJson(LlmContent(WeakVerdict));
+
+        var exit = await Loop(coreHandler, llmHandler).RunAsync(CancellationToken.None);
+
+        Assert.Equal(WorkerLoop.ExitOk, exit);
+        Assert.Single(coreHandler.Requests, r => r.RequestUri!.AbsolutePath == "/ai/context");
+        Assert.Equal(LlmSystem(llmHandler, 0), LlmSystem(llmHandler, 1));
     }
 
     [Fact]
@@ -599,7 +701,7 @@ public sealed class WorkerLoopTests
     {
         var coreHandler = new FakeHandler();
         var llmHandler = new FakeHandler();
-        coreHandler.RespondJson(MemorySnapshotJson());
+        coreHandler.RespondJson(ContextJson());
         coreHandler.RespondJson(NextJob(51));
         RunReportOk(coreHandler);
 
@@ -626,12 +728,14 @@ public sealed class WorkerLoopTests
         var long_value = new string('m', 3000);
         var row = $$"""{"domain":"*","fieldKey":"remote_only","kind":"Tip","value":"{{long_value}}"}""";
         var ranking = "[" + string.Join(",", Enumerable.Repeat(row, 3)) + "]";
-        coreHandler.RespondJson("{\"ranking\": " + ranking + ", \"resume\": []}");
+        coreHandler.RespondJson("{\"rankingMemory\": " + ranking + ", \"resumeMemory\": []," +
+            " \"keywords\": [], \"resume\": \"RESUME TEXT\"," +
+            " \"inventory\": [{\"id\": \"t\", \"type\": \"slot\", \"text\": \"x\"}]," +
+            " \"aiPassmark\": 90, \"contextVersion\": \"v1\"}");
         var huge = new string('j', 60000);
         coreHandler.RespondJson($$$"""
         {"empty": false, "jobId": 52, "content": "{{{huge}}}",
-         "resume": "RESUME TEXT", "keywords": [{"category": "tech", "score": 120, "title": "C#"}],
-         "fingerprint": "fp52", "settings": {"aipassmark": 90}}
+         "fingerprint": "fp52", "contextVersion": "v1"}
         """);
         coreHandler.RespondJson("{}");
         coreHandler.RespondJson(NextEmpty());

@@ -33,10 +33,14 @@ public sealed class RunStats
 
     public IReadOnlyList<long> ErrorJobIds => errorJobIds;
 
-    public void RecordTruncationIfAny(long jobId, PromptBuilder.Prompt message)
+    public void RecordTruncation(long jobId, PromptBuilder.JobText job)
     {
-        if (message.ContentTruncatedChars > 0) truncatedJobs.Add(jobId);
-        if (message.DroppedMemoryRows > 0) DroppedMemoryRows += message.DroppedMemoryRows;
+        if (job.TruncatedChars > 0) truncatedJobs.Add(jobId);
+    }
+
+    public void RecordDroppedMemoryRows(int dropped)
+    {
+        DroppedMemoryRows += dropped;
     }
 
     public void RecordErrorJob(long jobId)
