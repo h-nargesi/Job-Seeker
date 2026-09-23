@@ -79,15 +79,7 @@ WITH date_diff AS (
          , job.State, job.Score, job.AiScore, job.Country, job.Url, job.Link
          , job.AiRelocation, job.AiWorkModel, job.Relocation, job.Remote
          , job.AgencyName, job.Category, job.RegDate
-         -- Mirror of JobRanking.Weight (Analyze/JobRanking.cs). Keep in sync.
-         , {JobRanking.SqlRankScore} * CASE
-               WHEN AgeDays <= 2  THEN 0.85
-               WHEN AgeDays <= 4  THEN 0.85 + 0.15 * (AgeDays - 2) / 2
-               WHEN AgeDays <= 10 THEN 1.0
-               WHEN AgeDays <= 14 THEN 1.0 - 0.25 * (AgeDays - 10) / 4
-               WHEN AgeDays <= 28 THEN 0.75 - 0.50 * (AgeDays - 14) / 14
-               ELSE 0.15
-             END AS EffectiveScore
+          , {JobRanking.SqlEffectiveScore} AS EffectiveScore
     FROM date_diff job
 )
 

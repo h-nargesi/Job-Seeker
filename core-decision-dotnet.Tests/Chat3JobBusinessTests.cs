@@ -116,16 +116,51 @@ AiScore = $ai, Attempts = $attempts, Tries = $tries WHERE Code = $code",
     }
 
     [Fact]
-    public void FetchNextAiPending_is_oldest_jobid_with_content()
+    public void FetchNextAiPending_skips_null_content()
     {
         using var db = new GoldenDatabase();
         Seed(db, "n1", JobState.AiPending, content: null);
-        var second = Seed(db, "n2", JobState.AiPending);
-        Seed(db, "n3", JobState.AiPending);
-        Seed(db, "n4", JobState.Attention);
+        var ok = Seed(db, "n2", JobState.AiPending);
+        Seed(db, "n3", JobState.Attention);
 
         var next = db.Database.Job.FetchNextAiPending();
-        Assert.Equal(second, next!.JobID);
+        Assert.Equal(ok, next!.JobID);
+    }
+
+    [Fact]
+    public void FetchNextAiPending_is_highest_effective_score_first()
+    {
+        using var db = new GoldenDatabase();
+        var high = Seed(db, "s-high", JobState.AiPending, score: 100);
+        Seed(db, "s-low", JobState.AiPending, score: 50);
+
+        var next = db.Database.Job.FetchNextAiPending();
+        Assert.Equal(high, next!.JobID);
+    }
+
+    [Fact]
+    public void FetchNextAiPending_prefers_newer_regtime_on_score_tie()
+    {
+        using var db = new GoldenDatabase();
+        Seed(db, "t-old", JobState.AiPending);
+        var newer = Seed(db, "t-new", JobState.AiPending);
+        db.ExecuteRaw("UPDATE Job SET RegTime = datetime('now', '-2 days') WHERE Code = 't-old'");
+        db.ExecuteRaw("UPDATE Job SET RegTime = datetime('now', '-1 days') WHERE Code = 't-new'");
+
+        var next = db.Database.Job.FetchNextAiPending();
+        Assert.Equal(newer, next!.JobID);
+    }
+
+    [Fact]
+    public void FetchNextAiPending_applies_age_decay()
+    {
+        using var db = new GoldenDatabase();
+        Seed(db, "d-old", JobState.AiPending, score: 90);
+        var fresh = Seed(db, "d-new", JobState.AiPending, score: 70);
+        db.ExecuteRaw("UPDATE Job SET RegTime = datetime('now', '-20 days') WHERE Code = 'd-old'");
+
+        var next = db.Database.Job.FetchNextAiPending();
+        Assert.Equal(fresh, next!.JobID);
     }
 
     [Fact]

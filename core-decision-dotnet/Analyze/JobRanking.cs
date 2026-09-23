@@ -22,6 +22,18 @@ THEN {SqlFinalScore}
 ELSE {SqlRegexNorm}
 END";
 
+    public const string SqlAgeWeight = @"
+CASE
+WHEN AgeDays <= 2  THEN 0.85
+WHEN AgeDays <= 4  THEN 0.85 + 0.15 * (AgeDays - 2) / 2
+WHEN AgeDays <= 10 THEN 1.0
+WHEN AgeDays <= 14 THEN 1.0 - 0.25 * (AgeDays - 10) / 4
+WHEN AgeDays <= 28 THEN 0.75 - 0.50 * (AgeDays - 14) / 14
+ELSE 0.15
+END";
+
+    public const string SqlEffectiveScore = $"{SqlRankScore} * {SqlAgeWeight}";
+
     public static double Weight(double ageDays)
     {
         if (ageDays <= 2) return FreshPenalty;

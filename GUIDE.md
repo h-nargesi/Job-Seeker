@@ -1,3 +1,5 @@
+# راهنمای اجرا و انتشار
+
 جهت اجرای هسته:
 ```bash
 dotnet run --project core-decision-dotnet -c Debug --urls http://localhost:5001

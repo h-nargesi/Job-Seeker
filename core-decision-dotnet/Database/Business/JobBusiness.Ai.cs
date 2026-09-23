@@ -4,7 +4,7 @@ namespace Photon.JobSeeker
     {
         public Job? FetchNextAiPending()
         {
-            return database.Query<Job>(Q_FETCH_NEXT_AI).FirstOrDefault();
+            return database.Query<Job>(Q_FETCH_NEXT_AI, RankingParameters()).FirstOrDefault();
         }
 
         public List<Job> FetchAttentionJobs(int limit = 100)
@@ -129,9 +129,15 @@ LIMIT {limit}").ToList();
         }
 
         private readonly static string Q_FETCH_NEXT_AI = $@"
-SELECT * FROM Job
-WHERE State = '{nameof(JobState.AiPending)}' AND Content IS NOT NULL
-ORDER BY JobID
+WITH queue AS (
+    SELECT Job.*
+         , MAX(0, JulianDay((SELECT MAX(RegTime) FROM Job)) - JulianDay(Job.RegTime)) AS AgeDays
+    FROM Job
+    WHERE State = '{nameof(JobState.AiPending)}' AND Content IS NOT NULL
+)
+SELECT *, {JobRanking.SqlEffectiveScore} AS EffectiveScore
+FROM queue
+ORDER BY EffectiveScore DESC, RegTime DESC, JobID
 LIMIT 1";
 
         private readonly static string Q_REQUEUE = $@"

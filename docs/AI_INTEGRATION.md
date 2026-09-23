@@ -118,7 +118,11 @@ Decided (2026-09-10; simplified 2026-09-11): `ai-worker` has **no polling
 loop and no scheduler** — the user runs it manually whenever unranked jobs
 should be processed. One run:
 
-1. `GET /ai/next` (`X-Client: worker`) repeatedly, oldest first by `JobID`.
+1. `GET /ai/next` (`X-Client: worker`) repeatedly, in dashboard rank order
+   (2026-09-23; was oldest-first by `JobID`): highest `EffectiveScore`
+   first — regex score × age decay, the dashboard's `AiPending` sort —
+   then newest `RegTime`. The dashboard's per-agency display cap does not
+   apply to the queue: every `AiPending` job is eventually fetched.
    The fetch is **read-only**: the response carries one `AiPending` job's
    text, the candidate's master resume text and the JobOption-derived
    `keywords` (2026-09-17), and changes no state. Phase 3 (2026-09-17)
@@ -494,7 +498,7 @@ verdict), matching the "leave the system running" usage pattern.
 - **Poison jobs (decided 2026-09-15; amended 2026-09-17 — target state).**
   A model/parse failure is retried twice within the same worker run;
   persistent failure posts an **error verdict** moving the job to
-  `AIError` with the error as its reason. Without it, oldest-first would
+  `AIError` with the error as its reason. Without it, rank order would
   spin the worker on the same broken job forever. The dashboard re-queue
   button (job → `AiPending`) retries later (source states `AIError`/
   `NotApprovedAI` only + the `Content == null` guard — D12, §2.1).
@@ -541,7 +545,7 @@ verdict), matching the "leave the system running" usage pattern.
   deleted between fetch and verdict) → log + continue with the next job;
   400 (validation rejection = a worker bug) → abort the run loudly; 5xx
   or network error → abort the run. Loop-safety: without these rules the
-  worker could spin endlessly on the same oldest `AiPending` job.
+  worker could spin endlessly on the same top-ranked `AiPending` job.
 
 ## 7. Phasing
 
