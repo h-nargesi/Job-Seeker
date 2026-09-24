@@ -210,13 +210,13 @@ should be processed. One run:
   (`/v1/chat/completions`) on the AI station's localhost. The model never
   ships inside `job-seeker`; the core never talks to it at all. Decided
   (2026-09-12): localhost-only through phase 3; resolved 2026-09-18 —
-  **permanent localhost**: the phase-5 assistant runs on the same host and
-  shares the instance with the worker (`--parallel 2`, two independent
-  clients; the total context `-c` splits across slots — provision ≥ ~32k:
-  worker 16k + assistant ~8k). **No worker/assistant mutex** (2026-09-19):
-  the user chooses when to run the worker; overlapping use is allowed;
-  shared GPU latency is accepted. No interface binding, reverse proxy, or
-  home-LAN trust assumption remains.
+  **permanent localhost**: the phase-5 assistant runs on the same host.
+  Deployed `model/run.sh` is **one slot at 16k** (`--ctx-size 16384`, no
+  `--parallel`): worker and assistant are not run at the same time, so the
+  worker keeps the full 16k budget (2026-09-24, supersedes the 2026-09-18
+  `--parallel 2` / ≥32k provision). **No mutex in software** (2026-09-19)
+  remains. No interface binding, reverse proxy, or home-LAN trust
+  assumption remains.
 - `ai-worker` client: a plain `HttpClient` + JSON. No new package
   dependencies on the core.
 - Suggested configuration (the worker's, not the core's `appsettings.json`;
@@ -224,8 +224,8 @@ should be processed. One run:
 
 ```json
 "Llm": {
-  "BaseUrl": "http://localhost:8082/v1",
-  "Model": "Qwen3-30B-A3B-Q5_K_M",
+  "BaseUrl": "http://localhost:8081/v1",
+  "Model": "Qwen3.5-35B-A3B-Q5_K_M",
   "Core": "https://core.example.com",
   "CoreApiKey": "<the core's worker key — Auth:ApiKeys:Worker, D7>",
   "Temperature": 0.2,
@@ -480,8 +480,9 @@ verdict), matching the "leave the system running" usage pattern.
   `contextVersion` hash, and a mismatch at a job boundary triggers exactly one
   refetch + trunk rebuild (warn-logged; the one unavoidable re-ingest). The
   trunk never rebuilds between call 1 and call 2 of the same job. Rubric edits
-  are worker config — restart the worker for those. Phase-5 note: the
-  assistant extension should pin its own `id_slot: 1` (the worker owns 0).
+  are worker config — restart the worker for those. Phase-5 note: with the
+  single-slot `model/run.sh` both clients use slot 0 (an `id_slot: 1` pin
+  needs `--parallel 2`, which is not deployed).
   *(Supersedes the 2026-09-18 "call 1 and call 2 share no cached prefix"
   scope note.)*
 - **Structured output.** Use `response_format` (JSON schema / GBNF grammar)

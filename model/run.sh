@@ -8,6 +8,7 @@ cd ~/llama.cpp
   --port 8081 \
   --ctx-size 16384 \
   --jinja \
+  --chat-template-kwargs '{"enable_thinking":false}' \
   --reasoning-budget 0 \
   --n-gpu-layers 99 \
   --n-cpu-moe 25 \

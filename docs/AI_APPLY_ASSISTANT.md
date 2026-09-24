@@ -41,10 +41,10 @@ sensitive data, so hosted LLM endpoints are never used by the assistant,
 and running it anywhere other than the AI station host is out of scope
 (no hosted fallback).
 
-Worker and assistant are independent clients of the same `llama-server`
-(`--parallel 2`). There is **no mutex** (2026-09-19): the user chooses
-when to run the worker; overlapping use is allowed; shared GPU latency
-is accepted. Docs must not imply a night-worker / day-assistant split.
+Worker and assistant are independent clients of the same `llama-server`.
+The deployed command is single-slot (no `--parallel`); they are not run
+at the same time (2026-09-24, supersedes the 2026-09-18 `--parallel 2`
+provision). There is **no mutex** in software (2026-09-19).
 
 ## 2. The decided flow (human-triggered)
 
