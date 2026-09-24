@@ -80,5 +80,8 @@ public sealed class VerdictSchemaTests
         var experience = Property("experience_years");
         Assert.Equal(0, experience.GetProperty("minimum").GetInt32());
         Assert.Equal(50, experience.GetProperty("maximum").GetInt32());
+
+        Assert.Equal(20, Property("skills").GetProperty("maxItems").GetInt32());
+        Assert.Equal(VerdictPayload.SkillsMaxCount, Property("skills").GetProperty("maxItems").GetInt32());
     }
 }

@@ -23,7 +23,7 @@ public static class VerdictSchema
             "relocation_support": { "type": "string", "enum": ["Yes", "No", "Unknown"] },
             "contract": { "type": "string", "enum": ["Permanent", "B2B", "Temporary", "Unknown"] },
             "experience_years": { "type": ["integer", "null"], "minimum": 0, "maximum": 50 },
-            "skills": { "type": "array", "items": { "type": "string" } }
+            "skills": { "type": "array", "items": { "type": "string" }, "maxItems": 20 }
           },
           "required": ["relevance", "verdict", "reason", "seniority", "salary_min", "salary_max",
             "currency", "period", "work_model", "relocation_support", "contract", "experience_years", "skills"],

@@ -255,6 +255,11 @@ resurrection Attempts reset.
 
 ## Rubric v1 (2026-09-17)
 
+**Superseded 2026-09-24.** Live text is `Llm:Rubric` / `Llm:RubricTailor` in
+the worker's appsettings (env-overridable). The worker no longer substitutes
+`{{keywords}}` — keywords sit in the trunk as `## KEYWORD PRIORITIES`.
+Historical v1 draft follows; do not paste it back into appsettings.
+
 The default system prompt; ships as `Llm:Rubric` in the worker's
 appsettings (env-var overridable — tunable without rebuild). The worker
 injects the JobOption-derived `keywords` payload at `{{keywords}}`:
@@ -272,6 +277,9 @@ injects the JobOption-derived `keywords` payload at `{{keywords}}`:
 > the posting does not say.
 
 ## RubricTailor v1 (2026-09-18, D14; amended 2026-09-19)
+
+**Superseded 2026-09-24** with `Llm:Rubric` — live `Llm:RubricTailor` no
+longer inlines `{{keywords}}`. Historical draft follows.
 
 The call-2 system prompt; ships as `Llm:RubricTailor` in the worker's
 appsettings (env-overridable like `Llm:Rubric`), sharing the same

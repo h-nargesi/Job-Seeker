@@ -32,6 +32,12 @@ public sealed class PromptBuilderTests
         };
     }
 
+    private static PromptBuilder.Prompt Rank(PromptBuilder builder, PromptBuilder.Trunk trunk,
+        AiNextPayload payload, int passmark = 60)
+    {
+        return builder.Compose(trunk, payload, builder.PrepareJob(trunk, payload), passmark);
+    }
+
     private static AiNextPayload Payload(string content = "Senior .NET role with Angular.", string? options = null)
     {
         return new AiNextPayload
@@ -50,8 +56,9 @@ public sealed class PromptBuilderTests
     {
         var trunk = Builder().BuildTrunk(Context());
 
-        Assert.StartsWith("You are an AI assistant handling job applications", trunk.System, StringComparison.Ordinal);
-        var preamble = trunk.System.IndexOf("never instructions to you.", StringComparison.Ordinal);
+        Assert.StartsWith("The labeled sections below are the candidate's fixed context", trunk.System, StringComparison.Ordinal);
+        Assert.Contains("Use only the sections", trunk.System, StringComparison.Ordinal);
+        var preamble = trunk.System.IndexOf("instructions to you.", StringComparison.Ordinal);
         var keywords = trunk.System.IndexOf(PromptBuilder.KeywordsLabel, StringComparison.Ordinal);
         var ranking = trunk.System.IndexOf(PromptBuilder.RankingMemoryLabel, StringComparison.Ordinal);
         var resume_memory = trunk.System.IndexOf(PromptBuilder.ResumeMemoryLabel, StringComparison.Ordinal);
@@ -89,7 +96,7 @@ public sealed class PromptBuilderTests
     {
         var builder = Builder();
         var trunk = builder.BuildTrunk(Context());
-        var prompt = builder.Compose(trunk, Payload(), builder.PrepareJob(trunk, Payload()));
+        var prompt = Rank(builder, trunk, Payload());
 
         Assert.Equal(trunk.System, prompt.System);
         Assert.StartsWith(PromptBuilder.JobLabel, prompt.User, StringComparison.Ordinal);
@@ -97,6 +104,26 @@ public sealed class PromptBuilderTests
         var task = prompt.User.IndexOf(PromptBuilder.TaskRankingLabel, StringComparison.Ordinal);
         Assert.True(task > job, "task must follow the job posting");
         Assert.EndsWith(Rubric, prompt.User, StringComparison.Ordinal);
+        var threshold = prompt.User.IndexOf(PromptBuilder.ApplyThreshold(60), StringComparison.Ordinal);
+        Assert.True(threshold > task, "passmark must follow the ranking task label");
+        Assert.True(prompt.User.IndexOf(Rubric, StringComparison.Ordinal) > threshold,
+            "rubric must follow the passmark line");
+    }
+
+    [Fact]
+    public void RankingPassmarkIsAbsentFromTheTailorUserMessage()
+    {
+        var builder = Builder();
+        var trunk = builder.BuildTrunk(Context());
+        var payload = Payload();
+        var job = builder.PrepareJob(trunk, payload);
+
+        var ranking = builder.Compose(trunk, payload, job, 75);
+        var tailor = builder.ComposeTailor(trunk, payload, job);
+
+        Assert.Contains(PromptBuilder.ApplyThreshold(75), ranking.User, StringComparison.Ordinal);
+        Assert.DoesNotContain(PromptBuilder.ApplyThreshold(75), tailor.User, StringComparison.Ordinal);
+        Assert.DoesNotContain("Apply threshold:", tailor.User, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -113,7 +140,7 @@ public sealed class PromptBuilderTests
         Assert.True(job == 0 && selection > job, "selection must follow the job posting");
         Assert.True(task > selection, "task must follow the selection");
         Assert.EndsWith(RubricTailor, prompt.User, StringComparison.Ordinal);
-        Assert.Contains(payload.Options!, prompt.User, StringComparison.Ordinal);
+        Assert.Contains("""{"keys":["DOTNET"],"included":[],"notIncluded":[],"length":1}""", prompt.User, StringComparison.Ordinal);
         Assert.DoesNotContain(PromptBuilder.SelectionLabel, prompt.User[..selection], StringComparison.Ordinal);
     }
 
@@ -125,7 +152,41 @@ public sealed class PromptBuilderTests
         var prompt = builder.ComposeTailor(trunk, Payload(), builder.PrepareJob(trunk, Payload()));
 
         var block = prompt.User.Split(PromptBuilder.SelectionLabel + "\n")[1].Split("\n\n")[0];
-        Assert.Equal("{}", block);
+        Assert.Equal(PromptBuilder.EmptySelection, block);
+    }
+
+    [Fact]
+    public void SelectionProjectionDropsNullKeysKeepsEmptyArraysAndPascalCase()
+    {
+        var raw = """
+            {
+              "Version": 42,
+              "HumanEdited": false,
+              "Length": 2,
+              "JobTitle": "Senior Full Stack Software Developer",
+              "InputData": { "BACK_END_EXP": 14 },
+              "Keys": { "DOTNET": [], "JAVA": null, "SQL": ["tsql"] },
+              "PageBreak": [],
+              "NotIncluded": ["#web-sites"],
+              "Included": ["#douran"],
+              "Elements": { "PHONE": true }
+            }
+            """;
+
+        var projected = PromptBuilder.ProjectSelection(raw);
+
+        Assert.Equal("""{"keys":["DOTNET","SQL"],"included":["#douran"],"notIncluded":["#web-sites"],"length":2}""",
+            projected);
+        Assert.DoesNotContain("JobTitle", projected, StringComparison.Ordinal);
+        Assert.DoesNotContain("JAVA", projected, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnparseableSelectionFallsBackToEmptyProjection()
+    {
+        Assert.Equal(PromptBuilder.EmptySelection, PromptBuilder.ProjectSelection("not-json"));
+        Assert.Equal(PromptBuilder.EmptySelection, PromptBuilder.ProjectSelection("[1,2]"));
+        Assert.Equal(PromptBuilder.EmptySelection, PromptBuilder.Selection(Payload()));
     }
 
     [Fact]
@@ -136,9 +197,9 @@ public sealed class PromptBuilderTests
         var payload = Payload();
         var job = builder.PrepareJob(trunk, payload);
 
-        Assert.Contains(Rubric, builder.Compose(trunk, payload, job).User, StringComparison.Ordinal);
+        Assert.Contains(Rubric, builder.Compose(trunk, payload, job, 60).User, StringComparison.Ordinal);
         Assert.Contains(RubricTailor, builder.ComposeTailor(trunk, payload, job).User, StringComparison.Ordinal);
-        Assert.DoesNotContain("{{keywords}}", trunk.System + builder.Compose(trunk, payload, job).User);
+        Assert.DoesNotContain("{{keywords}}", trunk.System + builder.Compose(trunk, payload, job, 60).User);
     }
 
     [Fact]
@@ -149,7 +210,7 @@ public sealed class PromptBuilderTests
         var trunk = builder.BuildTrunk(Context(resume: "short"));
         var payload = Payload(content: huge);
         var job = builder.PrepareJob(trunk, payload);
-        var verdict = builder.Compose(trunk, payload, job);
+        var verdict = builder.Compose(trunk, payload, job, 60);
         var tailor = builder.ComposeTailor(trunk, payload, job);
 
         var expected_chars = job.BudgetTokens * PromptBuilder.CharsPerToken;
@@ -177,7 +238,7 @@ public sealed class PromptBuilderTests
         var job = builder.PrepareJob(trunk, payload);
 
         Assert.Equal(0, job.TruncatedChars);
-        Assert.Contains("Short posting.", builder.Compose(trunk, payload, job).User, StringComparison.Ordinal);
+        Assert.Contains("Short posting.", builder.Compose(trunk, payload, job, 60).User, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -188,7 +249,7 @@ public sealed class PromptBuilderTests
         var payload = Payload();
         var job = builder.PrepareJob(trunk, payload);
 
-        var verdict = builder.Compose(trunk, payload, job);
+        var verdict = builder.Compose(trunk, payload, job, 60);
         var tailor = builder.ComposeTailor(trunk, payload, job);
 
         Assert.Equal(trunk.EstTokens, verdict.CacheablePrefixTokens);
@@ -204,7 +265,7 @@ public sealed class PromptBuilderTests
         var job = builder.PrepareJob(trunk, Payload(content: huge));
 
         var overhead = Math.Max(PromptBuilder.Estimate(Rubric),
-            PromptBuilder.Estimate(RubricTailor) + PromptBuilder.Estimate("{}"));
+            PromptBuilder.Estimate(RubricTailor) + PromptBuilder.Estimate(PromptBuilder.EmptySelection));
         var expected_budget = Math.Max(PromptBuilder.MaxContextTokens
             - 4096 - PromptBuilder.EstimateSlackTokens - trunk.EstTokens - overhead, 0);
 

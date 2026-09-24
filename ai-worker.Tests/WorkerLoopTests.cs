@@ -177,6 +177,7 @@ public sealed class WorkerLoopTests
         Assert.StartsWith(PromptBuilder.JobLabel, user);
         Assert.Contains("Senior .NET role with Angular.", user);
         Assert.Contains(PromptBuilder.TaskRankingLabel, user);
+        Assert.Contains(PromptBuilder.ApplyThreshold(60), user);
         Assert.Contains(Rubric, user);
         Assert.DoesNotContain(PromptBuilder.ResumeLabel, user);
     }
@@ -214,8 +215,10 @@ public sealed class WorkerLoopTests
         Assert.StartsWith(PromptBuilder.JobLabel, tailor_user);
         Assert.Contains("Senior .NET role with Angular.", tailor_user);
         Assert.Contains(PromptBuilder.SelectionLabel, tailor_user);
+        Assert.Contains(PromptBuilder.EmptySelection, tailor_user);
         Assert.Contains(PromptBuilder.TaskTailoringLabel, tailor_user);
         Assert.Contains(RubricTailor, tailor_user);
+        Assert.DoesNotContain("Apply threshold:", tailor_user);
     }
 
     [Fact]

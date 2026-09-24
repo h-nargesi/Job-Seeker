@@ -139,7 +139,7 @@ public sealed class WorkerLoop
                 VerdictPayload verdict;
                 try
                 {
-                    verdict = await JudgeAsync(next, job_id, prompt.Compose(current.Trunk, next, job_text), stats, ct);
+                    verdict = await JudgeAsync(next, job_id, prompt.Compose(current.Trunk, next, job_text, current.Passmark), stats, ct);
                     consecutive_llm_failures = 0;
                 }
                 catch (LlmCallException ex)

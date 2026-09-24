@@ -485,6 +485,17 @@ verdict), matching the "leave the system running" usage pattern.
   needs `--parallel 2`, which is not deployed).
   *(Supersedes the 2026-09-18 "call 1 and call 2 share no cached prefix"
   scope note.)*
+  **Wording / placement (2026-09-24).** Live text is `Llm:Rubric` /
+  `Llm:RubricTailor` in the worker appsettings (`AI_PHASE1_NOTES.md` drafts
+  are historical). Shared framing stays in the trunk preamble (role-neutral;
+  use only sections the task names). Ranking-only rules stay in the ranking
+  TASK — including the live `AiPassmark` line `PromptBuilder` inserts after
+  `## TASK — RANKING` (not in the trunk, not hardcoded in the rubric).
+  Tailor-only rules stay in the tailoring TASK. The worker **projects**
+  `/ai/next` `options` to `{keys, included, notIncluded, length}` before
+  embedding; `keys` are `MainKeys` names, `included`/`notIncluded` are CSS
+  overlays. Do not add trunk sections or few-shot examples when tuning;
+  do not raise the 16k cap speculatively.
 - **Structured output.** Use `response_format` (JSON schema / GBNF grammar)
   so verdicts and extractions always parse. Never regex-scrape model output.
 - **Determinism (2026-09-18, D6).** Every model request carries
@@ -527,8 +538,8 @@ verdict), matching the "leave the system running" usage pattern.
   payload split); input: rubric + block inventory + current context + JD
   (fixed parts from the `/ai/context` trunk, JD + selection per job; the
   fixed candidate profile sits in the shared system-message trunk — its own
-  config key `Llm:RubricTailor`, D14, draft in
-  [`AI_PHASE1_NOTES.md`](AI_PHASE1_NOTES.md)); inventory: full template
+  config key `Llm:RubricTailor`, D14, live text in worker appsettings);
+  inventory: full template
   text on editable slots (title / summary / job-description bullets),
   ≤ 120 char excerpt on other items, no item-count cap (D16 as amended
   2026-09-19); the 16k cap applies **per call**, JD tail-truncated — do
