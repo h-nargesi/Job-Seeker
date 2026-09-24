@@ -20,14 +20,35 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish",
+            "label": "publish-core",
             "command": "dotnet",
             "type": "process",
             "args": [
                 "publish",
                 "${workspaceFolder}/core-decision-dotnet/core-decision.csproj",
+                "-c",
+                "Release",
                 "--output",
-                "${workspaceFolder}/publish",
+                "${workspaceFolder}/publish-core",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish-ai-worker",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "${workspaceFolder}/ai-worker/ai-worker.csproj",
+                "-c",
+                "Release",
+                "-r",
+                "linux-x64",
+                "--self-contained",
+                "--output",
+                "${workspaceFolder}/publish-ai-worker",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],

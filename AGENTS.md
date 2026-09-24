@@ -53,7 +53,9 @@ Job-Seeker/
 │   └── data.sqlite3           # main DB (gitignored)
 ├── core-decision.sln          # VS solution (contains only core-decision;
 │                             # run tests on core-decision-dotnet.Tests directly)
-└── job-seeker.sh              # runs the published binary on port 8081
+└── scripts/                   # AI-station launchers (bash)
+    ├── ai-worker.sh           # runs publish-ai-worker/ai-worker (env + exec)
+    └── llama-server.sh        # starts llama-server (single slot, 16k ctx)
 ```
 
 ## 2. Build & run
@@ -68,9 +70,9 @@ dotnet build core-decision.sln
 # Run the server (development)
 dotnet run --project core-decision-dotnet
 
-# Production (what job-seeker.sh does)
-dotnet publish core-decision-dotnet -c Release
-./publish/job-seeker --urls "http://*:8081"
+# Production
+dotnet publish core-decision-dotnet -c Release -o publish-core
+./publish-core/job-seeker --urls "http://*:8081"
 ```
 
 Assembly name is `job-seeker` (set in the `.csproj`), not the folder name.
@@ -242,7 +244,10 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
   per agency — even for fully inactive ones — via Search/Analyze switches
   (`POST /decision/status`) and country buttons (`POST /decision/running`,
   which also re-enables seeking); both refresh active-cache membership.
-- **`job-seeker.sh` hardcodes a Linux publish path.** Don't trust it on Windows;
-  use `dotnet run` instead.
+- **Publish outputs live in `publish-core/` and `publish-ai-worker/`** (both
+  gitignored). `publish-core/job-seeker` is framework-dependent (needs the
+  .NET 8 runtime); `scripts/ai-worker.sh` runs the **linux-x64 self-contained**
+  `publish-ai-worker/ai-worker` — don't copy that one to other
+  OSes/architectures.
 - The dashboard SQL in `JobBusiness.Q_INDEX` ranks jobs with a time-decay curve.
   Touch with care — it references enum names and the `Relocation` log marker.

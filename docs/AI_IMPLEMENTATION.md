@@ -57,8 +57,9 @@ Locked 2026-09-19 — Linux on the AI station is **not** a language reason.
   `HttpClient` to the core and to localhost `llama-server` (llama.cpp
   does inference). Chat 5 builds it.
 - **Linux deploy:** `dotnet publish ai-worker -c Release -r linux-x64
-  --self-contained`, then copy. No SDK required on the GPU box. Optional
-  thin launcher like `job-seeker.sh` (`ai-worker.sh`: env + exec). Shell
+  --self-contained -o publish-ai-worker`, then copy. No SDK required on the
+  GPU box. Optional
+  thin launcher (`scripts/ai-worker.sh`: env + exec). Shell
   is **not** a second worker. Manual run, no systemd / polling (D17).
 - **`assistant-extension/`** is Chrome MV3 **vanilla JS**, no build,
   patterned on `agent-extension/` (Chat 8). Not a Python UI.

@@ -211,7 +211,7 @@ should be processed. One run:
   ships inside `job-seeker`; the core never talks to it at all. Decided
   (2026-09-12): localhost-only through phase 3; resolved 2026-09-18 —
   **permanent localhost**: the phase-5 assistant runs on the same host.
-  Deployed `model/run.sh` is **one slot at 16k** (`--ctx-size 16384`, no
+  Deployed `scripts/llama-server.sh` is **one slot at 16k** (`--ctx-size 16384`, no
   `--parallel`): worker and assistant are not run at the same time, so the
   worker keeps the full 16k budget (2026-09-24, supersedes the 2026-09-18
   `--parallel 2` / ≥32k provision). **No mutex in software** (2026-09-19)
@@ -481,7 +481,7 @@ verdict), matching the "leave the system running" usage pattern.
   refetch + trunk rebuild (warn-logged; the one unavoidable re-ingest). The
   trunk never rebuilds between call 1 and call 2 of the same job. Rubric edits
   are worker config — restart the worker for those. Phase-5 note: with the
-  single-slot `model/run.sh` both clients use slot 0 (an `id_slot: 1` pin
+  single-slot `scripts/llama-server.sh` both clients use slot 0 (an `id_slot: 1` pin
   needs `--parallel 2`, which is not deployed).
   *(Supersedes the 2026-09-18 "call 1 and call 2 share no cached prefix"
   scope note.)*
