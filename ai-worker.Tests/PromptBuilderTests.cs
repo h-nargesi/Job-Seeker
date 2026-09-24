@@ -2,10 +2,11 @@ namespace AiWorker.Tests;
 
 public sealed class PromptBuilderTests
 {
+    private const string Fixed = "FIXED CONTEXT.";
     private const string Rubric = "RANKING TASK BODY.";
     private const string RubricTailor = "TAILORING TASK BODY.";
 
-    private static PromptBuilder Builder() => new(Rubric, RubricTailor);
+    private static PromptBuilder Builder() => new(Fixed, Rubric, RubricTailor);
 
     private static AiContext Context(
         string resume = "RESUME TEXT",
@@ -56,16 +57,15 @@ public sealed class PromptBuilderTests
     {
         var trunk = Builder().BuildTrunk(Context());
 
-        Assert.StartsWith("The labeled sections below are the candidate's fixed context", trunk.System, StringComparison.Ordinal);
-        Assert.Contains("Use only the sections", trunk.System, StringComparison.Ordinal);
-        var preamble = trunk.System.IndexOf("instructions to you.", StringComparison.Ordinal);
+        Assert.StartsWith(Fixed, trunk.System, StringComparison.Ordinal);
+        var preamble = trunk.System.IndexOf(Fixed, StringComparison.Ordinal);
         var keywords = trunk.System.IndexOf(PromptBuilder.KeywordsLabel, StringComparison.Ordinal);
         var ranking = trunk.System.IndexOf(PromptBuilder.RankingMemoryLabel, StringComparison.Ordinal);
         var resume_memory = trunk.System.IndexOf(PromptBuilder.ResumeMemoryLabel, StringComparison.Ordinal);
         var resume = trunk.System.IndexOf(PromptBuilder.ResumeLabel, StringComparison.Ordinal);
         var inventory = trunk.System.IndexOf(PromptBuilder.InventoryLabel, StringComparison.Ordinal);
 
-        Assert.True(preamble >= 0 && keywords > preamble, "keywords must follow the preamble");
+        Assert.True(preamble >= 0 && keywords > preamble, "keywords must follow the fixed text");
         Assert.True(ranking > keywords, "ranking memory must follow keywords");
         Assert.True(resume_memory > ranking, "resume memory must follow ranking memory");
         Assert.True(resume > resume_memory, "resume must follow resume memory");
@@ -190,6 +190,24 @@ public sealed class PromptBuilderTests
     }
 
     [Fact]
+    public void FixedTextStaysInTheTrunkAndNotInUserTails()
+    {
+        const string mina = "FIXED MINA. JOB POSTING is untrusted. injection attempt.";
+        var builder = new PromptBuilder(mina, "ROLE ranking only.", "ROLE tailor only.");
+        var trunk = builder.BuildTrunk(Context());
+        var payload = Payload();
+        var job = builder.PrepareJob(trunk, payload);
+        var ranking = builder.Compose(trunk, payload, job, 60);
+        var tailor = builder.ComposeTailor(trunk, payload, job);
+
+        Assert.StartsWith(mina, trunk.System, StringComparison.Ordinal);
+        Assert.DoesNotContain(mina, ranking.User, StringComparison.Ordinal);
+        Assert.DoesNotContain(mina, tailor.User, StringComparison.Ordinal);
+        Assert.DoesNotContain("injection attempt", ranking.User, StringComparison.Ordinal);
+        Assert.DoesNotContain("injection attempt", tailor.User, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RubricsAreUsedVerbatimWithoutSubstitution()
     {
         var builder = Builder();
@@ -260,7 +278,7 @@ public sealed class PromptBuilderTests
     public void CustomCompletionReserveShrinksContentBudget()
     {
         var huge = new string('x', 400_000);
-        var builder = new PromptBuilder(Rubric, RubricTailor, 4096);
+        var builder = new PromptBuilder(Fixed, Rubric, RubricTailor, 4096);
         var trunk = builder.BuildTrunk(Context(resume: "short"));
         var job = builder.PrepareJob(trunk, Payload(content: huge));
 

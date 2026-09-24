@@ -286,8 +286,9 @@ public sealed class WorkerLoop
         WorkerLog.Info("run {RunId} starting: model {Model}, temperature {Temperature}, seed {Seed}",
             WorkerLog.RunId, options?.Model ?? "n/a", options?.Temperature ?? LlmOptions.DefaultTemperature,
             options?.Seed ?? 0);
-        WorkerLog.Info("trunk {TrunkHash} (~{TrunkTokens} tok, version {Version}), rubric {RubricHash}, rubric-tailor {RubricTailorHash}",
+        WorkerLog.Info("trunk {TrunkHash} (~{TrunkTokens} tok, version {Version}), fixed {FixedHash}, rubric {RubricHash}, rubric-tailor {RubricTailorHash}",
             trunk.Hash, trunk.EstTokens, version ?? "n/a",
+            options == null ? "n/a" : RunReport.ShortHash(options.Fixed),
             options == null ? "n/a" : RunReport.ShortHash(options.Rubric),
             options == null ? "n/a" : RunReport.ShortHash(options.RubricTailor));
         WorkerLog.Info(

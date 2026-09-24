@@ -466,7 +466,7 @@ verdict), matching the "leave the system running" usage pattern.
   jobs are comfortable.
 - **Prompt caching (2026-09-23: trunk/TASK layout).** The worker pins one
   llama-server slot (`id_slot: 0`, `cache_prompt: true`) and prompts share a
-  run-constant **trunk** — the system message: preamble + `## KEYWORD
+  run-constant **trunk** — the system message: `Llm:Fixed` + `## KEYWORD
   PRIORITIES` + `## RANKING MEMORY` + `## RESUME MEMORY` + `## CANDIDATE
   RESUME` + `## BLOCK INVENTORY` (a full superset; the resume is new to call
   2). The JD is tail-truncated **once per job** and embedded byte-identically
@@ -479,23 +479,28 @@ verdict), matching the "leave the system running" usage pattern.
   `GET /ai/context` (fetched at run start); every `/ai/next` carries a
   `contextVersion` hash, and a mismatch at a job boundary triggers exactly one
   refetch + trunk rebuild (warn-logged; the one unavoidable re-ingest). The
-  trunk never rebuilds between call 1 and call 2 of the same job. Rubric edits
-  are worker config — restart the worker for those. Phase-5 note: with the
-  single-slot `scripts/llama-server.sh` both clients use slot 0 (an `id_slot: 1` pin
-  needs `--parallel 2`, which is not deployed).
+  trunk never rebuilds between call 1 and call 2 of the same job. `Fixed` and
+  rubric edits are worker config — restart the worker for those. Phase-5
+  note: with the single-slot `scripts/llama-server.sh` both clients use
+  slot 0 (an `id_slot: 1` pin needs `--parallel 2`, which is not deployed).
   *(Supersedes the 2026-09-18 "call 1 and call 2 share no cached prefix"
   scope note.)*
-  **Wording / placement (2026-09-24).** Live text is `Llm:Rubric` /
-  `Llm:RubricTailor` in the worker appsettings (`AI_PHASE1_NOTES.md` drafts
-  are historical). Shared framing stays in the trunk preamble (role-neutral;
-  use only sections the task names). Ranking-only rules stay in the ranking
-  TASK — including the live `AiPassmark` line `PromptBuilder` inserts after
+  **Wording / placement (2026-09-24; layered 2026-09-24).** Live static
+  prose is three worker appsettings keys (`AI_PHASE1_NOTES.md` drafts are
+  historical). `Llm:Fixed` is the mina — role-neutral framing, what each
+  trunk label *is*, and the untrusted-JD / injection rule — and is the
+  first block of the system trunk (cached across jobs). `Llm:Rubric` and
+  `Llm:RubricTailor` are request-only TASK tails (ROLE + score vs delta);
+  they do not repeat the mina. Ranking-only rules stay in the ranking TASK
+  — including the live `AiPassmark` line `PromptBuilder` inserts after
   `## TASK — RANKING` (not in the trunk, not hardcoded in the rubric).
   Tailor-only rules stay in the tailoring TASK. The worker **projects**
   `/ai/next` `options` to `{keys, included, notIncluded, length}` before
   embedding; `keys` are `MainKeys` names, `included`/`notIncluded` are CSS
   overlays. Do not add trunk sections or few-shot examples when tuning;
-  do not raise the 16k cap speculatively.
+  do not raise the 16k cap speculatively. Editing `Fixed` rebuilds the
+  trunk (restart the worker); editing a rubric re-ingests only that call's
+  suffix.
 - **Structured output.** Use `response_format` (JSON schema / GBNF grammar)
   so verdicts and extractions always parse. Never regex-scrape model output.
 - **Determinism (2026-09-18, D6).** Every model request carries

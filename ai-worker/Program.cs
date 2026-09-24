@@ -51,7 +51,7 @@ try
     var worker = new WorkerLoop(
         new CoreClient(core_http, options.CoreApiKey),
         new LlmClient(llm_http, options),
-        new PromptBuilder(options.Rubric, options.RubricTailor, options.MaxCompletionTokens),
+        new PromptBuilder(options.Fixed, options.Rubric, options.RubricTailor, options.MaxCompletionTokens),
         options);
 
     using var cancellation = new CancellationTokenSource();

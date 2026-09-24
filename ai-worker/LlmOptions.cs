@@ -17,6 +17,8 @@ public sealed class LlmOptions
 
     public string CoreApiKey { get; set; } = string.Empty;
 
+    public string Fixed { get; set; } = string.Empty;
+
     public string Rubric { get; set; } = string.Empty;
 
     public string RubricTailor { get; set; } = string.Empty;
@@ -37,6 +39,7 @@ public sealed class LlmOptions
         if (string.IsNullOrWhiteSpace(Model)) return "Llm:Model is required";
         if (string.IsNullOrWhiteSpace(Core)) return "Llm:Core is required";
         if (string.IsNullOrWhiteSpace(CoreApiKey)) return "Llm:CoreApiKey is required (Auth:ApiKeys:Worker)";
+        if (string.IsNullOrWhiteSpace(Fixed)) return "Llm:Fixed is required";
         if (string.IsNullOrWhiteSpace(Rubric)) return "Llm:Rubric is required";
         if (string.IsNullOrWhiteSpace(RubricTailor)) return "Llm:RubricTailor is required";
         if (Temperature is < 0 or > 2) return "Llm:Temperature must be within 0-2";

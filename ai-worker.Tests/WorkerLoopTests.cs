@@ -6,6 +6,7 @@ namespace AiWorker.Tests;
 [Collection("worker-run")]
 public sealed class WorkerLoopTests
 {
+    private const string Fixed = "FIXED CONTEXT.";
     private const string Rubric = "Judge this posting.";
     private const string RubricTailor = "Tailor this resume.";
 
@@ -17,6 +18,7 @@ public sealed class WorkerLoopTests
             Model = "test-model",
             Core = "http://core.test",
             CoreApiKey = "worker-key",
+            Fixed = Fixed,
             Rubric = Rubric,
             RubricTailor = RubricTailor,
             Temperature = 0.2,
@@ -29,7 +31,7 @@ public sealed class WorkerLoopTests
         options ??= Options();
         var core = new CoreClient(FakeHttp.Client(coreHandler), options.CoreApiKey);
         var llm = new LlmClient(FakeHttp.Client(llmHandler, "http://llm.test/v1/"), options);
-        return new WorkerLoop(core, llm, new PromptBuilder(options.Rubric, options.RubricTailor), options);
+        return new WorkerLoop(core, llm, new PromptBuilder(options.Fixed, options.Rubric, options.RubricTailor), options);
     }
 
     private static string NextJob(long id, string fingerprint = "fp", string contextVersion = "v1")
@@ -165,7 +167,7 @@ public sealed class WorkerLoopTests
         var messages = chat.GetProperty("messages").EnumerateArray().ToArray();
         Assert.Equal("system", messages[0].GetProperty("role").GetString());
         var system = messages[0].GetProperty("content").GetString()!;
-        Assert.Contains(PromptBuilder.TrunkPreamble.Split('\n')[0], system);
+        Assert.Contains(Fixed, system);
         Assert.Contains(PromptBuilder.KeywordsLabel, system);
         Assert.Contains("\"title\":\"C#\"", system);
         Assert.Contains(PromptBuilder.RankingMemoryLabel, system);
