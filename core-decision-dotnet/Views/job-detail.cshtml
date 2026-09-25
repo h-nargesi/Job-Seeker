@@ -70,7 +70,7 @@
             <label for="@dom_id" class="form-label">@slot</label>
             @if (slot == "title")
             {
-              <input id="@dom_id" type="text" class="codes code-single" value="@value?.Live"
+              <input id="@dom_id" type="text" class="codes" value="@value?.Live"
                      onkeydown="if (event.key === 'Enter') text_op(@job.JobID, 'title', 'live', '@dom_id')" />
             }
             else
