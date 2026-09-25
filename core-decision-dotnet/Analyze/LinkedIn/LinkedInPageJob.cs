@@ -34,9 +34,30 @@ class LinkedInPageJob(LinkedIn parent) : JobPage(parent), LinkedInPage
 
         var title_match = LinkedInPage.reg_job_title.Match(html);
         if (!title_match.Success) title_match = LinkedInPage.reg_job_title_fallback.Match(html);
+        if (!title_match.Success) title_match = LinkedInPage.reg_job_title_card.Match(html);
 
-        title = title_match.Success ? HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim() : null;
+        var document_title = false;
+        if (!title_match.Success)
+        {
+            title_match = LinkedInPage.reg_job_title_document.Match(html);
+            document_title = title_match.Success;
+        }
 
+        if (!title_match.Success)
+        {
+            title = null;
+            return;
+        }
+
+        var value = HttpUtility.HtmlDecode(title_match.Groups[1].Value).Trim();
+
+        if (document_title)
+        {
+            var separator = value.LastIndexOf(" | ", StringComparison.Ordinal);
+            if (separator > 0) value = value[..separator].Trim();
+        }
+
+        title = value;
     }
 
     public override string GetHtmlContent(string html)
@@ -56,6 +77,8 @@ class LinkedInPageJob(LinkedIn parent) : JobPage(parent), LinkedInPage
         }
 
         var title_content = doc.DocumentNode.SelectNodes("//div[contains(@class,'jobs-unified-top-card')]")?
+                                            .FirstOrDefault()
+                            ?? doc.DocumentNode.SelectNodes("//div[@data-display-contents='true']/p")?
                                             .FirstOrDefault();
 
         if (title_content == null)

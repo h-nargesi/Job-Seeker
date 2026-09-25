@@ -9,6 +9,7 @@
 *.pdf
 
 /selenium/driver/
+/examples/
 /database/structure/passwords.sql
 
 # JS tests (agent-extension)

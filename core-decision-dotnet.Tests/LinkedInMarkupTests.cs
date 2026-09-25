@@ -48,12 +48,14 @@ VALUES (1, 'LinkedIn', 3, '(.+\.)?linkedin\.com$', 'https://linkedin.com', @sett
     {
         var result = agency.AnalyzeContent(SearchUrl, ReadExample("linkedin.search.html"));
 
-        Assert.Equal(TrendState.Finished, result.State);
+        Assert.Equal(TrendState.Seeking, result.State);
         Assert.Empty(result.Commands.Where(c => c.Action == "go"));
-        Assert.Empty(result.Commands.Where(c => c.Action == "click"));
-        Assert.Equal(10L, database.ExecuteScalar<long>("SELECT COUNT(*) FROM Job"));
-        Assert.Equal("https://linkedin.com/jobs/view/4428954559/",
-            database.ExecuteScalar<string>("SELECT Url FROM Job WHERE Code = '4428954559'"));
+        Assert.Equal(@"button[aria-label=""Page 8""]",
+            Assert.Single(result.Commands.Where(c => c.Action == "click")).Object);
+        Assert.Contains(result.Commands, c => c.Action == "recheck");
+        Assert.Equal(12L, database.ExecuteScalar<long>("SELECT COUNT(*) FROM Job"));
+        Assert.Equal("https://linkedin.com/jobs/view/4469749917/",
+            database.ExecuteScalar<string>("SELECT Url FROM Job WHERE Code = '4469749917'"));
     }
 
     [Fact]
@@ -67,14 +69,24 @@ VALUES (1, 'LinkedIn', 3, '(.+\.)?linkedin\.com$', 'https://linkedin.com', @sett
     }
 
     [Fact]
-    public void Job_example_title_is_taken_from_the_title_paragraph()
+    public void Job_example_title_is_taken_from_the_top_card_paragraph()
     {
         var job_page = new ExposedLinkedInJobPage(agency);
 
         job_page.Content(ReadExample("linkedin.details.html"), out var code, out _, out var title);
 
         Assert.Null(code);
-        Assert.Equal("Oracle Data Migration Developer - Remote", title);
+        Assert.Equal("Javascript Developer - Remote", title);
+    }
+
+    [Fact]
+    public void Job_title_falls_back_to_the_document_title_without_company()
+    {
+        var job_page = new ExposedLinkedInJobPage(agency);
+
+        job_page.Content(DocumentTitleSnippet, out _, out _, out var title);
+
+        Assert.Equal("Senior Backend Engineer", title);
     }
 
     [Fact]
@@ -84,10 +96,10 @@ VALUES (1, 'LinkedIn', 3, '(.+\.)?linkedin\.com$', 'https://linkedin.com', @sett
 
         var html = job_page.Html(ReadExample("linkedin.details.html"));
 
-        Assert.Contains("Oracle Data Migration Analyst / Developer", html);
-        Assert.Contains("Until February go-live", html);
-        Assert.DoesNotContain("multi-award winning", html);
-        Assert.DoesNotContain("primary-nav", html);
+        Assert.Contains("Javascript Developer - Remote", html);
+        Assert.Contains("train next-generation AI systems", html);
+        Assert.DoesNotContain("Set alert for similar jobs", html);
+        Assert.DoesNotContain("YO IT Consulting", html);
     }
 
     private static string ReadExample(string name)
@@ -102,6 +114,11 @@ VALUES (1, 'LinkedIn', 3, '(.+\.)?linkedin\.com$', 'https://linkedin.com', @sett
         public void Content(string html, out string? code, out string? apply, out string? title)
             => GetJobContent(html, out code, out apply, out title);
     }
+
+    private const string DocumentTitleSnippet = """
+        <html><head><title>Senior Backend Engineer | ACME Corp | LinkedIn</title></head>
+        <body></body></html>
+        """;
 
     private const string MultiPageSnippet = """
         <html><body>

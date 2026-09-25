@@ -28,6 +28,10 @@ interface LinkedInPage
 
     protected static readonly Regex reg_job_title_fallback = new(@"<p[^>]*>\s*([^<]{5,}?)\s*<span", RegexOptions.IgnoreCase);
 
+    protected static readonly Regex reg_job_title_card = new(@"<div[^>]*data-display-contents=[""']true[""'][^>]*>\s*<p[^>]*>([^<]+)</p>", RegexOptions.IgnoreCase);
+
+    protected static readonly Regex reg_job_title_document = new(@"<title>\s*([^<]+?)\s*\|\s*LinkedIn\s*</title>", RegexOptions.IgnoreCase);
+
     protected static readonly Regex reg_job_adding = new(@"<span\s+aria-hidden=[""']true[""']>Save</span>", RegexOptions.IgnoreCase);
 
     public static readonly Regex reg_job_no_longer_accepting = new(@"\bNo longer accepting applications\b", RegexOptions.IgnoreCase);
