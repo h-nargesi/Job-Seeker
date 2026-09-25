@@ -8,19 +8,6 @@
   var has_content = job.Content != null;
   var SafeToString = (object? value) => value?.ToString() ?? string.Empty;
   var HasValue = (object? value) => SafeToString(value).Length > 0 ? "primary" : "secondary";
-  var GetColor = (JobState state) => state switch
-  {
-    JobState.Saved => "text-secondary",
-    JobState.Revaluation => "text-secondary",
-    JobState.NotApprovedRegex => "text-warning",
-    JobState.AiPending => "text-primary",
-    JobState.NotApprovedAI => "text-warning",
-    JobState.AIError => "text-danger",
-    JobState.Attention => "text-info",
-    JobState.Rejected => "text-danger",
-    JobState.Applied => "text-success",
-    _ => "text-secondary"
-  };
   var can_requeue = has_content && job.State is JobState.AIError or JobState.NotApprovedAI;
   var can_promote = job.State is JobState.AiPending or JobState.NotApprovedAI or JobState.AIError;
   var can_force = has_content && job.State is not (JobState.Rejected or JobState.Applied);
@@ -46,7 +33,7 @@
         <span class="text-secondary">/</span>
         <span class="@(job.AiScore == null ? "text-secondary" : "text-info")">@(job.AiScore?.ToString() ?? "—")</span>
         <span class="text-secondary">|</span>
-        <span class="@GetColor(job.State)">@job.State</span>
+        <span class="@job.State.CssClass()">@job.State</span>
       </h2>
       <h1 class="display-3 fw-bold d-inline-block">@job.Title</h1>
       <h4>Register Time: @job.RegTime</h4>
