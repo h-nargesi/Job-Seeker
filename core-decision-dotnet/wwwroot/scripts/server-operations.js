@@ -4,19 +4,35 @@ const job_seeker_agencies = document.getElementById('job-seeker-agency-list');
 const job_agency_filter = document.getElementById('job-agency-filter');
 const job_country_filter = document.getElementById('job-country-filter');
 
+let loading_jobs = false;
+
 async function LoadJobs() {
-    let query = "";
+    if (loading_jobs || !job_seeker_jobs) return;
+    loading_jobs = true;
 
-    const agency_filter = job_agency_filter?.value;
-    if (agency_filter) query += `&agencies=${agency_filter}`;
+    try {
+        let query = "";
 
-    const country_filter = job_country_filter?.value;
-    if (country_filter) query += `&countries=${country_filter}`;
+        const agency_filter = job_agency_filter?.value;
+        if (agency_filter) query += `&agencies=${agency_filter}`;
 
-    if (query.length > 0) query = "?" + query.substring(1);
+        const country_filter = job_country_filter?.value;
+        if (country_filter) query += `&countries=${country_filter}`;
 
-    const response = await fetch(`/report/jobs${query}`, { method: 'GET' });
-    job_seeker_jobs.innerHTML = await response.text();
+        if (query.length > 0) query = "?" + query.substring(1);
+
+        const response = await fetch(`/report/jobs${query}`, { method: 'GET' });
+        const selected = document.querySelector('tr.Selected')?.id;
+        job_seeker_jobs.innerHTML = await response.text();
+
+        if (selected && document.getElementById(selected))
+            select_job('#' + selected);
+
+    } catch (e) {
+        console.error(e);
+    } finally {
+        loading_jobs = false;
+    }
 }
 
 async function LoadAgencies() {
@@ -35,6 +51,7 @@ async function LoadTrends() {
 }
 
 if (job_seeker_trends) setInterval(LoadTrends, 15000);
+if (job_seeker_jobs) setInterval(LoadJobs, 15000);
 
 async function apply(jobid) {
     try {
