@@ -72,7 +72,8 @@
             @if (slot == "title")
             {
               <input id="@dom_id" type="text" class="codes" value="@value?.Live"
-                     onkeydown="if (event.key === 'Enter') text_op(@job.JobID, 'title', 'live', '@dom_id')" />
+                     onkeydown="if (event.key === 'Enter') text_op(@job.JobID, 'title', 'live', '@dom_id')"
+                     style="margin-bottom: 5pt" />
             }
             else
             {
