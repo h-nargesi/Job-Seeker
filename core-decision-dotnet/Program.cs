@@ -133,11 +133,8 @@ app.Use(async (ctx, next) =>
     else ctx.Response.Redirect("/auth/login");
 });
 
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapRazorPages();
-    endpoints.MapControllers();
-});
+app.MapRazorPages();
+app.MapControllers();
 app.Run();
 
 bool Authorized(HttpContext ctx)
