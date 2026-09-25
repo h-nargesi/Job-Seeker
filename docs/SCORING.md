@@ -83,6 +83,9 @@ Saved(1) → Revaluation → NotApproved ─┐
 - `NotApproved` — scored, failed the gate.
 - `Attention` — scored, passed (≥100). The "review me" pool.
 - `Applied` / `Rejected` — terminal user decisions.
+- Manual override — `POST /job/state` sets any state except `Revaluation`
+  (logs `Manual state change X→Y`); it never purges content, unlike
+  `POST /job/reject`.
 
 > SQL compares against the **name** string, never the int. Queries use
 > `nameof(JobState.Attention)` etc. to stay in sync.

@@ -59,6 +59,22 @@ public class JobController(Analyzer analyzer, Database database, IDatabaseFactor
     }
 
     [HttpPost]
+    public IActionResult State([FromQuery] long jobid, [FromQuery] string state)
+    {
+        try
+        {
+            if (!Enum.TryParse<JobState>(state, out var parsed) || parsed == JobState.Revaluation)
+                return BadRequest();
+            return database.Job.ChangeStateManually(jobid, parsed) ? Ok() : BadRequest();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
+    [HttpPost]
     public IActionResult Options([FromQuery] long jobid, [FromBody] string options)
     {
         try

@@ -119,6 +119,17 @@ async function promote(jobid) {
     }
 }
 
+async function change_state(jobid) {
+    try {
+        const select = document.getElementById('state-select');
+        if (!select) return;
+        await fetch(`/job/state?jobid=${jobid}&state=${encodeURIComponent(select.value)}`, { method: 'POST' });
+        location.reload();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
 async function change_running(agency, running) {
     try {
         await fetch("/decision/running", {

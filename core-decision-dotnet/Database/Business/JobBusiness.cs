@@ -228,6 +228,21 @@ WHERE JobID = @jobId", new
             database.Execute(Q_CHANGE_STATE, new { state = state.ToString(), now = DateTime.Now, jobId = id });
         }
 
+        public bool ChangeStateManually(long id, JobState state)
+        {
+            var job = database.QueryFirstOrDefault<MetaRow>(Q_FETCH_META, new { job = id });
+            if (job == null || job.State == state || state == JobState.Revaluation) return false;
+
+            database.Execute(Q_MANUAL_STATE, new
+            {
+                state = state.ToString(),
+                log = AppendLog(job.Log, $"Manual state change {job.State}→{state} — {DateTime.Now:yyyy-MM-dd}"),
+                now = DateTime.Now,
+                jobId = id,
+            });
+            return true;
+        }
+
         public bool MarkApplied(long id, string source)
         {
             var job = database.QueryFirstOrDefault<MetaRow>(Q_FETCH_META, new { job = id });
