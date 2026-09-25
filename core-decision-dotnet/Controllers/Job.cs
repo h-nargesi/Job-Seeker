@@ -215,20 +215,6 @@ public class JobController(Analyzer analyzer, Database database, IDatabaseFactor
         }
     }
 
-    [HttpPost]
-    public IActionResult BackfillPublished()
-    {
-        try
-        {
-            return Ok(database.Job.BackfillPublishedAt());
-        }
-        catch (Exception ex)
-        {
-            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
-            throw;
-        }
-    }
-
     private IActionResult ForceRevaluate(long jobid)
     {
         var job = database.Job.Fetch(jobid);

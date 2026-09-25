@@ -118,15 +118,6 @@ SELECT JobID, State, Log FROM Job WHERE JobID = @job";
         private const string Q_GET_ID_BY_CODE = @"
 SELECT JobID FROM Job WHERE AgencyID = @agency and Code = @code";
 
-        private const string Q_BACKFILL_FETCH = @"
-SELECT * FROM Job
-WHERE PublishedAt IS NULL AND (Html IS NOT NULL OR Content IS NOT NULL) AND JobID > @cursor
-ORDER BY JobID LIMIT @limit";
-
-        private const string Q_UPDATE_PUBLISHED = @"
-UPDATE Job SET PublishedAt = @publishedAt
-WHERE JobID = @jobId";
-
         private readonly static string RevaluationScope = $@"
 State IN (
     '{nameof(JobState.Attention)}',

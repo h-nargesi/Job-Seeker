@@ -187,60 +187,6 @@ WHERE JobID = @jobId", new
             });
         }
 
-        public void UpdatePublishedAt(long id, DateTime value)
-        {
-            database.Execute(Q_UPDATE_PUBLISHED, new { publishedAt = value, jobId = id });
-        }
-
-        public int BackfillPublishedAt()
-        {
-            var count = 0;
-            long cursor = 0;
-
-            while (true)
-            {
-                var rows = database.Query<Job>(Q_BACKFILL_FETCH, new { cursor, limit = 50 }).ToList();
-                if (rows.Count == 0) break;
-
-                foreach (var row in rows)
-                {
-                    cursor = row.JobID;
-
-                    if (TryRecoverPublishedAt(row, out var value))
-                    {
-                        UpdatePublishedAt(row.JobID, value);
-                        count++;
-                    }
-                }
-            }
-
-            return count;
-        }
-
-        private static bool TryRecoverPublishedAt(Job row, out DateTime value)
-        {
-            if (JobTimestamps.TryExtractExact(row.Html, out var exact))
-            {
-                value = exact!.Value;
-                return true;
-            }
-
-            if (JobTimestamps.TryExtractRelative(row.Html, row.RegTime, out var relative) && relative != null)
-            {
-                value = relative.Value;
-                return true;
-            }
-
-            if (JobTimestamps.TryExtractRelative(row.Content, row.RegTime, out relative) && relative != null)
-            {
-                value = relative.Value;
-                return true;
-            }
-
-            value = default;
-            return false;
-        }
-
         public void UpdateJobContent(Job job)
         {
             database.Execute(Q_UPDATE_CONTENT, new
