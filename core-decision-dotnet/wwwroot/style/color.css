@@ -6,3 +6,11 @@
     --main-color: rgb(10, 10, 10);
     --back-color: rgb(150, 150, 150);
 }
+
+[data-bs-theme="dark"] {
+    --high-ground: rgb(72, 60, 72);
+    --title-color: rgb(200, 200, 215);
+    --blue-color: rgb(80, 160, 255);
+    --main-color: rgb(222, 222, 228);
+    --back-color: rgb(140, 140, 150);
+}

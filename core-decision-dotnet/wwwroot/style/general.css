@@ -32,6 +32,13 @@ footer {
     text-decoration: none;
 }
 
+.theme-toggle {
+    color: var(--high-color);
+    padding: 0 6pt;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
 h4 a,
 h4 a:visited {
     color: var(--title-color);
