@@ -131,13 +131,13 @@ LIMIT {limit}").ToList();
         private readonly static string Q_FETCH_NEXT_AI = $@"
 WITH queue AS (
     SELECT Job.*
-         , MAX(0, JulianDay((SELECT MAX(RegTime) FROM Job)) - JulianDay(Job.RegTime)) AS AgeDays
+         , MAX(0, JulianDay((SELECT MAX(RegTime) FROM Job)) - COALESCE(JulianDay(Job.PublishedAt), JulianDay(Job.RegTime))) AS AgeDays
     FROM Job
     WHERE State = '{nameof(JobState.AiPending)}' AND Content IS NOT NULL
 )
 SELECT *, {JobRanking.SqlEffectiveScore} AS EffectiveScore
 FROM queue
-ORDER BY EffectiveScore DESC, RegTime DESC, JobID
+ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC, JobID
 LIMIT 1";
 
         private readonly static string Q_REQUEUE = $@"

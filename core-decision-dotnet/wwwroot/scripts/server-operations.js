@@ -225,6 +225,15 @@ async function clean() {
     }
 }
 
+async function backfillPublished() {
+    try {
+        await fetch("/job/backfillpublished", { method: 'POST' });
+        LoadJobs();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
 function filterChanged(event) {
     if (event.code === "Enter")
         LoadJobs();

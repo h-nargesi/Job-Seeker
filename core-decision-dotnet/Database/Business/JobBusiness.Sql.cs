@@ -8,8 +8,8 @@ VALUES (@agencyId, @country, @url, @code, '{nameof(JobState.Saved)}')
 ON CONFLICT(AgencyID, Code) DO NOTHING;";
 
         private readonly static string Q_INSERT_JOB = @"
-INSERT INTO Job (AgencyID, Country, Code, Title, State, Score, Url, Html, Content, Link, Log, Options, Tries)
-VALUES (@agencyId, @country, @code, @title, @state, @score, @url, @html, @content, @link, @log, @options, @tries)
+INSERT INTO Job (AgencyID, Country, Code, Title, State, Score, Url, Html, Content, Link, Log, Options, Tries, PublishedAt)
+VALUES (@agencyId, @country, @code, @title, @state, @score, @url, @html, @content, @link, @log, @options, @tries, @publishedAt)
 ON CONFLICT(AgencyID, Code) DO NOTHING;";
 
         private readonly static string Q_UPDATE_CONTENT = @"
@@ -46,11 +46,11 @@ DELETE FROM Job WHERE JobID = @jobId";
         private readonly static string Q_INDEX = @$"
 WITH date_diff AS (
     SELECT job.*
-         , MAX(0, JulianDay(latest.LatestTime) - JulianDay(job.RegTime)) AS AgeDays
+         , MAX(0, JulianDay(latest.LatestTime) - COALESCE(JulianDay(job.PublishedAt), JulianDay(job.RegTime))) AS AgeDays
     FROM (
         SELECT Job.JobID, Job.RegTime, Job.ModifiedOn, Job.AgencyID, Job.Code, Job.Title
              , Job.State, Job.Score, Job.AiScore, job.Country, Job.Url, Job.Link
-             , Job.AiRelocation, Job.AiWorkModel
+             , Job.AiRelocation, Job.AiWorkModel, Job.PublishedAt
              , Agency.Title AS AgencyName
              , CASE State
                WHEN '{nameof(JobState.Attention)}' THEN 1
@@ -77,7 +77,7 @@ WITH date_diff AS (
 ), ranking AS (
     SELECT job.JobID, job.RegTime, job.ModifiedOn, job.AgencyID, job.Code, job.Title
          , job.State, job.Score, job.AiScore, job.Country, job.Url, job.Link
-         , job.AiRelocation, job.AiWorkModel, job.Relocation, job.Remote
+         , job.AiRelocation, job.AiWorkModel, job.PublishedAt, job.Relocation, job.Remote
          , job.AgencyName, job.Category, job.RegDate
          , {JobRanking.SqlEffectiveScore} AS EffectiveScore
     FROM date_diff job
@@ -85,14 +85,14 @@ WITH date_diff AS (
 
 SELECT *
      , CASE Category
-       WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, EffectiveScore DESC, RegTime DESC)
-       ELSE ROW_NUMBER() OVER(PARTITION BY Category ORDER BY EffectiveScore DESC, RegTime DESC)
+       WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
+       ELSE ROW_NUMBER() OVER(PARTITION BY Category ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
        END AS Ordering
 FROM (
     SELECT *
         , CASE Category
-          WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY ModifiedOn DESC, EffectiveScore DESC, RegTime DESC)
-          ELSE ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY EffectiveScore DESC, RegTime DESC)
+          WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
+          ELSE ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
           END AS Ranking
     FROM ranking
 ) job
@@ -117,6 +117,15 @@ SELECT JobID, State, Log FROM Job WHERE JobID = @job";
 
         private const string Q_GET_ID_BY_CODE = @"
 SELECT JobID FROM Job WHERE AgencyID = @agency and Code = @code";
+
+        private const string Q_BACKFILL_FETCH = @"
+SELECT * FROM Job
+WHERE PublishedAt IS NULL AND (Html IS NOT NULL OR Content IS NOT NULL) AND JobID > @cursor
+ORDER BY JobID LIMIT @limit";
+
+        private const string Q_UPDATE_PUBLISHED = @"
+UPDATE Job SET PublishedAt = @publishedAt
+WHERE JobID = @jobId";
 
         private readonly static string RevaluationScope = $@"
 State IN (

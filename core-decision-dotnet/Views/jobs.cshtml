@@ -11,7 +11,7 @@
         <td><span class="@info.Job.State.CssClass()">@info.Job.State</span></td>
         <td><a href="@info.Job.Url" target="_blank">URL</a></td>
         <td><span>@info.Job.Country</span></td>
-        <td><span>@info.Job.RegTime</span></td>
+        <td><span>@(info.Job.PublishedAt ?? info.Job.RegTime)</span></td>
         @* <td>
         <button type="button" class="btn btn-link" onclick="logs(@info.Job.JobID)">
         Logs

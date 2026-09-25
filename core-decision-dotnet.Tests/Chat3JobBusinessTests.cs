@@ -152,6 +152,22 @@ AiScore = $ai, Attempts = $attempts, Tries = $tries WHERE Code = $code",
     }
 
     [Fact]
+    public void FetchNextAiPending_prefers_newer_published_at_on_score_tie()
+    {
+        using var db = new GoldenDatabase();
+        var newer = Seed(db, "p-new", JobState.AiPending);
+        Seed(db, "p-old", JobState.AiPending);
+        var reg = new DateTime(2026, 9, 25, 0, 0, 0);
+        db.ExecuteRaw("UPDATE Job SET RegTime = $reg, PublishedAt = $pub WHERE Code = 'p-new'",
+            ("$reg", reg), ("$pub", reg.AddDays(-1)));
+        db.ExecuteRaw("UPDATE Job SET RegTime = $reg, PublishedAt = $pub WHERE Code = 'p-old'",
+            ("$reg", reg), ("$pub", reg.AddDays(-1).AddMinutes(-30)));
+
+        var next = db.Database.Job.FetchNextAiPending();
+        Assert.Equal(newer, next!.JobID);
+    }
+
+    [Fact]
     public void FetchNextAiPending_applies_age_decay()
     {
         using var db = new GoldenDatabase();

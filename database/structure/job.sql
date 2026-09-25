@@ -1,6 +1,7 @@
 create table if not exists Job (
 	JobID			integer		not null	primary key,
 	RegTime			timestamp	not null	default current_timestamp,
+	PublishedAt		timestamp		null,
 	ModifiedOn		timestamp	not null	default current_timestamp,
 	AgencyID		integer 	not null,
 	Country			text		not null,

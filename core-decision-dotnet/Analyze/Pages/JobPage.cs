@@ -122,6 +122,12 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
         job.Html = html_content;
         job.Content = incoming_text;
 
+        JobTimestamps.TryExtractExact(html, out var published_exact);
+        JobTimestamps.TryExtractRelative(html, DateTime.UtcNow, out var published_relative);
+        job.PublishedAt = JobTimestamps.Merge(job.PublishedAt, published_exact, published_relative);
+        if (published_exact == null && published_relative == null)
+            Log.Information("PublishedAt not found ({0}, {1})", Parent.Name, job.Code);
+
         ChceckJob(job);
 
         var include_state = job.State == JobState.NotApprovedRegex;

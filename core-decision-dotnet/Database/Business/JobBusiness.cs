@@ -145,6 +145,7 @@ namespace Photon.JobSeeker
                 log = job.Log,
                 options = job.Options,
                 tries = job.Tries,
+                publishedAt = job.PublishedAt,
             });
 
             if (database.Changes() == 1)
@@ -167,6 +168,7 @@ namespace Photon.JobSeeker
             if (codeChanged) sets.Add("Code = @code");
             if (linkFound) sets.Add("Link = @link");
             if (includeState) sets.Add("State = @state");
+            if (job.PublishedAt != null) sets.Add("PublishedAt = @publishedAt");
 
             database.Execute($@"
 UPDATE Job SET {string.Join(", ", sets)}, ModifiedOn = @now
@@ -179,9 +181,64 @@ WHERE JobID = @jobId", new
                 code = job.Code,
                 link = job.Link,
                 state = job.State.ToString(),
+                publishedAt = job.PublishedAt,
                 now = DateTime.Now,
                 jobId = job.JobID,
             });
+        }
+
+        public void UpdatePublishedAt(long id, DateTime value)
+        {
+            database.Execute(Q_UPDATE_PUBLISHED, new { publishedAt = value, jobId = id });
+        }
+
+        public int BackfillPublishedAt()
+        {
+            var count = 0;
+            long cursor = 0;
+
+            while (true)
+            {
+                var rows = database.Query<Job>(Q_BACKFILL_FETCH, new { cursor, limit = 50 }).ToList();
+                if (rows.Count == 0) break;
+
+                foreach (var row in rows)
+                {
+                    cursor = row.JobID;
+
+                    if (TryRecoverPublishedAt(row, out var value))
+                    {
+                        UpdatePublishedAt(row.JobID, value);
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        private static bool TryRecoverPublishedAt(Job row, out DateTime value)
+        {
+            if (JobTimestamps.TryExtractExact(row.Html, out var exact))
+            {
+                value = exact!.Value;
+                return true;
+            }
+
+            if (JobTimestamps.TryExtractRelative(row.Html, row.RegTime, out var relative) && relative != null)
+            {
+                value = relative.Value;
+                return true;
+            }
+
+            if (JobTimestamps.TryExtractRelative(row.Content, row.RegTime, out relative) && relative != null)
+            {
+                value = relative.Value;
+                return true;
+            }
+
+            value = default;
+            return false;
         }
 
         public void UpdateJobContent(Job job)

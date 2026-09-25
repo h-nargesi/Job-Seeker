@@ -6,6 +6,8 @@
 
         public DateTime RegTime { get; set; }
 
+        public DateTime? PublishedAt { get; set; }
+
         public long AgencyID { get; set; }
 
         public string? Country { get; set; }
