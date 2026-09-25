@@ -351,14 +351,36 @@ Run the retention queries (`JobBusiness.Clean`): delete old jobs (keeping
 `Applied`), trim HTML for old `Attention`/`NotApproved` jobs. Pass
 `?vacuum=true` to also `VACUUM` (rewrites the whole DB file — slow).
 
-### `GET /job/options`
-Render the `job-options` view (the scoring-rules editor).
+## Settings — `SettingsController`
 
-### `POST /job/setting` (body: `{ "type": "E"|"Q", "query": "<sql>" }`)
-Ad-hoc SQL console.
-- `type:"reload"` → `analyzer.ReloadSettings()` (re-read agency config).
-- `type:"E"` → execute `query`.
-- `type:"Q"` → run `query` and return rows.
+The `/settings` dashboard page (AppSetting editor + JobOption CRUD) replaced the
+old raw-SQL console (`GET /job/options` + `POST /job/setting`, removed).
+
+### `GET /settings`
+Render the settings view: the known `AppSetting` keys with current values and
+the full `JobOption` row list (add / edit / disable / delete).
+
+### `POST /settings/appsetting` (body: `{ "key": "...", "value": "..." }`)
+Validated upsert of one known AppSetting key — unknown keys and non-numeric
+values return `400` with the reason. Values are uncached and read per use, so
+changes apply immediately.
+
+### `POST /settings/optionsave` (body: `OptionEditRow` JSON)
+Insert (`JobOptionID` 0) or update a scoring-rule row. `Pattern` must compile
+(case-insensitive) and `Settings` must be null or valid `JobOptionSettings`
+JSON; unique-Title collisions and validation failures return `400`. Invalidates
+the shared JobOption cache on success.
+
+### `POST /settings/optiondelete?joboptionid=`
+Hard-delete one JobOption row (`404` when the id is gone; invalidates the cache).
+
+### `POST /settings/optiontoggle?joboptionid=&effective=`
+Flip the `Efective` bit — ineffective rows stay editable but are excluded from
+scoring.
+
+### `POST /settings/reload`
+`analyzer.ReloadSettings()` + JobOption cache invalidation — for edits made
+directly against the DB file (e.g. a sqlite3 CLI re-seed).
 
 ## Dashboard — `ReportController`
 

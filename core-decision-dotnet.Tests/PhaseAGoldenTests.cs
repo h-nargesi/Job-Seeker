@@ -18,6 +18,7 @@ internal sealed class GoldenDatabase : IDisposable
         ExecuteRaw(DDL_JOB);
         ExecuteRaw(DDL_TREND);
         ExecuteRaw(DDL_APP_SETTING);
+        ExecuteRaw(DDL_JOB_OPTION);
         ExecuteRaw(DDL_MEMORY);
         ExecuteRaw(DDL_AI_RUN);
         ExecuteRaw("INSERT INTO Agency (AgencyID, Title, Active, Domain, Link) VALUES (1, 'Golden', 3, 'example.com', 'https://example.com')");
@@ -131,6 +132,18 @@ CREATE TABLE Trend (
 CREATE TABLE AppSetting (
     Key     text    not null    primary key,
     Value   text    not null
+)";
+
+    private const string DDL_JOB_OPTION = @"
+CREATE TABLE JobOption (
+    JobOptionID     integer     not null    primary key,
+    Efective        bit         not null    default 1,
+    Category        text        not null,
+    Score           integer     not null,
+    Title           text        not null,
+    Pattern         text        not null,
+    Settings        text            null,
+    unique (Title)
 )";
 
     private const string DDL_MEMORY = @"

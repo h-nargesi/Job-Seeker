@@ -1,0 +1,105 @@
+@using Photon.JobSeeker
+@model SettingsPageModel
+@{
+    Layout = "~/views/layout.cshtml";
+    string Current(string key) => Model.Values.TryGetValue(key, out var value) ? value : string.Empty;
+}
+
+<div class="container py-4">
+  <header class="pb-3 mb-3 border-bottom">Settings</header>
+
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <div class="container-fluid py-5">
+      <h2>App settings</h2>
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr><th>Setting</th><th>Value</th><th></th></tr>
+        </thead>
+        <tbody>
+        @foreach (var field in Model.Fields)
+        {
+          <tr>
+            <td>
+              <div>@field.Label</div>
+              <div class="text-body-secondary small"><code>@field.Key</code> &middot; default @field.Default</div>
+            </td>
+            <td style="min-width: 12em;">
+              @if (field.Kind == AppSettingField.FlagKind)
+              {
+                <select id="setting-@field.Key" class="form-select">
+                  <option value="0" selected="@(Current(field.Key) == "1" ? null : "selected")">0 &mdash; remote only</option>
+                  <option value="1" selected="@(Current(field.Key) == "1" ? "selected" : null)">1 &mdash; include hybrid</option>
+                </select>
+              }
+              else
+              {
+                <input id="setting-@field.Key" class="form-control" value="@Current(field.Key)" placeholder="@field.Default" />
+              }
+            </td>
+            <td style="white-space: nowrap;">
+              <button onclick="save_setting('@field.Key')" type="button" class="btn btn-outline-primary">Save</button>
+              <span id="setting-status-@field.Key" class="ms-2 small"></span>
+            </td>
+          </tr>
+        }
+        </tbody>
+      </table>
+      <button onclick="reload_settings()" type="button" class="btn btn-outline-secondary">Reload settings</button>
+      <span class="ms-2 small text-body-secondary">Re-reads agency settings and job options edited outside this page (e.g. via the sqlite3 CLI).</span>
+    </div>
+  </div>
+
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <div class="container-fluid py-5">
+      <h2>Job options</h2>
+      <p class="text-body-secondary">Scoring rules matched against every job. Pattern is a case-insensitive regular expression; Settings is optional JobOptionSettings JSON.</p>
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Category</th><th>Score</th><th>Title</th><th>Pattern</th><th>Settings</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+        @foreach (var option in Model.Options)
+        {
+          var id = option.JobOptionID;
+          <tr id="option-row-@id" class="@(option.Efective ? "" : "opacity-50")" data-efective="@(option.Efective ? "true" : "false")">
+            <td><input id="option-@id-category" class="form-control" value="@option.Category" /></td>
+            <td><input id="option-@id-score" class="form-control" style="width: 6em;" value="@option.Score" /></td>
+            <td><input id="option-@id-title" class="form-control" value="@option.Title" /></td>
+            <td><textarea id="option-@id-pattern" class="codes form-control" rows="2">@option.Pattern</textarea></td>
+            <td><textarea id="option-@id-settings" class="codes form-control" rows="2">@option.Settings</textarea></td>
+            <td style="white-space: nowrap;">
+              <button onclick="save_option(@id)" type="button" class="btn btn-outline-primary btn-sm">Save</button>
+              <button onclick="toggle_option(@id, @((!option.Efective).ToString().ToLower()))" type="button" class="btn btn-outline-secondary btn-sm">@(option.Efective ? "Disable" : "Enable")</button>
+              <button onclick="delete_option(@id)" type="button" class="btn btn-outline-danger btn-sm">Delete</button>
+            </td>
+          </tr>
+          <tr><td colspan="6" id="option-status-@id" class="small"></td></tr>
+        }
+        </tbody>
+      </table>
+
+      <h3>Add option</h3>
+      <table class="table align-middle">
+        <tbody>
+          <tr id="option-row-new" data-efective="true">
+            <td><input id="option-new-category" class="form-control" placeholder="field" /></td>
+            <td><input id="option-new-score" class="form-control" style="width: 6em;" value="0" /></td>
+            <td><input id="option-new-title" class="form-control" placeholder="Title" /></td>
+            <td><textarea id="option-new-pattern" class="codes form-control" rows="2" placeholder="\bword\b"></textarea></td>
+            <td><textarea id="option-new-settings" class="codes form-control" rows="2" placeholder='{ "resume": null }'></textarea></td>
+            <td><button onclick="save_option('new')" type="button" class="btn btn-outline-primary btn-sm">Add</button></td>
+          </tr>
+          <tr><td colspan="6" id="option-status-new" class="small"></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="pt-3 mt-4 text-body-secondary border-top">
+    &copy; 2023
+  </footer>
+</div>
+
+<script src="/scripts/settings-operations.js"></script>

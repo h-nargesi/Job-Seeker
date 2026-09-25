@@ -27,7 +27,9 @@ Given a `Job` (with `Content` already extracted from HTML), the engine:
 
 Rules live in `job-option.sql`: each row is `{ Category, Score, Title, Pattern
 (regex), Settings (JSON) }`. Every option's `Pattern` is matched against the job
-content.
+content. Runtime edits (add/update/disable/delete rows) go through the
+`/settings` page; `job-option.sql` re-seeding stays the fresh-install source of
+truth.
 
 ### Categories
 | Category | Role |
@@ -158,7 +160,7 @@ color). Jobs that never went through regex scoring show `—`. When the AI is
 determined, agreement with the regex marker is bolded (`text-success` when
 true) and disagreement is shown in `text-warning` — which surfaces regex false
 positives. `Hybrid` counts as determined: remote under the `remotehybrid`
-`AppSetting` (`0`/`1`, default `0` = fully-remote only, no UI — edit the DB),
+`AppSetting` (`0`/`1`, default `0` = fully-remote only, toggled at `/settings`),
 onsite otherwise. The log-marker `LIKE` patterns feed only this fallback and
 stay fragile (see the warning above).
 

@@ -217,7 +217,7 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | Task | Start here |
 |------|-----------|
 | Add a new job platform (site) | [`docs/ADDING_A_PLATFORM.md`](docs/ADDING_A_PLATFORM.md) + mirror any `Analyze/LinkedIn/` folder |
-| Change scoring rules / keywords / weights | `database/structure/job-option.sql` (re-seed) + `JobEligibilityHelper.EvaluateEligibility` |
+| Change scoring rules / keywords / weights | `/settings` page (runtime edits) or `database/structure/job-option.sql` (re-seed) + `JobEligibilityHelper.EvaluateEligibility`; AppSetting knobs (`floor`, weights, caps) live on the same page |
 | Change what the browser does (new command) | `Result/Command.cs` + `PageAction` enum + `action-handler.js` |
 | Add a country/locale to a platform | `agency.sql` → that platform's `Settings.methods[]` |
 | Resume generation | `Views/resume.cshtml` + `ResumeContext` + `Job.ResumeText` + `JobController.Resume` / `Resume64`; printing is manual from the browser (CloudConvert retired) |

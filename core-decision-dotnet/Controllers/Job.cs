@@ -215,58 +215,6 @@ public class JobController(Analyzer analyzer, Database database, IDatabaseFactor
         }
     }
 
-    [HttpGet]
-    public IActionResult Options()
-    {
-        try
-        {
-            return View("~/views/job-options.cshtml");
-        }
-        catch (Exception ex)
-        {
-            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
-            throw;
-        }
-    }
-
-    [HttpPost]
-    public IActionResult Setting([FromBody] SettingContext options)
-    {
-        try
-        {
-            if (options.Query == null)
-                return Ok("No Result");
-
-            if (options.Query == "reload")
-            {
-                analyzer.ReloadSettings();
-                JobEligibilityHelper.InvalidateOptionsCache();
-                return Ok("Setting were reloaded");
-            }
-            else
-            {
-                if (options.Type == "E")
-                {
-                    database.Execute(options.Query);
-                    JobEligibilityHelper.InvalidateOptionsCache();
-                    return Ok("Done");
-                }
-                else if (options.Type == "Q")
-                {
-                    var result = database.ReadAll(options.Query);
-                    return Ok(result);
-                }
-            }
-
-            return Ok("No Result");
-        }
-        catch (Exception ex)
-        {
-            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
-            throw;
-        }
-    }
-
     private IActionResult ForceRevaluate(long jobid)
     {
         var job = database.Job.Fetch(jobid);
@@ -278,12 +226,5 @@ public class JobController(Analyzer analyzer, Database database, IDatabaseFactor
         using var evaluator = new JobEligibilityHelper(database_factory);
         evaluator.EvaluateJobEligibility(job, agency?.JobAcceptabilityChecker, force: true);
         return Ok();
-    }
-
-    public class SettingContext
-    {
-        public string? Type { get; set; }
-
-        public string? Query { get; set; }
     }
 }
