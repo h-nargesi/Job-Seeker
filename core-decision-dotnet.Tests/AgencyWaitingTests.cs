@@ -17,7 +17,7 @@ public class AgencyWaitingTests
     }
 
     [Fact]
-    public void AgencyWaiting_saves_the_override_and_scopes_serve_it()
+    public void AgencyWaiting_saves_the_override_and_pacing_uses_it()
     {
         using var db = new CheckpointDatabase();
         var controller = Controller(db);
@@ -29,8 +29,8 @@ public class AgencyWaitingTests
         Assert.Contains("\"methods\"", StoredSettings(db));
 
         db.Analyzer.ReloadSettings();
-        Assert.Equal(9000, db.AgencyById.Waiting);
-        Assert.Equal(9000, db.AgencyById.WaitingOverride);
+        Assert.Equal(9000, db.AgencyById.Pacing);
+        Assert.Equal(9000, db.AgencyById.PacingOverride);
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public class AgencyWaitingTests
         using var db = new CheckpointDatabase(waiting: 9000);
         var controller = Controller(db);
 
-        Assert.Equal(9000, db.AgencyById.Waiting);
+        Assert.Equal(9000, db.AgencyById.Pacing);
 
         Assert.IsType<OkResult>(controller.AgencyWaiting(
             new AgencyWaitingContext { Agency = "CheckpointAgency" }));
@@ -47,8 +47,8 @@ public class AgencyWaitingTests
         Assert.DoesNotContain("waiting", StoredSettings(db));
 
         db.Analyzer.ReloadSettings();
-        Assert.Null(db.AgencyById.WaitingOverride);
-        Assert.Equal(2500, db.AgencyById.Waiting);
+        Assert.Null(db.AgencyById.PacingOverride);
+        Assert.Equal(2500, db.AgencyById.Pacing);
     }
 
     [Fact]

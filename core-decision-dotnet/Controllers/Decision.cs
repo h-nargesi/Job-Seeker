@@ -14,6 +14,8 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
     private readonly Database database = database;
     private readonly TrendsCheckpoint trends_checkpoint = trends_checkpoint;
 
+    private static readonly Random pacing_random = new();
+
     [HttpPost]
     [RequestSizeLimit(20_000_000)]
     public IActionResult Take([FromBody] PageContext? context)
@@ -25,6 +27,8 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
             Log.Debug("Taken: {0}", context.ToString());
 
             var result = analyzer.Analyze(context, database);
+
+            InsertPacingWait(result, context.Agency);
 
             return Ok(new
             {
@@ -44,6 +48,29 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
             Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
             throw;
         }
+    }
+
+    private void InsertPacingWait(Result result, string? agency_name)
+    {
+        if (agency_name == null || result.Commands.Length == 0) return;
+
+        var pacing = analyzer.FindAgency(agency_name)?.Pacing ?? 0;
+        if (pacing <= 0) return;
+
+        var index = Array.FindIndex(result.Commands,
+            c => c.page_action is PageAction.go or PageAction.open or PageAction.click);
+        if (index < 0) return;
+
+        var delta = (int)Math.Round(pacing * 0.25);
+        var miliseconds = pacing - delta + pacing_random.Next(2 * delta + 1);
+
+        Log.Debug("Pacing wait ({0}): {1} ms before command #{2}", agency_name, miliseconds, index);
+
+        var paced = new Command[result.Commands.Length + 1];
+        Array.Copy(result.Commands, paced, index);
+        paced[index] = Command.Wait(miliseconds);
+        Array.Copy(result.Commands, index, paced, index + 1, result.Commands.Length - index);
+        result.Commands = paced;
     }
 
     [HttpPost]
@@ -95,7 +122,7 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
             {
                 a.Name,
                 a.Domain,
-                a.Waiting,
+                waiting = a.DefaultWaiting,
             });
 
             return Ok(agencies);

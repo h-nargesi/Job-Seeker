@@ -30,6 +30,6 @@ public sealed record SettingsPageModel(
     AppSettingField[] Fields,
     Dictionary<string, string> Values,
     List<OptionEditRow> Options,
-    List<AgencyWaitingItem> Agencies);
+    List<AgencyPacingItem> Agencies);
 
-public sealed record AgencyWaitingItem(string Name, int? Waiting, int DefaultWaiting);
+public sealed record AgencyPacingItem(string Name, int? Pacing, int DefaultPacing);

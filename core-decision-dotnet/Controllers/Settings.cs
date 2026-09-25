@@ -21,7 +21,7 @@ public class SettingsController(Analyzer analyzer, Database database) : Controll
                 database.JobOption.FetchRows(),
                 analyzer.AgenciesByID.Values
                     .OrderBy(a => a.Name)
-                    .Select(a => new AgencyWaitingItem(a.Name, a.WaitingOverride, a.DefaultWaiting))
+                    .Select(a => new AgencyPacingItem(a.Name, a.PacingOverride, a.DefaultPacing))
                     .ToList());
 
             return View("~/views/settings.cshtml", model);

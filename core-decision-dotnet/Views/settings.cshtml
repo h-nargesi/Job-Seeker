@@ -52,10 +52,10 @@
   <div class="p-5 mb-4 bg-body-tertiary rounded-3">
     <div class="container-fluid py-5">
       <h2>Agencies</h2>
-      <p class="text-body-secondary">Per-agency page-send delay served to the extension via <code>/decision/scopes</code>.</p>
+      <p class="text-body-secondary">Anti-bot pacing: a jittered wait inserted before the first <code>go</code>/<code>open</code>/<code>click</code> command returned by <code>POST /decision/take</code>.</p>
       <table class="table table-striped align-middle">
         <thead>
-          <tr><th>Agency</th><th>Waiting (ms)</th><th></th></tr>
+          <tr><th>Agency</th><th>Pacing (ms)</th><th></th></tr>
         </thead>
         <tbody>
         @foreach (var item in Model.Agencies)
@@ -63,10 +63,10 @@
           <tr>
             <td>
               <div>@item.Name</div>
-              <div class="text-body-secondary small">empty = hardcoded default (@item.DefaultWaiting ms)</div>
+              <div class="text-body-secondary small">empty = @item.DefaultPacing ms default, 0 = off</div>
             </td>
             <td style="min-width: 12em;">
-              <input id="waiting-@item.Name" class="form-control" value="@(item.Waiting?.ToString() ?? "")" placeholder="@item.DefaultWaiting" />
+              <input id="waiting-@item.Name" class="form-control" value="@(item.Pacing?.ToString() ?? "")" placeholder="@item.DefaultPacing" />
             </td>
             <td style="white-space: nowrap;">
               <button onclick="save_waiting('@item.Name')" type="button" class="btn btn-outline-primary">Save</button>

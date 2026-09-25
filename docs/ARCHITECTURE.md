@@ -29,7 +29,7 @@ one HTTP round-trip.
            ▼                                                   │
   check-page.js                                                │
   fetch /decision/scopes  ─────────────────────────►  GET Scopes()
-  (agency list + domain regexes) ◄───────────────────  return [{Name,Domain,Waiting}]
+  (agency list + domain regexes) ◄───────────  return [{Name,Domain,Waiting=default}]
            │                                                   │
   match window.location.hostname against a Domain              │
            │ matched                                           │
@@ -44,7 +44,9 @@ one HTTP round-trip.
                                                │    (updates/creates workflow trends,
                                                │     injects open/go/close commands)
                                                └─ result: { TrendID, State, Commands[] }
-           │ ◄────────────────────────────────  200 { trend, commands[] }
+                                               (Take then inserts an anti-bot pacing
+                                                wait before the first go/open/click)
+            │ ◄────────────────────────────────  200 { trend, commands[] }
            ▼
   action-handler.js runs each Command sequentially
   (go → navigate, click → DOM, fill → input, close → tab, ...)

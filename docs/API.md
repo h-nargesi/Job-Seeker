@@ -67,7 +67,9 @@ capped at 5 MB (`[RequestSizeLimit]`).
     "close_timeout_ms": 90000
   }
   ```
-  `commands` is an array of `Command` (see [Commands](#commands)).
+  `commands` is an array of `Command` (see [Commands](#commands)). Responses may
+  gain an anti-bot pacing `wait` inserted immediately before the first
+  `go`/`open`/`click` (see `POST /settings/agencywaiting` below).
   `close_timeout_ms` — the tab auto-close timeout the extension should arm
   for this tab: `90000` (90 s) by default, `600000` (10 min) while the trend
   state is `Auth` (human 2FA/login wait).
@@ -98,10 +100,11 @@ server-side invalidation).
 
 - **Response**: array of `{ "name", "domain", "waiting" }`.
   - `domain` — regex; the extension matches `window.location.hostname` against it.
-  - `waiting` — delay (ms) the extension honors before sending the page.
-    Per-agency override stored in the agency's `Settings` JSON (`waiting`, ms),
-    editable on `/settings`; absent/null falls back to the platform's hardcoded
-    default.
+  - `waiting` — pre-send delay (ms) the extension honors before sending the
+    page (lets the site's dynamic data load before the HTML snapshot). Always
+    the platform's hardcoded `DefaultWaiting`; the `/settings` waiting value no
+    longer affects it — that value is now anti-bot pacing (see
+    `POST /settings/agencywaiting` below).
 
 > Correction: earlier docs described `POST /decision/scopes?reset=true` — that
 > endpoint never existed server-side. The "reset" was the dashboard's content
@@ -384,6 +387,13 @@ scoring.
 ### `POST /settings/reload`
 `analyzer.ReloadSettings()` + JobOption cache invalidation — for edits made
 directly against the DB file (e.g. a sqlite3 CLI re-seed).
+
+### `POST /settings/agencywaiting` (body: `{ "agency": "...", "waiting": 12345 }`)
+Per-agency anti-bot pacing (ms), jittered ±25% server-side and applied as a
+`wait` command inserted immediately before the first `go`/`open`/`click` of
+each `POST /decision/take` response for that agency. Empty/null falls back to
+the default (10 000 ms), `0` disables it; valid range `0..600000`. Stored in
+the agency's `Settings` JSON key `waiting`; changes apply without a restart.
 
 ## Dashboard — `ReportController`
 

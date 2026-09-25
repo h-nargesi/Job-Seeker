@@ -71,9 +71,11 @@ public class DecisionControllerTests
         Assert.Equal(90_000, body.GetProperty("close_timeout_ms").GetInt64());
 
         var commands = body.GetProperty("commands").EnumerateArray().ToList();
-        Assert.Equal(2, commands.Count);
-        Assert.Equal("open", commands[0].GetProperty("action").GetString());
-        Assert.Equal("close", commands[1].GetProperty("action").GetString());
+        Assert.Equal(3, commands.Count);
+        Assert.Equal("wait", commands[0].GetProperty("action").GetString());
+        Assert.InRange(commands[0].GetProperty("params").GetProperty("miliseconds").GetInt64(), 1875, 3125);
+        Assert.Equal("open", commands[1].GetProperty("action").GetString());
+        Assert.Equal("close", commands[2].GetProperty("action").GetString());
     }
 
     [Fact]
@@ -124,6 +126,95 @@ public class DecisionControllerTests
     }
 
     [Fact]
+    public void Take_inserts_a_jittered_pacing_wait_from_the_settings_override()
+    {
+        using var db = new CheckpointDatabase(waiting: 9000);
+        db.Agency.PageState = TrendState.Seeking;
+        db.Agency.PageCommands = [Command.Click("#apply")];
+        var context = new PageContext { Agency = "CheckpointAgency", Url = "https://cp.example.com/jobs", Content = "<html></html>" };
+
+        var commands = OkBody(Controller(db).Take(context)).GetProperty("commands").EnumerateArray().ToList();
+
+        Assert.Equal(2, commands.Count);
+        Assert.Equal("wait", commands[0].GetProperty("action").GetString());
+        Assert.InRange(commands[0].GetProperty("params").GetProperty("miliseconds").GetInt64(), 6750, 11250);
+        Assert.Equal("click", commands[1].GetProperty("action").GetString());
+        Assert.Equal("#apply", commands[1].GetProperty("object").GetString());
+    }
+
+    [Fact]
+    public void Take_inserts_the_pacing_wait_immediately_before_the_first_trigger_command()
+    {
+        using var db = new CheckpointDatabase();
+        db.Agency.PageState = TrendState.Seeking;
+        db.Agency.PageCommands =
+        [
+            Command.Fill("#user", "ryan"),
+            Command.Click("#submit"),
+            Command.Go("https://cp.example.com/next"),
+        ];
+        var context = new PageContext { Agency = "CheckpointAgency", Url = "https://cp.example.com/login", Content = "<html></html>" };
+
+        var commands = OkBody(Controller(db).Take(context)).GetProperty("commands").EnumerateArray().ToList();
+
+        Assert.Equal(4, commands.Count);
+        Assert.Equal("fill", commands[0].GetProperty("action").GetString());
+        Assert.Equal("wait", commands[1].GetProperty("action").GetString());
+        Assert.InRange(commands[1].GetProperty("params").GetProperty("miliseconds").GetInt64(), 1875, 3125);
+        Assert.Equal("click", commands[2].GetProperty("action").GetString());
+        Assert.Equal("go", commands[3].GetProperty("action").GetString());
+    }
+
+    [Fact]
+    public void Take_without_a_trigger_command_inserts_no_pacing_wait()
+    {
+        var seeds = new[]
+        {
+            new[] { Command.Reload() },
+            new[] { Command.Close() },
+            new[] { Command.Wait(3000), Command.Recheck() },
+        };
+
+        foreach (var seed in seeds)
+        {
+            using var db = new CheckpointDatabase();
+            db.Agency.PageState = TrendState.Seeking;
+            db.Agency.PageCommands = seed;
+            var context = new PageContext { Agency = "CheckpointAgency", Url = "https://cp.example.com/jobs", Content = "<html></html>" };
+
+            var commands = OkBody(Controller(db).Take(context)).GetProperty("commands").EnumerateArray().ToList();
+
+            Assert.Equal(seed.Select(c => c.Action), commands.Select(c => c.GetProperty("action").GetString()));
+        }
+    }
+
+    [Fact]
+    public void Take_in_auth_state_appends_only_the_close_command_without_pacing()
+    {
+        using var db = new CheckpointDatabase();
+        db.Agency.PageState = TrendState.Auth;
+        db.Agency.PageCommands = [];
+        var context = new PageContext { Agency = "CheckpointAgency", Url = "https://cp.example.com/login", Content = "<html></html>" };
+
+        var commands = OkBody(Controller(db).Take(context)).GetProperty("commands").EnumerateArray().ToList();
+
+        Assert.Equal("close", Assert.Single(commands).GetProperty("action").GetString());
+    }
+
+    [Fact]
+    public void Take_with_zero_pacing_is_disabled()
+    {
+        using var db = new CheckpointDatabase(waiting: 0);
+        db.Agency.PageState = TrendState.Seeking;
+        db.Agency.PageCommands = [Command.Click("#apply")];
+        var context = new PageContext { Agency = "CheckpointAgency", Url = "https://cp.example.com/jobs", Content = "<html></html>" };
+
+        var commands = OkBody(Controller(db).Take(context)).GetProperty("commands").EnumerateArray().ToList();
+
+        Assert.Equal("click", Assert.Single(commands).GetProperty("action").GetString());
+    }
+
+    [Fact]
     public void Heartbeat_touches_a_live_trend_and_answers_null_for_unknown_ids()
     {
         using var db = new CheckpointDatabase();
@@ -168,14 +259,14 @@ public class DecisionControllerTests
     }
 
     [Fact]
-    public void Scopes_serves_the_waiting_override_from_agency_settings()
+    public void Scopes_serves_the_hardcoded_waiting_despite_the_settings_override()
     {
         using var db = new CheckpointDatabase(waiting: 9000);
 
         var body = OkBody(Controller(db).Scopes());
 
         var scope = Assert.Single(body.EnumerateArray());
-        Assert.Equal(9000, scope.GetProperty("waiting").GetInt64());
+        Assert.Equal(2500, scope.GetProperty("waiting").GetInt64());
     }
 
     [Fact]

@@ -29,11 +29,13 @@ public abstract class Agency
 
     public string Link { get; private set; } = string.Empty;
 
-    public virtual int DefaultWaiting => 8000;
+    public virtual int DefaultWaiting => 1_000;
 
-    public int Waiting => settings.Waiting ?? DefaultWaiting;
+    public virtual int DefaultPacing => 10_000;
 
-    public int? WaitingOverride => settings.Waiting;
+    public int Pacing => settings.Waiting ?? DefaultPacing;
+
+    public int? PacingOverride => settings.Waiting;
 
     public AgencyStatus Status { get; set; }
 

@@ -16,6 +16,8 @@ internal sealed class CheckpointAgency : Agency
 
     public override int DefaultWaiting => 2500;
 
+    public override int DefaultPacing => 2500;
+
     public override string SearchLink => "https://cp.example.com/jobs";
 
     protected override void RunningSearchingMethodChanged(int value) { }
