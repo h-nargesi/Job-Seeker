@@ -66,31 +66,42 @@ Two entry points trigger analysis:
    The dashboard is a human control/monitor console only — no extension code
    runs on it.
 
-### Challenge hold (Cloudflare / CAPTCHA)
+### Challenge hold (Cloudflare / CAPTCHA / 403)
 
-When a page shows a Cloudflare interstitial/Turnstile box or a visible CAPTCHA
-widget, the extension stops and waits for a human instead of letting the flow
-spin:
+When a page shows a Cloudflare interstitial/Turnstile box, a visible CAPTCHA
+widget, or a rendered 403-style error page, the extension stops and waits for
+a human instead of letting the flow spin:
 
 1. `challenge-detector.js` (content script) matches a conservative selector
    list on page load; invisible widgets
    (`[data-size="invisible"]`) are deliberately excluded — the bot can still
    submit those forms, and a failed submit reloads with a *visible* challenge.
+   It also detects **rendered HTTP 403 pages** via text markers
+   (`403`, `access denied`, `forbidden`, `zugriff verweigert`): a matching
+   `document.title`, or a matching first `h1` on a tiny (< 500 chars) body —
+   the classic bare nginx/CDN error page. Content scripts cannot read HTTP
+   status codes, so only the *rendered* error page is detected; body-only
+   mentions of "403" never trigger it. Selector kinds keep priority.
 2. `check-page.js` sends the normal `POST /decision/take` with
-   `challenge: true`. The server skips page analysis and the slept-trend scan
-   (`TrendsCheckpoint.HoldForChallenge`): it binds the tab's trend (by tab
-   trend id → latest holdable agency row → creates one if none), sets the
-   trend's `Challenge` bit, and answers `commands: []` with
-   `close_timeout_ms = 24 h` — so the tab is not closed and **no new page is
-   opened** for that agency (its trend row stays alive).
-3. While held, the heartbeat ignores `document.visibilityState` and keeps
+   `challenge: true` and a `challenge_kind` string (`cf-interstitial`,
+   `http-403`, ... — logging only). The server skips page analysis and the
+   slept-trend scan (`TrendsCheckpoint.HoldForChallenge`): it binds the tab's
+   trend (by tab trend id → latest holdable agency row → creates one if
+   none), sets the trend's `Challenge` bit, and answers `commands: []` with
+   `close_timeout_ms = 24 h` — so the tab is not closed.
+3. **Agency-wide stop:** the orders scan (`CheckingSleptTrends`) skips any
+   agency with an active challenged trend, so no new tab/page is opened for a
+   held agency at all (not just the same trend type). A challenged *blocked*
+   row does not hold the agency.
+4. While held, the heartbeat ignores `document.visibilityState` and keeps
    touching the trend (challenge-flagged rows are swept only after 30 min
    without a heartbeat instead of the usual 5).
-4. A 5 s watcher re-checks the DOM. When the box disappears (solved without
+5. A 5 s watcher re-checks the DOM. When the box disappears (solved without
    navigation) the page is re-sent normally and the next checkpoint update
    clears the `Challenge` bit; a post-solve navigation re-enters the normal
-   loop through `load`.
-5. The dashboard trend list (polled every 15 s) overlays the state as
+   loop through `load` (this is also the recovery path for 403s: fix the
+   cause, then load any page on the agency domain).
+6. The dashboard trend list (polled every 15 s) overlays the state as
    `Challenge` with an orange row.
 
 

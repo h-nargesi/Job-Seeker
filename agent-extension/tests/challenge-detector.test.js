@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createEnv } from './helpers/env.js';
 
-function detect(html) {
+function detect(html, title) {
 	const env = createEnv({ dom: true });
+	if (title !== undefined) env.sandbox.document.title = title;
 	env.sandbox.document.body.innerHTML = html;
 	env.load('controllers/challenge-detector.js');
 	return env.grab('ChallengeDetector.Detect')(env.sandbox.document);
@@ -42,4 +43,33 @@ test('does not fire on ordinary pages', () => {
 	assert.strictEqual(detect('<div class="jobs-list"><a href="#">Senior .NET Developer</a></div>'), null);
 	assert.strictEqual(detect('<form id="login"><input name="user"><input name="pass" type="password"></form>'), null);
 	assert.strictEqual(detect('<textarea id="cover-letter"></textarea>'), null);
+});
+
+test('detects rendered 403 error pages by title', () => {
+	assert.strictEqual(detect('<div></div>', '403 Forbidden'), 'http-403');
+	assert.strictEqual(detect('<div></div>', 'Access Denied'), 'http-403');
+	assert.strictEqual(detect('<div></div>', 'Zugriff verweigert'), 'http-403');
+	assert.strictEqual(detect('<div></div>', 'Example.com | 403'), 'http-403');
+});
+
+test('detects nginx-style 403 pages via h1 and a tiny body', () => {
+	assert.strictEqual(detect('<center><h1>403 Forbidden</h1></center><hr><center>nginx</center>'), 'http-403');
+	assert.strictEqual(detect('<h1>Access Denied</h1><p>You do not have permission.</p>'), 'http-403');
+});
+
+test('does not fire when 403 appears only in body or job content', () => {
+	assert.strictEqual(detect('<div class="jobs-list"><a href="#">Job reference 403: .NET Developer</a></div>', 'Jobs'), null);
+	assert.strictEqual(
+		detect('<h1>Senior .NET Developer</h1><p>Error code 403 appeared in the build logs yesterday.</p>', 'Senior .NET Developer'),
+		null);
+});
+
+test('does not fire on an h1 403 marker with a full-size body', () => {
+	assert.strictEqual(
+		detect(`<h1>403 Forbidden</h1><div class="jobs-list">${'<a href="#">Senior .NET Developer vacancy</a>'.repeat(30)}</div>`, 'Jobs'),
+		null);
+});
+
+test('selector kinds keep priority over the http-403 text markers', () => {
+	assert.strictEqual(detect('<div id="challenge-form"></div>', '403 Forbidden'), 'cf-interstitial');
 });

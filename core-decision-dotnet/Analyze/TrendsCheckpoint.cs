@@ -173,6 +173,8 @@ namespace Photon.JobSeeker
 
             foreach (var agency in agencies)
             {
+                if (AgencyHeld(agency.ID)) continue;
+
                 new_trend = CheckingSleptLoginTrends(agency, out var go);
                 if (new_trend != null)
                     new_trends.Add((agency, new_trend.Value));
@@ -298,6 +300,10 @@ namespace Photon.JobSeeker
 
             return new_trend;
         }
+
+        private bool AgencyHeld(long agency_id) =>
+            AllCurrentTrends.Values.Any(t =>
+                t.AgencyID == agency_id && t.Challenge && t.State != TrendState.Blocked);
 
         private Trend? MatchingWithAnalyzedResult(Agency agency, TrendType type, out bool matched_analyzed_result)
         {

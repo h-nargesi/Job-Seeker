@@ -70,7 +70,10 @@ async function SendingPageInfo(scope, challenge_kind) {
         url: window.location.href,
         content: document.documentElement.outerHTML,
     };
-    if (challenge_kind) params.challenge = true;
+    if (challenge_kind) {
+        params.challenge = true;
+        params.challenge_kind = challenge_kind;
+    }
 
     for (let attempt = 1; attempt <= 3; attempt++) {
         const result = await BackgroundMessaging.Send(params);

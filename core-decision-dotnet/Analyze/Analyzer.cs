@@ -99,7 +99,7 @@ public class Analyzer(IDatabaseFactory database_factory)
         if (context.Agency == null)
             throw new BadJobRequest("Bad request (empty agency)");
 
-        Log.Information("Challenge hold request: {0}", context.Agency);
+        Log.Information("Challenge hold request: {0} ({1})", context.Agency, context.ChallengeKind ?? "cf/captcha");
 
         if (!Agencies.ContainsKey(context.Agency))
             throw new BadJobRequest($"{context.Agency} not found!");

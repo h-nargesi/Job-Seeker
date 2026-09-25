@@ -131,6 +131,48 @@ public class ChallengeHoldTests
     }
 
     [Fact]
+    public void Orders_scan_skips_an_agency_with_an_active_challenged_trend()
+    {
+        using var db = new CheckpointDatabase(active: 3);
+        db.Database.Trend.CreateTrend(new Trend { AgencyID = 1, State = TrendState.Seeking });
+        db.Database.Trend.MarkChallenge(db.Database.Trend.Get(1, TrendType.Search)!.TrendID);
+        db.Database.Job.InsertFromSearch(1, "NL", "https://cp.example.com/jobs/j5", "j5");
+
+        var result = Check(db, new Result { Commands = [] });
+
+        var command = Assert.Single(result.Commands);
+        Assert.Equal("close", command.Action);
+        Assert.Null(db.Database.Trend.Get(1, TrendType.Job));
+    }
+
+    [Fact]
+    public void Orders_scan_without_a_challenged_trend_opens_the_pending_job()
+    {
+        using var db = new CheckpointDatabase(active: 3);
+        db.Database.Trend.CreateTrend(new Trend { AgencyID = 1, State = TrendState.Seeking });
+        db.Database.Job.InsertFromSearch(1, "NL", "https://cp.example.com/jobs/j5", "j5");
+
+        var result = Check(db, new Result { Commands = [] });
+
+        Assert.Contains(result.Commands, c => c.Action == "open");
+        Assert.NotNull(db.Database.Trend.Get(1, TrendType.Job));
+    }
+
+    [Fact]
+    public void Orders_scan_ignores_a_blocked_challenged_trend()
+    {
+        using var db = new CheckpointDatabase(active: 3);
+        db.Database.Trend.CreateTrend(new Trend { AgencyID = 1, State = TrendState.Seeking });
+        db.Database.Trend.Block(db.Database.Trend.Get(1, TrendType.Search)!.TrendID);
+        db.Database.Trend.MarkChallenge(db.Database.Trend.Get(1, TrendType.Search)!.TrendID);
+        db.Database.Job.InsertFromSearch(1, "NL", "https://cp.example.com/jobs/j5", "j5");
+
+        var result = Check(db, new Result { Commands = [] });
+
+        Assert.Contains(result.Commands, c => c.Action == "open");
+    }
+
+    [Fact]
     public void Sweep_keeps_a_challenged_trend_until_thirty_minutes()
     {
         using var db = new CheckpointDatabase();

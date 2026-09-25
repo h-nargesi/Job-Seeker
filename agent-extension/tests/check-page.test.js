@@ -253,8 +253,26 @@ test('a challenge page sends challenge:true, arms the long close timer and holds
 
 	assert.deepStrictEqual(sentTitles(env), ['scopes', 'send']);
 	assert.strictEqual(env.chrome.runtime.sent[1].params.challenge, true);
+	assert.strictEqual(env.chrome.runtime.sent[1].params.challenge_kind, 'cf-interstitial');
 	assert.ok(env.clock.pending().some(t => t.due === 86400000));
 	assert.ok(env.clock.pending().some(t => t.interval === 30000));
+	assert.ok(env.clock.pending().some(t => t.interval === 5000));
+	assert.ok(env.console.entries.some(e => e.level === 'warn' && e.args.includes('challenge hold')));
+});
+
+test('a 403-titled page sends the http-403 challenge kind and holds', async () => {
+	const { env, onPageLoad } = fresh();
+	env.sandbox.document.title = '403 Forbidden';
+	env.sandbox.document.body.innerHTML = '<center><h1>403 Forbidden</h1></center>';
+	env.chrome.runtime.respondWith(challengeResponder());
+
+	onPageLoad();
+	await env.advance(1000);
+
+	assert.deepStrictEqual(sentTitles(env), ['scopes', 'send']);
+	assert.strictEqual(env.chrome.runtime.sent[1].params.challenge, true);
+	assert.strictEqual(env.chrome.runtime.sent[1].params.challenge_kind, 'http-403');
+	assert.ok(env.clock.pending().some(t => t.due === 86400000));
 	assert.ok(env.clock.pending().some(t => t.interval === 5000));
 	assert.ok(env.console.entries.some(e => e.level === 'warn' && e.args.includes('challenge hold')));
 });

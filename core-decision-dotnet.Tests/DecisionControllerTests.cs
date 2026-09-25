@@ -126,6 +126,34 @@ public class DecisionControllerTests
     }
 
     [Fact]
+    public void PageContext_binds_challenge_kind_from_json_and_the_hold_response_is_unchanged()
+    {
+        using var db = new CheckpointDatabase();
+        var context = JsonSerializer.Deserialize<PageContext>(@"{
+            ""agency"": ""CheckpointAgency"",
+            ""url"": ""https://cp.example.com/jobs"",
+            ""content"": ""<html></html>"",
+            ""challenge"": true,
+            ""challenge_kind"": ""http-403""
+        }", wire);
+
+        Assert.NotNull(context);
+        Assert.True(context!.Challenge);
+        Assert.Equal("http-403", context.ChallengeKind);
+        Assert.Contains("http-403", context.ToString());
+
+        var body = OkBody(Controller(db).Take(context));
+
+        Assert.True(body.GetProperty("trend").GetInt64() > 0);
+        Assert.Equal(86_400_000, body.GetProperty("close_timeout_ms").GetInt64());
+        Assert.Empty(body.GetProperty("commands").EnumerateArray());
+
+        var row = db.Database.Trend.Get(1, TrendType.Search);
+        Assert.NotNull(row);
+        Assert.True(row!.Challenge);
+    }
+
+    [Fact]
     public void Take_inserts_a_jittered_pacing_wait_from_the_settings_override()
     {
         using var db = new CheckpointDatabase(waiting: 9000);
