@@ -79,7 +79,7 @@ WITH date_diff AS (
          , job.State, job.Score, job.AiScore, job.Country, job.Url, job.Link
          , job.AiRelocation, job.AiWorkModel, job.Relocation, job.Remote
          , job.AgencyName, job.Category, job.RegDate
-          , {JobRanking.SqlEffectiveScore} AS EffectiveScore
+         , {JobRanking.SqlEffectiveScore} AS EffectiveScore
     FROM date_diff job
 )
 

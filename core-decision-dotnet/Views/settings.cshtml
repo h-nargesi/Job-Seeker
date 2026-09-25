@@ -67,8 +67,8 @@
             <td><input id="option-@id-category" class="form-control" value="@option.Category" /></td>
             <td><input id="option-@id-score" class="form-control" style="width: 6em;" value="@option.Score" /></td>
             <td><input id="option-@id-title" class="form-control" value="@option.Title" /></td>
-            <td><textarea id="option-@id-pattern" class="codes form-control" rows="2">@option.Pattern</textarea></td>
-            <td><textarea id="option-@id-settings" class="codes form-control" rows="2">@option.Settings</textarea></td>
+            <td><input id="option-@id-pattern" class="codes form-control" value="@option.Pattern" /></td>
+            <td><input id="option-@id-settings" class="codes form-control" value="@option.Settings" /></td>
             <td style="white-space: nowrap;">
               <button onclick="save_option(@id)" type="button" class="btn btn-outline-primary btn-sm">Save</button>
               <button onclick="toggle_option(@id, @((!option.Efective).ToString().ToLower()))" type="button" class="btn btn-outline-secondary btn-sm">@(option.Efective ? "Disable" : "Enable")</button>
@@ -87,8 +87,8 @@
             <td><input id="option-new-category" class="form-control" placeholder="field" /></td>
             <td><input id="option-new-score" class="form-control" style="width: 6em;" value="0" /></td>
             <td><input id="option-new-title" class="form-control" placeholder="Title" /></td>
-            <td><textarea id="option-new-pattern" class="codes form-control" rows="2" placeholder="\bword\b"></textarea></td>
-            <td><textarea id="option-new-settings" class="codes form-control" rows="2" placeholder='{ "resume": null }'></textarea></td>
+            <td><input id="option-new-pattern" class="codes form-control" placeholder="\bword\b" /></td>
+            <td><input id="option-new-settings" class="codes form-control" placeholder='{ "resume": null }' /></td>
             <td><button onclick="save_option('new')" type="button" class="btn btn-outline-primary btn-sm">Add</button></td>
           </tr>
           <tr><td colspan="6" id="option-status-new" class="small"></td></tr>
