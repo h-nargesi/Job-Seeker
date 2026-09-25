@@ -3,7 +3,8 @@
 > Observability for `ai-worker` per the 2026-09-23 monitoring-program lock in
 > [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md). Two-tier data contract:
 > **aggregates travel to the core, raw debug material stays local** on the AI
-> station.
+> station. Agreed-but-unbuilt upgrades from the 2026-09-25 session live in
+> [§ Deferred upgrades](#deferred-upgrades-2026-09-25--design-only-not-implemented).
 
 ## Panel
 
@@ -92,6 +93,79 @@ dumps, per-call records, llama-server internals.
 
   Run against the production DB on 2026-09-23: 0 inverted rows — no swap
   needed.
+
+## Deferred upgrades (2026-09-25 — design only, not implemented)
+
+> Locked with the user on 2026-09-25; implementation deliberately deferred
+> to a later session. Nothing in this section exists in code yet. Decisions
+> are also recorded in the decision log (2026-09-25).
+
+### Run history — derived metrics (no schema change)
+
+- Replace the run-total "Tokens in/out" cell with **averages**: avg
+  input/output tokens **per job** (`PromptTokens / Jobs`,
+  `CompletionTokens / Jobs`) and **per call**, and add an **AI wait**
+  column (avg LLM response latency per job, `CallMs / Jobs`; per-call
+  average and total call time in the tooltip). Run totals move into
+  tooltips.
+- Per-call averages need a call count. It is **derived, not stored**:
+  `Calls = Jobs + Promoted + Retries` — every parse retry returns a
+  usage-bearing response whose tokens are already summed
+  (`RunStats.Add` runs in `LogCall` before parsing), and
+  connection-level failures (`LlmFailures`) return no usage and never
+  increment `Retries`.
+- **Max(prompt + completion) per call is dropped** — not derivable
+  without a new counter, and the user declined the `AiRun` schema
+  addition (no new columns, no Tier-1 payload change of any kind).
+- Surface the stored-but-never-displayed counters — `llmFailures`,
+  `finishReasonLength`, `truncatedJobs`, `droppedMemoryRows` — in the
+  Run-column tooltip, closing the panel's currently broken "hover the
+  Run column for totals" promise (the note text exists today; the
+  tooltip lacks the totals).
+
+### Success by stage — agency/country switch + stacked state chart
+
+- New panel section: per-group job counts by `State` plus derived rates
+  — regex pass (AI-lane states / AI-lane + `NotApprovedRegex`), AI
+  promote (`Attention` / judged outcomes), disposition
+  (`Applied`+`Rejected` / `Attention`); zero denominators render `n/a`.
+- Grouping via query param (`/monitor?group=agency|country`, agency
+  default): country from `Job.Country` (empty → `(none)`), agency via a
+  `Agency.Title` join. Server-side switch rendered as toggle links; no
+  JS routing.
+- **Chart:** Chart.js stacked bar — x = group label, segments = `State`
+  counts (same rows as the table; the table stays authoritative).
+  Chart.js 4.x UMD vendored at `wwwroot/scripts/chart.umd.js` (no CDN,
+  no build step, per `DASHBOARD_CHARTS.md` implementation notes), loaded
+  only by the monitor view; init in
+  `wwwroot/scripts/ai-monitor-chart.js`.
+
+### Helper blocks
+
+1. **Verdict distribution** — counts per `AiVerdict` (Error its own
+   slice); compares model strictness against the 85/70/50 bands and the
+   60 passmark.
+2. **AiPending age buckets** — ≤6h / 6–24h / 1–3d / >3d over `RegTime`
+   for `State = AiPending`; queue staleness beyond the single
+   oldest-pending number; tells the user when to start the worker.
+3. **Run trends** — last 30 runs: jobs per run and avg AI wait per job
+   as two lines; spots GPU/model slowdown and prompt growth over time.
+
+### Notes coverage
+
+- `/monitor` keeps What/Why/Action notes on every block (house style,
+  including run-history column tooltips). The other report pages
+  (`jobs`, `trends`, `agencies`) gain one compact note block each; the
+  **dashboard** (`index.cshtml`) gets short `title` tooltips only
+  (user decision: the dashboard stays a terse control console).
+
+### AI-queue job count placement
+
+- The number of jobs waiting for a verdict is **already displayed** in
+  Queue health (`AiPending` + oldest pending age). Decision: it stays
+  there as the single source — no dashboard duplication (the 2026-09-23
+  page-role lock stands). Surfacing it on the dashboard digest would be
+  a new decision superseding that lock.
 
 ## Where the code lives
 
