@@ -79,3 +79,41 @@
         </div>
     </article>
 </div>
+<div class="mt-2">
+    <a class="small text-muted" data-bs-toggle="collapse" href="#flag-legend" role="button"
+        aria-expanded="false" aria-controls="flag-legend">Relocation / Remote legend</a>
+    <div class="collapse" id="flag-legend">
+        <div class="card card-body small text-muted py-2">
+            <p class="mb-2">
+                Both columns are AI-first: the AI verdict decides the value when it has an opinion
+                (<code>AiRelocation</code> Yes/No; <code>AiWorkModel</code> Remote/Onsite/Hybrid);
+                otherwise the regex log marker provides a plain fallback. Hybrid counts as Remote
+                only when the <code>remotehybrid</code> AppSetting is 1 (default 0 = fully-remote only).
+            </p>
+            <table class="table table-sm table-bordered mb-0">
+                <tbody>
+                    <tr>
+                        <td><span class="text-success fw-bold">true</span></td>
+                        <td>AI says yes and the regex marker agrees</td>
+                    </tr>
+                    <tr>
+                        <td><span class="fw-bold">false</span></td>
+                        <td>AI says no and the regex marker agrees</td>
+                    </tr>
+                    <tr>
+                        <td><span class="text-warning">true / false</span></td>
+                        <td>AI and regex disagree (surfaces regex false positives)</td>
+                    </tr>
+                    <tr>
+                        <td>true / false (plain)</td>
+                        <td>No AI opinion — regex fallback only</td>
+                    </tr>
+                    <tr>
+                        <td>&mdash;</td>
+                        <td>Never scored (no log, no AI verdict)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
