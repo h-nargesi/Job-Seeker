@@ -36,6 +36,7 @@ class IamExpatPageJob : JobPage, IamExpatPage
             Log.Warning("Apply link not found ({0})", Parent.Name);
 
         var title_match = IamExpatPage.reg_job_title.Match(html);
+        if (!title_match.Success) title_match = IamExpatPage.reg_job_title_fallback.Match(html);
         title = title_match.Success ? title_match.Groups[1].Value : null;
     }
 

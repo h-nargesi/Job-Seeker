@@ -126,6 +126,36 @@ VALUES (1, 'IamExpat', 1, '(.+\.)?iamexpat\.(nl|de|ch|com)$', 'https://www.iamex
         Assert.Equal("IT Support Technician", title);
     }
 
+    [Fact]
+    public void Job_page_title_ignores_the_jsonld_description_h1()
+    {
+        var job_page = new ExposedIamExpatJobPage(agency);
+
+        job_page.Content(EmployerSloganJobPageSnippet, out _, out _, out var title);
+
+        Assert.Equal("Development Architect (f/m/d) Utilities Industry - German Energy Market Communication", title);
+    }
+
+    [Fact]
+    public void Job_page_title_falls_back_to_the_document_title()
+    {
+        var job_page = new ExposedIamExpatJobPage(agency);
+
+        job_page.Content(DocumentTitleSnippet, out _, out _, out var title);
+
+        Assert.Equal("Automation Engineer (temp)", title);
+    }
+
+    [Fact]
+    public void Job_page_title_fallback_ignores_any_plain_h1()
+    {
+        var job_page = new ExposedIamExpatJobPage(agency);
+
+        job_page.Content(SloganWithoutTitleClassSnippet, out _, out _, out var title);
+
+        Assert.Equal("Working Student (f/m/d) - IT Portfolio", title);
+    }
+
     private sealed class ExposedIamExpatJobPage(IamExpatAgency parent) : IamExpatJobPage(parent)
     {
         public string Code(string url) => GetJobCode(url);
@@ -136,6 +166,33 @@ VALUES (1, 'IamExpat', 1, '(.+\.)?iamexpat\.(nl|de|ch|com)$', 'https://www.iamex
 
     private const string JobPageUrl =
         "https://www.iamexpat.nl/career/jobs-netherlands/it-technology-positions/it-support-technician/crMYMyCSPDKYg2BhLT2Ctm";
+
+    private const string EmployerSloganJobPageSnippet =
+        """
+        <html><head>
+        <script type="application/ld+json">{"@context":"https://schema.org","@type":"JobPosting","title":"Development Architect (f/m/d) Utilities Industry - German Energy Market Communication","description":"<div><h1>We help the world run better</h1><p>SAP</p></div>"}</script>
+        <title>Development Architect (f/m/d) Utilities Industry - German Energy Market Communication</title>
+        </head><body>
+        <div class="BodyTop_wrapper__MP_2N"><div class="BodyTop_main__EAqmj"><div class="flex flex-col gap-2"><h1 class="title-3">Development Architect (f/m/d) Utilities Industry - German Energy Market Communication</h1></div></div></div>
+        <div class="BodyCenter_main__Sz_2E"><main class="MainContent_styles_mainContent__cQTb5"><div>Job description body.</div></main></div>
+        </body></html>
+        """;
+
+    private const string DocumentTitleSnippet =
+        """
+        <html><head><title>Automation Engineer (temp)</title></head>
+        <body><div class="BodyCenter_main__Sz_2E"><main class="MainContent_styles_mainContent__cQTb5"><div>Job description body.</div></main></div></body></html>
+        """;
+
+    private const string SloganWithoutTitleClassSnippet =
+        """
+        <html><head>
+        <script type="application/ld+json">{"@context":"https://schema.org","@type":"JobPosting","description":"<div><h1>We help the world run better</h1></div>"}</script>
+        <title>Working Student (f/m/d) - IT Portfolio</title>
+        </head><body>
+        <div class="BodyTop_main__EAqmj"><div class="flex flex-col gap-2"><h1>We help the world run better</h1></div></div>
+        </body></html>
+        """;
 
     private const string CategoryPageSnippet =
         """

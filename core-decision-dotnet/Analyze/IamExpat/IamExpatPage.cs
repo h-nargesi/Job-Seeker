@@ -18,7 +18,9 @@ interface IamExpatPage
 
     internal static readonly Regex reg_job_url = new(@"/career/jobs-[\w-]+/it-technology-positions/([\w-]+)/([A-Za-z0-9]{8,})", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_job_title = new(@"<h1[^>]*>([^<]*)</h1>", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_job_title = new(@"<h1[^>]*class=""title-3""[^>]*>([^<]+)</h1>", RegexOptions.IgnoreCase);
+
+    protected static readonly Regex reg_job_title_fallback = new(@"<title>\s*([^<]+?)\s*</title>", RegexOptions.IgnoreCase);
 
     protected static readonly Regex reg_job_apply = new(@"<a\s+href=[""'](https?://[^""']+)[""'][^>]*>\s*Apply\s+for\s+this\s+position", RegexOptions.IgnoreCase);
 
