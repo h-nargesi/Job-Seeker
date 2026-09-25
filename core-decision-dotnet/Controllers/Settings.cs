@@ -18,7 +18,11 @@ public class SettingsController(Analyzer analyzer, Database database) : Controll
             var model = new SettingsPageModel(
                 AppSettingBusiness.Fields,
                 database.AppSetting.FetchAll(),
-                database.JobOption.FetchRows());
+                database.JobOption.FetchRows(),
+                analyzer.AgenciesByID.Values
+                    .OrderBy(a => a.Name)
+                    .Select(a => new AgencyWaitingItem(a.Name, a.WaitingOverride, a.DefaultWaiting))
+                    .ToList());
 
             return View("~/views/settings.cshtml", model);
         }
@@ -111,6 +115,31 @@ public class SettingsController(Analyzer analyzer, Database database) : Controll
         {
             analyzer.ReloadSettings();
             JobEligibilityHelper.InvalidateOptionsCache();
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
+    [HttpPost]
+    public IActionResult AgencyWaiting([FromBody] AgencyWaitingContext? context)
+    {
+        try
+        {
+            if (context?.Agency == null) return BadRequest();
+
+            var agency = analyzer.FindAgency(context.Agency);
+            if (agency == null) return NotFound();
+
+            if (context.Waiting is < 0 or > 600_000)
+                return BadRequest(new { error = "waiting-out-of-range" });
+
+            agency.ApplyWaiting(context.Waiting, database);
+            analyzer.ReloadSettings();
+
             return Ok();
         }
         catch (Exception ex)

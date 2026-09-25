@@ -29,4 +29,7 @@ public sealed class OptionEditRow
 public sealed record SettingsPageModel(
     AppSettingField[] Fields,
     Dictionary<string, string> Values,
-    List<OptionEditRow> Options);
+    List<OptionEditRow> Options,
+    List<AgencyWaitingItem> Agencies);
+
+public sealed record AgencyWaitingItem(string Name, int? Waiting, int DefaultWaiting);

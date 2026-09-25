@@ -51,6 +51,36 @@
 
   <div class="p-5 mb-4 bg-body-tertiary rounded-3">
     <div class="container-fluid py-5">
+      <h2>Agencies</h2>
+      <p class="text-body-secondary">Per-agency page-send delay served to the extension via <code>/decision/scopes</code>.</p>
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr><th>Agency</th><th>Waiting (ms)</th><th></th></tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model.Agencies)
+        {
+          <tr>
+            <td>
+              <div>@item.Name</div>
+              <div class="text-body-secondary small">empty = hardcoded default (@item.DefaultWaiting ms)</div>
+            </td>
+            <td style="min-width: 12em;">
+              <input id="waiting-@item.Name" class="form-control" value="@(item.Waiting?.ToString() ?? "")" placeholder="@item.DefaultWaiting" />
+            </td>
+            <td style="white-space: nowrap;">
+              <button onclick="save_waiting('@item.Name')" type="button" class="btn btn-outline-primary">Save</button>
+              <span id="waiting-status-@item.Name" class="ms-2 small"></span>
+            </td>
+          </tr>
+        }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <div class="container-fluid py-5">
       <h2>Job options</h2>
       <p class="text-body-secondary">Scoring rules matched against every job. Pattern is a case-insensitive regular expression; Settings is optional JobOptionSettings JSON.</p>
       <table class="table table-striped align-middle">

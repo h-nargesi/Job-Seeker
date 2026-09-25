@@ -164,7 +164,18 @@ public class DecisionControllerTests
         var scope = Assert.Single(body.EnumerateArray());
         Assert.Equal("CheckpointAgency", scope.GetProperty("name").GetString());
         Assert.Equal("cp\\.example\\.com$", scope.GetProperty("domain").GetString());
-        Assert.Equal(1000, scope.GetProperty("waiting").GetInt64());
+        Assert.Equal(2500, scope.GetProperty("waiting").GetInt64());
+    }
+
+    [Fact]
+    public void Scopes_serves_the_waiting_override_from_agency_settings()
+    {
+        using var db = new CheckpointDatabase(waiting: 9000);
+
+        var body = OkBody(Controller(db).Scopes());
+
+        var scope = Assert.Single(body.EnumerateArray());
+        Assert.Equal(9000, scope.GetProperty("waiting").GetInt64());
     }
 
     [Fact]

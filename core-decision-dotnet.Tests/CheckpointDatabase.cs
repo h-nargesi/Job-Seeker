@@ -14,6 +14,8 @@ internal sealed class CheckpointAgency : Agency
 
     public override Regex? JobAcceptabilityChecker => null;
 
+    public override int DefaultWaiting => 2500;
+
     public override string SearchLink => "https://cp.example.com/jobs";
 
     protected override void RunningSearchingMethodChanged(int value) { }
@@ -37,7 +39,7 @@ internal sealed class CheckpointDatabase : IDisposable
 {
     private readonly SQLiteConnection keeper;
 
-    public CheckpointDatabase(int active = 3, bool no_settings = false)
+    public CheckpointDatabase(int active = 3, bool no_settings = false, int? waiting = null)
     {
         var connection_string = $"Data Source=file:checkpoint{Guid.NewGuid():N}?mode=memory&cache=shared;Pooling=False";
 
@@ -51,7 +53,7 @@ internal sealed class CheckpointDatabase : IDisposable
         Database.Execute(@"
 INSERT INTO Agency (AgencyID, Title, Active, Domain, Link, Settings)
 VALUES (1, 'CheckpointAgency', @active, 'cp\.example\.com$', 'https://cp.example.com/', @settings)",
-            new { active, settings = no_settings ? null : SettingsJson() });
+            new { active, settings = no_settings ? null : SettingsJson(waiting) });
 
         Analyzer = new Analyzer(new SharedDatabaseFactory(connection_string));
         _ = Analyzer.Agencies;
@@ -81,12 +83,13 @@ VALUES (1, 'CheckpointAgency', @active, 'cp\.example\.com$', 'https://cp.example
             new { la = lastActivity, id = agencyId });
     }
 
-    private static string SettingsJson()
+    private static string SettingsJson(int? waiting)
     {
-        return @"{ ""running"": 0, ""methods"": [
-  { ""Title"": ""M0"", ""Url"": ""0"" },
-  { ""Title"": ""M1"", ""Url"": ""1"" },
-  { ""Title"": ""M2"", ""Url"": ""2"" } ] }";
+        var waiting_json = waiting == null ? string.Empty : $@" ""waiting"": {waiting.Value},";
+        return $@"{{ ""running"": 0,{waiting_json} ""methods"": [
+  {{ ""Title"": ""M0"", ""Url"": ""0"" }},
+  {{ ""Title"": ""M1"", ""Url"": ""1"" }},
+  {{ ""Title"": ""M2"", ""Url"": ""2"" }} ] }}";
     }
 
     private sealed class SharedDatabaseFactory(string connection_string) : IDatabaseFactory

@@ -98,7 +98,10 @@ server-side invalidation).
 
 - **Response**: array of `{ "name", "domain", "waiting" }`.
   - `domain` — regex; the extension matches `window.location.hostname` against it.
-  - `waiting` — optional delay (ms) the extension honors before sending the page.
+  - `waiting` — delay (ms) the extension honors before sending the page.
+    Per-agency override stored in the agency's `Settings` JSON (`waiting`, ms),
+    editable on `/settings`; absent/null falls back to the platform's hardcoded
+    default.
 
 > Correction: earlier docs described `POST /decision/scopes?reset=true` — that
 > endpoint never existed server-side. The "reset" was the dashboard's content

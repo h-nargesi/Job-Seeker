@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 using Photon.JobSeeker.Analyze.Pages;
 using Photon.JobSeeker.Pages;
 using Serilog;
@@ -28,7 +29,11 @@ public abstract class Agency
 
     public string Link { get; private set; } = string.Empty;
 
-    public virtual int Waiting => 1000;
+    public virtual int DefaultWaiting => 8000;
+
+    public int Waiting => settings.Waiting ?? DefaultWaiting;
+
+    public int? WaitingOverride => settings.Waiting;
 
     public AgencyStatus Status { get; set; }
 
@@ -164,6 +169,15 @@ public abstract class Agency
         }
     }
 
+    public void ApplyWaiting(int? waiting, Database database)
+    {
+        lock (agency_lock)
+        {
+            settings.Waiting = waiting;
+            database.Agency.SaveWaiting(this, waiting);
+        }
+    }
+
     public void LoadFromDatabase(Database database)
     {
         var agency_info = database.Agency.LoadByName(Name);
@@ -220,8 +234,10 @@ public abstract class Agency
     {
         private SearchingMethod[]? all_methods = null;
 
+        [JsonProperty("running")]
         public int Running { get; set; } = -1;
 
+        [JsonProperty("methods")]
         public SearchingMethod[]? Methods
         {
             get => all_methods;
@@ -233,11 +249,16 @@ public abstract class Agency
             }
         }
 
+        [JsonIgnore]
         public SearchingMethod[]? EnabledMethods { get; private set; }
 
+        [JsonIgnore]
         public int Length => EnabledMethods?.Length ?? 0;
 
+        [JsonProperty("waiting", NullValueHandling = NullValueHandling.Ignore)]
+        public int? Waiting { get; set; }
 
+        [JsonIgnore]
         public SearchingMethod Current
         {
             get => EnabledMethods?[Running] ?? SearchingMethod.Empty;

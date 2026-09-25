@@ -34,6 +34,15 @@ class AgencyBusiness
         database.Execute(Q_UPDATE_SETTINGS, new { settings, active, id });
     }
 
+    public void SaveWaiting(Agency agency, int? waiting)
+    {
+        var json = database.ExecuteScalar<string?>(Q_LOAD_SETTING, new { agency = agency.ID });
+        var settings = json == null ? new Agency.AgencySetting()
+            : JsonConvert.DeserializeObject<Agency.AgencySetting>(json);
+        settings.Waiting = waiting;
+        SaveSettings(agency.ID, JsonConvert.SerializeObject(settings), (long)agency.Status);
+    }
+
     public AgencyInfo? LoadByName(string name)
     {
         var row = database.Query<AgencyRow>(Q_LOAD_BY_NAME, new { title = name }).FirstOrDefault();

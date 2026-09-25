@@ -85,6 +85,25 @@ async function delete_option(id) {
     else show_status('option', id, error, false);
 }
 
+async function save_waiting(name) {
+    const element = document.getElementById('waiting-' + name);
+    if (!element) return;
+
+    const raw = element.value.trim();
+    let waiting = null;
+    if (raw.length > 0) {
+        waiting = Number.parseInt(raw, 10);
+        if (!Number.isFinite(waiting)) {
+            show_status('waiting', name, 'Waiting must be an integer (ms)', false);
+            return;
+        }
+    }
+
+    const result = await post_json('/settings/agencywaiting', { agency: name, waiting: waiting });
+    if (result.ok) location.reload();
+    else show_status('waiting', name, result.text, false);
+}
+
 async function reload_settings() {
     const error = await post_empty('/settings/reload');
     if (!error) show_status('setting', 'floor', 'Settings reloaded', true);
