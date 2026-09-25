@@ -117,7 +117,10 @@ app.UseExceptionHandler(error_app => error_app.Run(async ctx =>
     }
 }));
 
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = "no-cache"
+});
 app.UseRouting();
 
 app.Use(async (ctx, next) =>
