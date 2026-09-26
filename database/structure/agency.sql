@@ -13,7 +13,7 @@ create table if not exists Agency (
 
 insert into Agency (Title, Domain, Link, Settings)
 values
-	('Indeed',		'(.+\.)?indeed\.com$',				'https://indeed.com',
+	('Indeed',		'(.+\.)?indeed\.com$',				'https://www.indeed.com',
 					'{ "running": 0, "methods": [
 						{ "Title": "NL", "Url": "https://nl.indeed.com/" },
 						{ "Title": "AU", "Url": "https://au.indeed.com/" },
@@ -31,7 +31,7 @@ values
 						{ "Title": "CH", "Url": "ch/career/jobs-switzerland" }]
 					}'),
 
-	('LinkedIn',	'(.+\.)?linkedin\.com$',			'https://linkedin.com',
+	('LinkedIn',	'(.+\.)?linkedin\.com$',			'https://www.linkedin.com',
 					'{ "running": 0, "methods": [
 						{ "Title": "NL", "Url": "&f_WT=2&f_E=3%2C4&location=Netherlands" },
 						{ "Title": "AU", "Url": "&f_WT=2&f_E=3%2C4&location=Australia" },
