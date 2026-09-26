@@ -89,7 +89,10 @@ class FillLoop {
 
         for (let step = 1; step <= FillLoop.MAX_STEPS; step++) {
             const response = await loop.client.Chat(messages, FillLoop.Tools());
-            if (response.error) return { error: response.error, steps: step, filled: loop.filled, writes: loop.writes };
+            if (response.error) {
+                AssistantLog.Write("error", "fill", `${response.error} (step ${step})`);
+                return { error: response.error, steps: step, filled: loop.filled, writes: loop.writes };
+            }
 
             if (!response.tool_calls.length) {
                 return { done: true, content: response.content, steps: step, filled: loop.filled, writes: loop.writes };
@@ -114,6 +117,7 @@ class FillLoop {
             }
         }
 
+        AssistantLog.Write("warn", "fill", "max-steps (" + FillLoop.MAX_STEPS + ")");
         return { error: "max-steps", steps: FillLoop.MAX_STEPS, filled: loop.filled, writes: loop.writes };
     }
 

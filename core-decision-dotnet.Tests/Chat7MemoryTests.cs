@@ -237,7 +237,7 @@ public class Chat7MemoryTests
     }
 
     [Fact]
-    public async Task Jobs_lists_attention_only_with_pending_flag_and_live_text()
+    public async Task Job_fetches_by_id_with_pending_flag_and_live_text()
     {
         using var db = new GoldenDatabase();
         var attention = SeedJob(db, JobState.Attention);
@@ -245,7 +245,6 @@ public class Chat7MemoryTests
             @"UPDATE Job SET ResumeText = $text WHERE JobID = $id",
             ("$text", "{\"title\":{\"live\":\"Live Title\",\"proposal\":\"AI Proposal\",\"status\":\"pending\"}}"),
             ("$id", attention));
-        SeedJob(db, JobState.AiPending);
 
         var services = new ServiceCollection()
             .AddSingleton<IViewRenderService>(new FakeViews())
@@ -259,15 +258,16 @@ public class Chat7MemoryTests
             },
         };
 
-        var result = await controller.Jobs();
+        var result = await controller.Job(attention);
 
-        var items = Assert.IsType<OkObjectResult>(result).Value as List<AssistantJobItem>;
-        var item = Assert.Single(items!);
-        Assert.Equal(attention, item.JobId);
+        var item = Assert.IsType<OkObjectResult>(result).Value as AssistantJobItem;
+        Assert.Equal(attention, item!.JobId);
         Assert.True(item.PendingProposal);
         Assert.Contains("Live Title", item.ResumeText);
         Assert.DoesNotContain("AI Proposal", item.ResumeText);
         Assert.Contains("Base summary.", item.ResumeText);
+
+        Assert.IsType<NotFoundResult>(await controller.Job(404));
     }
 
     [Fact]

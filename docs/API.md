@@ -243,11 +243,13 @@ Assistant-only (`Auth:ApiKeys:Assistant`). The assistant extension (phase 5,
 AI station browser) uses these plus `GET /decision/scopes`. No HTML ever
 leaves the server on this API — `resume_text` is plain text.
 
-### `GET /assistant/jobs`
-The `Attention` jobs (most recently modified first, ≤ 100) with everything the
-assistant popup needs to pick a job:
+### `GET /assistant/job?jobid=`
+One job (any state) with everything the assistant panel needs to act on it.
+The popup is id-driven: the user enters a job id or reads it from the
+dashboard job-details URL (`/job/get/{jobid}`), then runs Open/Applied/Fill/
+Compose — there is no list endpoint anymore.
 
-- **Response**: array of `{ jobId, title, url, aiScore, pendingProposal, resumeText }`.
+- **Response**: `{ jobId, title, url, aiScore, pendingProposal, resumeText }`.
   - `resumeText` — the tailored resume as plain text: rendered server-side from
     `Views/resume.cshtml` with the selection precedence
     (`Options.HumanEdited ? Options : (AiOptions ?? Options)`), the
@@ -256,6 +258,7 @@ assistant popup needs to pick a job:
     render.
   - `pendingProposal` — `true` when any `ResumeText` slot is `pending`: the
     assistant warns; Fill stays allowed (checking remains the user's duty).
+- **404** when the id matches no job.
 
 ### `POST /assistant/applied?jobid=`
 Same effect as `POST /job/apply` (dual path, both idempotent): `State =

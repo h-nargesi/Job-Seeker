@@ -97,6 +97,7 @@ export function createEnv(options = {}) {
 	sandbox.URLSearchParams = URLSearchParams;
 	sandbox.AbortController = AbortController;
 	sandbox.self = sandbox;
+	if (!dom) sandbox.addEventListener = function () { };
 	sandbox.prompt = () => null;
 	sandbox.setTimeout = setTimeout;
 	sandbox.clearTimeout = clearTimeout;

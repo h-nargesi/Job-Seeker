@@ -7,14 +7,6 @@ namespace Photon.JobSeeker
             return database.Query<Job>(Q_FETCH_NEXT_AI, RankingParameters()).FirstOrDefault();
         }
 
-        public List<Job> FetchAttentionJobs(int limit = 100)
-        {
-            return database.Query<Job>($@"
-SELECT * FROM Job WHERE State = '{nameof(JobState.Attention)}'
-ORDER BY ModifiedOn DESC
-LIMIT {limit}").ToList();
-        }
-
         public bool ApplyAiVerdict(long jobId, AiVerdictUpdate update, ResumeInventory? inventory = null)
         {
             var job = Fetch(jobId);

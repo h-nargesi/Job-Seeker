@@ -10,14 +10,12 @@ function panelBodyHtml() {
 	return body.replace(/<script[\s\S]*?<\/script>/g, '');
 }
 
-function fresh(jobs = [], memory = [], behavior = null) {
+function fresh(job = null, memory = [], behavior = null) {
 	const env = createEnv({ dom: true, url: 'chrome-extension://panel/index.html' });
 	env.sandbox.document.body.innerHTML = panelBodyHtml();
 
-	env.chrome.storage.local.state.set('SERVER_URL', 'https://core.example:8081/');
-	env.chrome.storage.local.state.set('API_KEY', 'assistant-key');
 	env.chrome.runtime.behavior = behavior ?? (message => {
-		if (message.title === 'jobs') return jobs;
+		if (message.title === 'job') return job ?? { error: 'http', status: 404 };
 		if (message.title === 'memory-list') return memory;
 		if (message.title === 'tip') return { id: 2 };
 		return { ok: true };
@@ -37,43 +35,145 @@ async function settle(env) {
 	for (let i = 0; i < 12; i++) await env.flush();
 }
 
-test('loads settings, renders attention jobs and warns on pending proposals', async () => {
-	const env = fresh(
-		[{ jobId: 5, title: 'Senior .NET', url: 'https://ats.example/5', aiScore: 82, pendingProposal: true, resumeText: 'Ryan' }],
-		[],
-	);
+function pressEnter(env, element) {
+	const event = new env.sandbox.window.KeyboardEvent('keyup');
+	Object.defineProperty(event, 'keyCode', { value: 13 });
+	element.dispatchEvent(event);
+}
+
+test('Load renders the job line and warns on a pending proposal', async () => {
+	const env = fresh({ jobId: 5, title: 'Senior .NET', url: 'https://ats.example/5', aiScore: 82, pendingProposal: true, resumeText: 'Ryan' }, []);
 	await settle(env);
 
-	assert.strictEqual($(env, 'ServerUrl').value, 'https://core.example:8081/');
-	assert.strictEqual($(env, 'ApiKey').value, 'assistant-key');
-	assert.strictEqual($(env, 'JobsStatus').textContent, '1 attention job(s)');
-	assert.ok($(env, 'JobsList').textContent.includes('Senior .NET'));
-	assert.ok($(env, 'JobsList').textContent.includes('pending resume proposal'));
+	$(env, 'JobId').value = '5';
+	$(env, 'LoadJob').click();
+	await settle(env);
+
+	assert.ok(env.chrome.runtime.sent.some(m => m.title === 'job' && m.params.jobId === 5));
+	assert.ok($(env, 'JobInfo').textContent.includes('#5 Senior .NET (score 82)'));
+	assert.ok($(env, 'JobInfo').textContent.includes('pending resume proposal'));
 });
 
-test('Applied is a human click that posts the job id', async () => {
-	const env = fresh([{ jobId: 5, title: 'Dev', url: 'u', pendingProposal: false, resumeText: '' }], []);
+test('a missing job id renders the 404 as a status hint', async () => {
+	const env = fresh(null, []);
 	await settle(env);
 
-	const button = Array.from($(env, 'JobsList').querySelectorAll('button')).find(b => b.textContent === 'Applied');
-	button.click();
+	$(env, 'JobId').value = '77';
+	$(env, 'LoadJob').click();
 	await settle(env);
 
-	assert.ok(env.chrome.runtime.sent.some(m => m.title === 'applied' && m.params.jobId === 5));
-	assert.ok($(env, 'JobsStatus').textContent.includes('marked applied'));
+	assert.strictEqual($(env, 'JobsStatus').textContent, 'job not found');
+	assert.strictEqual($(env, 'JobInfo').textContent, '');
 });
 
-test('Fill current tab sends tab id, job id and resume text', async () => {
-	const env = fresh([{ jobId: 5, title: 'Dev', url: 'u', pendingProposal: false, resumeText: 'RYAN-RESUME' }], []);
-	env.chrome.runtime.behavior = message => {
-		if (message.title === 'jobs') return [{ jobId: 5, title: 'Dev', url: 'u', pendingProposal: false, resumeText: 'RYAN-RESUME' }];
+test('Enter in the job id field loads; invalid input only hints', async () => {
+	const env = fresh({ jobId: 5, title: 'Dev', url: 'u', pendingProposal: false, resumeText: '' }, []);
+	await settle(env);
+
+	$(env, 'JobId').value = 'oops';
+	pressEnter(env, $(env, 'JobId'));
+	await settle(env);
+
+	assert.strictEqual($(env, 'JobsStatus').textContent, 'enter a job id');
+	assert.ok(!env.chrome.runtime.sent.some(m => m.title === 'job'));
+
+	$(env, 'JobId').value = '/job/get/5';
+	pressEnter(env, $(env, 'JobId'));
+	await settle(env);
+
+	assert.ok(env.chrome.runtime.sent.some(m => m.title === 'job' && m.params.jobId === 5));
+});
+
+test('FromPage reads the job id from the dashboard job-details URL', async () => {
+	const env = fresh({ jobId: 123, title: 'Dev', url: 'u', pendingProposal: false, resumeText: '' }, []);
+	env.chrome.tabs.activeUrl = 'http://localhost:8081/job/get/123';
+	await settle(env);
+
+	$(env, 'FromPage').click();
+	await settle(env);
+
+	assert.strictEqual($(env, 'JobId').value, '123');
+	assert.ok(env.chrome.runtime.sent.some(m => m.title === 'job' && m.params.jobId === 123));
+	assert.ok($(env, 'JobInfo').textContent.includes('#123'));
+});
+
+test('FromPage on a non-dashboard page only hints', async () => {
+	const env = fresh(null, []);
+	await settle(env);
+
+	$(env, 'FromPage').click();
+	await settle(env);
+
+	assert.ok($(env, 'JobsStatus').textContent.includes('not a job details page'));
+	assert.ok(!env.chrome.runtime.sent.some(m => m.title === 'job'));
+});
+
+test('the panel holds no settings inputs — settings live only in the popup', async () => {
+	const env = fresh(null, []);
+	await settle(env);
+
+	for (const id of ['ServerUrl', 'ApiKey', 'LlamaUrl', 'LlamaModel'])
+		assert.ok(!$(env, id), `${id} should not exist in the panel`);
+
+	assert.ok($(env, 'ShowJobs').classList.contains('active'));
+	assert.ok(!$(env, 'ShowMemory').classList.contains('active'));
+
+	$(env, 'ShowMemory').click();
+	await settle(env);
+
+	assert.ok($(env, 'ShowMemory').classList.contains('active'));
+	assert.ok(!$(env, 'ShowJobs').classList.contains('active'));
+	assert.strictEqual($(env, 'MemoryView').style.display, '');
+	assert.strictEqual($(env, 'JobsView').style.display, 'none');
+});
+
+test('Applied is a human click that posts the entered id with no prior load', async () => {
+	const env = fresh(null, []);
+	await settle(env);
+
+	$(env, 'JobId').value = '7';
+	$(env, 'MarkApplied').click();
+	await settle(env);
+
+	assert.ok(!env.chrome.runtime.sent.some(m => m.title === 'job'));
+	assert.ok(env.chrome.runtime.sent.some(m => m.title === 'applied' && m.params.jobId === 7));
+	assert.ok($(env, 'JobsStatus').textContent.includes('marked applied #7'));
+});
+
+test('Applied error result surfaces in the status line', async () => {
+	const env = fresh(null, [], message => {
+		if (message.title === 'applied') return { error: 'http', status: 404 };
+		return { ok: true };
+	});
+	await settle(env);
+
+	$(env, 'JobId').value = '7';
+	$(env, 'MarkApplied').click();
+	await settle(env);
+
+	assert.ok($(env, 'JobsStatus').textContent.includes('applied error'));
+});
+
+test('Fill guards on the loaded job, then targets the active tab', async () => {
+	const job = { jobId: 5, title: 'Dev', url: 'u', pendingProposal: false, resumeText: 'RYAN-RESUME' };
+	const env = fresh(job, [], message => {
+		if (message.title === 'job') return job;
 		if (message.title === 'fill') return { done: true, filled: 3, writes: 1 };
-	 return { ok: true };
-	};
+		return { ok: true };
+	});
 	await settle(env);
 
-	const button = Array.from($(env, 'JobsList').querySelectorAll('button')).find(b => b.textContent === 'Fill current tab');
-	button.click();
+	$(env, 'FillJob').click();
+	await settle(env);
+
+	assert.strictEqual($(env, 'JobsStatus').textContent, 'load the job first');
+	assert.ok(!env.chrome.runtime.sent.some(m => m.title === 'fill'));
+
+	$(env, 'JobId').value = '5';
+	$(env, 'LoadJob').click();
+	await settle(env);
+
+	$(env, 'FillJob').click();
 	await settle(env);
 
 	const fill = env.chrome.runtime.sent.find(m => m.title === 'fill');
@@ -82,12 +182,25 @@ test('Fill current tab sends tab id, job id and resume text', async () => {
 	assert.ok($(env, 'JobsStatus').textContent.includes('submit yourself'));
 });
 
+test('Open and Compose guard on the loaded job too', async () => {
+	const env = fresh(null, []);
+	await settle(env);
+
+	$(env, 'OpenJob').click();
+	$(env, 'ComposeJob').click();
+	await settle(env);
+
+	assert.strictEqual($(env, 'JobsStatus').textContent, 'load the job first');
+	assert.strictEqual(env.chrome.tabs.created.length, 0);
+	assert.ok(!env.chrome.runtime.sent.some(m => m.title === 'compose'));
+});
+
 test('memory rows render with confirm, edit and delete actions', async () => {
 	const rows = [{
 		memoryID: 9, scope: 'Apply', kind: 'Correction', confirmed: false,
 		fieldKey: 'email', value: 'x@example.com', agencyDomain: '*', useCount: 0,
 	}];
-	const env = fresh([], rows);
+	const env = fresh(null, rows);
 	await settle(env);
 
 	$(env, 'ShowMemory').click();
@@ -100,7 +213,7 @@ test('memory rows render with confirm, edit and delete actions', async () => {
 
 test('confirm toggles post memory-confirm and refresh the list', async () => {
 	const rows = [{ memoryID: 9, scope: 'Apply', kind: 'Tip', confirmed: false, fieldKey: 'k', value: 'v', agencyDomain: '*', useCount: 0 }];
-	const env = fresh([], rows);
+	const env = fresh(null, rows);
 	await settle(env);
 
 	$(env, 'ShowMemory').click();
@@ -113,7 +226,7 @@ test('confirm toggles post memory-confirm and refresh the list', async () => {
 });
 
 test('the memory list stays lazy until the memory view is opened', async () => {
-	const env = fresh([], []);
+	const env = fresh(null, []);
 	await settle(env);
 
 	assert.ok(!env.chrome.runtime.sent.some(m => m.title === 'memory-list'));
@@ -125,7 +238,7 @@ test('the memory list stays lazy until the memory view is opened', async () => {
 });
 
 test('the memorycap warning appears beyond 500 confirmed rows', async () => {
-	const env = fresh([], []);
+	const env = fresh(null, []);
 	await settle(env);
 
 	const rows = Array.from({ length: 501 }, (_, i) => ({
@@ -138,14 +251,14 @@ test('the memorycap warning appears beyond 500 confirmed rows', async () => {
 });
 
 test('apply_form pages only accept apply-scope lessons', async () => {
-	const env = fresh([], []);
+	const env = fresh(null, []);
 	await settle(env);
 
 	assert.deepStrictEqual(Array.from($(env, 'TipScope').options).map(o => o.value), ['Apply']);
 });
 
 test('job_detail mode offers ranking and delta lessons with the closed key list', async () => {
-	const env = fresh([], []);
+	const env = fresh(null, []);
 	await settle(env);
 
 	const override = $(env, 'ModeOverride');
@@ -180,17 +293,19 @@ test('Compose sends tab id and resume text, then renders pending drafts for revi
 		id: 'ats.example::cover', domain: 'ats.example', fieldId: 'f2',
 		fieldKey: 'cover', fieldLabel: 'Cover letter', text: 'Dear team', accepted: false,
 	};
-	const env = fresh([job], []);
-	env.chrome.runtime.behavior = message => {
-		if (message.title === 'jobs') return [job];
+	const env = fresh(job, [], message => {
+		if (message.title === 'job') return job;
 		if (message.title === 'compose') return { drafts: [draft] };
 		if (message.title === 'compose-list') return { drafts: [draft] };
 		return { ok: true };
-	};
+	});
 	await settle(env);
 
-	const button = Array.from($(env, 'JobsList').querySelectorAll('button')).find(b => b.textContent === 'Compose');
-	button.click();
+	$(env, 'JobId').value = '5';
+	$(env, 'LoadJob').click();
+	await settle(env);
+
+	$(env, 'ComposeJob').click();
 	await settle(env);
 
 	const compose = env.chrome.runtime.sent.find(m => m.title === 'compose');
@@ -212,7 +327,7 @@ test('accepting a draft posts the edited text and shows the accepted state', asy
 		id: 'ats.example::cover', domain: 'ats.example', fieldId: 'f2',
 		fieldKey: 'cover', fieldLabel: 'Cover letter', text: 'Dear team', accepted: false,
 	};
-	const env = fresh([], [], message => {
+	const env = fresh(null, [], message => {
 		if (message.title === 'compose-list') return { drafts: [current] };
 		if (message.title === 'compose-accept') {
 			current = { ...current, accepted: true, text: message.params.text };
@@ -237,7 +352,7 @@ test('accepting a draft posts the edited text and shows the accepted state', asy
 });
 
 test('no panel control submits the form', async () => {
-	const env = fresh([], []);
+	const env = fresh(null, []);
 	await settle(env);
 
 	const labels = Array.from(env.sandbox.document.querySelectorAll('button')).map(b => b.textContent);

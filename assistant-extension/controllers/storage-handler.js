@@ -14,6 +14,7 @@ class StorageHandler {
     static PENDING_DIFFS = "PENDING_DIFFS";
     static CHAT_LOG = "CHAT_LOG";
     static COMPOSE_DRAFTS = "COMPOSE_DRAFTS";
+    static LOG_BUFFER = "LOG_BUFFER";
 
     static async Get(key, default_value) {
         return new Promise(function (resolve, reject) {
@@ -29,9 +30,11 @@ class StorageHandler {
     }
 
     static Set(key, value) {
-        const setting = {};
-        setting[key] = value;
-        chrome.storage.local.set(setting);
+        return new Promise(function (resolve) {
+            const setting = {};
+            setting[key] = value;
+            chrome.storage.local.set(setting, function () { resolve(); });
+        });
     }
 
     static async GetSession(key, default_value) {

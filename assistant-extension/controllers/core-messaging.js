@@ -44,6 +44,7 @@ class CoreMessaging {
                 let error = "http";
                 try { error = JSON.parse(body).error ?? error; } catch { }
                 console.error("ASSISTANT", "CoreMessaging", "error", response.status, error);
+                AssistantLog.Write("error", "core", error + " (" + response.status + ")");
                 return { error: error, status: response.status };
             }
 
@@ -51,11 +52,13 @@ class CoreMessaging {
                 return JSON.parse(body);
             } catch (e) {
                 console.error("ASSISTANT", "CoreMessaging", "invalid json", e);
+                AssistantLog.Write("error", "core", "invalid-json (" + response.status + ")");
                 return { error: "invalid-json", status: response.status };
             }
         } catch (e) {
             const error = e && e.name === 'AbortError' ? "timeout" : "network";
             console.error("ASSISTANT", "CoreMessaging", error, e);
+            AssistantLog.Write("error", "core", error);
             return { error: error, status: 0 };
         } finally {
             clearTimeout(timer);
@@ -77,8 +80,8 @@ class CoreMessaging {
         });
     }
 
-    async Jobs() {
-        return this.Get("assistant/jobs");
+    async Job(jobid) {
+        return this.Get("assistant/job?jobid=" + encodeURIComponent(jobid));
     }
 
     async Applied(jobid) {

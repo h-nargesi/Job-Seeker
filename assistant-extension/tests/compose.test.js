@@ -5,6 +5,7 @@ import { createEnv, link, deliver, jsonOf } from './helpers/env.js';
 function composeEnv() {
 	const env = createEnv({});
 	env.load('controllers/storage-handler.js');
+	env.load('controllers/logger.js');
 	env.load('controllers/compose-loop.js');
 	return { env, ComposeLoop: env.grab('ComposeLoop'), ComposeStore: env.grab('ComposeStore') };
 }

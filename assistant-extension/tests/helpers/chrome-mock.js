@@ -122,10 +122,11 @@ export function createChrome() {
 	const tabs = {
 		nextId: 0,
 		activeId: 1,
+		activeUrl: 'https://ats.example/apply',
 		created: [],
 		messages: [],
 		forward: null,
-		async query() { return [{ id: tabs.activeId }]; },
+		async query() { return [{ id: tabs.activeId, url: tabs.activeUrl }]; },
 		async create(options) {
 			tabs.created.push(options);
 			return { id: ++tabs.nextId };
@@ -141,7 +142,12 @@ export function createChrome() {
 		},
 	};
 
-	return { runtime, storage, tabs };
+	const sidePanel = {
+		opened: [],
+		async open(options) { sidePanel.opened.push(options); },
+	};
+
+	return { runtime, storage, tabs, sidePanel };
 }
 
 export function link(swChrome, contentChrome) {

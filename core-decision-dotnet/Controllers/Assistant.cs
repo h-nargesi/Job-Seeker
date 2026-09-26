@@ -9,35 +9,30 @@ public class AssistantController(Database database) : Controller
     private readonly Database database = database;
 
     [HttpGet]
-    public async Task<IActionResult> Jobs()
+    public async Task<IActionResult> Job([FromQuery] long jobid)
     {
         try
         {
             var views = HttpContext.RequestServices.GetService<IViewRenderService>()
                 ?? throw new Exception("The 'IViewRenderService' is not initialized.");
 
-            var jobs = database.Job.FetchAttentionJobs();
-            var items = new List<AssistantJobItem>(jobs.Count);
+            var job = database.Job.Fetch(jobid);
+            if (job == null) return NotFound();
 
-            foreach (var job in jobs)
+            var live = ResumeHtml.LiveText(job);
+
+            var html = await views.RenderToStringAsync(HttpContext, "~/views/resume.cshtml",
+                new ResumePage { Context = ResumeHtml.Selection(job), Text = live });
+
+            return Ok(new AssistantJobItem
             {
-                var live = ResumeHtml.LiveText(job);
-
-                var html = await views.RenderToStringAsync(HttpContext, "~/views/resume.cshtml",
-                    new ResumePage { Context = ResumeHtml.Selection(job), Text = live });
-
-                items.Add(new AssistantJobItem
-                {
-                    JobId = job.JobID,
-                    Title = job.Title,
-                    Url = job.Url,
-                    AiScore = job.AiScore,
-                    PendingProposal = ResumeHtml.HasPendingProposal(job),
-                    ResumeText = ResumeHtml.RenderText(html, live),
-                });
-            }
-
-            return Ok(items);
+                JobId = job.JobID,
+                Title = job.Title,
+                Url = job.Url,
+                AiScore = job.AiScore,
+                PendingProposal = ResumeHtml.HasPendingProposal(job),
+                ResumeText = ResumeHtml.RenderText(html, live),
+            });
         }
         catch (Exception ex)
         {

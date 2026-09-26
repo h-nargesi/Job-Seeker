@@ -4,7 +4,7 @@
 	"description": "Human-triggered apply-form fill assistant driven by a local LLM. Fills forms, learns memory, never submits.",
 	"manifest_version": 3,
 	"action": {
-		"default_popup": "application/panel.html",
+		"default_popup": "application/settings.html",
 		"default_title": "Apply Assistant",
 		"default_icon": {
 			"16": "assets/images/job-16.png",
@@ -30,8 +30,12 @@
 		"service_worker": "controllers/background.js"
 	},
 	"permissions": [
-		"storage"
+		"storage",
+		"sidePanel"
 	],
+	"side_panel": {
+		"default_path": "application/panel.html"
+	},
 	"host_permissions": [
 		"http://localhost/*",
 		"http://127.0.0.1/*"

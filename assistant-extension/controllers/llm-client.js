@@ -37,6 +37,7 @@ class LlmClient {
 
             if (!response.ok) {
                 console.error("ASSISTANT", "LlmClient", "http", response.status, body.slice(0, 200));
+                AssistantLog.Write("error", "llm", "llm-http-" + response.status);
                 return { error: "llm-http-" + response.status };
             }
 
@@ -44,6 +45,7 @@ class LlmClient {
         } catch (e) {
             const error = e && e.name === 'AbortError' ? "llm-timeout" : "llm-unreachable";
             console.error("ASSISTANT", "LlmClient", error, e);
+            AssistantLog.Write("error", "llm", error);
             return { error: error };
         } finally {
             clearTimeout(timer);
@@ -55,11 +57,15 @@ class LlmClient {
         try {
             parsed = JSON.parse(raw);
         } catch (e) {
+            AssistantLog.Write("error", "llm", "llm-invalid-json");
             return { error: "llm-invalid-json" };
         }
 
         const message = parsed && parsed.choices && parsed.choices[0] && parsed.choices[0].message;
-        if (!message) return { error: "llm-no-choice" };
+        if (!message) {
+            AssistantLog.Write("error", "llm", "llm-no-choice");
+            return { error: "llm-no-choice" };
+        }
 
         return {
             content: message.content ?? "",

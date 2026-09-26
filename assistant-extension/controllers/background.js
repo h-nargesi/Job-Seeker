@@ -2,6 +2,7 @@ console.log("ASSISTANT", "background");
 
 importScripts(
     "./storage-handler.js",
+    "./logger.js",
     "./core-messaging.js",
     "./llm-client.js",
     "./memory-tools.js",
@@ -12,6 +13,10 @@ importScripts(
 const messaging = new CoreMessaging();
 
 self.TAB_TIMEOUT_MS = 30000;
+
+self.addEventListener("unhandledrejection", function (event) {
+    AssistantLog.Write("error", "sw", "unhandledrejection: " + String(event.reason ?? ""));
+});
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (!request || !request.title) return;
@@ -25,8 +30,8 @@ FlushDiffs();
 
 async function Route(request) {
     switch (request.title) {
-        case "jobs":
-            return messaging.Jobs();
+        case "job":
+            return messaging.Job(request.params?.jobId);
         case "applied":
             return messaging.Applied(request.params?.jobId);
         case "memory-list":
@@ -91,18 +96,29 @@ async function FlushDiffs() {
     }
 
     await StorageHandler.SetSession(StorageHandler.PENDING_DIFFS, remaining);
+    AssistantLog.Write(remaining.length ? "warn" : "info", "flush-diffs",
+        `flushed ${queued.length - remaining.length}/${queued.length}`);
     return { flushed: queued.length - remaining.length };
 }
 
 async function RunFill(params) {
-    if (!params.tabId) return { error: "no-tab" };
+    if (!params.tabId) {
+        AssistantLog.Write("warn", "fill", "no-tab");
+        return { error: "no-tab" };
+    }
 
     const state = await TabSend(params.tabId, { title: "inventory" });
-    if (!state || state.error) return { error: state ? state.error : "no-content-script" };
+    if (!state || state.error) {
+        const error = state ? state.error : "no-content-script";
+        AssistantLog.Write("warn", "fill", error);
+        return { error: error };
+    }
 
     const client = await LlmClient.Create();
     const domain = state.domain;
     const snapshot = MemoryTools.Snapshot(messaging);
+
+    AssistantLog.Write("info", "fill", `start job ${params.jobId ?? "-"} (${domain})`);
 
     const result = await FillLoop.Run({
         client: client,
@@ -125,19 +141,42 @@ async function RunFill(params) {
     });
 
     const drafted = await ApplyAcceptedDrafts(params.tabId, domain, state.inventory);
+
+    if (result.error) {
+        AssistantLog.Write("error", "fill",
+            `end job ${params.jobId ?? "-"}: ${result.error} (filled ${result.filled}, writes ${result.writes}, drafted ${drafted})`);
+    }
+    else {
+        AssistantLog.Write("info", "fill",
+            `end job ${params.jobId ?? "-"}: filled ${result.filled}, writes ${result.writes}, drafted ${drafted}`);
+    }
+
     return Object.assign(result, { drafted: drafted });
 }
 
 async function RunCompose(params) {
-    if (!params.tabId) return { error: "no-tab" };
+    if (!params.tabId) {
+        AssistantLog.Write("warn", "compose", "no-tab");
+        return { error: "no-tab" };
+    }
 
     const state = await TabSend(params.tabId, { title: "inventory" });
-    if (!state || state.error) return { error: state ? state.error : "no-content-script" };
+    if (!state || state.error) {
+        const error = state ? state.error : "no-content-script";
+        AssistantLog.Write("warn", "compose", error);
+        return { error: error };
+    }
 
     const fields = state.inventory.filter(function (item) { return item.longText && !item.manual; });
-    if (!fields.length) return { error: "no-long-fields" };
+    if (!fields.length) {
+        AssistantLog.Write("warn", "compose", "no-long-fields");
+        return { error: "no-long-fields" };
+    }
 
     const client = await LlmClient.Create();
+
+    AssistantLog.Write("info", "compose",
+        `start job ${params.jobId ?? "-"} (${state.domain}, ${fields.length} long field(s))`);
 
     const result = await ComposeLoop.Run({
         client: client,
@@ -150,6 +189,7 @@ async function RunCompose(params) {
 
     const drafts = ComposeStore.Merge(await ComposeStore.All(), result.drafts, state.domain);
     await ComposeStore.Save(drafts);
+    AssistantLog.Write("info", "compose", `end job ${params.jobId ?? "-"}: ${drafts.length} draft(s)`);
     return { drafts: drafts };
 }
 
@@ -180,15 +220,20 @@ function TabSend(tabId, message) {
             if (settled) return;
             settled = true;
             clearTimeout(timer);
+            if (!response) AssistantLog.Write("warn", "tab", "no-response");
             resolve(response ?? { error: "no-response" });
         };
 
-        const timer = setTimeout(function () { done({ error: "tab-timeout" }); }, self.TAB_TIMEOUT_MS);
+        const timer = setTimeout(function () {
+            AssistantLog.Write("warn", "tab", "tab-timeout");
+            done({ error: "tab-timeout" });
+        }, self.TAB_TIMEOUT_MS);
 
         try {
             chrome.tabs.sendMessage(tabId, message, function (response) {
                 if (chrome.runtime.lastError) {
                     console.log("ASSISTANT", "TabSend", chrome.runtime.lastError.message);
+                    AssistantLog.Write("warn", "tab", "no-content-script");
                     done({ error: "no-content-script" });
                     return;
                 }
@@ -196,6 +241,7 @@ function TabSend(tabId, message) {
             });
         } catch (e) {
             console.error("ASSISTANT", "TabSend", e);
+            AssistantLog.Write("warn", "tab", "no-content-script");
             done({ error: "no-content-script" });
         }
     });

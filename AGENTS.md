@@ -203,6 +203,13 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **Reflection-discovered plugins.** `TypeHelper.GetSubTypes(typeof(Agency))`
   finds every platform class automatically. Adding a platform = adding a class;
   no registration list to edit. Same for `Page` subclasses per platform.
+- **Extension pages: remote CSS only, never remote JS.** MV3 CSP
+  (`script-src 'self'`) blocks CDN scripts in `agent-extension` /
+  `assistant-extension` pages, while remote stylesheets are allowed. Use the
+  Bootstrap 5.3.3 CSS CDN link (same as `Views/layout.cshtml`) but never load
+  `bootstrap.min.js` — avoid components that depend on it (dropdown, collapse,
+  modal, carousel, `data-bs-*` behaviors) and toggle visibility with a few
+  lines of vanilla JS.
 - **C# 12 / file-scoped namespaces / primary constructors** are in use.
   Match the surrounding style.
 - **Nullable enabled.** Don't silence nullability with `!` unless necessary.

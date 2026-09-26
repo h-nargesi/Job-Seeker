@@ -4,6 +4,8 @@ import { createEnv, jsonOf } from './helpers/env.js';
 
 function fresh() {
 	const env = createEnv({});
+	env.load('controllers/storage-handler.js');
+	env.load('controllers/logger.js');
 	env.load('controllers/fill-loop.js');
 	return { env, FillLoop: env.grab('FillLoop') };
 }

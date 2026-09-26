@@ -56,7 +56,10 @@ class ComposeLoop {
         if (!fields.length) return { error: "no-long-fields" };
 
         const response = await opts.client.Chat(ComposeLoop.Messages(opts), null, { max_tokens: ComposeLoop.MAX_TOKENS });
-        if (response.error) return { error: response.error };
+        if (response.error) {
+            AssistantLog.Write("error", "compose", response.error);
+            return { error: response.error };
+        }
 
         return ComposeLoop.Parse(response.content, fields);
     }
@@ -70,13 +73,17 @@ class ComposeLoop {
         try {
             parsed = JSON.parse(raw);
         } catch (e) {
+            AssistantLog.Write("error", "compose", "compose-invalid-json");
             return { error: "compose-invalid-json" };
         }
 
         const list = Array.isArray(parsed)
             ? parsed
             : Array.isArray(parsed?.drafts) ? parsed.drafts : null;
-        if (!list) return { error: "compose-invalid-output" };
+        if (!list) {
+            AssistantLog.Write("error", "compose", "compose-invalid-output");
+            return { error: "compose-invalid-output" };
+        }
 
         const allowed = new Map(fields.map(function (field) { return [field.fieldId, field]; }));
         const drafts = [];

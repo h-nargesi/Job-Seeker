@@ -7,6 +7,7 @@ async function fresh() {
 	env.chrome.storage.local.state.set('SERVER_URL', 'https://core.example:8081');
 	env.chrome.storage.local.state.set('API_KEY', 'secret-assistant-key');
 	env.load('controllers/storage-handler.js');
+	env.load('controllers/logger.js');
 	env.load('controllers/core-messaging.js');
 
 	const messaging = new (env.grab('CoreMessaging'))();
@@ -16,10 +17,10 @@ async function fresh() {
 test('every core request carries the assistant key and X-Client', async () => {
 	const { env, messaging } = await fresh();
 
-	await messaging.Jobs();
+	await messaging.Job(5);
 
 	const call = env.fetchStub.calls[0];
-	assert.strictEqual(call.url, 'https://core.example:8081/assistant/jobs');
+	assert.strictEqual(call.url, 'https://core.example:8081/assistant/job?jobid=5');
 	assert.strictEqual(call.data.method, 'GET');
 	assert.strictEqual(call.data.headers['X-API-Key'], 'secret-assistant-key');
 	assert.strictEqual(call.data.headers['X-Client'], 'assistant');
@@ -72,7 +73,7 @@ test('memory mutations target save, edit, confirm, delete and bump routes', asyn
 test('the assistant client can never reach the decision automation API', async () => {
 	const { env, messaging } = await fresh();
 
-	await messaging.Jobs();
+	await messaging.Job(1);
 	await messaging.Applied(1);
 	await messaging.MemoryList();
 	await messaging.MemorySave({});
@@ -86,18 +87,19 @@ test('the assistant client can never reach the decision automation API', async (
 test('http and network failures resolve to error objects, never throw', async () => {
 	const env = createEnv({});
 	env.load('controllers/storage-handler.js');
+	env.load('controllers/logger.js');
 	env.load('controllers/core-messaging.js');
 	const messaging = new (env.grab('CoreMessaging'))();
 
 	let mode = 'http';
-	env.fetchStub.route('assistant/jobs', () => mode === 'http'
+	env.fetchStub.route('assistant/job?', () => mode === 'http'
 		? { status: 500, body: { error: 'internal-server-error' } }
 		: { networkError: true });
 
-	const http = await messaging.Jobs();
+	const http = await messaging.Job(5);
 	assert.deepStrictEqual(jsonOf(http), { error: 'internal-server-error', status: 500 });
 
 	mode = 'network';
-	const network = await messaging.Jobs();
+	const network = await messaging.Job(5);
 	assert.deepStrictEqual(jsonOf(network), { error: 'network', status: 0 });
 });

@@ -9,17 +9,19 @@ const MEMORY_CAP = 500;
 const els = {
     mode: document.getElementById("Mode"),
     modeOverride: document.getElementById("ModeOverride"),
-    serverUrl: document.getElementById("ServerUrl"),
-    apiKey: document.getElementById("ApiKey"),
-    llamaUrl: document.getElementById("LlamaUrl"),
-    llamaModel: document.getElementById("LlamaModel"),
     showJobs: document.getElementById("ShowJobs"),
     showMemory: document.getElementById("ShowMemory"),
     jobsView: document.getElementById("JobsView"),
     memoryView: document.getElementById("MemoryView"),
-    refreshJobs: document.getElementById("RefreshJobs"),
+    jobId: document.getElementById("JobId"),
+    fromPage: document.getElementById("FromPage"),
+    loadJob: document.getElementById("LoadJob"),
+    jobInfo: document.getElementById("JobInfo"),
+    openJob: document.getElementById("OpenJob"),
+    markApplied: document.getElementById("MarkApplied"),
+    fillJob: document.getElementById("FillJob"),
+    composeJob: document.getElementById("ComposeJob"),
     jobsStatus: document.getElementById("JobsStatus"),
-    jobsList: document.getElementById("JobsList"),
     refreshMemory: document.getElementById("RefreshMemory"),
     memoryScope: document.getElementById("MemoryScope"),
     memoryCap: document.getElementById("MemoryCap"),
@@ -33,7 +35,7 @@ const els = {
     chatLog: document.getElementById("ChatLog"),
 };
 
-const state = { pageState: null, override: "auto", jobs: [], memoryLoaded: false };
+const state = { pageState: null, override: "auto", job: null, memoryLoaded: false };
 
 els.modeOverride.addEventListener("change", async function () {
     state.override = els.modeOverride.value;
@@ -45,23 +47,19 @@ els.modeOverride.addEventListener("change", async function () {
 els.showJobs.addEventListener("click", function () { SwitchView(true); });
 els.showMemory.addEventListener("click", function () { SwitchView(false); });
 
-els.refreshJobs.addEventListener("click", RefreshJobs);
+els.jobId.addEventListener("keyup", function (event) {
+    if (event.keyCode === 13) LoadJob();
+});
+els.fromPage.addEventListener("click", FromPage);
+els.loadJob.addEventListener("click", LoadJob);
+els.openJob.addEventListener("click", OpenJob);
+els.markApplied.addEventListener("click", MarkApplied);
+els.fillJob.addEventListener("click", FillJob);
+els.composeJob.addEventListener("click", ComposeJob);
 els.refreshMemory.addEventListener("click", RefreshMemory);
 els.memoryScope.addEventListener("change", RefreshMemory);
 els.tipScope.addEventListener("change", RenderTipFields);
 els.saveTip.addEventListener("click", SaveTip);
-
-SaveOnEnter(els.serverUrl, value => { StorageHandler.ServerUrl = value; });
-SaveOnEnter(els.apiKey, value => { StorageHandler.ApiKey = value; });
-SaveOnEnter(els.llamaUrl, value => { StorageHandler.LlamaUrl = value; });
-SaveOnEnter(els.llamaModel, value => { StorageHandler.LlamaModel = value; });
-
-function SaveOnEnter(input, save) {
-    input.addEventListener("keyup", function (event) {
-        event.preventDefault();
-        if (event.keyCode === 13) save(input.value.toString().trim());
-    });
-}
 
 function SwitchView(jobs) {
     els.jobsView.style.display = jobs ? "" : "none";
@@ -116,56 +114,105 @@ function TabRequest(tabId, message) {
     });
 }
 
-async function LoadSettings() {
-    els.serverUrl.value = await StorageHandler.ServerUrlAsync();
-    els.apiKey.value = await StorageHandler.ApiKeyAsync();
-    els.llamaUrl.value = await StorageHandler.LlamaUrlAsync();
-    els.llamaModel.value = await StorageHandler.LlamaModelAsync();
+function ParseJobId(text) {
+    const value = (text ?? "").trim();
+    const url = value.match(/job\/get\/(\d+)/);
+    if (url) return Number(url[1]);
+    return /^\d+$/.test(value) ? Number(value) : null;
 }
 
-async function RefreshJobs() {
-    els.jobsStatus.textContent = "loading ...";
-    const result = await BackgroundMessaging.Message("jobs");
-
-    if (!Array.isArray(result)) {
-        state.jobs = [];
-        els.jobsStatus.textContent = "error: " + (result?.error ?? "unknown");
-        RenderJobs();
+async function LoadJob() {
+    const jobId = ParseJobId(els.jobId.value);
+    if (!jobId) {
+        els.jobsStatus.textContent = "enter a job id";
         return;
     }
 
-    state.jobs = result;
-    els.jobsStatus.textContent = `${result.length} attention job(s)`;
-    RenderJobs();
+    els.jobsStatus.textContent = "loading ...";
+    const result = await BackgroundMessaging.Message("job", { jobId });
+
+    if (!result || result.error) {
+        state.job = null;
+        RenderJobInfo();
+        els.jobsStatus.textContent = result?.status === 404
+            ? "job not found"
+            : "error: " + (result?.error ?? "unknown");
+        return;
+    }
+
+    state.job = result;
+    RenderJobInfo();
+    els.jobsStatus.textContent = "";
 }
 
-function RenderJobs() {
-    els.jobsList.innerHTML = "";
+function RenderJobInfo() {
+    els.jobInfo.innerHTML = "";
+    if (!state.job) return;
 
-    for (const job of state.jobs) {
-        const row = document.createElement("div");
-        row.className = "job";
+    const line = document.createElement("div");
+    line.textContent = `#${state.job.jobId} ${state.job.title ?? ""} (score ${state.job.aiScore ?? "-"})`;
+    els.jobInfo.appendChild(line);
 
-        const title = document.createElement("div");
-        title.textContent = `#${job.jobId} ${job.title ?? ""} (score ${job.aiScore ?? "-"})`;
-        row.appendChild(title);
-
-        if (job.pendingProposal) {
-            const warn = document.createElement("div");
-            warn.className = "warn";
-            warn.textContent = "pending resume proposal — review before sending";
-            row.appendChild(warn);
-        }
-
-        const actions = document.createElement("div");
-        actions.appendChild(JobButton("Open", function () { chrome.tabs.create({ url: job.url }); }));
-        actions.appendChild(JobButton("Applied", function () { MarkApplied(job.jobId); }));
-        actions.appendChild(JobButton("Fill current tab", function () { FillCurrentTab(job); }));
-        actions.appendChild(JobButton("Compose", function () { ComposeUI.ComposeFor(job); }));
-        row.appendChild(actions);
-
-        els.jobsList.appendChild(row);
+    if (state.job.pendingProposal) {
+        const warn = document.createElement("div");
+        warn.className = "warn";
+        warn.textContent = "pending resume proposal — review before sending";
+        els.jobInfo.appendChild(warn);
     }
+}
+
+async function FromPage() {
+    let url;
+    try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        url = tabs && tabs.length ? tabs[0].url : undefined;
+    } catch (e) {
+        url = undefined;
+    }
+
+    const match = typeof url === "string" ? url.match(/job\/get\/(\d+)/) : null;
+    if (!match) {
+        els.jobsStatus.textContent = "current page is not a job details page";
+        return;
+    }
+
+    els.jobId.value = match[1];
+    await LoadJob();
+}
+
+function OpenJob() {
+    if (!state.job) {
+        els.jobsStatus.textContent = "load the job first";
+        return;
+    }
+    chrome.tabs.create({ url: state.job.url });
+}
+
+async function MarkApplied() {
+    const jobId = ParseJobId(els.jobId.value);
+    if (!jobId) {
+        els.jobsStatus.textContent = "enter a job id";
+        return;
+    }
+
+    const result = await BackgroundMessaging.Message("applied", { jobId });
+    els.jobsStatus.textContent = result?.error ? "applied error: " + result.error : `marked applied #${jobId}`;
+}
+
+function FillJob() {
+    if (!state.job) {
+        els.jobsStatus.textContent = "load the job first";
+        return;
+    }
+    FillCurrentTab(state.job);
+}
+
+function ComposeJob() {
+    if (!state.job) {
+        els.jobsStatus.textContent = "load the job first";
+        return;
+    }
+    ComposeUI.ComposeFor(state.job);
 }
 
 function JobButton(text, onClick) {
@@ -173,11 +220,6 @@ function JobButton(text, onClick) {
     button.textContent = text;
     button.addEventListener("click", onClick);
     return button;
-}
-
-async function MarkApplied(jobId) {
-    const result = await BackgroundMessaging.Message("applied", { jobId });
-    els.jobsStatus.textContent = result?.error ? "applied error: " + result.error : `marked applied #${jobId}`;
 }
 
 async function FillCurrentTab(job) {
@@ -330,11 +372,9 @@ async function LoadChatLog() {
 async function LoadData() {
     BackgroundMessaging.Message("flush-diffs");
     await Promise.all([
-        LoadSettings(),
         LoadMode(),
         ComposeUI.Init(),
         LoadChatLog(),
-        RefreshJobs(),
     ]);
 }
 

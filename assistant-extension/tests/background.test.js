@@ -43,7 +43,7 @@ function chatResponse(tool_calls, content_text) {
 }
 
 function routeCore(sw, options = {}) {
-	sw.fetchStub.route('assistant/jobs', { body: options.jobs ?? [] });
+	sw.fetchStub.route('assistant/job?', { body: options.job ?? {} });
 	sw.fetchStub.route(/assistant\/memory\?/, {
 		body: options.memory ?? [],
 	});
@@ -51,14 +51,14 @@ function routeCore(sw, options = {}) {
 	sw.fetchStub.route('assistant/memorybump', { body: {} });
 }
 
-test('jobs requests proxy straight through to the core', async () => {
+test('job-by-id requests proxy straight through to the core', async () => {
 	const { sw } = await fresh();
-	routeCore(sw, { jobs: [{ jobId: 5, title: 'Dev', pendingProposal: false }] });
+	routeCore(sw, { job: { jobId: 5, title: 'Dev', pendingProposal: false } });
 
-	const result = await deliver(sw.chrome, { title: 'jobs' });
+	const result = await deliver(sw.chrome, { title: 'job', params: { jobId: 5 } });
 
-	assert.deepStrictEqual(jsonOf(result), [{ jobId: 5, title: 'Dev', pendingProposal: false }]);
-	assert.ok(sw.fetchStub.calls.some(c => c.url.includes('assistant/jobs')));
+	assert.deepStrictEqual(jsonOf(result), { jobId: 5, title: 'Dev', pendingProposal: false });
+	assert.ok(sw.fetchStub.calls.some(c => c.url.includes('assistant/job?jobid=5')));
 });
 
 test('a full fill session: inventory, memory query, fill, bump — and no decision calls', async () => {
