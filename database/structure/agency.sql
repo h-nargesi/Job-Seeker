@@ -21,7 +21,8 @@ values
 						{ "Title": "SE", "Url": "https://se.indeed.com/" },
 						{ "Title": "OM", "Url": "https://om.indeed.com/", "Enabled": false },
 						{ "Title": "QA", "Url": "https://qa.indeed.com/", "Enabled": false },
-						{ "Title": "UK", "Url": "https://uk.indeed.com/" }]
+						{ "Title": "UK", "Url": "https://uk.indeed.com/" },
+						{ "Title": "FI", "Url": "https://fi.indeed.com/" }]
 					}'),
 
 	('IamExpat',	'(.+\.)?iamexpat\.(nl|de|ch|com)$',	'https://www.iamexpat.nl',
@@ -41,7 +42,8 @@ values
 						{ "Title": "OM", "Url": "&f_WT=2&f_E=3%2C4&location=Oman", "Enabled": false },
 						{ "Title": "QA", "Url": "&f_WT=2&f_E=3%2C4&location=Qatar", "Enabled": false },
 						{ "Title": "UK", "Url": "&f_WT=2&f_E=3%2C4&location=United Kingdom" },
-						{ "Title": "EU", "Url": "&f_WT=2&f_E=3%2C4&geoId=91000002" }]
+						{ "Title": "EU", "Url": "&f_WT=2&f_E=3%2C4&geoId=91000002" },
+						{ "Title": "FI", "Url": "&f_WT=2&f_E=3%2C4&location=Finland" }]
 					}'),
 
 	('Bayt',		'(.+\.)?bayt\.com$',				'https://www.bayt.com/',
