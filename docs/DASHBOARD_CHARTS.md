@@ -150,13 +150,24 @@ normalized by `AiCurrency`/`AiPeriod`) — explicitly declined by the user.
 - **Chart.js:** vendored, pinned v4 UMD under `wwwroot/scripts/lib/` — no CDN.
 - **Refresh:** dashboard charts auto-refresh every 15 s (same pattern as
   `server-operations.js` `setInterval(..., 15000)`); the stats page reloads
-  manually only.
+  manually only. Chart refresh fetches **JSON data only** — the chart JS
+  updates its datasets in place; charts are never refreshed by loading HTML
+  (no partials, no page reloads).
 - **File budgets:** dashboard chart in a partial (`dashboard-chart.cshtml`)
   + external JS; stats endpoints in a `Report.Stats.cs` partial controller;
   stats SQL as `Q_STATS_*` in `JobBusiness.Sql.cs` + methods in a
   `JobBusiness.Stats.cs` partial.
 - **SQL rules (repo-wide):** enum names as text via `nameof(JobState.X)`;
   `@now` from C#, never SQLite `'now'`.
+- **Indexing:** the schema currently ships no secondary indexes (no
+  `CREATE INDEX` in `database/structure/`). When the stats endpoints land,
+  ship a `database/updates/YYYYMMDD-NN-indexes.sql` script
+  (`CREATE INDEX IF NOT EXISTS ...`) covering the hot paths: `Job(State)`
+  and `Job(AiVerdict)` for the monitor queue/calibration scans,
+  `Job(ModifiedOn)` and `Job(RegTime)` for the daily buckets, and
+  `AiRun(StartedUtc DESC, RunID DESC)` for `AiRunBusiness.Recent`. Verify
+  with `EXPLAIN QUERY PLAN` on `Q_STATS_*`, `Q_INDEX`, and the monitor
+  queries once real data accumulates.
 
 ## 6. Implementation roadmap (not started)
 

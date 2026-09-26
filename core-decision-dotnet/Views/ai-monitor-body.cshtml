@@ -1,0 +1,168 @@
+@using System.Globalization
+@using Photon.JobSeeker
+@model MonitorViewModel
+
+@{
+    var ExitBadge = (int code) => code switch
+    {
+        0 => "text-bg-success",
+        3 => "text-bg-warning",
+        _ => "text-bg-danger"
+    };
+    var ExitName = (int code) => code switch
+    {
+        0 => "ok",
+        1 => "core abort",
+        2 => "llm unavailable",
+        3 => "interrupted",
+        5 => "unexpected",
+        _ => $"exit {code}"
+    };
+    var Local = (string iso) => DateTime.Parse(iso, CultureInfo.InvariantCulture,
+        DateTimeStyles.RoundtripKind).ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+    var TokPerSecond = (AiRun run) => run.WallSeconds > 0 ? (run.CompletionTokens / run.WallSeconds).ToString("0.0") : "n/a";
+    var OldestAge = (DateTime? oldest) => oldest == null ? "-" : $"{(DateTime.Now - oldest.Value).TotalHours:0.#} h";
+}
+
+<div class="row align-items-md-stretch">
+    <div class="col-lg-4 mb-3">
+      <div class="h-100 p-4 bg-body-tertiary border rounded-3">
+        <h5>Queue health</h5>
+        <dl class="ai-extract mb-0">
+          <dt>AiPending</dt><dd>@Model.Queue.AiPending</dd>
+          <dt>AIError</dt><dd>@Model.Queue.AiError</dd>
+          <dt>Oldest pending</dt><dd>@Model.Queue.OldestPending?.ToString("yyyy-MM-dd HH:mm") (@OldestAge(Model.Queue.OldestPending) old)</dd>
+        </dl>
+        <p class="text-body-secondary small mb-0">
+          What: jobs waiting for a verdict and poison jobs. Why: a growing pending count with no runs means the
+          worker is not being started; a growing AIError count means the model keeps failing.
+          Action: run <code>ai-worker</code>; re-queue error jobs from job-detail.
+        </p>
+      </div>
+    </div>
+    <div class="col-lg-8 mb-3">
+      <div class="h-100 p-4 bg-body-tertiary border rounded-3">
+        <h5>Calibration</h5>
+        <div class="row text-center">
+          <div class="col">
+            <div class="fs-3">@Model.Calibration.BandMismatches</div>
+            <div>band mismatches / @Model.Calibration.Judged judged</div>
+          </div>
+          <div class="col">
+            <div class="fs-3">@Model.Calibration.InvertedSalaries</div>
+            <div>inverted salaries</div>
+          </div>
+          <div class="col">
+            <div class="fs-3">@Model.Calibration.KeywordRichWithoutSkills</div>
+            <div>keyword-rich, no skills</div>
+          </div>
+        </div>
+        <p class="text-body-secondary small mb-0">
+          What: verdict-band mismatch = stored verdict disagrees with the 85/70/50 score bands; inverted salary =
+          min &gt; max (fixed by validation going forward); keyword-rich-no-skills = regex Score &ge;
+          @Model.Calibration.Floor but no skills extracted. Why: high values mean the model is sloppy or the
+          schema/rubric needs tightening. Action: inspect flagged jobs on job-detail, tune the rubric
+          (Llm:Rubric), then re-queue.
+        </p>
+      </div>
+    </div>
+</div>
+
+<div class="mb-3 p-4 bg-body-tertiary border rounded-3">
+    <h5>Extraction coverage (judged jobs: @Model.Calibration.Judged)</h5>
+    <table class="table table-sm mb-2">
+        <thead>
+            <tr>
+                <td scope="col">Field</td>
+                <td scope="col">Missing / Unknown</td>
+                <td scope="col">Rate</td>
+                <td scope="col" style="width: 40%"></td>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var field in Model.Calibration.Fields)
+            {
+                <tr>
+                    <td>@field.Field</td>
+                    <td>@field.Missing / @field.Judged</td>
+                    <td>@field.MissingRate%</td>
+                    <td>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-warning" role="progressbar"
+                                 style="width: @(Math.Min(field.MissingRate, 100))%;"></div>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <p class="text-body-secondary small mb-0">
+        What: share of judged jobs where an extraction field is NULL or "Unknown". Why: a field that is always
+        missing is wasted schema; a sudden jump means the model stopped filling it. Action: check the rubric's
+        extraction instructions and one raw failure dump, then re-queue a few jobs to test.
+    </p>
+</div>
+
+<div class="mb-3 p-4 bg-body-tertiary border rounded-3">
+    <h5>Run history (last @Model.Runs.Count runs)</h5>
+    @if (Model.Runs.Count == 0)
+    {
+        <p class="text-body-secondary">No runs recorded yet - start the worker on the AI station.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <td scope="col">Run</td>
+                        <td scope="col">Duration</td>
+                        <td scope="col">Exit</td>
+                        <td scope="col">Jobs</td>
+                        <td scope="col">Promoted</td>
+                        <td scope="col">Errors</td>
+                        <td scope="col">404</td>
+                        <td scope="col">Retries</td>
+                        <td scope="col">Tokens in/out</td>
+                        <td scope="col">tok/s</td>
+                        <td scope="col">Model</td>
+                        <td scope="col">Rubric</td>
+                        <td scope="col">Error jobs</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var run in Model.Runs)
+                    {
+                        <tr>
+                            <td title="started @run.StartedUtc&#10;finished @run.FinishedUtc">@Local(run.StartedUtc)</td>
+                            <td title="call time @((run.CallMs / 1000.0).ToString("0.#"))s">@run.WallSeconds.ToString("0.#")s</td>
+                            <td><span class="badge @ExitBadge(run.ExitCode)">@(ExitName(run.ExitCode))</span></td>
+                            <td>@run.Jobs</td>
+                            <td>@run.Promoted</td>
+                            <td>@(run.ErrorVerdicts == 0 ? string.Empty : run.ErrorVerdicts.ToString())</td>
+                            <td>@(run.Gone404 == 0 ? string.Empty : run.Gone404.ToString())</td>
+                            <td>@(run.Retries == 0 ? string.Empty : run.Retries.ToString())</td>
+                            <td>@run.PromptTokens / @run.CompletionTokens</td>
+                            <td>@TokPerSecond(run)</td>
+                            <td>@run.Model</td>
+                            <td title="judge @run.RubricHash / tailor @run.RubricTailorHash">@run.RubricHash</td>
+                            <td>
+                                @foreach (var id in run.ErrorJobIdList)
+                                {
+                                    <a href="/job/get/@id" target="_blank" class="badge text-bg-danger text-decoration-none">@id</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="text-body-secondary small mb-0">
+            What: one row per worker run, aggregates posted at exit (tok/s and duration are derived here).
+            Why: exit code and retries show stability; length-finishes, truncated jobs and dropped memory rows
+            (hover the Run column for totals) show context pressure. Action: recurring aborted exits mean the
+            core or llama-server was down; rising length/truncation counters mean prompts are outgrowing the
+            16k budget.
+        </p>
+    }
+</div>

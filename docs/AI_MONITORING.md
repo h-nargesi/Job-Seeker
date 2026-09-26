@@ -9,8 +9,9 @@
 ## Panel
 
 Read-only Razor page in the core dashboard: **`/monitor`** (also linked as
-"AI Monitor" on the home page). Server-rendered, manual refresh only (the
-dashboard polls nothing), English, no control buttons — Re-queue/Promote stay
+"AI Monitor" on the home page). Server-rendered, auto-refreshed every 15 s
+(the body partial is swapped in via `GET /monitor/body`), English, no
+control buttons — Re-queue/Promote stay
 on job-detail. Sections:
 
 1. **Queue health** — `AiPending` / `AIError` counts, oldest pending age.
