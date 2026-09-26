@@ -85,6 +85,14 @@ This runs the `.sql` files in `database/structure/` against `data.sqlite3`.
 `passwords.sql` is gitignored (contains real agency credentials) — create it if
 absent, otherwise `installation.sh` will error on the last line.
 
+**Incremental DB updates** — at startup the server applies every `*.sql` in
+`database/updates/` (sorted by filename) that is not yet recorded in the
+`SchemaUpdate` table, each in one transaction, then marks it applied
+(`DatabaseUpdater.Run`, wired in `Program.cs`; path via `Database:Updates`).
+Deploy a DB change by uploading a new `YYYYMMDD-NN-slug.sql` there and
+restarting the app. A failing script rolls back and aborts startup — remove
+the file to recover. Never edit an already-applied file; add a new one.
+
 **Auth secrets** — two secret concerns: API auth and credential encryption
 (`appsettings.json` ships them empty; never commit real values):
 

@@ -73,6 +73,7 @@ else
 using (var database = database_factory.Open())
 {
     TrendBusiness.MigrateChallengeColumn(database);
+    DatabaseUpdater.Run(database, builder.Configuration["Database:Updates"] ?? "../database/updates");
 }
 
 builder.Services.AddRazorPages();
