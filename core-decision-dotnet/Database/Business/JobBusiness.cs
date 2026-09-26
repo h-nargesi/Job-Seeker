@@ -161,9 +161,10 @@ namespace Photon.JobSeeker
             {
                 "Title = @title",
                 "Country = @country",
-                "Html = @html",
-                "Content = @content",
             };
+
+            if (!string.IsNullOrWhiteSpace(job.Html)) sets.Add("Html = @html");
+            if (!string.IsNullOrWhiteSpace(job.Content)) sets.Add("Content = @content");
 
             if (codeChanged) sets.Add("Code = @code");
             if (linkFound) sets.Add("Link = @link");

@@ -118,6 +118,14 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
         var incoming_text = JobContent.GetTextContent(html_content);
         if (string.IsNullOrWhiteSpace(incoming_text))
             Log.Error("Job content is empty ({0}, {1})", Parent.Name, code);
+
+        var broken_parts = new List<string>();
+        if (string.IsNullOrWhiteSpace(title)) broken_parts.Add("title");
+        if (string.IsNullOrWhiteSpace(incoming_text)) broken_parts.Add("content");
+        if (broken_parts.Count > 0)
+            throw new BadJobRequest(
+                $"Broken job page ({Parent.Name}, {code}): {string.Join("/", broken_parts)} missing");
+
         var content_changed = JobContent.HasChanged(job.Content, incoming_text);
         job.Html = html_content;
         job.Content = incoming_text;
