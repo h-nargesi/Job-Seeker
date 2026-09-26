@@ -10,6 +10,13 @@ class LinkedIn : Agency
 
     public override string SearchLink => $"{BaseUrl}/jobs/search/";
 
+    public override string NormalizeJobUrl(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return url;
+
+        return uri.Host == "www.linkedin.com" ? url : $"https://www.linkedin.com{uri.PathAndQuery}";
+    }
+
     public override Regex? JobAcceptabilityChecker => LinkedInPage.reg_job_no_longer_accepting;
 
     protected override void RunningSearchingMethodChanged(int value)

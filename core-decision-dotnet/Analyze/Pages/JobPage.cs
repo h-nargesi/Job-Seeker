@@ -93,7 +93,7 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
                     AgencyID = Parent.ID,
                     Code = code,
                     State = JobState.Saved,
-                    Url = url,
+                    Url = Parent.NormalizeJobUrl(url),
                 };
 
                 new_job = true;
