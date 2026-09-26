@@ -17,7 +17,6 @@ node_modules/
 
 # Dotnet Build results
 /publish**/
-*.sln
 *.csproj.user
 .vs/
 [Pp]roperties/
