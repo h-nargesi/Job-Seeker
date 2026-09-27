@@ -70,6 +70,31 @@ public sealed class RunReportTests
     }
 
     [Fact]
+    public void Add_tracks_max_tokens_and_max_ms_across_usage_and_null_usage_calls()
+    {
+        var stats = new RunStats();
+        stats.Add(new LlmResult("a", 4000, 500, "stop", 3000));
+        stats.Add(new LlmResult("b", 9000, 1000, "stop", 8000));
+        stats.Add(new LlmResult("c", null, null, null, 12000));
+
+        Assert.Equal(10000, stats.MaxCallTokens);
+        Assert.Equal(12000, stats.MaxCallMs);
+        Assert.Equal(13000, stats.PromptTokens);
+        Assert.Equal(1500, stats.CompletionTokens);
+        Assert.Equal(23000, stats.CallMs);
+    }
+
+    [Fact]
+    public void Add_ignores_null_usage_for_max_tokens()
+    {
+        var stats = new RunStats();
+        stats.Add(new LlmResult("a", null, null, null, 2000));
+
+        Assert.Equal(0, stats.MaxCallTokens);
+        Assert.Equal(2000, stats.MaxCallMs);
+    }
+
+    [Fact]
     public void ToJson_uses_camel_case_and_carries_the_tier1_fields()
     {
         var stats = new RunStats();
@@ -77,6 +102,7 @@ public sealed class RunReportTests
         stats.Promoted = 1;
         stats.Gone = 2;
         stats.RecordErrorJob(7);
+        stats.Add(new LlmResult("a", 4000, 500, "stop", 3000));
 
         var json = JsonDocument.Parse(RunReport.From("r1", WorkerLoop.ExitOk, null, stats).ToJson()).RootElement;
 
@@ -87,8 +113,22 @@ public sealed class RunReportTests
         Assert.Equal(1, json.GetProperty("promoted").GetInt32());
         Assert.Equal(2, json.GetProperty("gone404").GetInt32());
         Assert.Equal(7, json.GetProperty("errorJobIds")[0].GetInt64());
+        Assert.Equal(4500, json.GetProperty("maxCallTokens").GetInt64());
+        Assert.Equal(3000, json.GetProperty("maxCallMs").GetInt64());
         Assert.True(json.TryGetProperty("startedUtc", out _));
         Assert.True(json.TryGetProperty("finishedUtc", out _));
         Assert.True(json.TryGetProperty("wallSeconds", out _));
+    }
+
+    [Fact]
+    public void From_maps_max_call_metrics_from_stats()
+    {
+        var stats = new RunStats();
+        stats.Add(new LlmResult("a", 4000, 500, "stop", 3000));
+
+        var report = RunReport.From("r", WorkerLoop.ExitOk, null, stats);
+
+        Assert.Equal(4500, report.MaxCallTokens);
+        Assert.Equal(3000, report.MaxCallMs);
     }
 }

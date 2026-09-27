@@ -38,7 +38,7 @@ class AgencyBusiness
     {
         var json = database.ExecuteScalar<string?>(Q_LOAD_SETTING, new { agency = agency.ID });
         var settings = json == null ? new Agency.AgencySetting()
-            : JsonConvert.DeserializeObject<Agency.AgencySetting>(json);
+            : JsonConvert.DeserializeObject<Agency.AgencySetting>(json) ?? new Agency.AgencySetting();
         settings.Waiting = waiting;
         SaveSettings(agency.ID, JsonConvert.SerializeObject(settings), (long)agency.Status);
     }

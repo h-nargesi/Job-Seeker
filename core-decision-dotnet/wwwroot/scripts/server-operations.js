@@ -80,8 +80,9 @@ if (job_seeker_monitor)
         if (window.getSelection()?.toString()) return;
 
         try {
-            const response = await fetch('/monitor/body', { method: 'GET' });
+            const response = await fetch('/monitor/body' + location.search, { method: 'GET' });
             job_seeker_monitor.innerHTML = await response.text();
+            window.initMonitorCharts?.();
         } catch (e) {
             console.error(e);
         }

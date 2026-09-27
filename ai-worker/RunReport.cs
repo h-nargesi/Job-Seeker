@@ -46,7 +46,11 @@ public sealed class RunReport
 
     public long CompletionTokens { get; set; }
 
+    public long MaxCallTokens { get; set; }
+
     public long CallMs { get; set; }
+
+    public long MaxCallMs { get; set; }
 
     public double WallSeconds { get; set; }
 
@@ -80,7 +84,9 @@ public sealed class RunReport
             LlmFailures = stats.LlmFailures,
             PromptTokens = stats.PromptTokens,
             CompletionTokens = stats.CompletionTokens,
+            MaxCallTokens = stats.MaxCallTokens,
             CallMs = stats.CallMs,
+            MaxCallMs = stats.MaxCallMs,
             WallSeconds = stats.WallSeconds,
             FinishReasonLength = stats.FinishReasonLength,
             TruncatedJobs = stats.TruncatedJobs,

@@ -65,8 +65,14 @@ public sealed class AiRunReportRequest
     [JsonPropertyName("completionTokens")]
     public long? CompletionTokens { get; set; }
 
+    [JsonPropertyName("maxCallTokens")]
+    public long? MaxCallTokens { get; set; }
+
     [JsonPropertyName("callMs")]
     public long? CallMs { get; set; }
+
+    [JsonPropertyName("maxCallMs")]
+    public long? MaxCallMs { get; set; }
 
     [JsonPropertyName("wallSeconds")]
     public double? WallSeconds { get; set; }
@@ -134,7 +140,7 @@ public sealed class AiRunReportRequest
 
         if (Jobs < 0 || Promoted < 0 || ErrorVerdicts < 0 || Gone404 < 0 || Retries < 0 || LlmFailures < 0 ||
             FinishReasonLength < 0 || TruncatedJobs < 0 || DroppedMemoryRows < 0 ||
-            PromptTokens < 0 || CompletionTokens < 0 || CallMs < 0)
+            PromptTokens < 0 || CompletionTokens < 0 || MaxCallTokens < 0 || CallMs < 0 || MaxCallMs < 0)
         {
             error = "counters must be >= 0";
             return false;
@@ -170,7 +176,9 @@ public sealed class AiRunReportRequest
         run.LlmFailures = LlmFailures ?? 0;
         run.PromptTokens = PromptTokens ?? 0;
         run.CompletionTokens = CompletionTokens ?? 0;
+        run.MaxCallTokens = MaxCallTokens ?? 0;
         run.CallMs = CallMs ?? 0;
+        run.MaxCallMs = MaxCallMs ?? 0;
         run.WallSeconds = WallSeconds ?? 0;
         run.FinishReasonLength = FinishReasonLength ?? 0;
         run.TruncatedJobs = TruncatedJobs ?? 0;

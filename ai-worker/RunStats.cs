@@ -16,7 +16,9 @@ public sealed class RunStats
     public int DroppedMemoryRows;
     public long PromptTokens;
     public long CompletionTokens;
+    public long MaxCallTokens;
     public long CallMs;
+    public long MaxCallMs;
 
     private readonly HashSet<long> truncatedJobs = [];
     private readonly List<long> errorJobIds = [];
@@ -52,7 +54,10 @@ public sealed class RunStats
     {
         PromptTokens += result.PromptTokens ?? 0;
         CompletionTokens += result.CompletionTokens ?? 0;
+        if (result.PromptTokens != null || result.CompletionTokens != null)
+            MaxCallTokens = Math.Max(MaxCallTokens, (result.PromptTokens ?? 0) + (result.CompletionTokens ?? 0));
         CallMs += result.ElapsedMs;
+        MaxCallMs = Math.Max(MaxCallMs, result.ElapsedMs);
         if (result.FinishReason == "length") FinishReasonLength++;
     }
 }

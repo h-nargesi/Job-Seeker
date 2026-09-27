@@ -31,7 +31,9 @@ public class AiRunReportTests
             LlmFailures = 0,
             PromptTokens = 4500,
             CompletionTokens = 570,
+            MaxCallTokens = 4100,
             CallMs = 90000,
+            MaxCallMs = 45000,
             WallSeconds = 120.5,
             FinishReasonLength = 1,
             TruncatedJobs = 1,
@@ -60,6 +62,9 @@ public class AiRunReportTests
         Assert.Equal(2, run.Retries);
         Assert.Equal(4500, run.PromptTokens);
         Assert.Equal(570, run.CompletionTokens);
+        Assert.Equal(4100, run.MaxCallTokens);
+        Assert.Equal(90000, run.CallMs);
+        Assert.Equal(45000, run.MaxCallMs);
         Assert.Equal(120.5, run.WallSeconds);
         Assert.Equal(1, run.FinishReasonLength);
         Assert.Equal(1, run.TruncatedJobs);
@@ -103,6 +108,8 @@ public class AiRunReportTests
     [InlineData(nameof(AiRunReportRequest.Jobs), -1)]
     [InlineData(nameof(AiRunReportRequest.Retries), -1)]
     [InlineData(nameof(AiRunReportRequest.PromptTokens), -5L)]
+    [InlineData(nameof(AiRunReportRequest.MaxCallTokens), -5L)]
+    [InlineData(nameof(AiRunReportRequest.MaxCallMs), -5L)]
     [InlineData(nameof(AiRunReportRequest.WallSeconds), -0.1)]
     public void Invalid_fields_are_rejected(string field, object value)
     {

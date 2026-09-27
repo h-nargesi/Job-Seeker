@@ -38,7 +38,11 @@ public class AiRun
 
     public long CompletionTokens { get; set; }
 
+    public long MaxCallTokens { get; set; }
+
     public long CallMs { get; set; }
+
+    public long MaxCallMs { get; set; }
 
     public double WallSeconds { get; set; }
 
@@ -49,6 +53,10 @@ public class AiRun
     public int DroppedMemoryRows { get; set; }
 
     public string? ErrorJobIds { get; set; }
+
+    public long Calls => Jobs + Promoted + Retries;
+
+    public double AvgCallSeconds => Calls == 0 ? 0 : CallMs / Calls / 1000.0;
 
     public List<long> ErrorJobIdList =>
         string.IsNullOrEmpty(ErrorJobIds) ? [] :

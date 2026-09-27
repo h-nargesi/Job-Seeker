@@ -1,0 +1,179 @@
+@using Photon.JobSeeker
+@model MonitorViewModel
+
+@{
+    var ChartStates = new (string Label, string Color, Func<MonitorStageRow, long> Count)[]
+    {
+        ("Saved", "#6c757d", row => row.Saved),
+        ("Revaluation", "#fd7e14", row => row.Revaluation),
+        ("NotApprovedRegex", "#6f42c1", row => row.NotApprovedRegex),
+        ("AiPending", "#0dcaf0", row => row.AiPending),
+        ("NotApprovedAI", "#d63384", row => row.NotApprovedAI),
+        ("AIError", "#dc3545", row => row.AIError),
+        ("Attention", "#ffc107", row => row.Attention),
+        ("Rejected", "#b02a37", row => row.Rejected),
+        ("Applied", "#198754", row => row.Applied),
+    };
+    var StagesChart = new
+    {
+        labels = Model.Stages.Select(row => row.Label).ToList(),
+        states = ChartStates.Select(state => new
+        {
+            label = state.Label,
+            color = state.Color,
+            counts = Model.Stages.Select(state.Count).ToList()
+        }).ToList()
+    };
+    var TrendRuns = Model.Runs.AsEnumerable().Reverse().ToList();
+    var TrendsChart = new
+    {
+        labels = TrendRuns.Select(run => run.StartedUtc.Length >= 16
+            ? run.StartedUtc.Substring(5, 11).Replace("T", " ")
+            : run.StartedUtc).ToList(),
+        jobs = TrendRuns.Select(run => (long)run.Jobs).ToList(),
+        waitSeconds = TrendRuns.Select(run => Math.Round(run.AvgCallSeconds, 1)).ToList()
+    };
+}
+
+<div class="mb-3 p-4 bg-body-tertiary border rounded-3">
+    <div class="d-flex align-items-baseline mb-2">
+        <h5 class="mb-0 me-3">Success by stage</h5>
+        <span class="small text-body-secondary">group:</span>
+        <a href="/monitor?group=agency" class="small ms-1 @(Model.Group == "agency" ? "fw-bold" : "link-secondary")">agency</a>
+        <span class="small text-body-secondary mx-1">|</span>
+        <a href="/monitor?group=country" class="small @(Model.Group == "country" ? "fw-bold" : "link-secondary")">country</a>
+    </div>
+    @if (Model.Stages.Count == 0)
+    {
+        <p class="text-body-secondary">No jobs recorded yet - the funnel fills as agencies scrape.</p>
+    }
+    else
+    {
+        <div class="table-responsive mb-3">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <td scope="col">@(Model.Group == "country" ? "Country" : "Agency")</td>
+                        @foreach (var state in ChartStates)
+                        {
+                            <td scope="col">@state.Label</td>
+                        }
+                        <td scope="col" title="AI-lane states / (AI-lane + NotApprovedRegex); AI-lane = AiPending, NotApprovedAI, AIError, Attention, Rejected, Applied">Regex pass</td>
+                        <td scope="col" title="Attention / (NotApprovedAI + Attention + Rejected + Applied)">AI promote</td>
+                        <td scope="col" title="(Applied + Rejected) / Attention">Disposition</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Stages)
+                    {
+                        <tr>
+                            <td>@row.Label</td>
+                            <td>@row.Saved</td>
+                            <td>@row.Revaluation</td>
+                            <td>@row.NotApprovedRegex</td>
+                            <td>@row.AiPending</td>
+                            <td>@row.NotApprovedAI</td>
+                            <td>@row.AIError</td>
+                            <td>@row.Attention</td>
+                            <td>@row.Rejected</td>
+                            <td>@row.Applied</td>
+                            <td>@row.RegexPassRate</td>
+                            <td>@row.AiPromoteRate</td>
+                            <td>@row.DispositionRate</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div style="height: 260px;"><canvas id="monitor-stages-chart"></canvas></div>
+    }
+    <p class="text-body-secondary small mb-0 mt-2">
+        What: per-group job counts by state plus derived rates - regex pass, AI promote, disposition; the table is
+        authoritative, the chart mirrors it (n/a = zero denominator). Why: shows where in the funnel a group loses
+        jobs. Action: low regex pass = the floor/keywords miss that source; low AI promote = the rubric is too
+        strict; low disposition = Attention piles up undecided.
+    </p>
+    <script type="application/json" id="monitor-stages-data">@Json.Serialize(StagesChart)</script>
+</div>
+
+<div class="row align-items-md-stretch">
+    <div class="col-lg-6 mb-3">
+        <div class="h-100 p-4 bg-body-tertiary border rounded-3">
+            <h5>Verdict distribution (@Model.Verdicts.Judged judged)</h5>
+            <div class="row text-center">
+                <div class="col">
+                    <div class="fs-3">@Model.Verdicts.StrongMatch</div>
+                    <div>StrongMatch (&ge;85)</div>
+                </div>
+                <div class="col">
+                    <div class="fs-3">@Model.Verdicts.Match</div>
+                    <div>Match (&ge;70)</div>
+                </div>
+                <div class="col">
+                    <div class="fs-3">@Model.Verdicts.Possible</div>
+                    <div>Possible (&ge;50)</div>
+                </div>
+                <div class="col">
+                    <div class="fs-3">@Model.Verdicts.NoMatch</div>
+                    <div>NoMatch</div>
+                </div>
+                <div class="col">
+                    <div class="fs-3">@Model.Verdicts.Error</div>
+                    <div>Error</div>
+                </div>
+            </div>
+            <p class="text-body-secondary small mb-0">
+                What: counts per stored verdict, Error separate. Why: compares model strictness against the 85/70/50
+                bands - StrongMatch + Match sit above the 60 passmark, Possible spans 50-70 around it. Action: too
+                few StrongMatch/Match = loosen the rubric or improve the resume; Error &gt; 0 = inspect AIError jobs
+                and re-queue.
+            </p>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-3">
+        <div class="h-100 p-4 bg-body-tertiary border rounded-3">
+            <h5>AiPending age (@Model.PendingAges.Total waiting)</h5>
+            <div class="row text-center">
+                <div class="col">
+                    <div class="fs-3">@Model.PendingAges.To6Hours</div>
+                    <div>&le;6 h</div>
+                </div>
+                <div class="col">
+                    <div class="fs-3">@Model.PendingAges.From6To24Hours</div>
+                    <div>6-24 h</div>
+                </div>
+                <div class="col">
+                    <div class="fs-3">@Model.PendingAges.From1To3Days</div>
+                    <div>1-3 d</div>
+                </div>
+                <div class="col">
+                    <div class="fs-3">@Model.PendingAges.Over3Days</div>
+                    <div>&gt;3 d</div>
+                </div>
+            </div>
+            <p class="text-body-secondary small mb-0">
+                What: queue jobs bucketed by age. Why: staleness beyond the single oldest-pending number in Queue
+                health - old buckets mean the worker is not being started or the queue is stuck. Action: run
+                <code>ai-worker</code>; &gt;3 d stragglers may need re-queueing from job-detail.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="mb-3 p-4 bg-body-tertiary border rounded-3">
+    <h5>Run trends (last @Model.Runs.Count runs)</h5>
+    @if (Model.Runs.Count == 0)
+    {
+        <p class="text-body-secondary mb-0">No runs recorded yet - start the worker on the AI station.</p>
+    }
+    else
+    {
+        <div style="height: 260px;"><canvas id="monitor-trends-chart"></canvas></div>
+        <p class="text-body-secondary small mb-0 mt-2">
+            What: jobs per run and avg AI wait per call (CallMs / calls), oldest to newest. Why: spots GPU/model
+            slowdown and prompt growth over time. Action: a steady rise in wait (or a jobs collapse) = check
+            llama-server load, context pressure and prompt sizes.
+        </p>
+    }
+    <script type="application/json" id="monitor-trends-data">@Json.Serialize(TrendsChart)</script>
+</div>

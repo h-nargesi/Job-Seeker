@@ -21,6 +21,12 @@
     var Local = (string iso) => DateTime.Parse(iso, CultureInfo.InvariantCulture,
         DateTimeStyles.RoundtripKind).ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
     var TokPerSecond = (AiRun run) => run.WallSeconds > 0 ? (run.CompletionTokens / run.WallSeconds).ToString("0.0") : "n/a";
+    var SecondsPerJob = (AiRun run) => run.Jobs == 0 ? "n/a" : (run.WallSeconds / run.Jobs).ToString("0.#") + "s";
+    var WallTip = (AiRun run) => $"wall {run.WallSeconds:0.#}s\ncall time {(run.CallMs / 1000.0):0.#}s";
+    var MaxCallTokensCell = (AiRun run) => run.MaxCallTokens > 0 ? run.MaxCallTokens.ToString() : "—";
+    var TokenTip = (AiRun run) => $"in {run.PromptTokens} / out {run.CompletionTokens} total";
+    var AiWait = (AiRun run) => run.Calls == 0 ? "n/a" : run.AvgCallSeconds.ToString("0.#") + "s";
+    var WaitTip = (AiRun run) => $"max call {(run.MaxCallMs > 0 ? run.MaxCallMs + " ms" : "—")}\ncall time {(run.CallMs / 1000.0):0.#}s";
     var OldestAge = (DateTime? oldest) => oldest == null ? "-" : $"{(DateTime.Now - oldest.Value).TotalHours:0.#} h";
 }
 
@@ -103,6 +109,8 @@
     </p>
 </div>
 
+@await Html.PartialAsync("~/views/ai-monitor-stages.cshtml", Model)
+
 <div class="mb-3 p-4 bg-body-tertiary border rounded-3">
     <h5>Run history (last @Model.Runs.Count runs)</h5>
     @if (Model.Runs.Count == 0)
@@ -116,14 +124,15 @@
                 <thead>
                     <tr>
                         <td scope="col">Run</td>
-                        <td scope="col">Duration</td>
+                        <td scope="col" title="mean wall seconds per job; total wall + call time in tooltip">s/job</td>
                         <td scope="col">Exit</td>
                         <td scope="col">Jobs</td>
                         <td scope="col">Promoted</td>
                         <td scope="col">Errors</td>
                         <td scope="col">404</td>
                         <td scope="col">Retries</td>
-                        <td scope="col">Tokens in/out</td>
+                        <td scope="col" title="max prompt+completion tokens of a single LLM call; totals in tooltip">Max tok/call</td>
+                        <td scope="col" title="mean LLM latency per call (calls = jobs + promoted + retries); max + totals in tooltip">AI wait</td>
                         <td scope="col">tok/s</td>
                         <td scope="col">Model</td>
                         <td scope="col">Worker</td>
@@ -135,15 +144,16 @@
                     @foreach (var run in Model.Runs)
                     {
                         <tr>
-                            <td title="started @run.StartedUtc&#10;finished @run.FinishedUtc">@Local(run.StartedUtc)</td>
-                            <td title="call time @((run.CallMs / 1000.0).ToString("0.#"))s">@run.WallSeconds.ToString("0.#")s</td>
+                            <td title="started @run.StartedUtc&#10;finished @run.FinishedUtc&#10;llm failures @run.LlmFailures&#10;length-finishes @run.FinishReasonLength&#10;truncated jobs @run.TruncatedJobs&#10;dropped memory rows @run.DroppedMemoryRows">@Local(run.StartedUtc)</td>
+                            <td title="@WallTip(run)">@SecondsPerJob(run)</td>
                             <td><span class="badge @ExitBadge(run.ExitCode)">@(ExitName(run.ExitCode))</span></td>
                             <td>@run.Jobs</td>
                             <td>@run.Promoted</td>
                             <td>@(run.ErrorVerdicts == 0 ? string.Empty : run.ErrorVerdicts.ToString())</td>
                             <td>@(run.Gone404 == 0 ? string.Empty : run.Gone404.ToString())</td>
                             <td>@(run.Retries == 0 ? string.Empty : run.Retries.ToString())</td>
-                            <td>@run.PromptTokens / @run.CompletionTokens</td>
+                            <td title="@TokenTip(run)">@MaxCallTokensCell(run)</td>
+                            <td title="@WaitTip(run)">@AiWait(run)</td>
                             <td>@TokPerSecond(run)</td>
                             <td>@run.Model</td>
                             <td class="text-body-secondary small">@(run.WorkerVersion ?? "—")</td>
@@ -160,11 +170,13 @@
             </table>
         </div>
         <p class="text-body-secondary small mb-0">
-            What: one row per worker run, aggregates posted at exit (tok/s and duration are derived here).
-            Why: exit code and retries show stability; length-finishes, truncated jobs and dropped memory rows
-            (hover the Run column for totals) show context pressure. Action: recurring aborted exits mean the
-            core or llama-server was down; rising length/truncation counters mean prompts are outgrowing the
-            16k budget.
+            What: one row per worker run, aggregates posted at exit (s/job, Max tok/call, AI wait and tok/s are
+            derived here; AI wait = mean CallMs over calls = jobs + promoted + retries, max per call in the tooltip).
+            Why: exit code and retries show stability; the max-per-call columns show prompt-size and tail-latency
+            pressure (mean + max, not percentiles - per-run call counts are too small); "—" marks pre-update rows
+            or an old worker. Action: recurring aborted exits mean the core or llama-server was down; rising max
+            tokens or AI wait mean prompts or the model are slowing; length-finishes, truncated jobs and dropped
+            memory rows (hover the Run column) show context pressure on the 16k budget.
         </p>
     }
 </div>

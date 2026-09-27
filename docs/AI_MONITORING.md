@@ -3,8 +3,8 @@
 > Observability for `ai-worker` per the 2026-09-23 monitoring-program lock in
 > [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md). Two-tier data contract:
 > **aggregates travel to the core, raw debug material stays local** on the AI
-> station. Agreed-but-unbuilt upgrades from the 2026-09-25 session live in
-> [§ Deferred upgrades](#deferred-upgrades-2026-09-25--design-only-not-implemented).
+> station. The 2026-09-25 deferred upgrades were implemented 2026-09-27 (see
+> [§ 2026-09-27 upgrades](#2026-09-27-upgrades-implemented)).
 
 ## Panel
 
@@ -23,11 +23,38 @@ on job-detail. Sections:
    (regex `Score >= floor` but empty `AiSkills`), and per-field
    NULL/`Unknown` coverage for every extraction field. High values mean the
    rubric or schema needs tightening.
-3. **Run history** (last 30 `AiRun` rows) — start time, wall duration, exit
-   code, jobs/promoted/errors/404/retries, tokens in/out, derived tok/s,
-   model, rubric hash; `errorJobIds` link to job-detail.
+3. **Success by stage** — per-group job counts by `State` plus derived
+   rates — regex pass (AI-lane / AI-lane + `NotApprovedRegex`), AI promote
+   (`Attention` / judged outcomes), disposition
+   (`Applied`+`Rejected` / `Attention`); zero denominators render `n/a`.
+   Grouping via query param (`/monitor?group=agency|country`, agency
+   default; invalid → agency): country from `Job.Country` (empty →
+   `(none)`), agency via an `Agency.Title` join; plain toggle links, no JS
+   routing. A Chart.js stacked bar (x = group, segments = `State`) mirrors
+   the table; the table stays authoritative.
+4. **Helper blocks** — verdict distribution (counts per `AiVerdict`, Error
+   its own slice; compares model strictness against the 85/70/50 bands and
+   the 60 passmark), AiPending age buckets (≤6h / 6–24h / 1–3d / >3d over
+   `RegTime`; queue staleness beyond the oldest-pending number), and run
+   trends (last 30 runs: jobs per run + avg AI wait per call as two lines;
+   spots GPU/model slowdown and prompt growth).
+5. **Run history** (last 30 `AiRun` rows) — start time, derived `s/job`
+   (mean wall / jobs; totals in tooltip), exit code,
+   jobs/promoted/errors/404/retries, `Max tok/call` (max prompt+completion
+   of a single LLM call; totals in tooltip), `AI wait` (mean per-call
+   latency `CallMs / Calls` with `Calls = Jobs + Promoted + Retries`; max
+   call latency + totals in tooltip), derived tok/s, model, worker
+   version, rubric hash; `errorJobIds` link to job-detail. The Run-column
+   tooltip carries `llmFailures`, `finishReasonLength`, `truncatedJobs`,
+   `droppedMemoryRows`. "—" marks pre-update rows / an old worker.
 
 Every metric block carries what/why/action notes in the page itself.
+Charts are rebuilt on every 15 s swap: the body partial embeds
+`<script type="application/json">` data blocks (readable via `textContent`
+after an `innerHTML` swap — inline scripts never execute) and
+`wwwroot/scripts/ai-monitor-chart.js` destroys + recreates the Chart.js
+instances via the `window.initMonitorCharts()` hook called by
+`server-operations.js` after each swap and once on page load.
 
 ## Report contract (`POST /ai/run-report`)
 
@@ -48,8 +75,10 @@ abort, 2 llm unavailable, 3 interrupted, 5 unexpected), `model`,
 when absent), `temperature`, `seed`, `rubricHash`, `rubricTailorHash`
 (first 10 hex chars of SHA-256), `jobs`, `promoted`, `errorVerdicts`,
 `gone404`, `retries`, `llmFailures`, `promptTokens`, `completionTokens`,
-`callMs`, `wallSeconds`, `finishReasonLength`, `truncatedJobs`,
-`droppedMemoryRows`, `errorJobIds` (JSON array, cap 50).
+`maxCallTokens`, `callMs`, `maxCallMs` (both optional since worker 1.2.0;
+absent → 0 → "—" / 0-based tooltips), `wallSeconds`,
+`finishReasonLength`, `truncatedJobs`, `droppedMemoryRows`, `errorJobIds`
+(JSON array, cap 50).
 
 Tier 2 (never transferred): full prompt bodies, raw model outputs / failure
 dumps, per-call records, llama-server internals.
@@ -72,6 +101,9 @@ dumps, per-call records, llama-server internals.
 
 - `database/structure/ai-run.sql` — additive `CREATE TABLE IF NOT EXISTS
   AiRun (...)`, listed explicitly in `database/installation.sh`.
+- `MaxCallTokens` / `MaxCallMs` (2026-09-27) ship via the SchemaUpdate
+  mechanism: `database/updates/20260927-04-ai-run-max-call-metrics.sql`
+  (two additive `ALTER TABLE`s, auto-applied at startup).
 - Existing populated databases need the one-time manual create (a new table
   is not an ALTER; no migration framework):
 
@@ -97,78 +129,45 @@ dumps, per-call records, llama-server internals.
   Run against the production DB on 2026-09-23: 0 inverted rows — no swap
   needed.
 
-## Deferred upgrades (2026-09-25 — design only, not implemented)
+## 2026-09-27 upgrades (implemented)
 
-> Locked with the user on 2026-09-25; implementation deliberately deferred
-> to a later session. Nothing in this section exists in code yet. Decisions
-> are also recorded in the decision log (2026-09-25).
+> Everything designed 2026-09-25 was built on 2026-09-27 with the
+> modifications below (decision log 2026-09-27). The 2026-09-25 entries are
+> superseded where noted.
 
-### Run history — derived metrics (no schema change)
-
-- Replace the run-total "Tokens in/out" cell with **averages**: avg
-  input/output tokens **per job** (`PromptTokens / Jobs`,
-  `CompletionTokens / Jobs`) and **per call**, and add an **AI wait**
-  column (avg LLM response latency per job, `CallMs / Jobs`; per-call
-  average and total call time in the tooltip). Run totals move into
-  tooltips.
-- Per-call averages need a call count. It is **derived, not stored**:
-  `Calls = Jobs + Promoted + Retries` — every parse retry returns a
-  usage-bearing response whose tokens are already summed
-  (`RunStats.Add` runs in `LogCall` before parsing), and
-  connection-level failures (`LlmFailures`) return no usage and never
-  increment `Retries`.
-- **Max(prompt + completion) per call is dropped** — not derivable
-  without a new counter, and the user declined the `AiRun` schema
-  addition (no new columns, no Tier-1 payload change of any kind).
-- Surface the stored-but-never-displayed counters — `llmFailures`,
-  `finishReasonLength`, `truncatedJobs`, `droppedMemoryRows` — in the
-  Run-column tooltip, closing the panel's currently broken "hover the
-  Run column for totals" promise (the note text exists today; the
-  tooltip lacks the totals).
-
-### Success by stage — agency/country switch + stacked state chart
-
-- New panel section: per-group job counts by `State` plus derived rates
-  — regex pass (AI-lane states / AI-lane + `NotApprovedRegex`), AI
-  promote (`Attention` / judged outcomes), disposition
-  (`Applied`+`Rejected` / `Attention`); zero denominators render `n/a`.
-- Grouping via query param (`/monitor?group=agency|country`, agency
-  default): country from `Job.Country` (empty → `(none)`), agency via a
-  `Agency.Title` join. Server-side switch rendered as toggle links; no
-  JS routing.
-- **Chart:** Chart.js stacked bar — x = group label, segments = `State`
-  counts (same rows as the table; the table stays authoritative).
-  Chart.js 4.x UMD vendored at `wwwroot/scripts/lib/chart.umd.js`
-  (no CDN, no build step, per `DASHBOARD_CHARTS.md` implementation
-  notes), loaded only by the monitor view; init in
-  `wwwroot/scripts/ai-monitor-chart.js`.
-
-### Helper blocks
-
-1. **Verdict distribution** — counts per `AiVerdict` (Error its own
-   slice); compares model strictness against the 85/70/50 bands and the
-   60 passmark.
-2. **AiPending age buckets** — ≤6h / 6–24h / 1–3d / >3d over `RegTime`
-   for `State = AiPending`; queue staleness beyond the single
-   oldest-pending number; tells the user when to start the worker.
-3. **Run trends** — last 30 runs: jobs per run and avg AI wait per job
-   as two lines; spots GPU/model slowdown and prompt growth over time.
-
-### Notes coverage
-
-- `/monitor` keeps What/Why/Action notes on every block (house style,
-  including run-history column tooltips). The other report pages
-  (`jobs`, `trends`, `agencies`) gain one compact note block each; the
-  **dashboard** (`index.cshtml`) gets short `title` tooltips only
-  (user decision: the dashboard stays a terse control console).
-
-### AI-queue job count placement
-
-- The number of jobs waiting for a verdict is **already displayed** in
-  Queue health (`AiPending` + oldest pending age). Decision: it stays
-  there as the single source — no dashboard duplication (the 2026-09-23
-  page-role lock stands). Surfacing it on the dashboard digest would be
-  a new decision superseding that lock.
+- **Run history** — `Duration` became `s/job` (mean `WallSeconds / Jobs`,
+  totals in tooltip); the run-total "Tokens in/out" column became
+  **`Max tok/call`** (`maxCallTokens`); a new **`AI wait`** column shows the
+  mean per-call latency `CallMs / Calls` with the max single-call latency
+  (`maxCallMs`) and totals in the tooltip. `maxCallTokens`/`maxCallMs` are
+  new Tier-1 fields stored via two additive `AiRun` columns — **reversing
+  the 2026-09-25 max-drop lock** (the schema-addition objection fell with
+  the 2026-09-27 `WorkerVersion` precedent). Token per-job/per-call
+  averages were dropped (user); no percentiles — per-run call counts are
+  too small, mean + max covers typical + tail, the full distribution stays
+  in the local Tier-2 logs. Retries count toward the max metrics
+  (usage-bearing); null-usage calls are skipped for `maxCallTokens` but
+  their `ElapsedMs` counts for `maxCallMs`; 0 renders as "—". The call
+  count is derived, not stored: `Calls = Jobs + Promoted + Retries`.
+  `tok/s` unchanged. The Run-column tooltip now carries `llmFailures`,
+  `finishReasonLength`, `truncatedJobs`, `droppedMemoryRows` — closing the
+  old "hover the Run column for totals" promise.
+- **Success by stage** — implemented as designed (query-param group
+  switch, plain links, stacked Chart.js bar, table authoritative).
+- **Helper blocks** — verdict distribution, AiPending age buckets
+  (`julianday` arithmetic over `RegTime`, local-time naive text — the same
+  parseability Queue health relies on), run trends (jobs per run + avg AI
+  wait **per call**, derived from the existing `Runs` list, oldest →
+  newest, no new SQL).
+- **Notes coverage** — `/monitor` notes per block; the dashboard
+  (`index.cshtml`) gained one compact What/Why/Action note under each of
+  the three sections (jobs, trends, agencies) — the blocks live in
+  `index.cshtml`, never in the row partials (invalid HTML there, and
+  wiped every 15 s) — plus short `title` tooltips on chart cards,
+  buttons and KPI chips.
+- **AI-queue job count placement** — standing no-op decision: it stays
+  solely in Queue health (the 2026-09-23 page-role lock stands; no
+  dashboard-digest duplication).
 
 ## Where the code lives
 
@@ -176,9 +175,12 @@ dumps, per-call records, llama-server internals.
 |-------|------|
 | Run payload + rubric hash | `ai-worker/RunReport.cs` |
 | Run identity, retention, summary JSON, failure dumps | `ai-worker/WorkerLog.cs` |
-| Counters (`finishReasonLength`, `truncatedJobs`, `droppedMemoryRows`, `errorJobIds`) | `ai-worker/RunStats.cs` |
+| Counters (`maxCallTokens`, `maxCallMs`, `finishReasonLength`, `truncatedJobs`, `droppedMemoryRows`, `errorJobIds`) | `ai-worker/RunStats.cs` |
 | Report POST (warn + one retry) | `ai-worker/CoreClient.cs` `PostRunReportAsync` |
 | Report on every exit path | `ai-worker/WorkerLoop.cs` `RunAsync`/`Summary` |
 | Endpoint | `core-decision-dotnet/Controllers/Ai.cs` `RunReport` |
-| Table + upsert | `database/structure/ai-run.sql`, `Database/Business/AiRunBusiness.cs` |
+| Table + upsert | `database/structure/ai-run.sql`, `database/updates/20260927-04-ai-run-max-call-metrics.sql`, `Database/Business/AiRunBusiness.cs` |
 | Panel | `Controllers/Monitor.cs`, `Views/ai-monitor.cshtml`, `Database/Business/JobBusiness.Monitor.cs` |
+| Stages + helper SQL | `Database/Business/JobBusiness.MonitorStages.cs` |
+| Stages/helper sections (table, canvases, JSON blocks) | `Views/ai-monitor-stages.cshtml` (included by `ai-monitor-body.cshtml`) |
+| Monitor charts (destroy + rebuild each refresh) | `wwwroot/scripts/ai-monitor-chart.js` (`window.initMonitorCharts` hook; swap in `server-operations.js`) |

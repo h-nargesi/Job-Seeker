@@ -347,11 +347,11 @@ public sealed class WorkerLoop
     private void Summary(string outcome, int code, RunStats stats)
     {
         WorkerLog.Info(
-            "run {RunId} {Outcome} exit {Code}: jobs {Jobs}, promoted {Promoted}, errors {Errors}, 404 {Gone}, retries {Retries}, llm failures {LlmFailures}, wall {Wall:F1}s, avg {Avg:F1}s/job, tokens in {PromptTokens} / out {CompletionTokens}, length-finishes {FinishReasonLength}, truncated jobs {TruncatedJobs}, dropped memory rows {DroppedMemoryRows}",
+            "run {RunId} {Outcome} exit {Code}: jobs {Jobs}, promoted {Promoted}, errors {Errors}, 404 {Gone}, retries {Retries}, llm failures {LlmFailures}, wall {Wall:F1}s, avg {Avg:F1}s/job, tokens in {PromptTokens} / out {CompletionTokens}, max {MaxCallTokens} tok / {MaxCallMs} ms per call, length-finishes {FinishReasonLength}, truncated jobs {TruncatedJobs}, dropped memory rows {DroppedMemoryRows}",
             WorkerLog.RunId, outcome, code, stats.Jobs, stats.Promoted, stats.ErrorVerdicts, stats.Gone,
             stats.Retries, stats.LlmFailures, stats.WallSeconds, stats.AvgSecondsPerJob,
-            stats.PromptTokens, stats.CompletionTokens, stats.FinishReasonLength,
-            stats.TruncatedJobs, stats.DroppedMemoryRows);
+            stats.PromptTokens, stats.CompletionTokens, stats.MaxCallTokens, stats.MaxCallMs,
+            stats.FinishReasonLength, stats.TruncatedJobs, stats.DroppedMemoryRows);
 
         var report = RunReport.From(WorkerLog.RunId, code, options, stats);
         WorkerLog.WriteRunSummary(report.ToJson());

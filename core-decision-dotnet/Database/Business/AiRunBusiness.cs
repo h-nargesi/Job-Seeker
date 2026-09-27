@@ -28,7 +28,9 @@ class AiRunBusiness
             run.LlmFailures,
             run.PromptTokens,
             run.CompletionTokens,
+            run.MaxCallTokens,
             run.CallMs,
+            run.MaxCallMs,
             run.WallSeconds,
             run.FinishReasonLength,
             run.TruncatedJobs,
@@ -46,13 +48,13 @@ class AiRunBusiness
 INSERT OR REPLACE INTO AiRun (
     RunID, StartedUtc, FinishedUtc, ExitCode, Model, WorkerVersion, Temperature, Seed,
     RubricHash, RubricTailorHash, Jobs, Promoted, ErrorVerdicts, Gone404,
-    Retries, LlmFailures, PromptTokens, CompletionTokens, CallMs, WallSeconds,
-    FinishReasonLength, TruncatedJobs, DroppedMemoryRows, ErrorJobIds
+    Retries, LlmFailures, PromptTokens, CompletionTokens, MaxCallTokens, CallMs, MaxCallMs,
+    WallSeconds, FinishReasonLength, TruncatedJobs, DroppedMemoryRows, ErrorJobIds
 ) VALUES (
     @RunID, @StartedUtc, @FinishedUtc, @ExitCode, @Model, @WorkerVersion, @Temperature, @Seed,
     @RubricHash, @RubricTailorHash, @Jobs, @Promoted, @ErrorVerdicts, @Gone404,
-    @Retries, @LlmFailures, @PromptTokens, @CompletionTokens, @CallMs, @WallSeconds,
-    @FinishReasonLength, @TruncatedJobs, @DroppedMemoryRows, @ErrorJobIds
+    @Retries, @LlmFailures, @PromptTokens, @CompletionTokens, @MaxCallTokens, @CallMs, @MaxCallMs,
+    @WallSeconds, @FinishReasonLength, @TruncatedJobs, @DroppedMemoryRows, @ErrorJobIds
 )";
 
     private const string Q_RECENT = @"
