@@ -631,8 +631,6 @@
         const reg_legth = new RegExp(/^key-(not-)?extra-(\d+)$/);
         const reg_key = new RegExp(/^key-(not-)?([\w-]+)$/);
 
-        const letters = new Set();
-        const words = new Set();
         const keys = new Set();
 
         for (const k in KEYS) {
@@ -640,13 +638,6 @@
 
             const class_name = k.replaceAll('_', '-').toLowerCase();
             keys.add(class_name);
-
-            const parts = class_name.split('-');
-            if (!letters.has(parts[0][0])) letters.add(parts[0][0]);
-            else {
-                const p = parts.slice(1).join('-');
-                if (!words.has(p)) words.add(p);
-            }
         }
 
         console.log('keys', keys);
@@ -716,10 +707,6 @@
             document.querySelectorAll(not_included)
                     .forEach((element) => element.style.display = 'none');
         
-        const data = [VERSION, Array.from(letters).join('')];
-        if (words.size > 0)
-            data.push(Array.from(words).join('-'));
-
         document.getElementById('version').innerText = data.join(' | ');
         document.getElementById('date').innerText = new Date().toISOString().substring(0, 10);
 

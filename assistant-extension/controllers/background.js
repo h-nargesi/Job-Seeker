@@ -80,7 +80,7 @@ async function Route(request) {
 function OpenSessionStorage() {
     try {
         if (chrome.storage.session && chrome.storage.session.setAccessLevel)
-            chrome.storage.session.setAccessLevel("UNTRUSTED_CONTEXTS");
+            chrome.storage.session.setAccessLevel({ accessLevel: "UNTRUSTED_CONTEXTS" });
     } catch (e) {
         console.error("ASSISTANT", "OpenSessionStorage", e);
     }
