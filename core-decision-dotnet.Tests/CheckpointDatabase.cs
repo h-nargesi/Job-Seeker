@@ -147,6 +147,7 @@ create table Job (
     AiCurrency          text        null,
     AiPeriod            text        null,
     AiWorkModel         text        null,
+    AiRelocation        text        null,
     AiContract          text        null,
     AiExperienceYears   integer     null,
     AiSkills            text        null,

@@ -69,20 +69,96 @@
                 </div>
             </div>
         </div>
-        <div class="card card-body text-body-secondary small">
-            Score histograms (S2), AI donuts (S3), competitiveness (S5),
-            AiVerdict health (S6), attention aging (S9) and disposition time (S10) land here.
+        <div class="row g-2 mb-2">
+            <div class="col-lg-6">
+                <div class="card card-body py-2 h-100">
+                    <div class="text-body-secondary small mb-1">
+                        Regex score histogram (S2) &mdash; normalized Score, N jobs in caption
+                    </div>
+                    <div style="height: 220px;"><canvas id="score-regex-chart"></canvas></div>
+                    <div class="text-body-secondary small mt-1" id="score-regex-caption">N: 0</div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card card-body py-2 h-100">
+                    <div class="text-body-secondary small mb-1">
+                        AI score histogram (S2) &mdash; AiScore, dashed line marks the passmark bin
+                    </div>
+                    <div style="height: 220px;"><canvas id="score-ai-chart"></canvas></div>
+                    <div class="text-body-secondary small mt-1" id="score-ai-caption">N: 0</div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-2 mb-2">
+            <div class="col-md-6 col-lg-3">
+                <div class="card card-body py-2 h-100">
+                    <div class="text-body-secondary small mb-1">Work model (S3)</div>
+                    <div style="height: 200px;"><canvas id="donut-workModel"></canvas></div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="card card-body py-2 h-100">
+                    <div class="text-body-secondary small mb-1">Relocation (S3)</div>
+                    <div style="height: 200px;"><canvas id="donut-relocation"></canvas></div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="card card-body py-2 h-100">
+                    <div class="text-body-secondary small mb-1">Seniority (S3)</div>
+                    <div style="height: 200px;"><canvas id="donut-seniority"></canvas></div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="card card-body py-2 h-100">
+                    <div class="text-body-secondary small mb-1">Contract (S3)</div>
+                    <div style="height: 200px;"><canvas id="donut-contract"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-2 mb-2">
+            <div class="col-lg-4">
+                <div class="card card-body py-2 h-100">
+                    <div class="text-body-secondary small mb-1">AiVerdict health (S6) &mdash; all verdict rows</div>
+                    <div style="height: 200px;"><canvas id="verdict-chart"></canvas></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card card-body py-2 h-100">
+                    <div class="text-body-secondary small mb-1">Attention aging (S9) &mdash; backlog age in days</div>
+                    <div style="height: 200px;"><canvas id="aging-chart"></canvas></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card card-body py-2 h-100">
+                    <div class="text-body-secondary small mb-1">
+                        Disposition time (S10) &mdash; Applied/Rejected, days to decide
+                    </div>
+                    <div style="height: 200px;"><canvas id="disposition-chart"></canvas></div>
+                    <div class="text-body-secondary small mt-1" id="disposition-caption">median &mdash; / P90 &mdash;</div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-2">
+            <div class="col-12">
+                <div class="card card-body py-2">
+                    <div class="text-body-secondary small mb-1">
+                        Competitiveness by experience (S5) &mdash; % AI-passed of AI-evaluated jobs per bucket
+                        + avg effective score
+                    </div>
+                    <div style="height: 260px;"><canvas id="competitiveness-chart"></canvas></div>
+                </div>
+            </div>
         </div>
     </section>
 
     <footer class="pt-3 border-top text-body-secondary small">
-        S7/S1 follow the Agencies filter; S8 and S4 follow both filters. Remaining charts
-        (S2, S3, S5, S6, S9, S10) land in later phases.
+        S7/S1 follow the Agencies filter; all other charts follow both filters.
     </footer>
 </div>
 
 <script src="/scripts/lib/chart.umd.js"></script>
 <script src="/scripts/stats-chart.js"></script>
+<script src="/scripts/stats-analysis.js"></script>
 
 <script>
     function applyStatsFilters() {

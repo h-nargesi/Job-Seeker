@@ -236,6 +236,8 @@ function render_stats_full(data) {
     render_yield(data.agencyYield);
     render_health(data.pipelineHealth);
     render_skills(data.skillsGap);
+
+    if (typeof render_analysis === 'function') render_analysis(data);
 }
 
 function stats_full_url() {
@@ -285,6 +287,8 @@ function rebuild_charts_on_theme_change() {
         skills_chart.destroy();
         skills_chart = null;
     }
+
+    if (typeof rebuild_analysis_charts === 'function') rebuild_analysis_charts();
 
     if (last_stats_full) render_stats_full(last_stats_full);
 }

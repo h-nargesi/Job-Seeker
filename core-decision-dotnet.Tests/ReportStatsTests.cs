@@ -61,6 +61,12 @@ public class ReportStatsTests
         Assert.NotNull(envelope.Funnel);
         Assert.NotNull(envelope.PipelineHealth);
         Assert.NotNull(envelope.SkillsGap);
+        Assert.NotNull(envelope.ScoreHistograms);
+        Assert.NotNull(envelope.AiDonuts);
+        Assert.NotNull(envelope.AiVerdictDonut);
+        Assert.NotNull(envelope.Competitiveness);
+        Assert.NotNull(envelope.AttentionAging);
+        Assert.NotNull(envelope.Disposition);
     }
 
     [Fact]
@@ -98,6 +104,34 @@ public class ReportStatsTests
         Assert.NotNull(envelope.SkillsGap);
         Assert.Equal(0, envelope.SkillsGap!.Jobs);
         Assert.Empty(envelope.SkillsGap.Top);
+
+        Assert.NotNull(envelope.ScoreHistograms);
+        Assert.Equal(0, envelope.ScoreHistograms!.RegexJobs);
+        Assert.Equal(0, envelope.ScoreHistograms.AiJobs);
+        Assert.Equal(10, envelope.ScoreHistograms.Labels.Count);
+        Assert.All(envelope.ScoreHistograms.RegexBins, count => Assert.Equal(0, count));
+        Assert.All(envelope.ScoreHistograms.AiBins, count => Assert.Equal(0, count));
+
+        Assert.Equal(["workModel", "relocation", "seniority", "contract"],
+            envelope.AiDonuts!.Select(donut => donut.Key));
+        Assert.All(envelope.AiDonuts!, donut => Assert.Empty(donut.Slices));
+
+        Assert.NotNull(envelope.AiVerdictDonut);
+        Assert.Empty(envelope.AiVerdictDonut!.Slices);
+
+        Assert.Equal(["0-2", "3-5", "6-9", "10-14", "15+"],
+            envelope.Competitiveness!.Select(bucket => bucket.Bucket));
+        Assert.All(envelope.Competitiveness!, bucket =>
+        {
+            Assert.Equal(0, bucket.Evaluated);
+            Assert.Equal(0, bucket.Passed);
+            Assert.Null(bucket.AvgEffectiveScore);
+        });
+
+        Assert.Equal(0, envelope.AttentionAging!.Total);
+        Assert.Equal(0, envelope.Disposition!.Jobs);
+        Assert.Null(envelope.Disposition.MedianDays);
+        Assert.Null(envelope.Disposition.P90Days);
     }
 
     [Fact]

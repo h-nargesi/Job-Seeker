@@ -6,7 +6,13 @@ public sealed record StatsFullResponse(
     List<StatsAgencyYieldItem>? AgencyYield,
     StatsFunnel? Funnel,
     List<PipelineHealthItem>? PipelineHealth,
-    StatsSkillsGap? SkillsGap);
+    StatsSkillsGap? SkillsGap,
+    StatsScoreHistograms? ScoreHistograms,
+    List<StatsDonutChart>? AiDonuts,
+    StatsDonutChart? AiVerdictDonut,
+    List<StatsBucketItem>? Competitiveness,
+    StatsBucketList? AttentionAging,
+    StatsDisposition? Disposition);
 
 public sealed record StatsFilters(string[] Agencies, string[] Countries);
 
@@ -31,3 +37,28 @@ public sealed record PipelineHealthItem(string Day, long AiPending, long AiError
 public sealed record StatsSkillsGap(long Jobs, List<SkillsGapItem> Top);
 
 public sealed record SkillsGapItem(string Skill, long Jobs, bool Have);
+
+public sealed record StatsScoreHistograms(
+    int AiPassmark,
+    long RegexJobs,
+    long AiJobs,
+    List<string> Labels,
+    List<long> RegexBins,
+    List<long> AiBins);
+
+public sealed record StatsDonutChart(string Key, string Title, List<StatsDonutSlice> Slices);
+
+public sealed record StatsDonutSlice(string Label, long Jobs);
+
+public sealed record StatsBucketItem(
+    string Bucket,
+    long Evaluated,
+    long Passed,
+    long PassRate,
+    double? AvgEffectiveScore);
+
+public sealed record StatsBucketList(long Total, List<StatsBucketCount> Buckets);
+
+public sealed record StatsBucketCount(string Label, long Jobs);
+
+public sealed record StatsDisposition(long Jobs, double? MedianDays, double? P90Days, List<StatsBucketCount> Buckets);

@@ -53,7 +53,13 @@ public partial class ReportController
                 yield,
                 database.Job.StatsFunnel(yield),
                 database.Job.StatsPipelineHealth(StatsDailyDays, filters.Agencies, filters.Countries),
-                database.Job.StatsSkillsGap(filters.Agencies, filters.Countries)));
+                database.Job.StatsSkillsGap(filters.Agencies, filters.Countries),
+                database.Job.StatsScoreHistograms(filters.Agencies, filters.Countries),
+                database.Job.StatsAiDonuts(filters.Agencies, filters.Countries),
+                database.Job.StatsAiVerdict(filters.Agencies, filters.Countries),
+                database.Job.StatsCompetitiveness(filters.Agencies, filters.Countries),
+                database.Job.StatsAttentionAging(filters.Agencies, filters.Countries),
+                database.Job.StatsDispositionTimes(filters.Agencies, filters.Countries)));
         }
         catch (Exception ex)
         {

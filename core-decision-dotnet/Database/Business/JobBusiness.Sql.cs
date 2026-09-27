@@ -228,8 +228,46 @@ GROUP BY SUBSTR(ModifiedOn, 1, 10)
 ORDER BY Day";
 
         private readonly static string Q_STATS_SKILLS = $@"
-SELECT AiSkills AS Skills FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
-WHERE AiSkills IS NOT NULL AND AiSkills != '[]' AND AiSkills != '' @and@";
+        SELECT AiSkills AS Skills FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+        WHERE AiSkills IS NOT NULL AND AiSkills != '[]' AND AiSkills != '' @and@";
+
+        private readonly static string Q_STATS_SCORES = @"
+        SELECT Score, AiScore FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+        WHERE Score IS NOT NULL OR AiScore IS NOT NULL @and@";
+
+        private readonly static string Q_STATS_AI_FIELDS = $@"
+        SELECT AiWorkModel, AiRelocation, AiSeniority, AiContract
+        FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+        WHERE State IN ('{nameof(JobState.Attention)}', '{nameof(JobState.Applied)}', '{nameof(JobState.Rejected)}') @and@";
+
+        private readonly static string Q_STATS_VERDICTS = @"
+        SELECT AiVerdict AS Verdict, COUNT(*) AS Jobs
+        FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+        WHERE AiVerdict IS NOT NULL @and@
+        GROUP BY AiVerdict";
+
+        private readonly static string Q_STATS_EXPERIENCE = @$"
+        WITH date_diff AS (
+            SELECT Job.State, Job.Score, Job.AiScore, Job.AiExperienceYears
+                 , MAX(0, JulianDay(latest.LatestTime) - COALESCE(JulianDay(Job.PublishedAt), JulianDay(Job.RegTime))) AS AgeDays
+            FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+            CROSS JOIN (
+                SELECT MAX(RegTime) AS LatestTime FROM Job
+            ) latest
+            WHERE Job.AiExperienceYears >= 0 @and@
+        )
+        SELECT State, AiExperienceYears, {JobRanking.SqlEffectiveScore} AS EffectiveScore
+        FROM date_diff";
+
+        private readonly static string Q_STATS_ATTENTION_AGES = $@"
+        SELECT JulianDay(@now) - JulianDay(COALESCE(PublishedAt, RegTime)) AS AgeDays
+        FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+        WHERE State = '{nameof(JobState.Attention)}' @and@";
+
+        private readonly static string Q_STATS_DISPOSITION_DAYS = $@"
+        SELECT JulianDay(ModifiedOn) - JulianDay(COALESCE(PublishedAt, RegTime)) AS Days
+        FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+        WHERE State IN ('{nameof(JobState.Applied)}', '{nameof(JobState.Rejected)}') @and@";
 
         private const string Q_VACUUM = "vacuum;";
     }
