@@ -126,6 +126,7 @@
                         <td scope="col">Tokens in/out</td>
                         <td scope="col">tok/s</td>
                         <td scope="col">Model</td>
+                        <td scope="col">Worker</td>
                         <td scope="col">Rubric</td>
                         <td scope="col">Error jobs</td>
                     </tr>
@@ -145,6 +146,7 @@
                             <td>@run.PromptTokens / @run.CompletionTokens</td>
                             <td>@TokPerSecond(run)</td>
                             <td>@run.Model</td>
+                            <td class="text-body-secondary small">@(run.WorkerVersion ?? "—")</td>
                             <td title="judge @run.RubricHash / tailor @run.RubricTailorHash">@run.RubricHash</td>
                             <td>
                                 @foreach (var id in run.ErrorJobIdList)

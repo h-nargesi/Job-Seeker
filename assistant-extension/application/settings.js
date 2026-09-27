@@ -1,6 +1,7 @@
 console.log("ASSISTANT", "settings.js");
 
 const els = {
+    version: document.getElementById("Version"),
     serverUrl: document.getElementById("ServerUrl"),
     apiKey: document.getElementById("ApiKey"),
     llamaUrl: document.getElementById("LlamaUrl"),
@@ -90,6 +91,8 @@ async function DownloadLogs() {
 }
 
 async function LoadSettings() {
+    const manifest = chrome.runtime.getManifest();
+    els.version.textContent = manifest.version_name ?? manifest.version;
     els.serverUrl.value = await StorageHandler.ServerUrlAsync();
     els.apiKey.value = await StorageHandler.ApiKeyAsync();
     els.llamaUrl.value = await StorageHandler.LlamaUrlAsync();

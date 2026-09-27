@@ -18,6 +18,7 @@ public class AiRunReportTests
             FinishedUtc = "2026-09-23T10:12:10.0000000Z",
             ExitCode = 0,
             Model = "test-model",
+            WorkerVersion = "1.1.0+ab12cd",
             Temperature = 0.2,
             Seed = 42,
             RubricHash = "abc1234567",
@@ -49,6 +50,7 @@ public class AiRunReportTests
         var run = Assert.Single(db.Database.AiRun.Recent());
         Assert.Equal("20260923-101010", run.RunID);
         Assert.Equal("test-model", run.Model);
+        Assert.Equal("1.1.0+ab12cd", run.WorkerVersion);
         Assert.Equal(0.2, run.Temperature);
         Assert.Equal(42, run.Seed);
         Assert.Equal("abc1234567", run.RubricHash);
@@ -107,6 +109,43 @@ public class AiRunReportTests
         using var db = new GoldenDatabase();
         var body = Valid();
         typeof(AiRunReportRequest).GetProperty(field)!.SetValue(body, value);
+
+        var result = Assert.IsType<BadRequestObjectResult>(Controller(db).RunReport(body));
+        Assert.Equal(400, result.StatusCode);
+    }
+
+    [Fact]
+    public void WorkerVersion_absent_round_trips_as_null()
+    {
+        using var db = new GoldenDatabase();
+        var body = Valid();
+        body.WorkerVersion = null;
+
+        Assert.IsType<OkResult>(Controller(db).RunReport(body));
+
+        var run = Assert.Single(db.Database.AiRun.Recent());
+        Assert.Null(run.WorkerVersion);
+    }
+
+    [Fact]
+    public void WorkerVersion_is_trimmed_when_stored()
+    {
+        using var db = new GoldenDatabase();
+        var body = Valid();
+        body.WorkerVersion = "  1.1.0+ab12cd  ";
+
+        Assert.IsType<OkResult>(Controller(db).RunReport(body));
+
+        var run = Assert.Single(db.Database.AiRun.Recent());
+        Assert.Equal("1.1.0+ab12cd", run.WorkerVersion);
+    }
+
+    [Fact]
+    public void Too_long_worker_version_is_rejected()
+    {
+        using var db = new GoldenDatabase();
+        var body = Valid();
+        body.WorkerVersion = new string('v', AiRunReportRequest.WorkerVersionMaxLength + 1);
 
         var result = Assert.IsType<BadRequestObjectResult>(Controller(db).RunReport(body));
         Assert.Equal(400, result.StatusCode);

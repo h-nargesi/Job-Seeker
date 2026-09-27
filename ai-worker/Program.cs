@@ -35,7 +35,8 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    WorkerLog.Info("worker starting - environment: {Environment}", environment);
+    WorkerLog.Info("worker starting - version: {Version} - environment: {Environment}",
+        WorkerVersion.Current, environment);
 
     var options = config.GetSection("Llm").Get<LlmOptions>() ?? new LlmOptions();
     var config_error = options.Validate();

@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createEnv, jsonOf, EXTENSION_ROOT } from './helpers/env.js';
+import { createChrome } from './helpers/chrome-mock.js';
+
+const manifest = JSON.parse(fs.readFileSync(path.join(EXTENSION_ROOT, 'manifest.json'), 'utf8'));
 
 function settingsBodyHtml() {
 	const html = fs.readFileSync(path.join(EXTENSION_ROOT, 'application/settings.html'), 'utf8');
@@ -10,8 +13,8 @@ function settingsBodyHtml() {
 	return body.replace(/<script[\s\S]*?<\/script>/g, '');
 }
 
-function fresh(logs = [], theme = undefined) {
-	const env = createEnv({ dom: true, url: 'chrome-extension://settings/index.html' });
+function fresh(logs = [], theme = undefined, chrome) {
+	const env = createEnv({ dom: true, url: 'chrome-extension://settings/index.html', chrome });
 	env.sandbox.document.body.innerHTML = settingsBodyHtml();
 
 	env.chrome.storage.local.state.set('SERVER_URL', 'https://core.example:8081/');
@@ -45,6 +48,22 @@ test('loads the stored settings values into the popup inputs', async () => {
 	assert.strictEqual($(env, 'ServerUrl').value, 'https://core.example:8081/');
 	assert.strictEqual($(env, 'LlamaModel').value, 'test-model');
 	assert.strictEqual($(env, 'ApiKey').value, '');
+});
+
+test('the header shows the manifest version_name', async () => {
+	const env = fresh();
+	await settle(env);
+
+	assert.strictEqual($(env, 'Version').textContent, manifest.version_name ?? manifest.version);
+});
+
+test('the header falls back to version when version_name is absent', async () => {
+	const chrome = createChrome();
+	chrome.runtime.getManifest = () => ({ ...manifest, version_name: undefined });
+	const env = fresh([], undefined, chrome);
+	await settle(env);
+
+	assert.strictEqual($(env, 'Version').textContent, manifest.version);
 });
 
 test('Enter saves a settings field, other keys do not', async () => {

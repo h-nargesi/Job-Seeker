@@ -7,6 +7,7 @@ const OrdersStatus = document.getElementById('OrdersStatus');
 const ServerUrl = document.getElementById('ServerUrl');
 const ApiKey = document.getElementById('ApiKey');
 const ManifestTitle = document.getElementById('ManifestTitle');
+const ManifestVersion = document.getElementById('ManifestVersion');
 const ManifestDescr = document.getElementById('ManifestDescr');
 
 ServerUrl.addEventListener("keyup", function (event) {
@@ -66,6 +67,7 @@ async function LoadData() {
     SetOrderingState(await StorageHandler.OrderingAsync());
     await LoadOrdersStatus();
     ManifestTitle.innerText = Manifest.name;
+    ManifestVersion.innerText = Manifest.version_name ?? Manifest.version;
     ManifestDescr.innerText = Manifest.description ?? "";
 }
 

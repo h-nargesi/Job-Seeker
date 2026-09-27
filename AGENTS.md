@@ -77,6 +77,12 @@ dotnet publish core-decision-dotnet -c Release -o publish-core
 
 Assembly name is `job-seeker` (set in the `.csproj`), not the folder name.
 
+**Module versioning** — every module carries `<semver>+<githash>` (csproj
+`<Version>` / manifest `version` are the semver source of truth). Run
+`scripts/version.sh` to stamp the git hash into both extension manifests'
+`version_name` and print the `dotnet publish ... /p:SourceRevisionId=<hash>`
+commands for the .NET binaries; dev `dotnet run` shows bare semver by design.
+
 **Database first run** — the schema and seed data must be loaded once:
 ```bash
 cd database && bash installation.sh

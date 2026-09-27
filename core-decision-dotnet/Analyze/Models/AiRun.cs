@@ -12,6 +12,8 @@ public class AiRun
 
     public string? Model { get; set; }
 
+    public string? WorkerVersion { get; set; }
+
     public double Temperature { get; set; }
 
     public int Seed { get; set; }

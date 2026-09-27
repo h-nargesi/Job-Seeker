@@ -43,11 +43,13 @@ Tier-1 fields (camelCase JSON, stored in the `AiRun` table):
 
 `runId`, `startedUtc`, `finishedUtc` (ISO text), `exitCode` (0 ok, 1 core
 abort, 2 llm unavailable, 3 interrupted, 5 unexpected), `model`,
-`temperature`, `seed`, `rubricHash`, `rubricTailorHash` (first 10 hex chars
-of SHA-256), `jobs`, `promoted`, `errorVerdicts`, `gone404`, `retries`,
-`llmFailures`, `promptTokens`, `completionTokens`, `callMs`, `wallSeconds`,
-`finishReasonLength`, `truncatedJobs`, `droppedMemoryRows`, `errorJobIds`
-(JSON array, cap 50).
+`workerVersion` (optional, ≤ 64 chars — the worker's informational version
+`semver[+hash]`; shown as the Worker column in `/monitor` Run history, `—`
+when absent), `temperature`, `seed`, `rubricHash`, `rubricTailorHash`
+(first 10 hex chars of SHA-256), `jobs`, `promoted`, `errorVerdicts`,
+`gone404`, `retries`, `llmFailures`, `promptTokens`, `completionTokens`,
+`callMs`, `wallSeconds`, `finishReasonLength`, `truncatedJobs`,
+`droppedMemoryRows`, `errorJobIds` (JSON array, cap 50).
 
 Tier 2 (never transferred): full prompt bodies, raw model outputs / failure
 dumps, per-call records, llama-server internals.

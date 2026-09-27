@@ -7,6 +7,7 @@ const RANKING_KEYS = [
 const MEMORY_CAP = 500;
 
 const els = {
+    version: document.getElementById("Version"),
     mode: document.getElementById("Mode"),
     modeOverride: document.getElementById("ModeOverride"),
     showJobs: document.getElementById("ShowJobs"),
@@ -385,6 +386,8 @@ async function LoadChatLog() {
 
 async function LoadData() {
     BackgroundMessaging.Message("flush-diffs");
+    const manifest = chrome.runtime.getManifest();
+    els.version.textContent = manifest.version_name ?? manifest.version;
     await Promise.all([
         LoadMode(),
         ComposeUI.Init(),

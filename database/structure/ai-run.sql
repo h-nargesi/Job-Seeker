@@ -4,6 +4,7 @@ create table if not exists AiRun (
 	FinishedUtc			text		not null,
 	ExitCode			integer		not null,
 	Model				text			null,
+	WorkerVersion		text			null,
 	Temperature			real		not null	default 0.2,
 	Seed				integer		not null	default 0,
 	RubricHash			text			null,

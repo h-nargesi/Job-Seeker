@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "core-decision-dotnet.Tests"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "core-decision-dotnet", "core-decision-dotnet", "{C8E51EF4-6D7B-C383-5C89-B379F6E20595}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ai-worker.Tests", "ai-worker.Tests\ai-worker.Tests.csproj", "{92E44A1E-A13E-4B5B-A3EE-6761B3889D84}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +59,18 @@ Global
 		{8E8E9011-ABAB-4369-B188-C3FBE4676BCD}.Release|x64.Build.0 = Release|Any CPU
 		{8E8E9011-ABAB-4369-B188-C3FBE4676BCD}.Release|x86.ActiveCfg = Release|Any CPU
 		{8E8E9011-ABAB-4369-B188-C3FBE4676BCD}.Release|x86.Build.0 = Release|Any CPU
+		{92E44A1E-A13E-4B5B-A3EE-6761B3889D84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{92E44A1E-A13E-4B5B-A3EE-6761B3889D84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{92E44A1E-A13E-4B5B-A3EE-6761B3889D84}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{92E44A1E-A13E-4B5B-A3EE-6761B3889D84}.Debug|x64.Build.0 = Debug|Any CPU
+		{92E44A1E-A13E-4B5B-A3EE-6761B3889D84}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{92E44A1E-A13E-4B5B-A3EE-6761B3889D84}.Debug|x86.Build.0 = Debug|Any CPU
+		{92E44A1E-A13E-4B5B-A3EE-6761B3889D84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{92E44A1E-A13E-4B5B-A3EE-6761B3889D84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{92E44A1E-A13E-4B5B-A3EE-6761B3889D84}.Release|x64.ActiveCfg = Release|Any CPU
+		{92E44A1E-A13E-4B5B-A3EE-6761B3889D84}.Release|x64.Build.0 = Release|Any CPU
+		{92E44A1E-A13E-4B5B-A3EE-6761B3889D84}.Release|x86.ActiveCfg = Release|Any CPU
+		{92E44A1E-A13E-4B5B-A3EE-6761B3889D84}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

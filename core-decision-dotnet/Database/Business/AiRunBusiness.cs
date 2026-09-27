@@ -15,6 +15,7 @@ class AiRunBusiness
             run.FinishedUtc,
             run.ExitCode,
             run.Model,
+            run.WorkerVersion,
             run.Temperature,
             run.Seed,
             run.RubricHash,
@@ -43,12 +44,12 @@ class AiRunBusiness
 
     private const string Q_UPSERT = @"
 INSERT OR REPLACE INTO AiRun (
-    RunID, StartedUtc, FinishedUtc, ExitCode, Model, Temperature, Seed,
+    RunID, StartedUtc, FinishedUtc, ExitCode, Model, WorkerVersion, Temperature, Seed,
     RubricHash, RubricTailorHash, Jobs, Promoted, ErrorVerdicts, Gone404,
     Retries, LlmFailures, PromptTokens, CompletionTokens, CallMs, WallSeconds,
     FinishReasonLength, TruncatedJobs, DroppedMemoryRows, ErrorJobIds
 ) VALUES (
-    @RunID, @StartedUtc, @FinishedUtc, @ExitCode, @Model, @Temperature, @Seed,
+    @RunID, @StartedUtc, @FinishedUtc, @ExitCode, @Model, @WorkerVersion, @Temperature, @Seed,
     @RubricHash, @RubricTailorHash, @Jobs, @Promoted, @ErrorVerdicts, @Gone404,
     @Retries, @LlmFailures, @PromptTokens, @CompletionTokens, @CallMs, @WallSeconds,
     @FinishReasonLength, @TruncatedJobs, @DroppedMemoryRows, @ErrorJobIds

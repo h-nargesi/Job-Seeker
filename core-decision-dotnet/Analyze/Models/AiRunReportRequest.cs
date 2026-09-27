@@ -7,6 +7,7 @@ public sealed class AiRunReportRequest
     public const int RunIdMaxLength = 64;
     public const int TimestampMaxLength = 64;
     public const int ModelMaxLength = 200;
+    public const int WorkerVersionMaxLength = 64;
     public const int HashMaxLength = 32;
     public const int ErrorJobIdsMaxCount = 50;
 
@@ -24,6 +25,9 @@ public sealed class AiRunReportRequest
 
     [JsonPropertyName("model")]
     public string? Model { get; set; }
+
+    [JsonPropertyName("workerVersion")]
+    public string? WorkerVersion { get; set; }
 
     [JsonPropertyName("temperature")]
     public double? Temperature { get; set; }
@@ -109,6 +113,13 @@ public sealed class AiRunReportRequest
             return false;
         }
 
+        WorkerVersion = WorkerVersion?.Trim();
+        if (WorkerVersion is { Length: > WorkerVersionMaxLength })
+        {
+            error = $"workerVersion must be <= {WorkerVersionMaxLength} characters";
+            return false;
+        }
+
         if (Temperature is not null and (< 0 or > 2))
         {
             error = "temperature must be within 0-2";
@@ -146,6 +157,7 @@ public sealed class AiRunReportRequest
         run.FinishedUtc = FinishedUtc;
         run.ExitCode = ExitCode!.Value;
         run.Model = Model;
+        run.WorkerVersion = WorkerVersion;
         run.Temperature = Temperature ?? 0;
         run.Seed = Seed ?? 0;
         run.RubricHash = RubricHash;

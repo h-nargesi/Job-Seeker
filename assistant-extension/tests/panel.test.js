@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createEnv, EXTENSION_ROOT, jsonOf } from './helpers/env.js';
+import { createChrome } from './helpers/chrome-mock.js';
+
+const manifest = JSON.parse(fs.readFileSync(path.join(EXTENSION_ROOT, 'manifest.json'), 'utf8'));
 
 function panelBodyHtml() {
 	const html = fs.readFileSync(path.join(EXTENSION_ROOT, 'application/panel.html'), 'utf8');
@@ -10,8 +13,8 @@ function panelBodyHtml() {
 	return body.replace(/<script[\s\S]*?<\/script>/g, '');
 }
 
-function fresh(job = null, memory = [], behavior = null) {
-	const env = createEnv({ dom: true, url: 'chrome-extension://panel/index.html' });
+function fresh(job = null, memory = [], behavior = null, chrome) {
+	const env = createEnv({ dom: true, url: 'chrome-extension://panel/index.html', chrome });
 	env.sandbox.document.body.innerHTML = panelBodyHtml();
 
 	env.chrome.runtime.behavior = behavior ?? (message => {
@@ -94,6 +97,22 @@ test('the job id field strips non-digits on input', async () => {
 	$(env, 'JobId').dispatchEvent(new env.sandbox.window.Event('input'));
 
 	assert.strictEqual($(env, 'JobId').value, '127');
+});
+
+test('the panel header shows the manifest version_name', async () => {
+	const env = fresh(null, []);
+	await settle(env);
+
+	assert.strictEqual($(env, 'Version').textContent, manifest.version_name ?? manifest.version);
+});
+
+test('the panel header falls back to version when version_name is absent', async () => {
+	const chrome = createChrome();
+	chrome.runtime.getManifest = () => ({ ...manifest, version_name: undefined });
+	const env = fresh(null, [], null, chrome);
+	await settle(env);
+
+	assert.strictEqual($(env, 'Version').textContent, manifest.version);
 });
 
 test('the panel holds no settings inputs — settings live only in the popup', async () => {

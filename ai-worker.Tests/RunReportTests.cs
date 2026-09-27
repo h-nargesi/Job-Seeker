@@ -34,6 +34,7 @@ public sealed class RunReportTests
         Assert.Equal("20260923-101010", report.RunId);
         Assert.Equal(WorkerLoop.ExitOk, report.ExitCode);
         Assert.Equal("test-model", report.Model);
+        Assert.Matches(@"^\d+\.\d+\.\d+", report.WorkerVersion ?? "");
         Assert.Equal(0.2, report.Temperature);
         Assert.Equal(42, report.Seed);
         Assert.Equal(RunReport.ShortHash("rubric"), report.RubricHash);
@@ -80,6 +81,7 @@ public sealed class RunReportTests
         var json = JsonDocument.Parse(RunReport.From("r1", WorkerLoop.ExitOk, null, stats).ToJson()).RootElement;
 
         Assert.Equal("r1", json.GetProperty("runId").GetString());
+        Assert.Matches(@"^\d+\.\d+\.\d+", json.GetProperty("workerVersion").GetString() ?? "");
         Assert.Equal(0, json.GetProperty("exitCode").GetInt32());
         Assert.Equal(3, json.GetProperty("jobs").GetInt32());
         Assert.Equal(1, json.GetProperty("promoted").GetInt32());

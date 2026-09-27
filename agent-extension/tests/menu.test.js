@@ -4,15 +4,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { createEnv } from './helpers/env.js';
+import { createChrome } from './helpers/chrome-mock.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const menuHtml = fs.readFileSync(path.resolve(here, '../application/menu.html'), 'utf8');
+const manifest = JSON.parse(fs.readFileSync(path.resolve(here, '../manifest.json'), 'utf8'));
 
-function fresh(seed = {}) {
+function fresh(seed = {}, chrome) {
 	const env = createEnv({
 		dom: true,
 		url: 'chrome-extension://abc/application/menu.html',
 		html: menuHtml,
+		chrome,
 	});
 	for (const [key, value] of Object.entries(seed)) {
 		env.chrome.storage.local.set({ [key]: value });
@@ -49,9 +52,19 @@ test('LoadData populates fields from storage and the manifest', async () => {
 	assert.strictEqual(doc.getElementById('ApiKey').value, 'k1');
 	assert.strictEqual(doc.getElementById('Ordering').getAttribute('data-state'), 'on');
 	assert.strictEqual(doc.getElementById('ManifestTitle').innerText, 'Job Seeker Agent');
+	assert.strictEqual(doc.getElementById('ManifestVersion').innerText, manifest.version_name ?? manifest.version);
 	assert.ok(doc.getElementById('ManifestDescr').innerText.includes('job agents'));
 	const expected = `Last poll ${new Date(1000).toLocaleTimeString()} — opened 2`;
 	assert.strictEqual(doc.getElementById('OrdersStatus').innerText, expected);
+});
+
+test('ManifestVersion falls back to version when version_name is absent', async () => {
+	const chrome = createChrome();
+	chrome.runtime.getManifest = () => ({ ...manifest, version_name: undefined });
+	const { env, doc } = fresh({}, chrome);
+	await env.settle();
+
+	assert.strictEqual(doc.getElementById('ManifestVersion').innerText, manifest.version);
 });
 
 test('defaults render when nothing is stored', async () => {

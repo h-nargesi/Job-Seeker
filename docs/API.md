@@ -232,8 +232,9 @@ the `AiRun` table, `INSERT OR REPLACE` by `runId` — re-posts are harmless. See
 layout.
 
 - **Body**: the Tier-1 aggregate payload (`runId`, `startedUtc`, `finishedUtc`
-  ISO text, `exitCode` 0–255, `model`, `temperature` 0–2, `seed`, rubric
-  hashes ≤ 32 chars, non-negative counters, `errorJobIds` ≤ 50 ids).
+  ISO text, `exitCode` 0–255, `model`, optional `workerVersion` ≤ 64 chars,
+  `temperature` 0–2, `seed`, rubric hashes ≤ 32 chars, non-negative counters,
+  `errorJobIds` ≤ 50 ids).
 - **400** `{ error: "validation", message }` on invalid payloads; otherwise
   `200`. The worker treats a failed POST as warn + one retry, never an abort.
 

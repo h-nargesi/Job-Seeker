@@ -20,6 +20,8 @@ public sealed class RunReport
 
     public string? Model { get; set; }
 
+    public string? WorkerVersion { get; set; }
+
     public double Temperature { get; set; }
 
     public int Seed { get; set; }
@@ -65,6 +67,7 @@ public sealed class RunReport
             FinishedUtc = DateTime.UtcNow.ToString("O"),
             ExitCode = exitCode,
             Model = options?.Model,
+            WorkerVersion = AiWorker.WorkerVersion.Current,
             Temperature = options?.Temperature ?? LlmOptions.DefaultTemperature,
             Seed = options?.Seed ?? 0,
             RubricHash = options == null ? null : ShortHash(options.Rubric),
