@@ -55,7 +55,12 @@ chrome.runtime.onStartup.addListener(ResumeOrdering);
 chrome.runtime.onInstalled.addListener(ResumeOrdering);
 
 chrome.storage.onChanged.addListener(function (changes, area) {
-    if (area !== "local" || !changes[StorageHandler.ORDERING]) return;
+    if (area !== "local") return;
+
+    if (changes[StorageHandler.SERVER_URL] || changes[StorageHandler.API_KEY])
+        CoreMessaging.InvalidateConnection();
+
+    if (!changes[StorageHandler.ORDERING]) return;
 
     if (changes[StorageHandler.ORDERING].newValue === true) ResumeOrdering();
     else PauseOrdering();

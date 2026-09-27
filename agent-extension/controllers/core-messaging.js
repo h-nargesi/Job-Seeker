@@ -52,7 +52,7 @@ class CoreMessaging {
             if (!response.ok) {
                 let error = "http";
                 try { error = JSON.parse(body).error ?? error; } catch { }
-                console.error("AGENT", "CoreMessaging", "FetchJson", "error", response.status, error);
+                console.error("AGENT", "CoreMessaging", "FetchJson", "error", response.status, error, url);
                 return { error: error, status: response.status };
             }
 
@@ -148,6 +148,14 @@ class CoreMessaging {
         try {
             await chrome.storage.session.set({ [CoreMessaging.SCOPES_CACHE_KEY]: { at: Date.now(), scopes: scopes } });
         } catch (e) { }
+    }
+
+    static InvalidateConnection() {
+        CoreMessaging.SERVER_URL = undefined;
+        CoreMessaging.API_KEY = undefined;
+        CoreMessaging.SCOPES = undefined;
+        CoreMessaging.SCOPES_AT = 0;
+        try { chrome.storage.session.remove(CoreMessaging.SCOPES_CACHE_KEY); } catch (e) { }
     }
 
     async Orders() {

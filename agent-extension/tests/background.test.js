@@ -210,6 +210,32 @@ test('storage.onChanged only reacts to ORDERING=true in the local area', async (
 	assert.strictEqual(env.fetchStub.calls.length, 1);
 });
 
+test('changing SERVER_URL or API_KEY invalidates the cached connection', async () => {
+	const { env } = fresh();
+	await env.flush();
+	env.chrome.storage.local.set({ SERVER_URL: 'http://old:1' });
+	env.fetchStub.setDefault({ status: 200, body: {} });
+
+	env.chrome.runtime.onMessage.emit({ title: 'orders', id: 1 }, { tab: { id: 1 } });
+	await env.settle();
+	assert.ok(env.fetchStub.calls.some(c => c.url === 'http://old:1/decision/orders'));
+
+	env.chrome.storage.local.set({ SERVER_URL: 'http://new:2', API_KEY: 'k2' });
+	env.chrome.storage.onChanged.emit({
+		SERVER_URL: { newValue: 'http://new:2' },
+		API_KEY: { newValue: 'k2' },
+	}, 'local');
+	await env.settle();
+	assert.strictEqual(env.grab('CoreMessaging').SERVER_URL, undefined);
+	assert.strictEqual(env.grab('CoreMessaging').API_KEY, undefined);
+
+	env.chrome.runtime.onMessage.emit({ title: 'orders', id: 2 }, { tab: { id: 1 } });
+	await env.settle();
+	assert.ok(env.fetchStub.calls.some(c => c.url === 'http://new:2/decision/orders'));
+	assert.strictEqual(env.grab('CoreMessaging').SERVER_URL, 'http://new:2/');
+	assert.strictEqual(env.grab('CoreMessaging').API_KEY, 'k2');
+});
+
 test('onInstalled triggers ResumeOrdering when ordering is on', async () => {
 	const { env } = fresh();
 	await env.flush();
