@@ -113,7 +113,14 @@ WHERE Ranking <= CASE Category
     WHEN 'NotApproved' THEN 6
     WHEN 'Done' THEN 3
     ELSE 1 END
-ORDER BY Category, Ordering";
+ORDER BY CASE Category
+    WHEN 'Attention' THEN 1
+    WHEN 'AiPending' THEN 2
+    WHEN 'AIError' THEN 3
+    WHEN 'NotApproved' THEN 4
+    WHEN 'Done' THEN 5
+    ELSE 12 END,
+    Ordering";
 
         private const string Q_FETCH_ID = @"
 SELECT * FROM Job WHERE JobID = @job";
