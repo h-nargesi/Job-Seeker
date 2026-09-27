@@ -57,10 +57,13 @@ public class ReportStatsTests
         var envelope = Assert.IsType<StatsFullResponse>(ok.Value!);
         Assert.Equal(["LinkedIn", "Indeed"], envelope.Filters.Agencies);
         Assert.Equal(["NL"], envelope.Filters.Countries);
+        Assert.NotNull(envelope.AgencyYield);
+        Assert.NotNull(envelope.Funnel);
+        Assert.NotNull(envelope.PipelineHealth);
     }
 
     [Fact]
-    public void StatsFull_without_filters_returns_empty_arrays()
+    public void StatsFull_without_filters_returns_filled_sections()
     {
         using var cp = new CheckpointDatabase();
 
@@ -70,6 +73,26 @@ public class ReportStatsTests
         var envelope = Assert.IsType<StatsFullResponse>(ok.Value!);
         Assert.Empty(envelope.Filters.Agencies);
         Assert.Empty(envelope.Filters.Countries);
+
+        var yieldRow = Assert.Single(envelope.AgencyYield!);
+        Assert.Equal("CheckpointAgency", yieldRow.Title);
+        Assert.Equal(0, yieldRow.JobCount);
+        Assert.Equal(0, yieldRow.AnalyzingRate);
+        Assert.Equal(0, yieldRow.AcceptingRate);
+
+        Assert.Equal(0, envelope.Funnel!.Overall.Saved);
+        Assert.Equal(0, envelope.Funnel.Overall.Analyzed);
+        Assert.Equal(0, envelope.Funnel.Overall.Attention);
+        Assert.Equal(0, envelope.Funnel.Overall.Applied);
+        Assert.Empty(envelope.Funnel.Agencies);
+
+        Assert.Equal(30, envelope.PipelineHealth!.Count);
+        Assert.Equal(DateTime.Now.ToString("yyyy-MM-dd"), envelope.PipelineHealth[^1].Day);
+        Assert.All(envelope.PipelineHealth, row =>
+        {
+            Assert.Equal(0, row.AiPending);
+            Assert.Equal(0, row.AiError);
+        });
     }
 
     [Fact]

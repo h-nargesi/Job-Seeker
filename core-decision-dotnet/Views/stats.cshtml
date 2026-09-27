@@ -24,14 +24,37 @@
         </div>
     </div>
 
-    <section id="stats-kpi-row" class="mb-3">
-        <div class="card card-body text-body-secondary small">
-            Stats-page charts land here in later phases (roadmap steps 4&ndash;6); D1&ndash;D3 live on the dashboard.
-        </div>
-    </section>
     <section id="stats-pipeline-row" class="mb-3">
-        <div class="card card-body text-body-secondary small">
-            Funnel (S7), agency yield (S1) and pipeline health (S8) land here.
+        <div id="stats-charts-body">
+            <div class="row g-2 mb-2">
+                <div class="col-lg-4">
+                    <div class="card card-body py-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="text-body-secondary small">Pipeline funnel (S7)</div>
+                            <select id="funnel-agency-select" class="form-select form-select-sm w-auto"></select>
+                        </div>
+                        <div style="height: 260px;"><canvas id="funnel-chart"></canvas></div>
+                    </div>
+                </div>
+                <div class="col-lg-8">
+                    <div class="card card-body py-2">
+                        <div class="text-body-secondary small mb-1">
+                            Pipeline health daily (S8) &mdash; AiPending backlog + AIError per day, last 30 days
+                        </div>
+                        <div style="height: 260px;"><canvas id="pipeline-health-chart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-2">
+                <div class="col-12">
+                    <div class="card card-body py-2">
+                        <div class="text-body-secondary small mb-1">
+                            Agency yield (S1) &mdash; AnalyzingRate / AcceptingRate (%), counts in tooltip
+                        </div>
+                        <div style="height: 260px;"><canvas id="agency-yield-chart"></canvas></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
     <section id="stats-analysis-row" class="mb-3">
@@ -42,9 +65,13 @@
     </section>
 
     <footer class="pt-3 border-top text-body-secondary small">
-        Chart data lands in later phases; filters currently only prefill this page.
+        S7/S1 follow the Agencies filter; S8 follows both filters. Remaining charts (S2&ndash;S6, S9, S10)
+        land in later phases.
     </footer>
 </div>
+
+<script src="/scripts/lib/chart.umd.js"></script>
+<script src="/scripts/stats-chart.js"></script>
 
 <script>
     function applyStatsFilters() {

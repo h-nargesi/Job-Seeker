@@ -44,7 +44,15 @@ public partial class ReportController
     {
         try
         {
-            return Ok(new StatsFullResponse(DateTime.Now, ParseFilters(agencies, countries)));
+            var filters = ParseFilters(agencies, countries);
+            var yield = database.Job.StatsAgencyYield(filters.Agencies);
+
+            return Ok(new StatsFullResponse(
+                DateTime.Now,
+                filters,
+                yield,
+                database.Job.StatsFunnel(yield),
+                database.Job.StatsPipelineHealth(StatsDailyDays, filters.Agencies, filters.Countries)));
         }
         catch (Exception ex)
         {

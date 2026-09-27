@@ -1,3 +1,5 @@
+using Dapper;
+
 namespace Photon.JobSeeker
 {
     partial class JobBusiness
@@ -45,7 +47,93 @@ namespace Photon.JobSeeker
                 Round(row.AttentionAvgAgeDays));
         }
 
-        private static object StatsWindow(int days) => new { from = DateTime.Now.Date.AddDays(-(days - 1)) };
+        public List<StatsAgencyYieldItem> StatsAgencyYield(string[] agencyTitles)
+        {
+            var parameters = new DynamicParameters();
+            var where = StatsAgencyWhere(agencyTitles, parameters);
+
+            var rows = database.Query<StatsAgencyYieldRow>(Q_STATS_AGENCY_YIELD.Replace("@where@", where), parameters);
+
+            return rows.Select(row => new StatsAgencyYieldItem(
+                row.AgencyID,
+                row.Title,
+                row.JobCount,
+                row.Analyzed,
+                row.Accepted,
+                row.Applied,
+                Rate(row.Analyzed, row.JobCount),
+                Rate(row.Accepted, row.Analyzed))).ToList();
+        }
+
+        public StatsFunnel StatsFunnel(List<StatsAgencyYieldItem> yield)
+        {
+            return new StatsFunnel(
+                new StatsFunnelStage(
+                    yield.Sum(row => row.JobCount),
+                    yield.Sum(row => row.Analyzed),
+                    yield.Sum(row => row.Accepted),
+                    yield.Sum(row => row.Applied)),
+                yield.Where(row => row.JobCount > 0)
+                    .Select(row => new StatsFunnelAgency(row.Title,
+                        new StatsFunnelStage(row.JobCount, row.Analyzed, row.Accepted, row.Applied)))
+                    .ToList());
+        }
+
+        public List<PipelineHealthItem> StatsPipelineHealth(int days, string[] agencyTitles, string[] countryCodes)
+        {
+            var parameters = StatsWindow(days);
+            var and = StatsJobFilter(agencyTitles, countryCodes, parameters);
+
+            var rows = database.Query<PipelineHealthRow>(Q_STATS_PIPELINE_HEALTH.Replace("@and@", and), parameters)
+                .ToDictionary(row => row.Day);
+
+            return StatsWindowDays(days).Select(day =>
+            {
+                rows.TryGetValue(day, out var row);
+                return new PipelineHealthItem(day, row?.AiPending ?? 0, row?.AiError ?? 0);
+            }).ToList();
+        }
+
+        private static long Rate(long value, long total) => total == 0 ? 0 : (long)(100.0 * value / total);
+
+        private static string StatsAgencyWhere(string[] agencyTitles, DynamicParameters parameters)
+        {
+            if (agencyTitles.Length == 0) return string.Empty;
+
+            var titles = string.Join(", ", agencyTitles.Select((_, i) => $"@a{i}"));
+            for (var i = 0; i < agencyTitles.Length; i++)
+                parameters.Add($"a{i}", agencyTitles[i]);
+
+            return $" WHERE agc.Title IN ({titles})";
+        }
+
+        private static string StatsJobFilter(string[] agencyTitles, string[] countryCodes, DynamicParameters parameters)
+        {
+            var and = string.Empty;
+
+            if (agencyTitles.Length > 0)
+            {
+                and += $" AND Agency.Title IN ({string.Join(", ", agencyTitles.Select((_, i) => $"@a{i}"))})";
+                for (var i = 0; i < agencyTitles.Length; i++)
+                    parameters.Add($"a{i}", agencyTitles[i]);
+            }
+
+            if (countryCodes.Length > 0)
+            {
+                and += $" AND Job.Country IN ({string.Join(", ", countryCodes.Select((_, i) => $"@c{i}"))})";
+                for (var i = 0; i < countryCodes.Length; i++)
+                    parameters.Add($"c{i}", countryCodes[i]);
+            }
+
+            return and;
+        }
+
+        private static DynamicParameters StatsWindow(int days)
+        {
+            var parameters = new DynamicParameters();
+            parameters.Add("from", DateTime.Now.Date.AddDays(-(days - 1)));
+            return parameters;
+        }
 
         private static IEnumerable<string> StatsWindowDays(int days)
         {
@@ -92,6 +180,30 @@ namespace Photon.JobSeeker
             public long? AttentionBacklog { get; set; }
 
             public double? AttentionAvgAgeDays { get; set; }
+        }
+
+        private sealed class StatsAgencyYieldRow
+        {
+            public long AgencyID { get; set; }
+
+            public string Title { get; set; } = string.Empty;
+
+            public long JobCount { get; set; }
+
+            public long Analyzed { get; set; }
+
+            public long Accepted { get; set; }
+
+            public long Applied { get; set; }
+        }
+
+        private sealed class PipelineHealthRow
+        {
+            public string Day { get; set; } = string.Empty;
+
+            public long AiPending { get; set; }
+
+            public long AiError { get; set; }
         }
     }
 }

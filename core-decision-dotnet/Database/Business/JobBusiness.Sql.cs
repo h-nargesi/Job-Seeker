@@ -199,6 +199,34 @@ SELECT AVG(CASE WHEN State IN ('{nameof(JobState.Applied)}', '{nameof(JobState.R
         THEN JulianDay(@now) - JulianDay(COALESCE(PublishedAt, RegTime)) END) AS AttentionAvgAgeDays
 FROM Job";
 
+        private readonly static string Q_STATS_AGENCY_YIELD = $@"
+SELECT agc.AgencyID, agc.Title
+     , IFNULL(job.JobCount, 0) AS JobCount
+     , IFNULL(job.Analyzed, 0) AS Analyzed
+     , IFNULL(job.Attention, 0) + IFNULL(job.Applied, 0) AS Accepted
+     , IFNULL(job.Applied, 0) AS Applied
+FROM Agency agc
+LEFT JOIN (
+    SELECT AgencyID
+        , COUNT(*) AS JobCount
+        , SUM(CASE State WHEN '{nameof(JobState.Saved)}' THEN 0 ELSE 1 END) AS Analyzed
+        , SUM(CASE State WHEN '{nameof(JobState.Attention)}' THEN 1 ELSE 0 END) AS Attention
+        , SUM(CASE State WHEN '{nameof(JobState.Applied)}' THEN 1 ELSE 0 END) AS Applied
+    FROM Job
+    GROUP BY AgencyID
+) job ON agc.AgencyID = job.AgencyID
+@where@
+ORDER BY agc.AgencyID";
+
+        private readonly static string Q_STATS_PIPELINE_HEALTH = $@"
+SELECT SUBSTR(ModifiedOn, 1, 10) AS Day
+     , SUM(CASE WHEN State = '{nameof(JobState.AiPending)}' THEN 1 ELSE 0 END) AS AiPending
+     , SUM(CASE WHEN State = '{nameof(JobState.AIError)}' THEN 1 ELSE 0 END) AS AiError
+FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+WHERE State IN ('{nameof(JobState.AiPending)}', '{nameof(JobState.AIError)}') AND ModifiedOn >= @from @and@
+GROUP BY SUBSTR(ModifiedOn, 1, 10)
+ORDER BY Day";
+
         private const string Q_VACUUM = "vacuum;";
     }
 }

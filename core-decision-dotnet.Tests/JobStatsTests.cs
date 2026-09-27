@@ -7,7 +7,13 @@ public class JobStatsTests
     private static void Seed(GoldenDatabase db, string code, JobState state,
         DateTime regTime, DateTime modifiedOn, DateTime? publishedAt = null)
     {
-        db.SaveSearchJob(code, $"https://example.com/jobs/{code}");
+        Seed(db, GoldenDatabase.AgencyId, "NL", code, state, regTime, modifiedOn, publishedAt);
+    }
+
+    private static void Seed(GoldenDatabase db, long agencyId, string country, string code, JobState state,
+        DateTime regTime, DateTime modifiedOn, DateTime? publishedAt = null)
+    {
+        db.Database.Job.InsertFromSearch(agencyId, country, $"https://example.com/jobs/{code}", code);
         db.ExecuteRaw($@"
 UPDATE Job SET State = '{state}', RegTime = @reg, ModifiedOn = @mod, PublishedAt = @pub
 WHERE Code = @code",
@@ -15,6 +21,11 @@ WHERE Code = @code",
             ("mod", Stamp(modifiedOn)),
             ("pub", publishedAt == null ? DBNull.Value : (object)Stamp(publishedAt.Value)),
             ("code", code));
+    }
+
+    private static void SeedAgency(GoldenDatabase db, long id, string title)
+    {
+        db.ExecuteRaw($"INSERT INTO Agency (AgencyID, Title, Active, Domain, Link) VALUES ({id}, '{title}', 3, '{title.ToLower()}.com', 'https://{title.ToLower()}.com')");
     }
 
     private static string Day(DateTime date) => date.Date.ToString("yyyy-MM-dd");
@@ -133,5 +144,147 @@ WHERE Code = @code",
         Assert.Null(kpis.AvgDispositionDays);
         Assert.Equal(0, kpis.AttentionBacklog);
         Assert.Null(kpis.AttentionAvgAgeDays);
+    }
+
+    [Fact]
+    public void StatsAgencyYield_counts_and_rates_per_agency()
+    {
+        using var db = new GoldenDatabase();
+        SeedAgency(db, 2, "Other");
+        var now = DateTime.Now;
+
+        Seed(db, "sv1", JobState.Saved, now, now);
+        Seed(db, "sv2", JobState.Saved, now, now);
+        Seed(db, "gr", JobState.NotApprovedRegex, now, now);
+        Seed(db, "at", JobState.Attention, now, now);
+        Seed(db, "ap", JobState.Applied, now, now);
+        Seed(db, 2, "NL", "o-sv", JobState.Saved, now, now);
+        Seed(db, 2, "NL", "o-ap", JobState.Applied, now, now);
+
+        var result = db.Database.Job.StatsAgencyYield([]);
+
+        Assert.Equal(2, result.Count);
+        var golden = Assert.Single(result, row => row.Title == "Golden");
+        Assert.Equal(5, golden.JobCount);
+        Assert.Equal(3, golden.Analyzed);
+        Assert.Equal(2, golden.Accepted);
+        Assert.Equal(1, golden.Applied);
+        Assert.Equal(60, golden.AnalyzingRate);
+        Assert.Equal(66, golden.AcceptingRate);
+
+        var other = Assert.Single(result, row => row.Title == "Other");
+        Assert.Equal(2, other.JobCount);
+        Assert.Equal(1, other.Analyzed);
+        Assert.Equal(1, other.Accepted);
+        Assert.Equal(1, other.Applied);
+    }
+
+    [Fact]
+    public void StatsAgencyYield_filters_by_agency_title()
+    {
+        using var db = new GoldenDatabase();
+        SeedAgency(db, 2, "Other");
+        var now = DateTime.Now;
+
+        Seed(db, "a", JobState.Applied, now, now);
+        Seed(db, 2, "NL", "b", JobState.Saved, now, now);
+
+        var result = db.Database.Job.StatsAgencyYield(["Golden"]);
+
+        var golden = Assert.Single(result);
+        Assert.Equal("Golden", golden.Title);
+        Assert.Equal(1, golden.JobCount);
+    }
+
+    [Fact]
+    public void StatsFunnel_sums_overall_and_keeps_only_active_agencies()
+    {
+        using var db = new GoldenDatabase();
+        SeedAgency(db, 2, "Empty");
+        var now = DateTime.Now;
+
+        Seed(db, "sv", JobState.Saved, now, now);
+        Seed(db, "gr", JobState.NotApprovedRegex, now, now);
+        Seed(db, "at", JobState.Attention, now, now);
+        Seed(db, "ap", JobState.Applied, now, now);
+
+        var funnel = db.Database.Job.StatsFunnel(db.Database.Job.StatsAgencyYield([]));
+
+        Assert.Equal(4, funnel.Overall.Saved);
+        Assert.Equal(3, funnel.Overall.Analyzed);
+        Assert.Equal(2, funnel.Overall.Attention);
+        Assert.Equal(1, funnel.Overall.Applied);
+
+        var agency = Assert.Single(funnel.Agencies);
+        Assert.Equal("Golden", agency.Title);
+        Assert.Equal(4, agency.Stages.Saved);
+        Assert.Equal(3, agency.Stages.Analyzed);
+        Assert.Equal(2, agency.Stages.Attention);
+        Assert.Equal(1, agency.Stages.Applied);
+    }
+
+    [Fact]
+    public void StatsPipelineHealth_buckets_pending_and_errors_by_modifiedon_day()
+    {
+        using var db = new GoldenDatabase();
+        SeedAgency(db, 2, "Other");
+        var today = DateTime.Now;
+        var yesterday = today.AddDays(-1);
+
+        Seed(db, "p1", JobState.AiPending, yesterday, yesterday.AddHours(-2));
+        Seed(db, "p2", JobState.AiPending, yesterday, yesterday);
+        Seed(db, "e1", JobState.AIError, yesterday, yesterday);
+        Seed(db, "e2", JobState.AIError, today, today);
+        Seed(db, "old", JobState.AIError, today.AddDays(-40), today.AddDays(-40));
+        Seed(db, "ap-ignored", JobState.Applied, yesterday, yesterday);
+        Seed(db, 2, "NL", "o-e", JobState.AIError, yesterday, yesterday);
+
+        var result = db.Database.Job.StatsPipelineHealth(30, [], []);
+
+        Assert.Equal(30, result.Count);
+        Assert.Equal(Day(today.AddDays(-29)), result[0].Day);
+
+        var yesterdayRow = result.Single(row => row.Day == Day(yesterday));
+        Assert.Equal(2, yesterdayRow.AiPending);
+        Assert.Equal(2, yesterdayRow.AiError);
+
+        var todayRow = result.Single(row => row.Day == Day(today));
+        Assert.Equal(0, todayRow.AiPending);
+        Assert.Equal(1, todayRow.AiError);
+    }
+
+    [Fact]
+    public void StatsPipelineHealth_applies_agency_and_country_filters()
+    {
+        using var db = new GoldenDatabase();
+        SeedAgency(db, 2, "Other");
+        var now = DateTime.Now;
+
+        Seed(db, 1, "NL", "nl", JobState.AiPending, now, now);
+        Seed(db, 1, "DE", "de", JobState.AiPending, now, now);
+        Seed(db, 2, "NL", "other-nl", JobState.AiPending, now, now);
+
+        var byCountry = db.Database.Job.StatsPipelineHealth(30, [], ["NL"]);
+        var todayRow = byCountry.Single(row => row.Day == Day(now));
+        Assert.Equal(2, todayRow.AiPending);
+
+        var byAgency = db.Database.Job.StatsPipelineHealth(30, ["Golden"], []);
+        todayRow = byAgency.Single(row => row.Day == Day(now));
+        Assert.Equal(2, todayRow.AiPending);
+    }
+
+    [Fact]
+    public void StatsPipelineHealth_on_empty_database_zero_fills_window()
+    {
+        using var db = new GoldenDatabase();
+
+        var result = db.Database.Job.StatsPipelineHealth(30, [], []);
+
+        Assert.Equal(30, result.Count);
+        Assert.All(result, row =>
+        {
+            Assert.Equal(0, row.AiPending);
+            Assert.Equal(0, row.AiError);
+        });
     }
 }
