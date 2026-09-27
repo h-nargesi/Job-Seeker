@@ -265,8 +265,9 @@ Human still sends the form to the company.
 
 The side panel has exactly two tabs — **Assistant** (mode override +
 badge, job controls, chat) and **Memory** (list / confirm / edit /
-delete, cap warning — nothing else). The standalone Compose section,
-the manual add-lesson form and the `#ChatLog` one-liner are deleted;
+delete, cap warning, plus the unchanged manual add-lesson form with its
+`#ChatLog` status line — the direct path for adding a row by hand,
+alongside chat extraction). The standalone Compose section is deleted;
 the background `CHAT_LOG` audit keeps being written. All panel pickers
 use the Dropdown component (`application/dropdown.js`); no native
 `<select>` remains (the old "selects don't open" TODO is closed

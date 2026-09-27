@@ -23,10 +23,19 @@ const els = {
     memoryScope: document.getElementById("MemoryScope"),
     memoryCap: document.getElementById("MemoryCap"),
     memoryList: document.getElementById("MemoryList"),
+    tipScope: document.getElementById("TipScope"),
+    tipRankingKey: document.getElementById("TipRankingKey"),
+    tipFieldKey: document.getElementById("TipFieldKey"),
+    tipValue: document.getElementById("TipValue"),
+    tipNote: document.getElementById("TipNote"),
+    saveTip: document.getElementById("SaveTip"),
+    chatLog: document.getElementById("ChatLog"),
 };
 
 Dropdown.Attach(els.modeOverride);
 Dropdown.Attach(els.memoryScope);
+Dropdown.Attach(els.tipScope);
+Dropdown.Attach(els.tipRankingKey);
 
 const state = { pageState: null, override: "auto", job: null, memoryLoaded: false };
 
@@ -34,6 +43,7 @@ els.modeOverride.addEventListener("change", async function () {
     state.override = els.modeOverride.value;
     await StorageHandler.SetSession(StorageHandler.MODE_OVERRIDE, state.override);
     RenderMode();
+    RenderTipScope();
 });
 
 els.showJobs.addEventListener("click", function () { SwitchView(true); });
@@ -53,6 +63,8 @@ els.fillJob.addEventListener("click", FillJob);
 els.composeJob.addEventListener("click", ComposeJob);
 els.refreshMemory.addEventListener("click", RefreshMemory);
 els.memoryScope.addEventListener("change", RefreshMemory);
+els.tipScope.addEventListener("change", RenderTipFields);
+els.saveTip.addEventListener("click", SaveTip);
 
 function SwitchView(jobs) {
     els.jobsView.style.display = jobs ? "" : "none";
@@ -92,6 +104,7 @@ async function LoadMode() {
     }
 
     RenderMode();
+    RenderTipScope();
 }
 
 function TabRequest(tabId, message) {
@@ -313,6 +326,56 @@ async function EditMemory(row) {
     RefreshMemory();
 }
 
+function RenderTipScope() {
+    const mode = EffectiveMode();
+    const scopes = mode === "job_detail" ? ["Ranking", "Resume"] : ["Apply"];
+    els.tipScope.options = scopes.map(scope => ({ value: scope, text: scope.toLowerCase() }));
+    RenderTipFields();
+}
+
+function RenderTipFields() {
+    const ranking = els.tipScope.value === "Ranking";
+    els.tipRankingKey.style.display = ranking ? "" : "none";
+    els.tipFieldKey.style.display = ranking ? "none" : "";
+
+    if (ranking && !els.tipRankingKey.options.length)
+        els.tipRankingKey.options = RANKING_KEYS.map(key => ({ value: key, text: key }));
+}
+
+async function SaveTip() {
+    const scope = els.tipScope.value;
+    const fieldKey = scope === "Ranking" ? els.tipRankingKey.value : FormInventory.NormalizeKey(els.tipFieldKey.value, "");
+    const value = els.tipValue.value.trim();
+    const note = els.tipNote.value.trim();
+
+    if (!fieldKey || !value) {
+        els.chatLog.textContent = "lesson needs a field and a value";
+        return;
+    }
+
+    const domain = scope === "Apply" ? (state.pageState?.domain ?? "*") : "*";
+    const result = await BackgroundMessaging.Message("tip", {
+        scope: scope,
+        domain: domain,
+        fieldKey: fieldKey,
+        fieldLabel: scope === "Ranking" ? undefined : FormInventory.CleanLabel(els.tipFieldKey.value),
+        value: value,
+        note: note || undefined,
+    });
+
+    els.chatLog.textContent = result?.error ? "lesson error: " + result.error : `saved ${scope} lesson`;
+    els.tipValue.value = "";
+    els.tipNote.value = "";
+    if (state.memoryLoaded) RefreshMemory();
+}
+
+async function LoadChatLog() {
+    const log = (await StorageHandler.GetSession(StorageHandler.CHAT_LOG, [])) || [];
+    els.chatLog.textContent = log.length
+        ? "recent lessons: " + log.map(entry => `${entry.scope}:${entry.fieldKey}`).join(", ")
+        : "no lessons this session";
+}
+
 async function LoadData() {
     BackgroundMessaging.Message("flush-diffs");
     const manifest = chrome.runtime.getManifest();
@@ -321,6 +384,7 @@ async function LoadData() {
         LoadMode(),
         ComposeUI.Init(),
         ChatUi.Init({ mode: EffectiveMode, domain: () => state.pageState?.domain ?? "*" }),
+        LoadChatLog(),
     ]);
 }
 

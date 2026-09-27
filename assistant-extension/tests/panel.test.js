@@ -134,9 +134,9 @@ test('the panel is two tabs — Assistant and Memory — with the chat inside As
 
 	assert.ok(!$(env, 'ComposeView'));
 	assert.ok(!$(env, 'ComposeStatus'));
-	assert.ok(!$(env, 'ChatLog'));
-	for (const id of ['TipScope', 'TipRankingKey', 'TipFieldKey', 'TipValue', 'TipNote', 'SaveTip'])
-		assert.ok(!$(env, id), `${id} should not exist`);
+	assert.ok($(env, 'SaveTip').closest('#MemoryView'), 'the manual add-lesson form stays in the Memory tab');
+	for (const id of ['TipScope', 'TipRankingKey', 'TipFieldKey', 'TipValue', 'TipNote', 'ChatLog'])
+		assert.ok($(env, id), `${id} should exist in the Memory tab`);
 
 	$(env, 'ShowMemory').click();
 	await settle(env);
@@ -332,6 +332,43 @@ test('the memorycap warning appears beyond 500 confirmed rows', async () => {
 
 	assert.ok($(env, 'MemoryCap').textContent.includes('memorycap'));
 	assert.ok($(env, 'MemoryCap').textContent.includes('501'));
+});
+
+test('apply_form pages only accept apply-scope lessons', async () => {
+	const env = fresh(null, []);
+	await settle(env);
+
+	assert.deepStrictEqual(Array.from($(env, 'TipScope').options).map(o => o.value), ['Apply']);
+});
+
+test('job_detail mode offers ranking and delta lessons with the closed key list', async () => {
+	const env = fresh(null, []);
+	await settle(env);
+
+	const override = $(env, 'ModeOverride');
+	override.value = 'job_detail';
+	override.dispatchEvent(new env.sandbox.window.Event('change'));
+	await settle(env);
+
+	assert.deepStrictEqual(Array.from($(env, 'TipScope').options).map(o => o.value), ['Ranking', 'Resume']);
+	assert.ok($(env, 'Mode').textContent.includes('job_detail'));
+
+	$(env, 'TipScope').value = 'Ranking';
+	env.grab('RenderTipFields')();
+	assert.strictEqual($(env, 'TipRankingKey').style.display, '');
+	assert.ok(Array.from($(env, 'TipRankingKey').options).length >= 8);
+
+	$(env, 'TipValue').value = 'required';
+	$(env, 'SaveTip').click();
+	await settle(env);
+
+	const tip = env.chrome.runtime.sent.find(m => m.title === 'tip');
+	assert.strictEqual(tip.params.scope, 'Ranking');
+	assert.strictEqual(tip.params.fieldKey, 'visa_sponsorship');
+	assert.strictEqual(tip.params.domain, '*');
+	assert.strictEqual(tip.params.value, 'required');
+
+	assert.ok($(env, 'ChatLog').textContent.includes('saved Ranking lesson'));
 });
 
 test('Compose sends tab id and resume text, then renders pending drafts in the chat stream', async () => {

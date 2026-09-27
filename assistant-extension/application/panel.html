@@ -72,6 +72,10 @@
 			overflow-y: auto;
 		}
 
+		#ChatLog {
+			font-size: 12px;
+		}
+
 		ul {
 			margin: 4px 0;
 			padding-left: 16px;
@@ -139,6 +143,25 @@
 		</div>
 		<div id="MemoryCap" class="warn"></div>
 		<div id="MemoryList"></div>
+		<hr />
+		<b>Add lesson (tip, confirmed)</b>
+		<label class="mb-1 mt-1 d-block">Scope:
+			<div id="TipScope" class="dropdown">
+				<button type="button" class="form-select form-select-sm text-start"></button>
+				<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto"></div>
+			</div>
+		</label>
+		<label class="mb-1 d-block">Field:
+			<div id="TipRankingKey" class="dropdown" style="display:none">
+				<button type="button" class="form-select form-select-sm text-start"></button>
+				<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto"></div>
+			</div>
+			<input id="TipFieldKey" type="text" class="form-control form-control-sm" placeholder="field key (name or label)" />
+		</label>
+		<label class="mb-1 d-block">Value: <input id="TipValue" type="text" class="form-control form-control-sm" /></label>
+		<label class="mb-1 d-block">Note: <input id="TipNote" type="text" class="form-control form-control-sm" /></label>
+		<button id="SaveTip" class="btn btn-sm btn-outline-secondary">Save lesson</button>
+		<div id="ChatLog" class="muted"></div>
 	</div>
 	<script src="../controllers/background-messaging.js"></script>
 	<script src="../controllers/form-inventory.js"></script>
