@@ -259,21 +259,44 @@ AiScore = $ai, Attempts = $attempts, Tries = $tries WHERE Code = $code",
     }
 
     [Fact]
-    public void Q_INDEX_v2_category_order_caps_and_blend()
+    public void Q_INDEX_v3_global_caps_category_order_and_blend()
     {
         using var db = new GoldenDatabase();
+        db.ExecuteRaw(
+            "INSERT INTO Agency (AgencyID, Title, Active, Domain, Link) VALUES (2, 'Golden2', 3, 'example2.com', 'https://example2.com')");
+
         Seed(db, "c-att-low", JobState.Attention, score: 300, aiScore: 0);
         Seed(db, "c-att-promoted", JobState.Attention, score: 300, aiScore: null);
         Seed(db, "c-pending", JobState.AiPending, score: 90);
         Seed(db, "c-nai", JobState.NotApprovedAI, score: 300, aiScore: 80);
         Seed(db, "c-applied", JobState.Applied, score: 10);
+        Seed(db, "c-rejected", JobState.Rejected, score: 20);
         Seed(db, "c-regex", JobState.NotApprovedRegex, score: 40, content: null);
         Seed(db, "c-err-high-ai", JobState.AIError, score: 50, aiScore: 100);
         Seed(db, "c-err-high-regex", JobState.AIError, score: 200, aiScore: 0);
-        Seed(db, "c-saved", JobState.Saved, score: 999);
+        Seed(db, "c-saved-a1-1", JobState.Saved, score: 999);
+        Seed(db, "c-saved-a1-2", JobState.Saved, score: 500);
 
-        for (var i = 0; i < 12; i++)
+        for (var i = 0; i < 13; i++)
             Seed(db, $"c-att-extra-{i}", JobState.Attention, score: 10, aiScore: 10);
+
+        for (var i = 0; i < 3; i++)
+            Seed(db, $"c-att-a2-{i}", JobState.Attention, score: 10, aiScore: 10);
+
+        for (var i = 0; i < 3; i++)
+            Seed(db, $"c-nai-extra-{i}", JobState.NotApprovedAI, score: 50 + i, aiScore: 10);
+
+        for (var i = 0; i < 3; i++)
+            Seed(db, $"c-regex-extra-{i}", JobState.NotApprovedRegex, score: 30, content: null);
+
+        for (var i = 0; i < 2; i++)
+            Seed(db, $"c-saved-a2-{i}", JobState.Saved, score: 400);
+
+        foreach (var code in new[]
+        {
+            "c-att-a2-0", "c-att-a2-1", "c-att-a2-2", "c-saved-a2-0", "c-saved-a2-1",
+        })
+            db.ExecuteRaw("UPDATE Job SET AgencyID = 2 WHERE Code = $c", ("$c", code));
 
         var list = db.Database.Job.Fetch([], []);
         var states = list.Select(x => x.Job.State).Distinct().ToList();
@@ -281,16 +304,31 @@ AiScore = $ai, Attempts = $attempts, Tries = $tries WHERE Code = $code",
         [
             JobState.Attention,
             JobState.AiPending,
-            JobState.NotApprovedAI,
-            JobState.Applied,
-            JobState.NotApprovedRegex,
             JobState.AIError,
+            JobState.NotApprovedAI,
+            JobState.NotApprovedRegex,
+            JobState.Rejected,
+            JobState.Applied,
             JobState.Saved,
         ], states);
 
         var attention = list.Where(x => x.Job.State == JobState.Attention).ToList();
         Assert.Equal(12, attention.Count);
         Assert.Equal("c-att-promoted", attention[0].Job.Code);
+
+        Assert.Equal(3, list.Count(x => x.Job.State == JobState.NotApprovedAI));
+        Assert.Equal(3, list.Count(x => x.Job.State == JobState.NotApprovedRegex));
+
+        var notApproved = list
+            .Where(x => x.Job.State is JobState.NotApprovedAI or JobState.NotApprovedRegex)
+            .Select(x => x.Job.Code)
+            .ToList();
+        Assert.Equal(6, notApproved.Count);
+        Assert.Equal(["c-nai", "c-regex"], notApproved.Take(2));
+
+        var saved = list.Where(x => x.Job.State == JobState.Saved).ToList();
+        Assert.Equal(2, saved.Count);
+        Assert.Equal(2, saved.Select(x => x.Job.AgencyID).Distinct().Count());
 
         var errors = list.Where(x => x.Job.State == JobState.AIError).Select(x => x.Job.Code).ToList();
         Assert.Equal(["c-err-high-regex", "c-err-high-ai"], errors);

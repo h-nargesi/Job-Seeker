@@ -17,11 +17,14 @@ Decision log 2026-09-17 (`AIError`), 09-18 (D1–D5, D8, D11, D12).
 ## Files
 
 - [`Database/Business/JobBusiness.cs`](../../core-decision-dotnet/Database/Business/JobBusiness.cs)
-  — `Q_INDEX` v2 categories + caps (D11): Attention=1 (12, `FinalScore`;
-  verdict-less COALESCE `RegexNorm`), AiPending=2 (6, `RegexNorm`),
-  NotApprovedAI=3 (6, `FinalScore`), Applied/Rejected=4 (3 each),
-  NotApprovedRegex=5 (6, `RegexNorm`), AIError=6 (3, `RegexNorm`), ELSE=12
-  (1). Shared C# SQL fragment for blend: `RegexNorm =
+  — `Q_INDEX` v3 categories + caps (D11, amended 2026-09-27): Attention=1
+  (12, `FinalScore`; verdict-less COALESCE `RegexNorm`), AiPending=2 (6,
+  `RegexNorm`), AIError=3 (3, `RegexNorm`), NotApprovedAI +
+  NotApprovedRegex=4 (one merged band ordered by `EffectiveScore`, 3 per
+  state), Applied/Rejected=5 (3 each per state; picked by `ModifiedOn`
+  recency, displayed by `EffectiveScore`), ELSE=12 (1, per agency per
+  state); caps for categories 1–5 are **global across agencies**. Shared
+  C# SQL fragment for blend: `RegexNorm =
   min(Score, ScoreCap)/ScoreCap×100`; `FinalScore` only for
   `Attention`/`NotApprovedAI`; scorecap + weights as **SQL parameters** from
   `AppSetting`. Keep Relocation log marker.

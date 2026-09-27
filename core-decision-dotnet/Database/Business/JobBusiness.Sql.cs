@@ -59,11 +59,11 @@ WITH date_diff AS (
              , CASE State
                WHEN '{nameof(JobState.Attention)}' THEN 1
                WHEN '{nameof(JobState.AiPending)}' THEN 2
-               WHEN '{nameof(JobState.NotApprovedAI)}' THEN 3
-               WHEN '{nameof(JobState.Applied)}' THEN 4
-               WHEN '{nameof(JobState.Rejected)}' THEN 4
-               WHEN '{nameof(JobState.NotApprovedRegex)}' THEN 5
-               WHEN '{nameof(JobState.AIError)}' THEN 6
+               WHEN '{nameof(JobState.AIError)}' THEN 3
+               WHEN '{nameof(JobState.NotApprovedAI)}' THEN 4
+               WHEN '{nameof(JobState.NotApprovedRegex)}' THEN 4
+               WHEN '{nameof(JobState.Applied)}' THEN 5
+               WHEN '{nameof(JobState.Rejected)}' THEN 5
                ELSE 12
                END AS Category
              , SUBSTR(Job.RegTime, 1, 10) AS RegDate
@@ -89,24 +89,24 @@ WITH date_diff AS (
 
 SELECT *
      , CASE Category
-       WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
+       WHEN 6 THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
        ELSE ROW_NUMBER() OVER(PARTITION BY Category ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
        END AS Ordering
 FROM (
     SELECT *
         , CASE Category
-          WHEN 4 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
-          ELSE ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
+          WHEN 12 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
+          WHEN 5 THEN ROW_NUMBER() OVER(PARTITION BY State ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
+          ELSE ROW_NUMBER() OVER(PARTITION BY State ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
           END AS Ranking
     FROM ranking
 ) job
 WHERE Ranking <= CASE Category
     WHEN 1 THEN 12
     WHEN 2 THEN 6
-    WHEN 3 THEN 6
+    WHEN 3 THEN 3
     WHEN 4 THEN 3
-    WHEN 5 THEN 6
-    WHEN 6 THEN 3
+    WHEN 5 THEN 3
     ELSE 1 END
 ORDER BY Category, Ordering";
 

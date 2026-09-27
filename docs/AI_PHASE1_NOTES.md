@@ -68,14 +68,18 @@
   shared C# SQL fragment (scorecap + weights as SQL parameters from
   `AppSetting`) used by `Q_INDEX` v2 and `Q_CLEAN_ATTENTION` alike: the
   latter's top-100 Html-retention subquery orders by `FinalScore`, not raw
-  `Score` (D5). Dashboard layout (D11): category numbers + display caps —
+  `Score` (D5). Dashboard layout (D11, amended 2026-09-27 — `Q_INDEX` v3):
+  category numbers + display caps —
   `Attention = 1` (12 rows, `FinalScore`; verdict-less promoted jobs
   COALESCE to `RegexNorm`), `AiPending = 2` (6, `RegexNorm`),
-  `NotApprovedAI = 3` (6, `FinalScore`), `Applied`/`Rejected = 4` (3 each,
-  unchanged), `NotApprovedRegex = 5` (6, `RegexNorm`), `AIError = 6` (3,
-  `RegexNorm`), ELSE `Saved`/`Revaluation = 12` (1, unchanged); page order
-  top→bottom Attention, AiPending, NotApprovedAI, Applied/Rejected,
-  NotApprovedRegex, AIError, Saved/Revaluation — actionable rows on top,
+  `AIError = 3` (3, `RegexNorm`), `NotApprovedAI` + `NotApprovedRegex =
+  4` — one merged interleaved band ordered by `EffectiveScore` (cap 3 per
+  state), `Applied`/`Rejected = 5` (3 each per state; rows picked by
+  `ModifiedOn` recency, band displayed by `EffectiveScore`), ELSE
+  `Saved`/`Revaluation = 12` (1, unchanged, per agency per state); caps
+  for categories 1–5 are **global across agencies**; page order
+  top→bottom Attention, AiPending, AIError, NotApprovedAI/NotApprovedRegex,
+  Applied/Rejected, Saved/Revaluation — actionable rows on top,
   bulk/informational bands below. Cleanup family: `Q_CLEAN` (deletes old
   non-Applied — bounds queue history), `Q_CLEAN_ATTENTION` (top-100 Html
   retention), `Q_CLEAN_NOT_APPROVED` (content purge `WHERE` → `NotApprovedRegex`,
