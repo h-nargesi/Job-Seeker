@@ -4,7 +4,7 @@ using Serilog;
 namespace Photon.JobSeeker;
 
 [Route("[controller]/[action]")]
-public class ReportController(Analyzer analyzer, Database database) : Controller
+public partial class ReportController(Analyzer analyzer, Database database) : Controller
 {
     private readonly Analyzer analyzer = analyzer;
     private readonly Database database = database;

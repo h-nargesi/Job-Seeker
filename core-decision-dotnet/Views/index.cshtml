@@ -69,6 +69,7 @@
             <button onclick="revaluate()" type="button" class="btn btn-outline-warning m-1">Revaluate</button>
             <a href="/settings" target="_blank" class="btn btn-outline-warning m-1" role="button">Settings</a>
             <a href="/monitor" target="_blank" class="btn btn-outline-warning m-1" role="button">AI Monitor</a>
+            <a href="/report/stats" target="_blank" class="btn btn-outline-warning m-1" role="button">Charts</a>
             <button id="clean-jobs" onclick="clean()" type="button" class="btn btn-outline-danger m-1">Clean Database</button>
         </div>
         <div id="job-seeker-agency-list" class="agency-list mt-3 d-flex flex-column">
@@ -80,6 +81,7 @@
         </div>
     </article>
 </div>
+@await Html.PartialAsync("~/views/dashboard-chart.cshtml")
 <div class="mt-2">
     <a class="small text-muted" data-bs-toggle="collapse" href="#flag-legend" role="button"
         aria-expanded="false" aria-controls="flag-legend">Relocation / Remote legend</a>
@@ -118,3 +120,5 @@
         </div>
     </div>
 </div>
+<script src="/scripts/lib/chart.umd.js"></script>
+<script src="/scripts/dashboard-chart.js"></script>

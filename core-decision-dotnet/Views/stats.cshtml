@@ -1,0 +1,66 @@
+@using Photon.JobSeeker
+@model StatsPageViewModel
+
+@{
+    Layout = "~/views/layout.cshtml";
+}
+
+<div class="container py-4">
+    <header class="pb-3 mb-3 border-bottom d-flex align-items-center">
+        <span class="fs-4">Charts</span>
+    </header>
+
+    <div class="row g-2 mb-3">
+        <div class="col-md-4">
+            <input id="stats-agency-filter" type="text" class="form-control"
+                onkeyup="statsFilterChanged(event)" value="@Model.Agencies" placeholder="Agency Filter" />
+        </div>
+        <div class="col-md-4">
+            <input id="stats-country-filter" type="text" class="form-control"
+                onkeyup="statsFilterChanged(event)" value="@Model.Countries" placeholder="Country Filter" />
+        </div>
+        <div class="col-md-auto">
+            <button type="button" class="btn btn-outline-warning" onclick="applyStatsFilters()">Apply</button>
+        </div>
+    </div>
+
+    <section id="stats-kpi-row" class="mb-3">
+        <div class="card card-body text-body-secondary small">
+            KPI tiles (D3) and velocity lines (D2) land here.
+        </div>
+    </section>
+    <section id="stats-pipeline-row" class="mb-3">
+        <div class="card card-body text-body-secondary small">
+            Funnel (S7), agency yield (S1) and pipeline health (S8) land here.
+        </div>
+    </section>
+    <section id="stats-analysis-row" class="mb-3">
+        <div class="card card-body text-body-secondary small">
+            Score histograms (S2), AI donuts (S3), skills gap (S4), competitiveness (S5),
+            AiVerdict health (S6), attention aging (S9) and disposition time (S10) land here.
+        </div>
+    </section>
+
+    <footer class="pt-3 border-top text-body-secondary small">
+        Chart data lands in later phases; filters currently only prefill this page.
+    </footer>
+</div>
+
+<script>
+    function applyStatsFilters() {
+        const agencies = document.getElementById('stats-agency-filter')?.value.trim();
+        const countries = document.getElementById('stats-country-filter')?.value.trim();
+        const params = new URLSearchParams();
+
+        if (agencies) params.set('agencies', agencies);
+        if (countries) params.set('countries', countries);
+
+        const query = params.toString();
+        window.location.href = '/report/stats' + (query ? '?' + query : '');
+    }
+
+    function statsFilterChanged(event) {
+        if (event.code === 'Enter')
+            applyStatsFilters();
+    }
+</script>
