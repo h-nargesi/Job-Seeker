@@ -8,8 +8,6 @@ class Indeed : Agency
 
     public override string BaseUrl => CurrentMethod.Url.TrimEnd('/');
 
-    public override int DefaultWaiting => 16000;
-
     public override string NormalizeJobUrl(string url)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return url;
