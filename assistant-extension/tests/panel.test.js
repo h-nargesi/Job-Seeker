@@ -26,6 +26,7 @@ function fresh(job = null, memory = [], behavior = null, chrome) {
 
 	env.load('controllers/storage-handler.js');
 	env.load('application/theme.js');
+	env.load('application/dropdown.js');
 	env.load('controllers/background-messaging.js');
 	env.load('controllers/form-inventory.js');
 	env.load('application/compose-ui.js');

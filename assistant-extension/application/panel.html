@@ -50,12 +50,15 @@
 		<span id="Mode" class="muted"></span>
 	</div>
 	<div class="mb-2">
-		<label class="mb-1">Mode override:</label>
-		<select id="ModeOverride" class="form-select form-select-sm">
-			<option value="auto">auto</option>
-			<option value="job_detail">job_detail</option>
-			<option value="apply_form">apply_form</option>
-		</select>
+	<label class="mb-1">Mode override:</label>
+	<div id="ModeOverride" class="dropdown">
+		<button type="button" class="form-select form-select-sm text-start">auto</button>
+		<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto">
+			<button type="button" class="dropdown-item" data-value="auto">auto</button>
+			<button type="button" class="dropdown-item" data-value="job_detail">job_detail</button>
+			<button type="button" class="dropdown-item" data-value="apply_form">apply_form</button>
+		</div>
+	</div>
 	</div>
 	<ul class="nav nav-tabs mb-2">
 		<li class="nav-item"><button id="ShowJobs" class="nav-link active">Jobs</button></li>
@@ -84,18 +87,30 @@
 	</div>
 	<div id="MemoryView" class="mb-2" style="display:none">
 		<button id="RefreshMemory" class="btn btn-sm btn-outline-secondary">Refresh</button>
-		<select id="MemoryScope" class="form-select form-select-sm w-auto d-inline-block">
-			<option value="">all scopes</option>
-			<option value="Apply">apply</option>
-			<option value="Resume">resume</option>
-			<option value="Ranking">ranking</option>
-		</select>
+		<div id="MemoryScope" class="dropdown w-auto d-inline-block">
+			<button type="button" class="form-select form-select-sm text-start">all scopes</button>
+			<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto">
+				<button type="button" class="dropdown-item" data-value="">all scopes</button>
+				<button type="button" class="dropdown-item" data-value="Apply">apply</button>
+				<button type="button" class="dropdown-item" data-value="Resume">resume</button>
+				<button type="button" class="dropdown-item" data-value="Ranking">ranking</button>
+			</div>
+		</div>
 		<div id="MemoryCap" class="warn"></div>
 		<div id="MemoryList"></div>
 		<hr />
 		<b>Add lesson (tip, confirmed)</b>
-		<label class="mb-1 mt-1 d-block">Scope: <select id="TipScope" class="form-select form-select-sm"></select></label>
-		<label class="mb-1 d-block">Field: <select id="TipRankingKey" class="form-select form-select-sm" style="display:none"></select>
+		<label class="mb-1 mt-1 d-block">Scope:
+			<div id="TipScope" class="dropdown">
+				<button type="button" class="form-select form-select-sm text-start"></button>
+				<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto"></div>
+			</div>
+		</label>
+		<label class="mb-1 d-block">Field:
+			<div id="TipRankingKey" class="dropdown" style="display:none">
+				<button type="button" class="form-select form-select-sm text-start"></button>
+				<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto"></div>
+			</div>
 			<input id="TipFieldKey" type="text" class="form-control form-control-sm" placeholder="field key (name or label)" />
 		</label>
 		<label class="mb-1 d-block">Value: <input id="TipValue" type="text" class="form-control form-control-sm" /></label>
@@ -106,6 +121,7 @@
 	<script src="../controllers/background-messaging.js"></script>
 	<script src="../controllers/form-inventory.js"></script>
 	<script src="compose-ui.js"></script>
+	<script src="dropdown.js"></script>
 	<script src="panel.js"></script>
 </body>
 

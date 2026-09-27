@@ -25,6 +25,7 @@ function fresh(logs = [], theme = undefined, chrome) {
 	env.load('controllers/storage-handler.js');
 	env.load('controllers/logger.js');
 	env.load('application/theme.js');
+	env.load('application/dropdown.js');
 	env.load('application/settings.js');
 	return env;
 }

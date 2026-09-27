@@ -44,22 +44,28 @@
 	<label class="mb-1 d-block">Llama URL: <input id="LlamaUrl" type="text" class="form-control form-control-sm" /></label>
 	<label class="mb-1 d-block">Llama Model: <input id="LlamaModel" type="text" class="form-control form-control-sm" /></label>
 	<label class="mb-1 d-block">Theme:
-		<select id="ThemeMode" class="form-select form-select-sm">
-			<option value="system">system</option>
-			<option value="light">light</option>
-			<option value="dark">dark</option>
-		</select>
+		<div id="ThemeMode" class="dropdown">
+			<button type="button" class="form-select form-select-sm text-start">system</button>
+			<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto">
+				<button type="button" class="dropdown-item" data-value="system">system</button>
+				<button type="button" class="dropdown-item" data-value="light">light</button>
+				<button type="button" class="dropdown-item" data-value="dark">dark</button>
+			</div>
+		</div>
 	</label>
 	<button id="OpenPanel" class="btn btn-sm btn-primary mt-2 mb-1">Open Assistant Panel</button>
 	<hr />
 	<div class="d-flex justify-content-between align-items-center mb-1">
 		<b>Logs</b>
-		<select id="LogsFilter" class="form-select form-select-sm w-auto">
-			<option value="">all levels</option>
-			<option value="info">info</option>
-			<option value="warn">warn</option>
-			<option value="error">error</option>
-		</select>
+		<div id="LogsFilter" class="dropdown w-auto">
+			<button type="button" class="form-select form-select-sm text-start">all levels</button>
+			<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto">
+				<button type="button" class="dropdown-item" data-value="">all levels</button>
+				<button type="button" class="dropdown-item" data-value="info">info</button>
+				<button type="button" class="dropdown-item" data-value="warn">warn</button>
+				<button type="button" class="dropdown-item" data-value="error">error</button>
+			</div>
+		</div>
 	</div>
 	<div class="mb-1">
 		<button id="LogsRefresh" class="btn btn-sm btn-outline-secondary">Refresh</button>
@@ -69,6 +75,7 @@
 	</div>
 	<div id="LogsList"></div>
 	<script src="../controllers/logger.js"></script>
+	<script src="dropdown.js"></script>
 	<script src="settings.js"></script>
 </body>
 

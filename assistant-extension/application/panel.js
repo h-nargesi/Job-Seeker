@@ -36,6 +36,11 @@ const els = {
     chatLog: document.getElementById("ChatLog"),
 };
 
+Dropdown.Attach(els.modeOverride);
+Dropdown.Attach(els.memoryScope);
+Dropdown.Attach(els.tipScope);
+Dropdown.Attach(els.tipRankingKey);
+
 const state = { pageState: null, override: "auto", job: null, memoryLoaded: false };
 
 els.modeOverride.addEventListener("change", async function () {
@@ -322,16 +327,8 @@ async function EditMemory(row) {
 
 function RenderTipScope() {
     const mode = EffectiveMode();
-    els.tipScope.innerHTML = "";
-
     const scopes = mode === "job_detail" ? ["Ranking", "Resume"] : ["Apply"];
-    for (const scope of scopes) {
-        const option = document.createElement("option");
-        option.value = scope;
-        option.textContent = scope.toLowerCase();
-        els.tipScope.appendChild(option);
-    }
-
+    els.tipScope.options = scopes.map(scope => ({ value: scope, text: scope.toLowerCase() }));
     RenderTipFields();
 }
 
@@ -340,14 +337,8 @@ function RenderTipFields() {
     els.tipRankingKey.style.display = ranking ? "" : "none";
     els.tipFieldKey.style.display = ranking ? "none" : "";
 
-    if (ranking && !els.tipRankingKey.options.length) {
-        for (const key of RANKING_KEYS) {
-            const option = document.createElement("option");
-            option.value = key;
-            option.textContent = key;
-            els.tipRankingKey.appendChild(option);
-        }
-    }
+    if (ranking && !els.tipRankingKey.options.length)
+        els.tipRankingKey.options = RANKING_KEYS.map(key => ({ value: key, text: key }));
 }
 
 async function SaveTip() {

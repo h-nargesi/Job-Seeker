@@ -20,6 +20,8 @@ SaveOnEnter(els.serverUrl, value => { StorageHandler.ServerUrl = value; });
 SaveOnEnter(els.apiKey, value => { StorageHandler.ApiKey = value; });
 SaveOnEnter(els.llamaUrl, value => { StorageHandler.LlamaUrl = value; });
 SaveOnEnter(els.llamaModel, value => { StorageHandler.LlamaModel = value; });
+Dropdown.Attach(els.themeMode);
+Dropdown.Attach(els.logsFilter);
 ThemeHandler.BindSelect(els.themeMode);
 
 function SaveOnEnter(input, save) {
