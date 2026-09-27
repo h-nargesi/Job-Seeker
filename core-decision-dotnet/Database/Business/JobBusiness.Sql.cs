@@ -2,22 +2,26 @@ namespace Photon.JobSeeker
 {
     partial class JobBusiness
     {
+        private const string ModifiedOnGuard =
+            $"ModifiedOn = CASE WHEN State IN ('{nameof(JobState.Applied)}', '{nameof(JobState.Rejected)}')"
+            + " THEN ModifiedOn ELSE @now END";
+
         private readonly static string Q_INSERT_FROM_SEARCH = $@"
-INSERT INTO Job (AgencyID, Country, Url, Code, State)
-VALUES (@agencyId, @country, @url, @code, '{nameof(JobState.Saved)}')
+INSERT INTO Job (AgencyID, Country, Url, Code, State, RegTime, ModifiedOn)
+VALUES (@agencyId, @country, @url, @code, '{nameof(JobState.Saved)}', @now, @now)
 ON CONFLICT(AgencyID, Code) DO NOTHING;";
 
         private readonly static string Q_INSERT_JOB = @"
-INSERT INTO Job (AgencyID, Country, Code, Title, State, Score, Url, Html, Content, Link, Log, Options, Tries, PublishedAt)
-VALUES (@agencyId, @country, @code, @title, @state, @score, @url, @html, @content, @link, @log, @options, @tries, @publishedAt)
+INSERT INTO Job (AgencyID, Country, Code, Title, State, Score, Url, Html, Content, Link, Log, Options, Tries, PublishedAt, RegTime, ModifiedOn)
+VALUES (@agencyId, @country, @code, @title, @state, @score, @url, @html, @content, @link, @log, @options, @tries, @publishedAt, @now, @now)
 ON CONFLICT(AgencyID, Code) DO NOTHING;";
 
-        private readonly static string Q_UPDATE_CONTENT = @"
-UPDATE Job SET Html = @html, Content = @content, ModifiedOn = @now
+        private readonly static string Q_UPDATE_CONTENT = $@"
+UPDATE Job SET Html = @html, Content = @content, {ModifiedOnGuard}
 WHERE JobID = @jobId";
 
-        private readonly static string Q_REGISTER_ATTEMPT = @"
-UPDATE Job SET Tries = @tries, Attempts = @attempt, ModifiedOn = @now
+        private readonly static string Q_REGISTER_ATTEMPT = $@"
+UPDATE Job SET Tries = @tries, Attempts = @attempt, {ModifiedOnGuard}
 WHERE JobID = @jobId";
 
         private readonly static string Q_CHANGE_STATE = $@"
@@ -32,16 +36,16 @@ WHERE JobID = @jobId";
 UPDATE Job SET State = '{nameof(JobState.Applied)}', Log = @log, ModifiedOn = @now
 WHERE JobID = @jobId";
 
-        private readonly static string Q_REMOVE_HTML = @"
-UPDATE Job SET Html = null, Content = null, ModifiedOn = @now
+        private readonly static string Q_REMOVE_HTML = $@"
+UPDATE Job SET Html = null, Content = null, {ModifiedOnGuard}
 WHERE JobID = @jobId";
 
-        private readonly static string Q_CHANGE_OPTIONS = @"
-UPDATE Job SET Options = @options, ModifiedOn = @now
+        private readonly static string Q_CHANGE_OPTIONS = $@"
+UPDATE Job SET Options = @options, {ModifiedOnGuard}
 WHERE JobID = @jobId";
 
-        private readonly static string Q_SAVE_RESUME_TEXT = @"
-UPDATE Job SET ResumeText = @resumeText, ModifiedOn = @now
+        private readonly static string Q_SAVE_RESUME_TEXT = $@"
+UPDATE Job SET ResumeText = @resumeText, {ModifiedOnGuard}
 WHERE JobID = @jobId";
 
         private const string Q_DELETE = @"

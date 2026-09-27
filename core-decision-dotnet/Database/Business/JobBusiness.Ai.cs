@@ -142,7 +142,7 @@ WHERE JobID = @jobId AND Content IS NOT NULL AND State IN (
 UPDATE Job SET State = @state, Log = @log, ModifiedOn = @now
 WHERE JobID = @jobId";
 
-        private readonly static string Q_APPLY_VERDICT = @"
+        private readonly static string Q_APPLY_VERDICT = $@"
 UPDATE Job SET
     AiScore = @aiScore,
     AiVerdict = @aiVerdict,
@@ -161,7 +161,7 @@ UPDATE Job SET
     ResumeText = @resumeText,
     Log = @log,
     State = @state,
-    ModifiedOn = @now
+    {ModifiedOnGuard}
 WHERE JobID = @jobId";
     }
 }

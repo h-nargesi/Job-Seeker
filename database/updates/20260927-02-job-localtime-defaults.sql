@@ -1,0 +1,52 @@
+create table Job_new (
+	JobID			integer		not null	primary key,
+	RegTime			timestamp	not null	default (datetime('now','localtime')),
+	PublishedAt		timestamp		null,
+	ModifiedOn		timestamp	not null	default (datetime('now','localtime')),
+	AgencyID		integer 	not null,
+	Country			text		not null,
+	Code			text		not null,
+	Title			text			null,
+	State			text		not null,
+	Score			integer			null,
+	Url				text		not null,
+	Html			text		null,
+	Content			text		null,
+	Link			text		null,
+	Log				text		null,
+	Options			text		null,
+	Tries			text		null,
+	Attempts		integer		not null	default 0,
+	AiScore			integer			null,
+	AiVerdict		text		null,
+	AiReason		text		null,
+	AiSeniority		text		null,
+	AiSalaryMin		integer			null,
+	AiSalaryMax		integer			null,
+	AiCurrency		text		null,
+	AiPeriod		text		null,
+	AiWorkModel		text		null,
+	AiRelocation	text		null,
+	AiContract		text		null,
+	AiExperienceYears	integer		null,
+	AiSkills		text		null,
+	AiOptions		text		null,
+	ResumeText		text		null,
+
+	unique			(AgencyID, Code),
+	foreign key		(AgencyID) references Agency (AgencyID) on delete no action
+);
+
+insert into Job_new (JobID, RegTime, PublishedAt, ModifiedOn, AgencyID, Country, Code, Title, State, Score,
+	Url, Html, Content, Link, Log, Options, Tries, Attempts, AiScore, AiVerdict, AiReason, AiSeniority,
+	AiSalaryMin, AiSalaryMax, AiCurrency, AiPeriod, AiWorkModel, AiRelocation, AiContract, AiExperienceYears,
+	AiSkills, AiOptions, ResumeText)
+select JobID, RegTime, PublishedAt, ModifiedOn, AgencyID, Country, Code, Title, State, Score,
+	Url, Html, Content, Link, Log, Options, Tries, Attempts, AiScore, AiVerdict, AiReason, AiSeniority,
+	AiSalaryMin, AiSalaryMax, AiCurrency, AiPeriod, AiWorkModel, AiRelocation, AiContract, AiExperienceYears,
+	AiSkills, AiOptions, ResumeText
+from Job;
+
+drop table Job;
+
+alter table Job_new rename to Job;

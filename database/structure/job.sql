@@ -1,8 +1,8 @@
 create table if not exists Job (
 	JobID			integer		not null	primary key,
-	RegTime			timestamp	not null	default current_timestamp,
+	RegTime			timestamp	not null	default (datetime('now','localtime')),
 	PublishedAt		timestamp		null,
-	ModifiedOn		timestamp	not null	default current_timestamp,
+	ModifiedOn		timestamp	not null	default (datetime('now','localtime')),
 	AgencyID		integer 	not null,
 	Country			text		not null,
 	Code			text		not null,

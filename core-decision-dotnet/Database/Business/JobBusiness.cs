@@ -125,7 +125,7 @@ namespace Photon.JobSeeker
 
         public void InsertFromSearch(long agencyId, string country, string url, string code)
         {
-            database.Execute(Q_INSERT_FROM_SEARCH, new { agencyId, country, url, code });
+            database.Execute(Q_INSERT_FROM_SEARCH, new { agencyId, country, url, code, now = DateTime.Now });
         }
 
         public void InsertJob(Job job)
@@ -146,6 +146,7 @@ namespace Photon.JobSeeker
                 options = job.Options,
                 tries = job.Tries,
                 publishedAt = job.PublishedAt,
+                now = DateTime.Now,
             });
 
             if (database.Changes() == 1)
@@ -172,7 +173,7 @@ namespace Photon.JobSeeker
             if (job.PublishedAt != null) sets.Add("PublishedAt = @publishedAt");
 
             database.Execute($@"
-UPDATE Job SET {string.Join(", ", sets)}, ModifiedOn = @now
+UPDATE Job SET {string.Join(", ", sets)}, {ModifiedOnGuard}
 WHERE JobID = @jobId", new
             {
                 title = job.Title,
