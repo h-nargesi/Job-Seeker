@@ -227,6 +227,10 @@ WHERE State IN ('{nameof(JobState.AiPending)}', '{nameof(JobState.AIError)}') AN
 GROUP BY SUBSTR(ModifiedOn, 1, 10)
 ORDER BY Day";
 
+        private readonly static string Q_STATS_SKILLS = $@"
+SELECT AiSkills AS Skills FROM Job JOIN Agency ON Job.AgencyID = Agency.AgencyID
+WHERE AiSkills IS NOT NULL AND AiSkills != '[]' AND AiSkills != '' @and@";
+
         private const string Q_VACUUM = "vacuum;";
     }
 }

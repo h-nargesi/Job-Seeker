@@ -28,6 +28,24 @@ WHERE Code = @code",
         db.ExecuteRaw($"INSERT INTO Agency (AgencyID, Title, Active, Domain, Link) VALUES ({id}, '{title}', 3, '{title.ToLower()}.com', 'https://{title.ToLower()}.com')");
     }
 
+    private static void SeedSkills(GoldenDatabase db, string code, params string[] skills)
+    {
+        var json = $"[{string.Join(",", skills.Select(skill => $"\"{skill}\""))}]";
+        db.ExecuteRaw("UPDATE Job SET AiSkills = @skills WHERE Code = @code",
+            ("skills", json), ("code", code));
+    }
+
+    private static long Option(GoldenDatabase db, string category, string title, string pattern)
+    {
+        return db.Database.JobOption.Save(new OptionEditRow
+        {
+            Category = category,
+            Score = 10,
+            Title = title,
+            Pattern = pattern,
+        });
+    }
+
     private static string Day(DateTime date) => date.Date.ToString("yyyy-MM-dd");
 
     [Fact]
@@ -286,5 +304,113 @@ WHERE Code = @code",
             Assert.Equal(0, row.AiPending);
             Assert.Equal(0, row.AiError);
         });
+    }
+
+    [Fact]
+    public void StatsSkillsGap_counts_normalized_skills_per_job_and_flags_have()
+    {
+        using var db = new GoldenDatabase();
+        var now = DateTime.Now;
+        Option(db, "field", "SqlKey", @"\bsql server\b");
+
+        Seed(db, "j1", JobState.Saved, now, now);
+        Seed(db, "j2", JobState.Rejected, now, now);
+        Seed(db, "j3", JobState.Saved, now, now);
+        SeedSkills(db, "j1", "SQL Server", "C#.NET", "Java", "React");
+        SeedSkills(db, "j2", "sql server", "React", "React");
+        SeedSkills(db, "j3", "SQL Server", "React");
+
+        var gap = db.Database.Job.StatsSkillsGap([], []);
+
+        Assert.Equal(3, gap.Jobs);
+
+        var sql = Assert.Single(gap.Top, item => item.Skill == "sql server");
+        Assert.Equal(3, sql.Jobs);
+        Assert.True(sql.Have);
+
+        var react = Assert.Single(gap.Top, item => item.Skill == "react");
+        Assert.Equal(3, react.Jobs);
+        Assert.False(react.Have);
+
+        var java = Assert.Single(gap.Top, item => item.Skill == "java");
+        Assert.Equal(1, java.Jobs);
+        Assert.True(java.Have);
+
+        var csharp = Assert.Single(gap.Top, item => item.Skill == "c#");
+        Assert.Equal(1, csharp.Jobs);
+        Assert.False(csharp.Have);
+    }
+
+    [Fact]
+    public void StatsSkillsGap_ignores_excluded_option_categories()
+    {
+        using var db = new GoldenDatabase();
+        var now = DateTime.Now;
+        Option(db, "benefit", "ReactBenefit", @"\breact\b");
+        Option(db, "production", "ReactProduction", @"\breact\b");
+        Option(db, "resume", "ReactResume", @"\bkafka\b");
+
+        Seed(db, "j1", JobState.Saved, now, now);
+        SeedSkills(db, "j1", "React", "Kafka");
+
+        var gap = db.Database.Job.StatsSkillsGap([], []);
+
+        Assert.False(Assert.Single(gap.Top, item => item.Skill == "react").Have);
+        Assert.True(Assert.Single(gap.Top, item => item.Skill == "kafka").Have);
+    }
+
+    [Fact]
+    public void StatsSkillsGap_uses_saved_alias_map()
+    {
+        using var db = new GoldenDatabase();
+        var now = DateTime.Now;
+        db.Database.AppSetting.Save(AppSettingBusiness.SkillAliasesKey, @"{ ""vue"": ""vue.js"" }");
+
+        Seed(db, "j1", JobState.Saved, now, now);
+        Seed(db, "j2", JobState.Saved, now, now);
+        SeedSkills(db, "j1", "Vue");
+        SeedSkills(db, "j2", "vue.js");
+
+        var gap = db.Database.Job.StatsSkillsGap([], []);
+
+        var vue = Assert.Single(gap.Top);
+        Assert.Equal("vue.js", vue.Skill);
+        Assert.Equal(2, vue.Jobs);
+    }
+
+    [Fact]
+    public void StatsSkillsGap_applies_agency_and_country_filters()
+    {
+        using var db = new GoldenDatabase();
+        SeedAgency(db, 2, "Other");
+        var now = DateTime.Now;
+
+        Seed(db, 1, "NL", "nl", JobState.Saved, now, now);
+        Seed(db, 1, "DE", "de", JobState.Saved, now, now);
+        Seed(db, 2, "NL", "other", JobState.Saved, now, now);
+        SeedSkills(db, "nl", "React");
+        SeedSkills(db, "de", "React");
+        SeedSkills(db, "other", "React");
+
+        Assert.Equal(3, db.Database.Job.StatsSkillsGap([], []).Jobs);
+        Assert.Equal(2, db.Database.Job.StatsSkillsGap(["Golden"], []).Jobs);
+        Assert.Equal(2, db.Database.Job.StatsSkillsGap([], ["NL"]).Jobs);
+        Assert.Equal(1, db.Database.Job.StatsSkillsGap(["Golden"], ["DE"]).Jobs);
+    }
+
+    [Fact]
+    public void StatsSkillsGap_caps_top_list_at_30()
+    {
+        using var db = new GoldenDatabase();
+        var now = DateTime.Now;
+
+        Seed(db, "j1", JobState.Saved, now, now);
+        SeedSkills(db, "j1", Enumerable.Range(0, 35).Select(i => $"skill{i}").ToArray());
+
+        var gap = db.Database.Job.StatsSkillsGap([], []);
+
+        Assert.Equal(1, gap.Jobs);
+        Assert.Equal(30, gap.Top.Count);
+        Assert.Equal(30, gap.Top.Select(item => item.Skill).Distinct().Count());
     }
 }

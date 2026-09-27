@@ -191,7 +191,7 @@ Implementation chats continue the `docs/impl/CHAT-XX.md` numbering.
    views, DTO models.
 3. **Dashboard:** done (Chat 12) — D3, D1, D2 + 15 s refresh + stats indexes.
 4. **Stats page:** done (Chat 13) — S7, S1, S8 via `/report/statsfull`.
-5. **Skills gap:** S4.
+5. **Skills gap:** done (Chat 14) — S4 via `/report/statsfull`.
 6. **Remaining:** S2, S3, S6, S5, S9, S10.
 7. **Wrap-up:** flip this doc's status header; add `docs/API.md` entries for
    the new endpoints.

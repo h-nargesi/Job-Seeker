@@ -52,7 +52,8 @@ public partial class ReportController
                 filters,
                 yield,
                 database.Job.StatsFunnel(yield),
-                database.Job.StatsPipelineHealth(StatsDailyDays, filters.Agencies, filters.Countries)));
+                database.Job.StatsPipelineHealth(StatsDailyDays, filters.Agencies, filters.Countries),
+                database.Job.StatsSkillsGap(filters.Agencies, filters.Countries)));
         }
         catch (Exception ex)
         {

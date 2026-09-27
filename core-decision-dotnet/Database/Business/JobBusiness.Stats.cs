@@ -94,6 +94,55 @@ namespace Photon.JobSeeker
             }).ToList();
         }
 
+        public StatsSkillsGap StatsSkillsGap(string[] agencyTitles, string[] countryCodes)
+        {
+            var parameters = new DynamicParameters();
+            var and = StatsJobFilter(agencyTitles, countryCodes, parameters);
+
+            var rows = database.Query<SkillsRow>(Q_STATS_SKILLS.Replace("@and@", and), parameters).ToList();
+
+            var aliases = SkillNormalizer.BuildAliasMap(database.AppSetting.SkillAliases());
+            var known = SkillNormalizer.KnownSkills(ResumeHtml.MasterContext(), aliases);
+            var patterns = database.JobOption.FetchAll()
+                .Where(option => SkillCategories.Contains(option.Category.ToLowerInvariant()))
+                .Select(option => option.Pattern)
+                .ToArray();
+
+            var counts = new Dictionary<string, long>();
+
+            foreach (var row in rows)
+            {
+                foreach (var skill in (row.Skills ?? [])
+                    .Where(skill => !string.IsNullOrWhiteSpace(skill))
+                    .Select(skill => SkillNormalizer.Normalize(skill, aliases))
+                    .Where(skill => skill.Length > 0)
+                    .Distinct())
+                {
+                    counts[skill] = counts.GetValueOrDefault(skill) + 1;
+                }
+            }
+
+            var top = counts.OrderByDescending(pair => pair.Value)
+                .ThenBy(pair => pair.Key, StringComparer.Ordinal)
+                .Take(SkillsTop)
+                .Select(pair => new SkillsGapItem(
+                    pair.Key,
+                    pair.Value,
+                    known.Contains(pair.Key) || patterns.Any(pattern => pattern.IsMatch(pair.Key))))
+                .ToList();
+
+            return new StatsSkillsGap(rows.Count, top);
+        }
+
+        private const int SkillsTop = 30;
+
+        private static readonly HashSet<string> SkillCategories = new(StringComparer.Ordinal)
+        {
+            "field",
+            "tech",
+            "resume"
+        };
+
         private static long Rate(long value, long total) => total == 0 ? 0 : (long)(100.0 * value / total);
 
         private static string StatsAgencyWhere(string[] agencyTitles, DynamicParameters parameters)
@@ -204,6 +253,11 @@ namespace Photon.JobSeeker
             public long AiPending { get; set; }
 
             public long AiError { get; set; }
+        }
+
+        private sealed class SkillsRow
+        {
+            public List<string>? Skills { get; set; }
         }
     }
 }

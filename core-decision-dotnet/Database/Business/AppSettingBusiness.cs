@@ -1,4 +1,6 @@
 using System.Globalization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Photon.JobSeeker;
 
@@ -11,6 +13,7 @@ class AppSettingBusiness
     public const string WAiKey = "w_ai";
     public const string MemoryCapKey = "memorycap";
     public const string RemoteHybridKey = "remotehybrid";
+    public const string SkillAliasesKey = "skillaliases";
 
     public const int FloorDefault = 70;
     public const int AiPassmarkDefault = 60;
@@ -36,6 +39,7 @@ class AppSettingBusiness
             MemoryCapDefault.ToString(CultureInfo.InvariantCulture)),
         new(RemoteHybridKey, "Remote/hybrid", AppSettingField.FlagKind,
             RemoteHybridDefault.ToString(CultureInfo.InvariantCulture)),
+        new(SkillAliasesKey, "Skill aliases", AppSettingField.JsonKind, SkillNormalizer.SeedJson),
     ];
 
     private readonly Database database;
@@ -56,6 +60,23 @@ class AppSettingBusiness
 
     public int RemoteHybrid() => ReadInt(RemoteHybridKey, RemoteHybridDefault);
 
+    public Dictionary<string, string> SkillAliases()
+    {
+        var raw = ReadValue(SkillAliasesKey);
+        if (!string.IsNullOrWhiteSpace(raw))
+        {
+            try
+            {
+                return JsonConvert.DeserializeObject<Dictionary<string, string>>(raw) ?? [];
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        return new Dictionary<string, string>(SkillNormalizer.SeedAliases);
+    }
+
     public Dictionary<string, string> FetchAll()
     {
         return database.Query<SettingRow>(Q_FETCH_ALL)
@@ -72,13 +93,28 @@ class AppSettingBusiness
             throw new BadJobRequest($"Value for {field.Key} is empty");
 
         if (!Parses(field, trimmed))
-            throw new BadJobRequest($"Value for {field.Key} must be a number: {trimmed}");
+            throw new BadJobRequest(field.Kind == AppSettingField.JsonKind
+                ? $"Value for {field.Key} must be a JSON object of alias -> canonical skill strings"
+                : $"Value for {field.Key} must be a number: {trimmed}");
 
         database.Execute(Q_SAVE, new { key = field.Key, value = trimmed });
     }
 
     private static bool Parses(AppSettingField field, string value)
     {
+        if (field.Kind == AppSettingField.JsonKind)
+        {
+            try
+            {
+                var map = JsonConvert.DeserializeObject<Dictionary<string, JToken>>(value);
+                return map != null && map.All(pair => pair.Value.Type == JTokenType.String);
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+        }
+
         if (field.Kind == AppSettingField.DoubleKind)
             return double.TryParse(value, NumberStyles.Float | NumberStyles.AllowThousands,
                 CultureInfo.InvariantCulture, out _);

@@ -49,6 +49,40 @@ public class SettingsCrudTests
     }
 
     [Fact]
+    public void SkillAliases_defaults_to_seed_when_absent()
+    {
+        using var db = new GoldenDatabase();
+
+        var aliases = db.Database.AppSetting.SkillAliases();
+
+        Assert.Equal("javascript", aliases["js"]);
+        Assert.Equal("kubernetes", aliases["kubernete"]);
+    }
+
+    [Fact]
+    public void SkillAliases_save_stores_and_reads_custom_map()
+    {
+        using var db = new GoldenDatabase();
+        var settings = db.Database.AppSetting;
+
+        settings.Save(AppSettingBusiness.SkillAliasesKey, @"{ ""reactj"": ""react"" }");
+
+        Assert.Equal("react", settings.SkillAliases()["reactj"]);
+    }
+
+    [Theory]
+    [InlineData("{ nope")]
+    [InlineData("[1,2]")]
+    [InlineData(@"{ ""a"": 1 }")]
+    public void SkillAliases_save_rejects_non_object_json(string value)
+    {
+        using var db = new GoldenDatabase();
+
+        Assert.Throws<BadJobRequest>(() =>
+            db.Database.AppSetting.Save(AppSettingBusiness.SkillAliasesKey, value));
+    }
+
+    [Fact]
     public void Option_save_inserts_and_fetch_rows_sees_it()
     {
         using var db = new GoldenDatabase();

@@ -17,9 +17,12 @@ const YIELD_SERIES = [
     { key: 'acceptingRate', label: 'Accepted %', color: '#ffc107' }
 ];
 
+const SKILL_COLORS = { have: '#198754', missing: '#dc3545' };
+
 let funnel_chart = null;
 let yield_chart = null;
 let health_chart = null;
+let skills_chart = null;
 let last_stats_full = null;
 let funnel_selection = '';
 
@@ -129,6 +132,33 @@ function make_health_chart() {
     });
 }
 
+function make_skills_chart() {
+    const canvas = document.getElementById('skills-gap-chart');
+    if (!canvas || !window.Chart) return null;
+
+    const options = base_options(true);
+    options.indexAxis = 'y';
+    options.plugins.legend.display = false;
+    options.plugins.tooltip = {
+        callbacks: {
+            label: item => {
+                const row = last_stats_full?.skillsGap?.top?.[item.dataIndex];
+                if (!row) return '';
+                return `${item.parsed.x} jobs — ${row.have ? 'have' : 'missing'}`;
+            }
+        }
+    };
+
+    return new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{ label: 'Jobs', data: [], backgroundColor: [], borderWidth: 0 }]
+        },
+        options: options
+    });
+}
+
 function funnel_stages_for_selection(data) {
     if (!data) return null;
 
@@ -186,12 +216,26 @@ function render_health(items) {
     health_chart.update();
 }
 
+function render_skills(gap) {
+    if (!gap || !gap.top || gap.top.length === 0) return;
+
+    skills_chart = skills_chart || make_skills_chart();
+    if (!skills_chart) return;
+
+    skills_chart.data.labels = gap.top.map(item => item.skill);
+    skills_chart.data.datasets[0].data = gap.top.map(item => item.jobs);
+    skills_chart.data.datasets[0].backgroundColor = gap.top.map(item =>
+        item.have ? SKILL_COLORS.have : SKILL_COLORS.missing);
+    skills_chart.update();
+}
+
 function render_stats_full(data) {
     last_stats_full = data;
 
     render_funnel(data.funnel);
     render_yield(data.agencyYield);
     render_health(data.pipelineHealth);
+    render_skills(data.skillsGap);
 }
 
 function stats_full_url() {
@@ -235,6 +279,11 @@ function rebuild_charts_on_theme_change() {
     if (health_chart) {
         health_chart.destroy();
         health_chart = null;
+    }
+
+    if (skills_chart) {
+        skills_chart.destroy();
+        skills_chart = null;
     }
 
     if (last_stats_full) render_stats_full(last_stats_full);

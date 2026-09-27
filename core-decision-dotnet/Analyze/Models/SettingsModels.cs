@@ -7,6 +7,8 @@ public sealed record AppSettingField(string Key, string Label, string Kind, stri
     public const string DoubleKind = "double";
 
     public const string FlagKind = "flag";
+
+    public const string JsonKind = "json";
 }
 
 public sealed class OptionEditRow

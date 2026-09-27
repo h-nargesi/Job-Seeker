@@ -52,6 +52,8 @@ internal sealed class CheckpointDatabase : IDisposable
         Database.Execute(DDL_AGENCY);
         Database.Execute(DDL_JOB);
         Database.Execute(DDL_TREND);
+        Database.Execute(DDL_APP_SETTING);
+        Database.Execute(DDL_JOB_OPTION);
         Database.Execute(@"
 INSERT INTO Agency (AgencyID, Title, Active, Domain, Link, Settings)
 VALUES (1, 'CheckpointAgency', @active, 'cp\.example\.com$', 'https://cp.example.com/', @settings)",
@@ -151,6 +153,24 @@ create table Job (
     AiOptions           text        null,
     ResumeText          text        null,
     unique (AgencyID, Code)
+)";
+
+    private const string DDL_APP_SETTING = @"
+create table AppSetting (
+    Key     text    not null    primary key,
+    Value   text    not null
+)";
+
+    private const string DDL_JOB_OPTION = @"
+create table JobOption (
+    JobOptionID     integer     not null    primary key,
+    Efective        bit         not null    default 1,
+    Category        text        not null,
+    Score           integer     not null,
+    Title           text        not null,
+    Pattern         text        not null,
+    Settings        text            null,
+    unique (Title)
 )";
 
     private const string DDL_TREND = @"

@@ -60,6 +60,7 @@ public class ReportStatsTests
         Assert.NotNull(envelope.AgencyYield);
         Assert.NotNull(envelope.Funnel);
         Assert.NotNull(envelope.PipelineHealth);
+        Assert.NotNull(envelope.SkillsGap);
     }
 
     [Fact]
@@ -93,6 +94,10 @@ public class ReportStatsTests
             Assert.Equal(0, row.AiPending);
             Assert.Equal(0, row.AiError);
         });
+
+        Assert.NotNull(envelope.SkillsGap);
+        Assert.Equal(0, envelope.SkillsGap!.Jobs);
+        Assert.Empty(envelope.SkillsGap.Top);
     }
 
     [Fact]

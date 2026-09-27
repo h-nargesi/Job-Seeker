@@ -5,7 +5,8 @@ public sealed record StatsFullResponse(
     StatsFilters Filters,
     List<StatsAgencyYieldItem>? AgencyYield,
     StatsFunnel? Funnel,
-    List<PipelineHealthItem>? PipelineHealth);
+    List<PipelineHealthItem>? PipelineHealth,
+    StatsSkillsGap? SkillsGap);
 
 public sealed record StatsFilters(string[] Agencies, string[] Countries);
 
@@ -26,3 +27,7 @@ public sealed record StatsFunnelStage(long Saved, long Analyzed, long Attention,
 public sealed record StatsFunnelAgency(string Title, StatsFunnelStage Stages);
 
 public sealed record PipelineHealthItem(string Day, long AiPending, long AiError);
+
+public sealed record StatsSkillsGap(long Jobs, List<SkillsGapItem> Top);
+
+public sealed record SkillsGapItem(string Skill, long Jobs, bool Have);
