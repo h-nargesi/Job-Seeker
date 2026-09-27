@@ -80,7 +80,7 @@ async function Route(request) {
 function OpenSessionStorage() {
     try {
         if (chrome.storage.session && chrome.storage.session.setAccessLevel)
-            chrome.storage.session.setAccessLevel({ accessLevel: "UNTRUSTED_CONTEXTS" });
+            chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS" });
     } catch (e) {
         console.error("ASSISTANT", "OpenSessionStorage", e);
     }
@@ -241,7 +241,7 @@ async function RunLessonExtract(params) {
         }
     }
 
-    const confirmedKeys = await ConfirmedKeys(mode);
+    const confirmedKeys = await ConfirmedKeys();
 
     AssistantLog.Write("info", "lesson", "extract (" + mode + ", " + (params.domain || "*") + ")");
 
@@ -265,16 +265,12 @@ async function RunLessonExtract(params) {
     return result;
 }
 
-async function ConfirmedKeys(mode) {
+async function ConfirmedKeys() {
     try {
-        const rows = await messaging.MemoryList(mode === "job_detail" ? null : "Apply", true);
+        const rows = await messaging.MemoryList(null, true);
         if (!Array.isArray(rows)) return [];
 
-        return rows
-            .filter(function (row) {
-                return mode !== "job_detail" || row.scope === "Ranking" || row.scope === "Resume";
-            })
-            .map(function (row) { return row.scope + "/" + row.fieldKey; });
+        return rows.map(function (row) { return row.scope + "/" + row.fieldKey; });
     } catch (e) {
         return [];
     }

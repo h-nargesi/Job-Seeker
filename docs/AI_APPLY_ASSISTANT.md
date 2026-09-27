@@ -100,14 +100,19 @@ Default from the current tab (user may override):
 
 | Mode | Default when | Chat lessons |
 |------|----------------|--------------|
-| `job_detail` | tab origin equals the configured core / dashboard URL | user must tag **ranking** or **delta** |
-| `apply_form` | any other origin | `Scope = apply` only |
+| `job_detail` | tab origin equals the configured core / dashboard URL | any scope |
+| `apply_form` | any other origin | any scope |
+
+Chat lessons are not mode-scoped: every mode allows `Apply`, `Ranking`
+and `Resume` — in the human pickers and in the model's proposals
+alike. The mode only shapes the form-inventory hint (fetched in
+`apply_form`), the prompt context, and the add-lesson form's default
+scope (Ranking on `job_detail`, Apply otherwise).
 
 Job id, when present, comes from `/job/get/{id}` or `?jobid=` (job-detail
 and resume views). Ranking lessons use the closed `FieldKey` list
 (`Scope = ranking`). Delta lessons use `Scope = resume` and inject into
-worker call-2 (F1 snapshot at run start). Apply-form lessons never
-prompt for ranking vs delta.
+worker call-2 (F1 snapshot at run start).
 
 ## 3. The tool loop and its guardrails
 
@@ -265,9 +270,15 @@ Human still sends the form to the company.
 
 The side panel has exactly two tabs — **Assistant** (mode override +
 badge, job controls, chat) and **Memory** (list / confirm / edit /
-delete, cap warning, plus the unchanged manual add-lesson form with its
-`#ChatLog` status line — the direct path for adding a row by hand,
-alongside chat extraction). The standalone Compose section is deleted;
+delete, cap warning, plus the manual add-lesson form — all three
+scopes, mode-based default — with its `#ChatLog` status line, the
+direct path for adding a row by hand, alongside chat extraction).
+Memory rows are edited in the add-lesson form itself: Edit loads the
+row into the form (edit mode adds domain, field label, kind and
+confirmed controls and highlights the row), replacing the old
+`prompt()` flow; Save posts one `assistant/memoryedit` patch with all
+eight columns, Cancel returns the form to add mode. The standalone
+Compose section is deleted;
 the background `CHAT_LOG` audit keeps being written. All panel pickers
 use the Dropdown component (`application/dropdown.js`); no native
 `<select>` remains (the old "selects don't open" TODO is closed
@@ -278,12 +289,14 @@ call (no multi-turn): the panel computes the mode (`EffectiveMode` +
 page state) and domain, the background fetches the form inventory only
 for `apply_form` and passes confirmed keys as data. The model returns a
 short conversational reply (user's language) plus zero or more proposed
-rows via the structured `propose_memory` tool; invalid rows (wrong
-scope for the mode, ranking key outside the closed list, empty
-field/value) are dropped client-side with a note in chat.
+rows via the structured `propose_memory` tool; invalid rows (unknown
+scope, ranking key outside the closed list, empty field/value) are
+dropped client-side with a note in chat. Scope is never
+mode-constrained: the model may propose Apply, Ranking or Resume rows
+in any mode; only the inventory-key hint depends on `apply_form`.
 
-A proposed row renders as an **accept-gated candidate card**: scope
-picker (mode-constrained), field key (closed-list picker for Ranking,
+A proposed row renders as an **accept-gated candidate card**: labeled
+scope picker (all scopes), field key (closed-list picker for Ranking,
 free text otherwise), value, note — all editable inline. Accept
 persists through the existing `tip` route (`Kind = Tip`,
 `Confirmed = true`); Reject discards. Cards survive panel close in

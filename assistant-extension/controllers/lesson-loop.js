@@ -23,7 +23,7 @@ class LessonLoop {
     ].join("\n");
 
     static ScopesFor(mode) {
-        return mode === "job_detail" ? ["Ranking", "Resume"] : ["Apply"];
+        return ["Apply", "Ranking", "Resume"];
     }
 
     static Tools() {
@@ -39,7 +39,7 @@ class LessonLoop {
                             scope: {
                                 type: "string",
                                 enum: ["Apply", "Ranking", "Resume"],
-                                description: "memory scope; must be one of the allowed scopes for the page mode",
+                                description: "memory scope",
                             },
                             field_key: {
                                 type: "string",
@@ -71,17 +71,12 @@ class LessonLoop {
             "",
             "## ALLOWED SCOPES",
             JSON.stringify(scopes),
+            "",
+            "## RANKING KEYS (closed list — Ranking rows must use exactly one)",
+            JSON.stringify(RANKING_KEYS),
         ];
 
-        if (scopes.includes("Ranking")) {
-            parts.push(
-                "",
-                "## RANKING KEYS (closed list — Ranking rows must use exactly one)",
-                JSON.stringify(RANKING_KEYS),
-            );
-        }
-
-        if (scopes.includes("Apply") && Array.isArray(opts.inventoryKeys) && opts.inventoryKeys.length) {
+        if (Array.isArray(opts.inventoryKeys) && opts.inventoryKeys.length) {
             parts.push(
                 "",
                 "## FORM FIELD KEYS (data — prefer these keys for Apply rows)",
@@ -134,7 +129,7 @@ class LessonLoop {
             };
 
             if (!scopes.includes(candidate.scope)) {
-                dropped.push(Object.assign({}, candidate, { reason: "scope not allowed in " + (opts.mode || "apply_form") + " mode" }));
+                dropped.push(Object.assign({}, candidate, { reason: "unknown scope" }));
                 continue;
             }
             if (!candidate.fieldKey || !candidate.value) {

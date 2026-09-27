@@ -17,7 +17,7 @@
 			min-width: 320px;
 			margin: 0;
 			padding: 8px;
-			font-size: 13px;
+			font-size: 1.5rem;
 			display: flex;
 			flex-direction: column;
 		}
@@ -73,7 +73,11 @@
 		}
 
 		#ChatLog {
-			font-size: 12px;
+			font-size: 1.7rem;
+		}
+
+		.memory-row.editing {
+			background: var(--bs-tertiary-bg);
 		}
 
 		ul {
@@ -95,7 +99,7 @@
 		<div class="mb-2">
 			<label class="mb-1">Mode override:</label>
 			<div id="ModeOverride" class="dropdown">
-				<button type="button" class="form-select form-select-sm text-start">auto</button>
+				<button type="button" class="form-select form-select text-start">auto</button>
 				<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto">
 					<button type="button" class="dropdown-item" data-value="auto">auto</button>
 					<button type="button" class="dropdown-item" data-value="job_detail">job_detail</button>
@@ -107,16 +111,16 @@
 		<div class="mb-2">
 			<label class="mb-1 d-block">Job id:
 				<input id="JobId" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
-					class="form-control form-control-sm" placeholder="job id" />
+					class="form-control" placeholder="job id" />
 			</label>
-			<button id="FromPage" class="btn btn-sm btn-outline-secondary">From page</button>
-			<button id="LoadJob" class="btn btn-sm btn-outline-secondary">Load</button>
+			<button id="FromPage" class="btn btn-outline-primary">From page</button>
+			<button id="LoadJob" class="btn btn-outline-secondary">Load</button>
 			<div id="JobInfo" class="mt-1"></div>
 			<div class="mt-1">
-				<button id="OpenJob" class="btn btn-sm btn-outline-secondary">Open</button>
-				<button id="MarkApplied" class="btn btn-sm btn-outline-secondary">Applied</button>
-				<button id="FillJob" class="btn btn-sm btn-outline-secondary">Fill current form</button>
-				<button id="ComposeJob" class="btn btn-sm btn-outline-secondary">Compose</button>
+				<button id="OpenJob" class="btn btn-outline-primary">Open</button>
+				<button id="MarkApplied" class="btn btn-outline-success">Applied</button>
+				<button id="FillJob" class="btn btn-outline-primary">Fill current form</button>
+				<button id="ComposeJob" class="btn btn-outline-secondary">Compose</button>
 			</div>
 			<div id="JobsStatus" class="muted"></div>
 		</div>
@@ -125,15 +129,15 @@
 			<div id="ComposeList"></div>
 		</div>
 		<div class="d-flex gap-1 mb-2">
-			<textarea id="ChatInput" rows="2" class="form-control form-control-sm"
+			<textarea id="ChatInput" rows="2" class="form-control"
 				placeholder="teach a lesson ..."></textarea>
-			<button id="ChatSend" class="btn btn-sm btn-outline-secondary align-self-stretch">Send</button>
+			<button id="ChatSend" class="btn btn-outline-primary align-self-stretch">Send</button>
 		</div>
 	</div>
 	<div id="MemoryView" class="mb-2" style="display:none">
-		<button id="RefreshMemory" class="btn btn-sm btn-outline-secondary">Refresh</button>
+		<button id="RefreshMemory" class="btn btn-outline-secondary">Refresh</button>
 		<div id="MemoryScope" class="dropdown w-auto d-inline-block">
-			<button type="button" class="form-select form-select-sm text-start">all scopes</button>
+			<button type="button" class="form-select form-select text-start">all scopes</button>
 			<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto">
 				<button type="button" class="dropdown-item" data-value="">all scopes</button>
 				<button type="button" class="dropdown-item" data-value="Apply">apply</button>
@@ -144,24 +148,42 @@
 		<div id="MemoryCap" class="warn"></div>
 		<div id="MemoryList"></div>
 		<hr />
-		<b>Add lesson (tip, confirmed)</b>
-		<label class="mb-1 mt-1 d-block">Scope:
-			<div id="TipScope" class="dropdown">
-				<button type="button" class="form-select form-select-sm text-start"></button>
-				<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto"></div>
-			</div>
-		</label>
-		<label class="mb-1 d-block">Field:
-			<div id="TipRankingKey" class="dropdown" style="display:none">
-				<button type="button" class="form-select form-select-sm text-start"></button>
-				<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto"></div>
-			</div>
-			<input id="TipFieldKey" type="text" class="form-control form-control-sm" placeholder="field key (name or label)" />
-		</label>
-		<label class="mb-1 d-block">Value: <input id="TipValue" type="text" class="form-control form-control-sm" /></label>
-		<label class="mb-1 d-block">Note: <input id="TipNote" type="text" class="form-control form-control-sm" /></label>
-		<button id="SaveTip" class="btn btn-sm btn-outline-secondary">Save lesson</button>
-		<div id="ChatLog" class="muted"></div>
+		<div id="TipForm">
+			<b id="TipFormTitle">Add lesson (tip, confirmed)</b>
+			<label class="mb-1 mt-1 d-block">Scope:
+				<div id="TipScope" class="dropdown">
+					<button type="button" class="form-select form-select text-start"></button>
+					<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto"></div>
+				</div>
+			</label>
+			<label id="TipDomainGroup" class="mb-1 d-block" style="display:none">Domain:
+				<input id="TipDomain" type="text" class="form-control" placeholder="*" />
+			</label>
+			<label class="mb-1 d-block">Field:
+				<div id="TipRankingKey" class="dropdown" style="display:none">
+					<button type="button" class="form-select form-select text-start"></button>
+					<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto"></div>
+				</div>
+				<input id="TipFieldKey" type="text" class="form-control" placeholder="field key (name or label)" />
+			</label>
+			<label id="TipFieldLabelGroup" class="mb-1 d-block" style="display:none">Field label:
+				<input id="TipFieldLabel" type="text" class="form-control" />
+			</label>
+			<label id="TipKindGroup" class="mb-1 d-block" style="display:none">Kind:
+				<div id="TipKind" class="dropdown">
+					<button type="button" class="form-select form-select text-start"></button>
+					<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto"></div>
+				</div>
+			</label>
+			<label id="TipConfirmedGroup" class="mb-1 d-block" style="display:none">Confirmed:
+				<input id="TipConfirmed" type="checkbox" class="form-check-input mt-0" />
+			</label>
+			<label class="mb-1 d-block">Value: <input id="TipValue" type="text" class="form-control" /></label>
+			<label class="mb-1 d-block">Note: <input id="TipNote" type="text" class="form-control" /></label>
+			<button id="SaveTip" class="btn btn-outline-primary">Save lesson</button>
+			<button id="TipCancel" class="btn btn-outline-secondary" style="display:none">Cancel edit</button>
+			<div id="ChatLog" class="muted"></div>
+		</div>
 	</div>
 	<script src="../controllers/background-messaging.js"></script>
 	<script src="../controllers/form-inventory.js"></script>
@@ -169,6 +191,7 @@
 	<script src="dropdown.js"></script>
 	<script src="compose-ui.js"></script>
 	<script src="chat-ui.js"></script>
+	<script src="memory-ui.js"></script>
 	<script src="panel.js"></script>
 </body>
 

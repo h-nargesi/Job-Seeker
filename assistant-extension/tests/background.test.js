@@ -134,6 +134,7 @@ test('lesson-extract fetches the inventory on apply forms and validates candidat
 	sw.fetchStub.route('v1/chat/completions', () => chatBody(chatResponse([
 		{ id: 'a', name: 'propose_memory', args: { scope: 'Apply', field_key: 'email', field_label: 'Email', value: 'r@e.com' } },
 		{ id: 'b', name: 'propose_memory', args: { scope: 'Ranking', field_key: 'visa_sponsorship', value: 'required' } },
+		{ id: 'c', name: 'propose_memory', args: { scope: 'Bogus', field_key: 'x', value: 'y' } },
 	], 'Noted.')));
 
 	const result = await deliver(sw.chrome, {
@@ -142,17 +143,21 @@ test('lesson-extract fetches the inventory on apply forms and validates candidat
 	});
 
 	assert.strictEqual(result.reply, 'Noted.');
-	assert.strictEqual(result.candidates.length, 1);
+	assert.strictEqual(result.candidates.length, 2);
 	assert.strictEqual(result.candidates[0].scope, 'Apply');
 	assert.strictEqual(result.candidates[0].fieldKey, 'email');
 	assert.strictEqual(result.candidates[0].domain, 'ats.example');
-	assert.deepStrictEqual(jsonOf(result.dropped.map(d => d.reason)), ['scope not allowed in apply_form mode']);
+	assert.strictEqual(result.candidates[1].scope, 'Ranking');
+	assert.deepStrictEqual(jsonOf(result.dropped.map(d => d.reason)), ['unknown scope']);
 
 	const chat = JSON.parse(sw.fetchStub.calls.find(c => c.url.includes('v1/chat/completions')).data.body);
 	const user = chat.messages.find(m => m.role === 'user').content;
 	assert.ok(user.includes('["email"]'), 'inventory keys travel as data');
 	assert.ok(user.includes('Apply/email'), 'confirmed keys travel as data');
+	assert.ok(user.includes('["Apply","Ranking","Resume"]'), 'all scopes are allowed in apply_form mode');
 
+	assert.ok(sw.fetchStub.calls.some(c => c.url.includes('assistant/memory?confirmed=true')),
+		'confirmed keys are fetched without a scope filter');
 	assert.ok(sw.chrome.tabs.messages.some(m => m.message.title === 'inventory'));
 });
 
@@ -172,6 +177,8 @@ test('lesson-extract on job_detail skips the inventory fetch', async () => {
 
 	assert.deepStrictEqual(jsonOf(result.dropped.map(d => d.reason)), ['ranking key outside the closed list']);
 	assert.ok(!sw.chrome.tabs.messages.some(m => m.message.title === 'inventory'));
+	assert.ok(sw.fetchStub.calls.some(c => c.url.includes('assistant/memory?confirmed=true')),
+		'confirmed keys are fetched without a scope filter');
 });
 
 test('llm calls serialize — a busy worker answers llm-busy', async () => {
@@ -227,6 +234,13 @@ test('unknown titles answer with an error object', async () => {
 	const result = await deliver(sw.chrome, { title: 'bogus' });
 
 	assert.deepStrictEqual(jsonOf(result), { error: 'unknown-title' });
+});
+
+test('the service worker opens session storage to untrusted contexts at startup', async () => {
+	const { sw } = await fresh();
+
+	assert.deepStrictEqual(sw.chrome.storage.session.accessLevels, ['TRUSTED_AND_UNTRUSTED_CONTEXTS']);
+	assert.deepStrictEqual(sw.console.entries.filter(e => e.level === 'error'), []);
 });
 
 function chatBody(turn) {

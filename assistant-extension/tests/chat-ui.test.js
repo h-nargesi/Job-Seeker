@@ -70,7 +70,7 @@ test('a send round-trip appends the user message, reply, dropped notes and candi
 		if (message.title === 'lesson-extract') return {
 			reply: 'Noted.',
 			candidates: [{ scope: 'Apply', fieldKey: 'email', value: 'x@y.z', domain: 'ats.example' }],
-			dropped: [{ scope: 'Ranking', fieldKey: 'visa_sponsorship', value: 'required', domain: '*', reason: 'scope not allowed in apply_form mode' }],
+			dropped: [{ scope: 'Ranking', fieldKey: 'visa_sponsorship', value: 'required', domain: '*', reason: 'unknown scope' }],
 		};
 		return { ok: true };
 	});
@@ -156,6 +156,38 @@ test('an apply card can be edited inline before accepting', async () => {
 	assert.strictEqual(tip.params.fieldKey, 'email');
 	assert.strictEqual(tip.params.fieldLabel, 'Email');
 	assert.strictEqual(tip.params.value, 'new@example.com');
+});
+
+test('cards label their controls and a ranking card can switch to apply in job_detail mode', async () => {
+	const env = fresh();
+	env.chrome.storage.session.state.set('CHAT_TRANSCRIPT', [
+		{ kind: 'card', card: { scope: 'Ranking', fieldKey: 'visa_sponsorship', value: 'required', domain: '*' } },
+	]);
+	await initChat(env, 'job_detail');
+
+	const card = $(env, 'ChatEntries').querySelector('.chat-card');
+	assert.ok(card.textContent.includes('Scope:'));
+	assert.ok(card.textContent.includes('Field:'));
+
+	const scopeDrop = card.querySelector('.dropdown');
+	assert.deepStrictEqual(jsonOf(scopeDrop.options.map(o => o.value)), ['Apply', 'Ranking', 'Resume']);
+
+	scopeDrop.value = 'Apply';
+	scopeDrop.dispatchEvent(new env.sandbox.window.Event('change'));
+
+	const inputs = Array.from(card.querySelectorAll('input'));
+	inputs[0].value = 'email';
+	inputs[1].value = 'x@y.z';
+
+	cardButton(env, 'Accept').click();
+	await settle(env);
+
+	const tip = env.chrome.runtime.sent.find(m => m.title === 'tip');
+	assert.strictEqual(tip.params.scope, 'Apply');
+	assert.strictEqual(tip.params.domain, '*');
+	assert.strictEqual(tip.params.fieldKey, 'email');
+	assert.strictEqual(tip.params.fieldLabel, 'email');
+	assert.strictEqual(tip.params.value, 'x@y.z');
 });
 
 test('rejecting a card discards it without any tip post', async () => {

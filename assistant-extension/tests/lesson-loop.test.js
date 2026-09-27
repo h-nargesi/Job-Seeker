@@ -14,12 +14,12 @@ function propose(id, args) {
 	return { id, name: 'propose_memory', args };
 }
 
-test('the mode decides the allowed scopes', () => {
+test('all scopes are allowed in every mode', () => {
 	const { LessonLoop } = fresh();
 
-	assert.deepStrictEqual(jsonOf(LessonLoop.ScopesFor('apply_form')), ['Apply']);
-	assert.deepStrictEqual(jsonOf(LessonLoop.ScopesFor('job_detail')), ['Ranking', 'Resume']);
-	assert.deepStrictEqual(jsonOf(LessonLoop.ScopesFor(undefined)), ['Apply']);
+	assert.deepStrictEqual(jsonOf(LessonLoop.ScopesFor('apply_form')), ['Apply', 'Ranking', 'Resume']);
+	assert.deepStrictEqual(jsonOf(LessonLoop.ScopesFor('job_detail')), ['Apply', 'Ranking', 'Resume']);
+	assert.deepStrictEqual(jsonOf(LessonLoop.ScopesFor(undefined)), ['Apply', 'Ranking', 'Resume']);
 });
 
 test('the ranking key list mirrors the server-side closed list', () => {
@@ -54,17 +54,18 @@ test('the user message carries ranking keys, inventory keys and confirmed keys a
 		confirmedKeys: ['Apply/phone'],
 	});
 	assert.ok(apply.includes('## ALLOWED SCOPES'));
-	assert.ok(apply.includes('["Apply"]'));
+	assert.ok(apply.includes('["Apply","Ranking","Resume"]'));
 	assert.ok(apply.includes('FORM FIELD KEYS'));
 	assert.ok(apply.includes('["email","cover"]'));
 	assert.ok(apply.includes('ALREADY REMEMBERED'));
 	assert.ok(apply.includes('my email is x@y.z'));
-	assert.ok(!apply.includes('RANKING KEYS'));
+	assert.ok(apply.includes('RANKING KEYS'));
 
 	const detail = LessonLoop.UserMessage({
 		mode: 'job_detail',
 		text: 'only visa sponsors',
 	});
+	assert.ok(detail.includes('["Apply","Ranking","Resume"]'));
 	assert.ok(detail.includes('RANKING KEYS'));
 	assert.ok(detail.includes('visa_sponsorship'));
 	assert.ok(!detail.includes('FORM FIELD KEYS'));
@@ -142,23 +143,24 @@ test('llm failures surface as errors', async () => {
 	assert.deepStrictEqual(jsonOf(result), { error: 'llm-timeout' });
 });
 
-test('apply_form validation drops wrong scopes, empty keys and values', () => {
+test('apply_form validation keeps every scope and drops unknown ones', () => {
 	const { LessonLoop } = fresh();
 
 	const result = LessonLoop.Validate([
 		{ scope: 'Ranking', field_key: 'visa_sponsorship', value: 'required' },
+		{ scope: 'Bogus', field_key: 'x', value: 'y' },
 		{ scope: 'Apply', field_key: '', value: 'x' },
 		{ scope: 'Apply', field_key: 'email', value: '   ' },
 		{ scope: 'Apply', field_key: 'email', value: 'x@y.z' },
 	], { mode: 'apply_form', domain: 'ats.example' });
 
-	assert.deepStrictEqual(jsonOf(result.candidates.map(c => c.scope + '/' + c.fieldKey)), ['Apply/email']);
+	assert.deepStrictEqual(jsonOf(result.candidates.map(c => c.scope + '/' + c.fieldKey)), ['Ranking/visa_sponsorship', 'Apply/email']);
 	assert.deepStrictEqual(jsonOf(result.dropped.map(d => d.reason)), [
-		'scope not allowed in apply_form mode',
+		'unknown scope',
 		'needs a field key and a value',
 		'needs a field key and a value',
 	]);
-	assert.strictEqual(result.candidates[0].domain, 'ats.example');
+	assert.strictEqual(result.candidates[1].domain, 'ats.example');
 });
 
 test('job_detail validation enforces the closed ranking-key list', () => {
@@ -171,10 +173,8 @@ test('job_detail validation enforces the closed ranking-key list', () => {
 		{ scope: 'Apply', field_key: 'email', value: 'x' },
 	], { mode: 'job_detail', domain: 'ats.example' });
 
-	assert.deepStrictEqual(jsonOf(result.candidates.map(c => c.scope + '/' + c.fieldKey)), ['Ranking/remote_only', 'Resume/summary tone']);
-	assert.deepStrictEqual(jsonOf(result.dropped.map(d => d.reason)), [
-		'ranking key outside the closed list',
-		'scope not allowed in job_detail mode',
-	]);
-	assert.ok(result.candidates.every(c => c.domain === '*'));
+	assert.deepStrictEqual(jsonOf(result.candidates.map(c => c.scope + '/' + c.fieldKey)), ['Ranking/remote_only', 'Resume/summary tone', 'Apply/email']);
+	assert.deepStrictEqual(jsonOf(result.dropped.map(d => d.reason)), ['ranking key outside the closed list']);
+	assert.ok(result.candidates.slice(0, 2).every(c => c.domain === '*'));
+	assert.strictEqual(result.candidates[2].domain, 'ats.example');
 });

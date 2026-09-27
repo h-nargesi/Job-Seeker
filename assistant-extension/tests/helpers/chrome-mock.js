@@ -128,7 +128,13 @@ export function createChrome() {
 		session: createStorageArea(runtime, 'session', onChanged),
 		onChanged,
 	};
-	storage.session.setAccessLevel = function () { };
+	storage.session.accessLevels = [];
+	storage.session.setAccessLevel = function (options) {
+		const level = options?.accessLevel;
+		if (level !== 'TRUSTED_AND_UNTRUSTED_CONTEXTS' && level !== 'TRUSTED_CONTEXTS')
+			throw new TypeError("Error at property 'accessLevel': Value must be one of TRUSTED_AND_UNTRUSTED_CONTEXTS, TRUSTED_CONTEXTS.");
+		storage.session.accessLevels.push(level);
+	};
 
 	const tabs = {
 		nextId: 0,

@@ -135,8 +135,7 @@ class ChatUi {
     }
 
     static Scopes() {
-        const mode = ChatUi.hooks.mode ? ChatUi.hooks.mode() : "apply_form";
-        return mode === "job_detail" ? ["Ranking", "Resume"] : ["Apply"];
+        return ["Apply", "Ranking", "Resume"];
     }
 
     static Card(entry, node) {
@@ -157,32 +156,42 @@ class ChatUi {
         head.textContent = "proposed lesson — review, edit, then accept";
         node.appendChild(head);
 
+        const scopeWrap = document.createElement("label");
+        scopeWrap.className = "mb-1 d-block";
+        scopeWrap.textContent = "Scope: ";
+        node.appendChild(scopeWrap);
+
         const scope = ChatUi.Picker(scopes.map(function (scope) {
             return { value: scope, text: scope.toLowerCase() };
         }));
         scope.value = card.scope;
-        node.appendChild(scope);
+        scopeWrap.appendChild(scope);
 
-        const keyWrap = document.createElement("div");
+        const keyWrap = document.createElement("label");
+        keyWrap.className = "mb-1 d-block";
+        keyWrap.textContent = "Field: ";
         node.appendChild(keyWrap);
+
+        const keyHolder = document.createElement("div");
+        keyWrap.appendChild(keyHolder);
 
         const rankingPick = ChatUi.Picker(RANKING_KEYS.map(function (key) {
             return { value: key, text: key };
         }));
         const keyInput = document.createElement("input");
         keyInput.type = "text";
-        keyInput.className = "form-control form-control-sm";
+        keyInput.className = "form-control form-control";
         keyInput.placeholder = "field key (name or label)";
 
         function RenderKey() {
-            keyWrap.innerHTML = "";
+            keyHolder.innerHTML = "";
             if (scope.value === "Ranking") {
                 rankingPick.value = RANKING_KEYS.includes(card.fieldKey) ? card.fieldKey : RANKING_KEYS[0];
-                keyWrap.appendChild(rankingPick);
+                keyHolder.appendChild(rankingPick);
             }
             else {
                 keyInput.value = card.fieldKey || "";
-                keyWrap.appendChild(keyInput);
+                keyHolder.appendChild(keyInput);
             }
         }
 
@@ -218,7 +227,7 @@ class ChatUi {
 
         const toggle = document.createElement("button");
         toggle.type = "button";
-        toggle.className = "form-select form-select-sm text-start";
+        toggle.className = "form-select form-select text-start";
         wrap.appendChild(toggle);
 
         const menu = document.createElement("div");
@@ -239,7 +248,7 @@ class ChatUi {
 
         const input = document.createElement("input");
         input.type = "text";
-        input.className = "form-control form-control-sm";
+        input.className = "form-control form-control";
         input.value = value;
         wrap.appendChild(input);
         return { wrap: wrap, input: input };
@@ -247,7 +256,7 @@ class ChatUi {
 
     static Button(text, onClick) {
         const button = document.createElement("button");
-        button.className = "btn btn-sm btn-outline-secondary";
+        button.className = "btn btn-outline-primary";
         button.textContent = text;
         button.addEventListener("click", onClick);
         return button;

@@ -4,7 +4,7 @@ import { createEnv } from './helpers/env.js';
 
 const MARKUP = `
 <div id="Pick" class="dropdown">
-	<button type="button" class="form-select form-select-sm text-start">auto</button>
+	<button type="button" class="form-select text-start">auto</button>
 	<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto">
 		<button type="button" class="dropdown-item" data-value="auto">auto</button>
 		<button type="button" class="dropdown-item" data-value="job_detail">job_detail</button>

@@ -33,6 +33,7 @@ function fresh(job = null, memory = [], behavior = null, chrome) {
 	env.load('application/dropdown.js');
 	env.load('application/compose-ui.js');
 	env.load('application/chat-ui.js');
+	env.load('application/memory-ui.js');
 	env.load('application/panel.js');
 	return env;
 }
@@ -321,6 +322,116 @@ test('the memory list stays lazy until the memory view is opened', async () => {
 	assert.ok(env.chrome.runtime.sent.some(m => m.title === 'memory-list'));
 });
 
+async function openEditor(env) {
+	$(env, 'ShowMemory').click();
+	await settle(env);
+	return Array.from($(env, 'MemoryList').querySelectorAll('button')).find(b => b.textContent === 'Edit');
+}
+
+test('row Edit loads the lesson into the bottom form and Save posts the full patch', async () => {
+	const rows = [{
+		memoryID: 9, scope: 'Apply', kind: 'Tip', confirmed: false, fieldKey: 'email',
+		fieldLabel: 'Email', value: 'old@example.com', note: 'n/a', agencyDomain: 'ats.example', useCount: 0,
+	}];
+	const env = fresh(null, rows);
+	await settle(env);
+
+	(await openEditor(env)).click();
+	await settle(env);
+
+	assert.strictEqual($(env, 'TipFormTitle').textContent, 'Edit lesson #9');
+	assert.strictEqual($(env, 'SaveTip').textContent, 'Save changes');
+	assert.strictEqual($(env, 'TipDomain').style.display === 'none', false, 'edit-only fields are visible');
+	assert.strictEqual($(env, 'TipScope').value, 'Apply');
+	assert.strictEqual($(env, 'TipDomain').value, 'ats.example');
+	assert.strictEqual($(env, 'TipFieldKey').value, 'email');
+	assert.strictEqual($(env, 'TipFieldLabel').value, 'Email');
+	assert.strictEqual($(env, 'TipKind').value, 'Tip');
+	assert.strictEqual($(env, 'TipConfirmed').checked, false);
+	assert.strictEqual($(env, 'TipValue').value, 'old@example.com');
+	assert.strictEqual($(env, 'TipNote').value, 'n/a');
+	assert.ok($(env, 'MemoryList').querySelector('.memory-row.editing'), 'the edited row is highlighted');
+
+	$(env, 'TipDomain').value = '';
+	$(env, 'TipConfirmed').checked = true;
+	$(env, 'TipValue').value = 'new@example.com';
+
+	$(env, 'SaveTip').click();
+	await settle(env);
+
+	const edit = env.chrome.runtime.sent.find(m => m.title === 'memory-edit');
+	assert.ok(edit, 'Save posts memory-edit');
+	assert.strictEqual(edit.params.id, 9);
+	assert.deepStrictEqual(jsonOf(edit.params.row), {
+		scope: 'Apply',
+		domain: '',
+		fieldKey: 'email',
+		fieldLabel: 'Email',
+		kind: 'Tip',
+		confirmed: true,
+		value: 'new@example.com',
+		note: 'n/a',
+	});
+
+	assert.strictEqual($(env, 'TipFormTitle').textContent, 'Add lesson (tip, confirmed)');
+	assert.strictEqual($(env, 'SaveTip').textContent, 'Save lesson');
+	assert.strictEqual($(env, 'TipValue').value, '');
+	assert.ok(!$(env, 'MemoryList').querySelector('.memory-row.editing'), 'the highlight clears after save');
+});
+
+test('edit mode swaps the field control with the scope and enforces the closed ranking list', async () => {
+	const rows = [{
+		memoryID: 9, scope: 'Apply', kind: 'Tip', confirmed: true, fieldKey: 'email',
+		value: 'x', agencyDomain: '*', useCount: 0,
+	}];
+	const env = fresh(null, rows);
+	await settle(env);
+
+	(await openEditor(env)).click();
+	await settle(env);
+
+	assert.strictEqual($(env, 'TipFieldKey').style.display, '');
+	assert.strictEqual($(env, 'TipRankingKey').style.display, 'none');
+
+	$(env, 'TipScope').value = 'Ranking';
+	$(env, 'TipScope').dispatchEvent(new env.sandbox.window.Event('change'));
+
+	assert.strictEqual($(env, 'TipFieldKey').style.display, 'none');
+	assert.strictEqual($(env, 'TipRankingKey').style.display, '');
+	assert.deepStrictEqual(jsonOf($(env, 'TipRankingKey').options.map(o => o.value)), jsonOf(env.grab('RANKING_KEYS')));
+	assert.strictEqual($(env, 'TipRankingKey').value, 'visa_sponsorship', 'an invalid ranking key falls back to the first');
+
+	$(env, 'SaveTip').click();
+	await settle(env);
+
+	const edit = env.chrome.runtime.sent.find(m => m.title === 'memory-edit');
+	assert.strictEqual(edit.params.row.scope, 'Ranking');
+	assert.strictEqual(edit.params.row.fieldKey, 'visa_sponsorship');
+});
+
+test('Cancel edit returns the form to add mode without posting', async () => {
+	const rows = [{
+		memoryID: 9, scope: 'Apply', kind: 'Tip', confirmed: false, fieldKey: 'email',
+		value: 'x', agencyDomain: '*', useCount: 0,
+	}];
+	const env = fresh(null, rows);
+	await settle(env);
+
+	(await openEditor(env)).click();
+	await settle(env);
+
+	$(env, 'TipCancel').click();
+	await settle(env);
+
+	assert.ok(!env.chrome.runtime.sent.some(m => m.title === 'memory-edit'));
+	assert.strictEqual($(env, 'TipFormTitle').textContent, 'Add lesson (tip, confirmed)');
+	assert.strictEqual($(env, 'SaveTip').textContent, 'Save lesson');
+	assert.strictEqual($(env, 'TipDomainGroup').style.display, 'none', 'edit-only fields hide again');
+	assert.strictEqual($(env, 'TipValue').value, '');
+	assert.strictEqual($(env, 'TipScope').value, 'Apply', 'the scope default returns to the mode default');
+	assert.ok(!$(env, 'MemoryList').querySelector('.memory-row.editing'));
+});
+
 test('the memorycap warning appears beyond 500 confirmed rows', async () => {
 	const env = fresh(null, []);
 	await settle(env);
@@ -328,20 +439,21 @@ test('the memorycap warning appears beyond 500 confirmed rows', async () => {
 	const rows = Array.from({ length: 501 }, (_, i) => ({
 		memoryID: i, scope: 'Apply', kind: 'Tip', confirmed: true, fieldKey: 'k' + i, value: 'v', agencyDomain: '*', useCount: 0,
 	}));
-	env.grab('RenderMemory')(rows);
+	env.grab('MemoryUi').Render(rows);
 
 	assert.ok($(env, 'MemoryCap').textContent.includes('memorycap'));
 	assert.ok($(env, 'MemoryCap').textContent.includes('501'));
 });
 
-test('apply_form pages only accept apply-scope lessons', async () => {
+test('apply_form pages offer every scope with apply preselected', async () => {
 	const env = fresh(null, []);
 	await settle(env);
 
-	assert.deepStrictEqual(Array.from($(env, 'TipScope').options).map(o => o.value), ['Apply']);
+	assert.deepStrictEqual(Array.from($(env, 'TipScope').options).map(o => o.value), ['Apply', 'Ranking', 'Resume']);
+	assert.strictEqual($(env, 'TipScope').value, 'Apply');
 });
 
-test('job_detail mode offers ranking and delta lessons with the closed key list', async () => {
+test('job_detail mode offers every scope with ranking preselected and the closed key list', async () => {
 	const env = fresh(null, []);
 	await settle(env);
 
@@ -350,11 +462,12 @@ test('job_detail mode offers ranking and delta lessons with the closed key list'
 	override.dispatchEvent(new env.sandbox.window.Event('change'));
 	await settle(env);
 
-	assert.deepStrictEqual(Array.from($(env, 'TipScope').options).map(o => o.value), ['Ranking', 'Resume']);
+	assert.deepStrictEqual(Array.from($(env, 'TipScope').options).map(o => o.value), ['Apply', 'Ranking', 'Resume']);
+	assert.strictEqual($(env, 'TipScope').value, 'Ranking');
 	assert.ok($(env, 'Mode').textContent.includes('job_detail'));
 
 	$(env, 'TipScope').value = 'Ranking';
-	env.grab('RenderTipFields')();
+	env.grab('MemoryUi').RenderTipFields();
 	assert.strictEqual($(env, 'TipRankingKey').style.display, '');
 	assert.ok(Array.from($(env, 'TipRankingKey').options).length >= 8);
 

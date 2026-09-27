@@ -29,6 +29,7 @@ function fresh(job = null, behavior = null) {
 	env.load('application/dropdown.js');
 	env.load('application/compose-ui.js');
 	env.load('application/chat-ui.js');
+	env.load('application/memory-ui.js');
 	env.load('application/panel.js');
 	return env;
 }
