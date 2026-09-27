@@ -36,7 +36,7 @@ export function dispatch(listeners, message, sender, callback) {
 	if (!async && !responded && callback) callback(undefined);
 }
 
-function createStorageArea(runtime) {
+function createStorageArea(runtime, areaName, onChanged) {
 	const area = {
 		state: new Map(),
 		errors: { get: null, set: null },
@@ -76,7 +76,16 @@ function createStorageArea(runtime) {
 
 	area.set = function (items, callback) {
 		area.calls.set++;
-		for (const [key, value] of Object.entries(items)) area.state.set(key, value);
+		const changes = {};
+		for (const [key, value] of Object.entries(items)) {
+			const had = area.state.has(key);
+			const previous = area.state.get(key);
+			if (!had || previous !== value) changes[key] = { oldValue: had ? previous : undefined, newValue: value };
+			area.state.set(key, value);
+		}
+		if (onChanged && Object.keys(changes).length) {
+			for (const fn of [...onChanged.listeners]) fn(changes, areaName);
+		}
 		if (typeof callback !== 'function') {
 			if (area.errors.set) return Promise.reject(area.errors.set);
 			return Promise.resolve();
@@ -113,9 +122,11 @@ export function createChrome() {
 		},
 	};
 
+	const onChanged = createEvent();
 	const storage = {
-		local: createStorageArea(runtime),
-		session: createStorageArea(runtime),
+		local: createStorageArea(runtime, 'local', onChanged),
+		session: createStorageArea(runtime, 'session', onChanged),
+		onChanged,
 	};
 	storage.session.setAccessLevel = function () { };
 

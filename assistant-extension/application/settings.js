@@ -5,6 +5,7 @@ const els = {
     apiKey: document.getElementById("ApiKey"),
     llamaUrl: document.getElementById("LlamaUrl"),
     llamaModel: document.getElementById("LlamaModel"),
+    themeMode: document.getElementById("ThemeMode"),
     openPanel: document.getElementById("OpenPanel"),
     logsFilter: document.getElementById("LogsFilter"),
     logsRefresh: document.getElementById("LogsRefresh"),
@@ -18,6 +19,7 @@ SaveOnEnter(els.serverUrl, value => { StorageHandler.ServerUrl = value; });
 SaveOnEnter(els.apiKey, value => { StorageHandler.ApiKey = value; });
 SaveOnEnter(els.llamaUrl, value => { StorageHandler.LlamaUrl = value; });
 SaveOnEnter(els.llamaModel, value => { StorageHandler.LlamaModel = value; });
+ThemeHandler.BindSelect(els.themeMode);
 
 function SaveOnEnter(input, save) {
     input.addEventListener("keyup", function (event) {

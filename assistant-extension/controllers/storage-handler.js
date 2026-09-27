@@ -11,6 +11,8 @@ class StorageHandler {
     static LLAMA_MODEL = "LLAMA_MODEL";
     static LLAMA_MODEL_DEFAULT = "Qwen3-30B-A3B-Q5_K_M";
     static MODE_OVERRIDE = "MODE_OVERRIDE";
+    static THEME = "THEME";
+    static THEME_DEFAULT = "system";
     static PENDING_DIFFS = "PENDING_DIFFS";
     static CHAT_LOG = "CHAT_LOG";
     static COMPOSE_DRAFTS = "COMPOSE_DRAFTS";
@@ -90,5 +92,13 @@ class StorageHandler {
 
     static set LlamaModel(value) {
         StorageHandler.Set(StorageHandler.LLAMA_MODEL, value);
+    }
+
+    static async ThemeAsync() {
+        return (async () => String(await StorageHandler.Get(StorageHandler.THEME, StorageHandler.THEME_DEFAULT)))();
+    }
+
+    static set Theme(value) {
+        StorageHandler.Set(StorageHandler.THEME, value);
     }
 }

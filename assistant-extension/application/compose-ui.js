@@ -76,6 +76,7 @@ class ComposeUI {
         item.appendChild(head);
 
         const area = document.createElement("textarea");
+        area.className = "form-control form-control-sm";
         area.rows = 6;
         area.value = draft.text;
         if (draft.accepted) area.readOnly = true;
@@ -93,6 +94,7 @@ class ComposeUI {
 
     static Button(text, onClick) {
         const button = document.createElement("button");
+        button.className = "btn btn-sm btn-outline-secondary";
         button.textContent = text;
         button.addEventListener("click", onClick);
         return button;

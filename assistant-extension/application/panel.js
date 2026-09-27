@@ -217,6 +217,7 @@ function ComposeJob() {
 
 function JobButton(text, onClick) {
     const button = document.createElement("button");
+    button.className = "btn btn-sm btn-outline-secondary";
     button.textContent = text;
     button.addEventListener("click", onClick);
     return button;

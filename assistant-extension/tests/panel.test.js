@@ -22,6 +22,7 @@ function fresh(job = null, memory = [], behavior = null) {
 	});
 
 	env.load('controllers/storage-handler.js');
+	env.load('application/theme.js');
 	env.load('controllers/background-messaging.js');
 	env.load('controllers/form-inventory.js');
 	env.load('application/compose-ui.js');
@@ -125,6 +126,18 @@ test('the panel holds no settings inputs — settings live only in the popup', a
 	assert.ok(!$(env, 'ShowJobs').classList.contains('active'));
 	assert.strictEqual($(env, 'MemoryView').style.display, '');
 	assert.strictEqual($(env, 'JobsView').style.display, 'none');
+});
+
+test('the panel follows theme changes made in the popup', async () => {
+	const env = fresh(null, []);
+	await settle(env);
+
+	assert.strictEqual(env.sandbox.document.documentElement.getAttribute('data-bs-theme'), 'light');
+
+	await env.chrome.storage.local.set({ THEME: 'dark' });
+	await settle(env);
+
+	assert.strictEqual(env.sandbox.document.documentElement.getAttribute('data-bs-theme'), 'dark');
 });
 
 test('Applied is a human click that posts the entered id with no prior load', async () => {

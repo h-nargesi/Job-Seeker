@@ -10,16 +10,18 @@ function settingsBodyHtml() {
 	return body.replace(/<script[\s\S]*?<\/script>/g, '');
 }
 
-function fresh(logs = []) {
+function fresh(logs = [], theme = undefined) {
 	const env = createEnv({ dom: true, url: 'chrome-extension://settings/index.html' });
 	env.sandbox.document.body.innerHTML = settingsBodyHtml();
 
 	env.chrome.storage.local.state.set('SERVER_URL', 'https://core.example:8081/');
 	env.chrome.storage.local.state.set('LLAMA_MODEL', 'test-model');
+	if (theme !== undefined) env.chrome.storage.local.state.set('THEME', theme);
 	if (logs.length) env.chrome.storage.local.state.set('LOG_BUFFER', logs);
 
 	env.load('controllers/storage-handler.js');
 	env.load('controllers/logger.js');
+	env.load('application/theme.js');
 	env.load('application/settings.js');
 	return env;
 }
@@ -55,6 +57,21 @@ test('Enter saves a settings field, other keys do not', async () => {
 
 	press(env, $(env, 'LlamaUrl'), 13);
 	assert.strictEqual(env.chrome.storage.local.state.get('LLAMA_URL'), 'http://llama.example:9000');
+});
+
+test('the theme select loads the stored mode and saves on change', async () => {
+	const env = fresh([], 'dark');
+	await settle(env);
+
+	assert.strictEqual($(env, 'ThemeMode').value, 'dark');
+	assert.strictEqual(env.sandbox.document.documentElement.getAttribute('data-bs-theme'), 'dark');
+
+	$(env, 'ThemeMode').value = 'system';
+	$(env, 'ThemeMode').dispatchEvent(new env.sandbox.window.Event('change'));
+	await settle(env);
+
+	assert.strictEqual(env.chrome.storage.local.state.get('THEME'), 'system');
+	assert.strictEqual(env.sandbox.document.documentElement.getAttribute('data-bs-theme'), 'light');
 });
 
 test('the open-panel button opens the side panel on the active tab', async () => {
