@@ -7,7 +7,7 @@ class StorageHandler {
     static API_KEY = "API_KEY";
     static API_KEY_DEFAULT = "";
     static LLAMA_URL = "LLAMA_URL";
-    static LLAMA_URL_DEFAULT = "http://localhost:8082/";
+    static LLAMA_URL_DEFAULT = "http://localhost:8081/v1";
     static LLAMA_MODEL = "LLAMA_MODEL";
     static LLAMA_MODEL_DEFAULT = "Qwen3-30B-A3B-Q5_K_M";
     static MODE_OVERRIDE = "MODE_OVERRIDE";
@@ -80,7 +80,8 @@ class StorageHandler {
 
     static async LlamaUrlAsync() {
         const url = String(await StorageHandler.Get(StorageHandler.LLAMA_URL, StorageHandler.LLAMA_URL_DEFAULT));
-        return url.endsWith('/') ? url : url + '/';
+        const slashed = url.endsWith('/') ? url : url + '/';
+        return slashed.endsWith('/v1/') ? slashed.slice(0, -3) : slashed;
     }
 
     static set LlamaUrl(value) {
