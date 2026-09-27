@@ -138,9 +138,9 @@ dumps, per-call records, llama-server internals.
   JS routing.
 - **Chart:** Chart.js stacked bar — x = group label, segments = `State`
   counts (same rows as the table; the table stays authoritative).
-  Chart.js 4.x UMD vendored at `wwwroot/scripts/chart.umd.js` (no CDN,
-  no build step, per `DASHBOARD_CHARTS.md` implementation notes), loaded
-  only by the monitor view; init in
+  Chart.js 4.x UMD vendored at `wwwroot/scripts/lib/chart.umd.js`
+  (no CDN, no build step, per `DASHBOARD_CHARTS.md` implementation
+  notes), loaded only by the monitor view; init in
   `wwwroot/scripts/ai-monitor-chart.js`.
 
 ### Helper blocks

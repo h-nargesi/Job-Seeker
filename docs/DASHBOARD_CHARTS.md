@@ -5,6 +5,13 @@
 > chart code exists yet. Chart IDs use the D/S scheme (D = dashboard,
 > S = stats page), replacing the old 3–8 numbering.
 
+> **Audited 2026-09-27** against all commits through `c5720e2` (incl.
+> Q_INDEX v3, `AiRun.WorkerVersion`, monitor auto-refresh): the roadmap
+> below stands unchanged. Canonical Chart.js path:
+> `wwwroot/scripts/lib/chart.umd.js` (§5) — one vendored copy shared
+> with the `/monitor` deferred chart ([`AI_MONITORING.md`](AI_MONITORING.md)).
+> S5 must mirror the current `Q_INDEX` v3 code (`JobBusiness.Sql.cs`).
+
 ## 1. Page split
 
 The dashboard (`Views/index.cshtml`) stays a **control/monitor console**:
