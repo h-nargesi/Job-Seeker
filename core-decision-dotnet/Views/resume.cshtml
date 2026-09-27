@@ -76,7 +76,7 @@
         }
         .page-break {
             margin-top: 30pt;
-            break-after: page; 
+            break-after: page;
         }
     }
     .rtl {
@@ -674,7 +674,7 @@
                     continue;
                 }
             }
-            
+
             if (display) {
                 element.style.display = display;
             } else {
@@ -706,15 +706,9 @@
         for (const not_included of NOT_INCLUDED)
             document.querySelectorAll(not_included)
                     .forEach((element) => element.style.display = 'none');
-        
-        document.getElementById('version').innerText = data.join(' | ');
+
+        document.getElementById('version').innerText = VERSION;
         document.getElementById('date').innerText = new Date().toISOString().substring(0, 10);
-
-        data.push(["p", LENGTH].join(''));
-        data.unshift(document.title);
-
-        document.title = data.join('-');
-        console.log(document.title);
 
         for (const e in ELEMENTS)
             if (!ELEMENTS[e]) {
@@ -744,6 +738,17 @@
         const lang_suffix_ignore = ELEMENTS.PARSI ? '-en' : '-pr';
         document.querySelectorAll(`[class*="${lang_suffix_ignore}"]`)
                 .forEach((element) => element.style.display = 'none');
+    });
+
+    let titleBeforePrint = null;
+
+    window.addEventListener('beforeprint', () => {
+        titleBeforePrint = document.title;
+        document.title = titleBeforePrint.replaceAll(' ', '-');
+    });
+
+    window.addEventListener('afterprint', () => {
+        if (titleBeforePrint !== null) document.title = titleBeforePrint;
     });
 
     function applyResumeText(texts) {

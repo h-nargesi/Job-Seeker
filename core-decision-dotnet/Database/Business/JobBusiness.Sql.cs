@@ -61,14 +61,14 @@ WITH date_diff AS (
              , Job.AiRelocation, Job.AiWorkModel, Job.PublishedAt
              , Agency.Title AS AgencyName
              , CASE State
-               WHEN '{nameof(JobState.Attention)}' THEN 1
-               WHEN '{nameof(JobState.AiPending)}' THEN 2
-               WHEN '{nameof(JobState.AIError)}' THEN 3
-               WHEN '{nameof(JobState.NotApprovedAI)}' THEN 4
-               WHEN '{nameof(JobState.NotApprovedRegex)}' THEN 4
-               WHEN '{nameof(JobState.Applied)}' THEN 5
-               WHEN '{nameof(JobState.Rejected)}' THEN 5
-               ELSE 12
+               WHEN '{nameof(JobState.Attention)}' THEN 'Attention'
+               WHEN '{nameof(JobState.AiPending)}' THEN 'AiPending'
+               WHEN '{nameof(JobState.AIError)}' THEN 'AIError'
+               WHEN '{nameof(JobState.NotApprovedAI)}' THEN 'NotApproved'
+               WHEN '{nameof(JobState.NotApprovedRegex)}' THEN 'NotApproved'
+               WHEN '{nameof(JobState.Applied)}' THEN 'Done'
+               WHEN '{nameof(JobState.Rejected)}' THEN 'Done'
+               ELSE 'Other'
                END AS Category
              , SUBSTR(Job.RegTime, 1, 10) AS RegDate
              , CASE WHEN Job.Log IS NULL OR Job.Log = ''
@@ -93,24 +93,25 @@ WITH date_diff AS (
 
 SELECT *
      , CASE Category
-       WHEN 6 THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
+       WHEN 'Done' THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
+       WHEN 'Other' THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
        ELSE ROW_NUMBER() OVER(PARTITION BY Category ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
        END AS Ordering
 FROM (
     SELECT *
         , CASE Category
-          WHEN 12 THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
-          WHEN 5 THEN ROW_NUMBER() OVER(PARTITION BY State ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
+          WHEN 'Other' THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
+          WHEN 'Done' THEN ROW_NUMBER() OVER(PARTITION BY State ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
           ELSE ROW_NUMBER() OVER(PARTITION BY State ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
           END AS Ranking
     FROM ranking
 ) job
 WHERE Ranking <= CASE Category
-    WHEN 1 THEN 12
-    WHEN 2 THEN 6
-    WHEN 3 THEN 3
-    WHEN 4 THEN 3
-    WHEN 5 THEN 3
+    WHEN 'Attention' THEN 12
+    WHEN 'AiPending' THEN 6
+    WHEN 'AIError' THEN 3
+    WHEN 'NotApproved' THEN 6
+    WHEN 'Done' THEN 3
     ELSE 1 END
 ORDER BY Category, Ordering";
 
