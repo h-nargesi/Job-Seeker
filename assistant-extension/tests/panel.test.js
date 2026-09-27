@@ -82,31 +82,18 @@ test('Enter in the job id field loads; invalid input only hints', async () => {
 	pressEnter(env, $(env, 'JobId'));
 	await settle(env);
 
-	assert.ok(env.chrome.runtime.sent.some(m => m.title === 'job' && m.params.jobId === 5));
+	assert.strictEqual($(env, 'JobsStatus').textContent, 'enter a job id');
+	assert.ok(!env.chrome.runtime.sent.some(m => m.title === 'job'));
 });
 
-test('FromPage reads the job id from the dashboard job-details URL', async () => {
-	const env = fresh({ jobId: 123, title: 'Dev', url: 'u', pendingProposal: false, resumeText: '' }, []);
-	env.chrome.tabs.activeUrl = 'http://localhost:8081/job/get/123';
-	await settle(env);
-
-	$(env, 'FromPage').click();
-	await settle(env);
-
-	assert.strictEqual($(env, 'JobId').value, '123');
-	assert.ok(env.chrome.runtime.sent.some(m => m.title === 'job' && m.params.jobId === 123));
-	assert.ok($(env, 'JobInfo').textContent.includes('#123'));
-});
-
-test('FromPage on a non-dashboard page only hints', async () => {
+test('the job id field strips non-digits on input', async () => {
 	const env = fresh(null, []);
 	await settle(env);
 
-	$(env, 'FromPage').click();
-	await settle(env);
+	$(env, 'JobId').value = '12a7b';
+	$(env, 'JobId').dispatchEvent(new env.sandbox.window.Event('input'));
 
-	assert.ok($(env, 'JobsStatus').textContent.includes('not a job details page'));
-	assert.ok(!env.chrome.runtime.sent.some(m => m.title === 'job'));
+	assert.strictEqual($(env, 'JobId').value, '127');
 });
 
 test('the panel holds no settings inputs — settings live only in the popup', async () => {

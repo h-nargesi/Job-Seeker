@@ -31,7 +31,8 @@
 	},
 	"permissions": [
 		"storage",
-		"sidePanel"
+		"sidePanel",
+		"tabs"
 	],
 	"side_panel": {
 		"default_path": "application/panel.html"

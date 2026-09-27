@@ -50,6 +50,9 @@ els.showMemory.addEventListener("click", function () { SwitchView(false); });
 els.jobId.addEventListener("keyup", function (event) {
     if (event.keyCode === 13) LoadJob();
 });
+els.jobId.addEventListener("input", function () {
+    els.jobId.value = els.jobId.value.replace(/\D+/g, "");
+});
 els.fromPage.addEventListener("click", FromPage);
 els.loadJob.addEventListener("click", LoadJob);
 els.openJob.addEventListener("click", OpenJob);
@@ -116,8 +119,6 @@ function TabRequest(tabId, message) {
 
 function ParseJobId(text) {
     const value = (text ?? "").trim();
-    const url = value.match(/job\/get\/(\d+)/);
-    if (url) return Number(url[1]);
     return /^\d+$/.test(value) ? Number(value) : null;
 }
 
@@ -161,6 +162,16 @@ function RenderJobInfo() {
     }
 }
 
+function JobIdFromUrl(url) {
+    if (typeof url !== "string" || !url) return null;
+    try {
+        const match = new URL(url).pathname.match(/^\/job\/get\/(\d+)\/?$/);
+        return match ? Number(match[1]) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
 async function FromPage() {
     let url;
     try {
@@ -170,13 +181,15 @@ async function FromPage() {
         url = undefined;
     }
 
-    const match = typeof url === "string" ? url.match(/job\/get\/(\d+)/) : null;
-    if (!match) {
-        els.jobsStatus.textContent = "current page is not a job details page";
+    const jobId = JobIdFromUrl(url);
+    if (!jobId) {
+        els.jobsStatus.textContent = typeof url === "string" && url
+            ? "current page is not a job details page"
+            : "cannot read the current tab url";
         return;
     }
 
-    els.jobId.value = match[1];
+    els.jobId.value = String(jobId);
     await LoadJob();
 }
 
