@@ -401,14 +401,35 @@ the agency's `Settings` JSON key `waiting`; changes apply without a restart.
 
 ## Dashboard — `ReportController`
 
-Razor-view pages (HTML), not JSON.
+Razor-view pages (HTML) plus the two stats JSON endpoints below.
 
 | Route | View | Content |
 |-------|------|---------|
-| `GET /` | `index` | Combined overview (trends + jobs + agencies) |
+| `GET /` | `index` | Combined overview (trends + jobs + agencies + D1–D3 charts) |
 | `GET /report/trends` | `trends` | Active/expiring workflow trends |
 | `GET /report/jobs?agencies=&countries=` | `jobs` | Ranked job list, filterable |
 | `GET /report/agencies` | `agencies` | Per-platform stats (counts, accept rates) |
+| `GET /report/stats?agencies=&countries=` | `stats` | Charts page S1–S10 (manual reload only) |
+
+### Stats JSON
+
+Chart data endpoints — see [`DASHBOARD_CHARTS.md`](DASHBOARD_CHARTS.md) for
+chart semantics. JSON only (camelCase); charts update datasets in place,
+never via HTML reloads.
+
+- **`GET /report/statsdaily`** — dashboard charts (D1–D3), last 30 days, no
+  filters; fetched every 15 s by the dashboard JS. Shape:
+  `{ generatedAt, days, dailyStacked[], velocity[], kpis }` — `dailyStacked`
+  = D1 7-segment rows per day, `velocity` = D2 `{ day, applied, rejected }`,
+  `kpis` = D3 avg disposition days + Attention backlog (count, avg age).
+- **`GET /report/statsfull?agencies=&countries=`** — stats-page charts
+  (S1–S10). Comma-separated id filters, same convention as `/report/jobs`;
+  `countries` does not apply to `agencyYield` (S1 has no Country dimension
+  — Agencies-only), every other member takes both filters. Shape:
+  `{ generatedAt, filters, agencyYield[], funnel, pipelineHealth[],
+  skillsGap, scoreHistograms, aiDonuts[], aiVerdictDonut,
+  competitiveness[], attentionAging, disposition }` — one member per chart
+  spec in `DASHBOARD_CHARTS.md` §4.
 
 ## Commands
 

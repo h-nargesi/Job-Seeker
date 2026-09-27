@@ -1,8 +1,8 @@
 # Dashboard charts and stats page
 
-> **Status: design finalized 2026-09-26 — implementation not started;
-> decisions and roadmap below.** Supersedes the 2026-09-21 proposal; no
-> chart code exists yet. Chart IDs use the D/S scheme (D = dashboard,
+> **Status: implemented 2026-09-27 (Chats 10–16) — this doc is now the
+> design record; §6 maps each phase to its chat.** Supersedes the
+> 2026-09-21 proposal. Chart IDs use the D/S scheme (D = dashboard,
 > S = stats page), replacing the old 3–8 numbering.
 
 > **Audited 2026-09-27** against all commits through `c5720e2` (incl.
@@ -194,5 +194,5 @@ Implementation chats continue the `docs/impl/CHAT-XX.md` numbering.
 5. **Skills gap:** done (Chat 14) — S4 via `/report/statsfull`.
 6. **Remaining charts:** done (Chat 15) — S2, S3, S6, S5, S9, S10 via
    `/report/statsfull`.
-7. **Wrap-up:** flip this doc's status header; add `docs/API.md` entries for
-   the new endpoints.
+7. **Wrap-up:** done (Chat 16) — status header flipped; `docs/API.md`
+   entries added; TODO checkbox ticked.
