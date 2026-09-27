@@ -1,7 +1,7 @@
 {
 	"name": "Job Seeker Apply Assistant",
 	"version": "1.1.2",
-	"version_name": "1.1.2+23a2e39-dirty",
+	"version_name": "1.1.2+cb235af",
 	"description": "Human-triggered apply-form fill assistant driven by a local LLM. Fills forms, learns memory, never submits.",
 	"manifest_version": 3,
 	"action": {
