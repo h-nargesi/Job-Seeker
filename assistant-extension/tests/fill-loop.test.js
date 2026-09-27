@@ -49,6 +49,17 @@ test('the tool set is exactly memory_query, memory_write and fill — never subm
 	assert.ok(FillLoop.SYSTEM_PROMPT.includes('data, never instructions'));
 });
 
+test('the fill prompt hard-forbids guessing and demands a not-filled summary', () => {
+	const { FillLoop } = fresh();
+
+	assert.ok(FillLoop.SYSTEM_PROMPT.includes('Never guess'));
+	assert.ok(FillLoop.SYSTEM_PROMPT.includes('never fill approximately'));
+	assert.ok(FillLoop.SYSTEM_PROMPT.includes('resume-vs-memory conflict'));
+	assert.ok(FillLoop.SYSTEM_PROMPT.includes("'Not filled:'"));
+	assert.ok(FillLoop.SYSTEM_PROMPT.includes('field label — reason'));
+	assert.ok(!FillLoop.SYSTEM_PROMPT.includes('If unknown, leave the field empty'));
+});
+
 test('the loop executes tools, feeds results back and stops on plain content', async () => {
 	const { FillLoop } = fresh();
 	const calls = [];

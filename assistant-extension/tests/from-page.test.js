@@ -23,10 +23,12 @@ function fresh(job = null, behavior = null) {
 
 	env.load('controllers/storage-handler.js');
 	env.load('application/theme.js');
-	env.load('application/dropdown.js');
 	env.load('controllers/background-messaging.js');
 	env.load('controllers/form-inventory.js');
+	env.load('controllers/lesson-loop.js');
+	env.load('application/dropdown.js');
 	env.load('application/compose-ui.js');
+	env.load('application/chat-ui.js');
 	env.load('application/panel.js');
 	return env;
 }

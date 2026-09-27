@@ -7,7 +7,8 @@
 > assistant code exists yet; `assistant-extension/` is a planned directory.
 > Amended 2026-09-18: the assistant runs on the AI station host (no LAN
 > leg). Amended 2026-09-19: phase-5 product close in
-> [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md).
+> [`AI_DECISION_LOG.md`](AI_DECISION_LOG.md). Amended 2026-09-27: the side
+> panel is restructured around a chat-driven Assistant tab (§8).
 
 ## 1. Stations: a browser on the AI station, a second extension
 
@@ -259,3 +260,40 @@ memory schema change; the human accepts (edits allowed before accept)
 or rejects each draft; only accepted drafts are applied, deterministically
 by field key during Fill, never by the model. Still no submit tool.
 Human still sends the form to the company.
+
+## 8. Panel restructure + chat-driven lessons (2026-09-27)
+
+The side panel has exactly two tabs — **Assistant** (mode override +
+badge, job controls, chat) and **Memory** (list / confirm / edit /
+delete, cap warning — nothing else). The standalone Compose section,
+the manual add-lesson form and the `#ChatLog` one-liner are deleted;
+the background `CHAT_LOG` audit keeps being written. All panel pickers
+use the Dropdown component (`application/dropdown.js`); no native
+`<select>` remains (the old "selects don't open" TODO is closed
+structurally).
+
+Every chat message goes to the model as a single-shot `lesson-extract`
+call (no multi-turn): the panel computes the mode (`EffectiveMode` +
+page state) and domain, the background fetches the form inventory only
+for `apply_form` and passes confirmed keys as data. The model returns a
+short conversational reply (user's language) plus zero or more proposed
+rows via the structured `propose_memory` tool; invalid rows (wrong
+scope for the mode, ranking key outside the closed list, empty
+field/value) are dropped client-side with a note in chat.
+
+A proposed row renders as an **accept-gated candidate card**: scope
+picker (mode-constrained), field key (closed-list picker for Ranking,
+free text otherwise), value, note — all editable inline. Accept
+persists through the existing `tip` route (`Kind = Tip`,
+`Confirmed = true`); Reject discards. Cards survive panel close in
+`chrome.storage.session` (`CHAT_TRANSCRIPT`, capped ~100 entries — text
+messages and cards only). Compose drafts render as a live block at the
+end of the chat stream, always rebuilt from `ComposeStore` (single
+source of truth — never copied into the transcript). Fill keeps its
+count line in the status area and posts the model summary — ending with
+its `Not filled:` list — into the chat as a report entry.
+
+`lesson-extract`, Fill and Compose serialize on an `LLM_BUSY` flag in
+the service worker (single-slot llama-server, 2026-09-24); a busy call
+answers `llm-busy`, surfaced as a chat error; a service-worker restart
+clearing the flag is accepted.

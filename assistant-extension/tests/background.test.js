@@ -125,6 +125,73 @@ test('chat lessons are stored confirmed and echoed into the session chat log', a
 	assert.strictEqual(log[0].fieldKey, 'visa_sponsorship');
 });
 
+test('lesson-extract fetches the inventory on apply forms and validates candidates', async () => {
+	const { sw } = await fresh();
+	routeCore(sw, {
+		memory: [{ memoryID: 3, scope: 'Apply', fieldKey: 'email', value: 'r@e.com', kind: 'Tip', agencyDomain: '*', confirmed: true }],
+	});
+
+	sw.fetchStub.route('v1/chat/completions', () => chatBody(chatResponse([
+		{ id: 'a', name: 'propose_memory', args: { scope: 'Apply', field_key: 'email', field_label: 'Email', value: 'r@e.com' } },
+		{ id: 'b', name: 'propose_memory', args: { scope: 'Ranking', field_key: 'visa_sponsorship', value: 'required' } },
+	], 'Noted.')));
+
+	const result = await deliver(sw.chrome, {
+		title: 'lesson-extract',
+		params: { text: 'my email is r@e.com', tabId: 1, mode: 'apply_form', domain: 'ats.example' },
+	});
+
+	assert.strictEqual(result.reply, 'Noted.');
+	assert.strictEqual(result.candidates.length, 1);
+	assert.strictEqual(result.candidates[0].scope, 'Apply');
+	assert.strictEqual(result.candidates[0].fieldKey, 'email');
+	assert.strictEqual(result.candidates[0].domain, 'ats.example');
+	assert.deepStrictEqual(jsonOf(result.dropped.map(d => d.reason)), ['scope not allowed in apply_form mode']);
+
+	const chat = JSON.parse(sw.fetchStub.calls.find(c => c.url.includes('v1/chat/completions')).data.body);
+	const user = chat.messages.find(m => m.role === 'user').content;
+	assert.ok(user.includes('["email"]'), 'inventory keys travel as data');
+	assert.ok(user.includes('Apply/email'), 'confirmed keys travel as data');
+
+	assert.ok(sw.chrome.tabs.messages.some(m => m.message.title === 'inventory'));
+});
+
+test('lesson-extract on job_detail skips the inventory fetch', async () => {
+	const { sw } = await fresh();
+	routeCore(sw);
+	sw.chrome.tabs.messages.length = 0;
+
+	sw.fetchStub.route('v1/chat/completions', () => chatBody(chatResponse([
+		{ id: 'a', name: 'propose_memory', args: { scope: 'Ranking', field_key: 'bogus_key', value: 'x' } },
+	], 'ok')));
+
+	const result = await deliver(sw.chrome, {
+		title: 'lesson-extract',
+		params: { text: 'no remote-only', tabId: 1, mode: 'job_detail', domain: 'localhost' },
+	});
+
+	assert.deepStrictEqual(jsonOf(result.dropped.map(d => d.reason)), ['ranking key outside the closed list']);
+	assert.ok(!sw.chrome.tabs.messages.some(m => m.message.title === 'inventory'));
+});
+
+test('llm calls serialize — a busy worker answers llm-busy', async () => {
+	const { sw } = await fresh();
+	routeCore(sw);
+	sw.sandbox.LLM_BUSY = true;
+
+	const fill = await deliver(sw.chrome, { title: 'fill', params: { tabId: 1, resumeText: '' } });
+	assert.deepStrictEqual(jsonOf(fill), { error: 'llm-busy' });
+
+	const compose = await deliver(sw.chrome, { title: 'compose', params: { tabId: 1, resumeText: '' } });
+	assert.deepStrictEqual(jsonOf(compose), { error: 'llm-busy' });
+
+	const lesson = await deliver(sw.chrome, { title: 'lesson-extract', params: { text: 'x', tabId: 1 } });
+	assert.deepStrictEqual(jsonOf(lesson), { error: 'llm-busy' });
+
+	assert.ok(!sw.fetchStub.calls.some(c => c.url.includes('v1/chat/completions')));
+	assert.strictEqual(sw.sandbox.LLM_BUSY, true);
+});
+
 test('flush-diffs drains the queued submit corrections as unconfirmed rows', async () => {
 	const { sw } = await fresh();
 	routeCore(sw);

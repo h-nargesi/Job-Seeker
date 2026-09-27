@@ -15,6 +15,7 @@ class StorageHandler {
     static THEME_DEFAULT = "system";
     static PENDING_DIFFS = "PENDING_DIFFS";
     static CHAT_LOG = "CHAT_LOG";
+    static CHAT_TRANSCRIPT = "CHAT_TRANSCRIPT";
     static COMPOSE_DRAFTS = "COMPOSE_DRAFTS";
     static LOG_BUFFER = "LOG_BUFFER";
 

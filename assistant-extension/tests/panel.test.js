@@ -21,15 +21,18 @@ function fresh(job = null, memory = [], behavior = null, chrome) {
 		if (message.title === 'job') return job ?? { error: 'http', status: 404 };
 		if (message.title === 'memory-list') return memory;
 		if (message.title === 'tip') return { id: 2 };
+		if (message.title === 'lesson-extract') return { reply: 'ok', candidates: [], dropped: [] };
 		return { ok: true };
 	});
 
 	env.load('controllers/storage-handler.js');
 	env.load('application/theme.js');
-	env.load('application/dropdown.js');
 	env.load('controllers/background-messaging.js');
 	env.load('controllers/form-inventory.js');
+	env.load('controllers/lesson-loop.js');
+	env.load('application/dropdown.js');
 	env.load('application/compose-ui.js');
+	env.load('application/chat-ui.js');
 	env.load('application/panel.js');
 	return env;
 }
@@ -116,15 +119,24 @@ test('the panel header falls back to version when version_name is absent', async
 	assert.strictEqual($(env, 'Version').textContent, manifest.version);
 });
 
-test('the panel holds no settings inputs — settings live only in the popup', async () => {
+test('the panel is two tabs — Assistant and Memory — with the chat inside Assistant', async () => {
 	const env = fresh(null, []);
 	await settle(env);
 
-	for (const id of ['ServerUrl', 'ApiKey', 'LlamaUrl', 'LlamaModel'])
-		assert.ok(!$(env, id), `${id} should not exist in the panel`);
+	assert.strictEqual($(env, 'ShowJobs').textContent, 'Assistant');
+	assert.strictEqual($(env, 'ShowMemory').textContent, 'Memory');
 
 	assert.ok($(env, 'ShowJobs').classList.contains('active'));
-	assert.ok(!$(env, 'ShowMemory').classList.contains('active'));
+	assert.ok($(env, 'ModeOverride').closest('#JobsView'), 'mode override lives inside the Assistant tab');
+	assert.ok($(env, 'ChatInput'));
+	assert.ok($(env, 'ChatSend'));
+	assert.ok($(env, 'ChatLogArea').contains($(env, 'ComposeList')), 'drafts render at the end of the chat stream');
+
+	assert.ok(!$(env, 'ComposeView'));
+	assert.ok(!$(env, 'ComposeStatus'));
+	assert.ok(!$(env, 'ChatLog'));
+	for (const id of ['TipScope', 'TipRankingKey', 'TipFieldKey', 'TipValue', 'TipNote', 'SaveTip'])
+		assert.ok(!$(env, id), `${id} should not exist`);
 
 	$(env, 'ShowMemory').click();
 	await settle(env);
@@ -133,6 +145,19 @@ test('the panel holds no settings inputs — settings live only in the popup', a
 	assert.ok(!$(env, 'ShowJobs').classList.contains('active'));
 	assert.strictEqual($(env, 'MemoryView').style.display, '');
 	assert.strictEqual($(env, 'JobsView').style.display, 'none');
+
+	$(env, 'ShowJobs').click();
+	await settle(env);
+
+	assert.strictEqual($(env, 'JobsView').style.display, '');
+});
+
+test('the panel holds no settings inputs — settings live only in the popup', async () => {
+	const env = fresh(null, []);
+	await settle(env);
+
+	for (const id of ['ServerUrl', 'ApiKey', 'LlamaUrl', 'LlamaModel'])
+		assert.ok(!$(env, id), `${id} should not exist in the panel`);
 });
 
 test('the panel follows theme changes made in the popup', async () => {
@@ -145,6 +170,19 @@ test('the panel follows theme changes made in the popup', async () => {
 	await settle(env);
 
 	assert.strictEqual(env.sandbox.document.documentElement.getAttribute('data-bs-theme'), 'dark');
+});
+
+test('mode override switches the badge and persists to session storage', async () => {
+	const env = fresh(null, []);
+	await settle(env);
+
+	const override = $(env, 'ModeOverride');
+	override.value = 'job_detail';
+	override.dispatchEvent(new env.sandbox.window.Event('change'));
+	await settle(env);
+
+	assert.ok($(env, 'Mode').textContent.includes('job_detail'));
+	assert.strictEqual(env.chrome.storage.session.state.get('MODE_OVERRIDE'), 'job_detail');
 });
 
 test('Applied is a human click that posts the entered id with no prior load', async () => {
@@ -200,6 +238,32 @@ test('Fill guards on the loaded job, then targets the active tab', async () => {
 	assert.deepStrictEqual(jsonOf(fill.params), { tabId: 1, jobId: 5, resumeText: 'RYAN-RESUME' });
 	assert.ok($(env, 'JobsStatus').textContent.includes('filled 3'));
 	assert.ok($(env, 'JobsStatus').textContent.includes('submit yourself'));
+});
+
+test('Fill posts the model summary with its not-filled list into the chat', async () => {
+	const job = { jobId: 5, title: 'Dev', url: 'u', pendingProposal: false, resumeText: 'RYAN-RESUME' };
+	const env = fresh(job, [], message => {
+		if (message.title === 'job') return job;
+		if (message.title === 'fill') return {
+			done: true,
+			filled: 2,
+			writes: 0,
+			content: 'Filled 2 fields.\nNot filled:\nEmail — not in resume or memory',
+		};
+		return { ok: true };
+	});
+	await settle(env);
+
+	$(env, 'JobId').value = '5';
+	$(env, 'LoadJob').click();
+	await settle(env);
+
+	$(env, 'FillJob').click();
+	await settle(env);
+
+	const chat = $(env, 'ChatEntries').textContent;
+	assert.ok(chat.includes('Not filled:'));
+	assert.ok(chat.includes('Email — not in resume or memory'));
 });
 
 test('Open and Compose guard on the loaded job too', async () => {
@@ -270,44 +334,7 @@ test('the memorycap warning appears beyond 500 confirmed rows', async () => {
 	assert.ok($(env, 'MemoryCap').textContent.includes('501'));
 });
 
-test('apply_form pages only accept apply-scope lessons', async () => {
-	const env = fresh(null, []);
-	await settle(env);
-
-	assert.deepStrictEqual(Array.from($(env, 'TipScope').options).map(o => o.value), ['Apply']);
-});
-
-test('job_detail mode offers ranking and delta lessons with the closed key list', async () => {
-	const env = fresh(null, []);
-	await settle(env);
-
-	const override = $(env, 'ModeOverride');
-	override.value = 'job_detail';
-	override.dispatchEvent(new env.sandbox.window.Event('change'));
-	await settle(env);
-
-	assert.deepStrictEqual(Array.from($(env, 'TipScope').options).map(o => o.value), ['Ranking', 'Resume']);
-	assert.ok($(env, 'Mode').textContent.includes('job_detail'));
-
-	$(env, 'TipScope').value = 'Ranking';
-	env.grab('RenderTipFields')();
-	assert.strictEqual($(env, 'TipRankingKey').style.display, '');
-	assert.ok(Array.from($(env, 'TipRankingKey').options).length >= 8);
-
-	$(env, 'TipValue').value = 'required';
-	$(env, 'SaveTip').click();
-	await settle(env);
-
-	const tip = env.chrome.runtime.sent.find(m => m.title === 'tip');
-	assert.strictEqual(tip.params.scope, 'Ranking');
-	assert.strictEqual(tip.params.fieldKey, 'visa_sponsorship');
-	assert.strictEqual(tip.params.domain, '*');
-	assert.strictEqual(tip.params.value, 'required');
-
-	assert.ok($(env, 'ChatLog').textContent.includes('saved Ranking lesson'));
-});
-
-test('Compose sends tab id and resume text, then renders pending drafts for review', async () => {
+test('Compose sends tab id and resume text, then renders pending drafts in the chat stream', async () => {
 	const job = { jobId: 5, title: 'Dev', url: 'u', pendingProposal: false, resumeText: 'RYAN-RESUME' };
 	const draft = {
 		id: 'ats.example::cover', domain: 'ats.example', fieldId: 'f2',
@@ -340,9 +367,12 @@ test('Compose sends tab id and resume text, then renders pending drafts for revi
 	assert.strictEqual(area.readOnly, false);
 	const labels = Array.from($(env, 'ComposeList').querySelectorAll('button')).map(b => b.textContent);
 	assert.deepStrictEqual(labels, ['Accept', 'Reject']);
+
+	assert.ok($(env, 'ChatLogArea').contains($(env, 'ComposeList')));
+	assert.ok($(env, 'ChatEntries').textContent.includes('drafts are pending'));
 });
 
-test('accepting a draft posts the edited text and shows the accepted state', async () => {
+test('accepting a draft posts the edited text and reports into the chat', async () => {
 	let current = {
 		id: 'ats.example::cover', domain: 'ats.example', fieldId: 'f2',
 		fieldKey: 'cover', fieldLabel: 'Cover letter', text: 'Dear team', accepted: false,
@@ -367,15 +397,18 @@ test('accepting a draft posts the edited text and shows the accepted state', asy
 	assert.strictEqual(accept.params.text, 'Edited draft');
 
 	assert.ok($(env, 'ComposeList').textContent.includes('accepted — Fill current tab applies it'));
-	assert.ok($(env, 'ComposeStatus').textContent.includes('Fill current tab'));
+	assert.ok($(env, 'ChatEntries').textContent.includes('accepted — press Fill current tab'));
 	assert.strictEqual($(env, 'ComposeList').querySelector('textarea').readOnly, true);
 });
 
-test('no panel control submits the form', async () => {
+test('no panel control submits the form — the chat Send is not a form submit', async () => {
 	const env = fresh(null, []);
 	await settle(env);
 
-	const labels = Array.from(env.sandbox.document.querySelectorAll('button')).map(b => b.textContent);
-	assert.ok(labels.length >= 5);
-	for (const label of labels) assert.ok(!/submit|send\b/i.test(label), label);
+	const buttons = Array.from(env.sandbox.document.querySelectorAll('button'));
+	assert.ok(buttons.length >= 5);
+	for (const button of buttons) {
+		if (button.id === 'ChatSend') continue;
+		assert.ok(!/submit|send\b/i.test(button.textContent), button.textContent);
+	}
 });

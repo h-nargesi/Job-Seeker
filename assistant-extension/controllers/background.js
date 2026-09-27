@@ -7,12 +7,24 @@ importScripts(
     "./llm-client.js",
     "./memory-tools.js",
     "./fill-loop.js",
-    "./compose-loop.js"
+    "./compose-loop.js",
+    "./lesson-loop.js"
 );
 
 const messaging = new CoreMessaging();
 
 self.TAB_TIMEOUT_MS = 30000;
+self.LLM_BUSY = false;
+
+async function WithLlm(run) {
+    if (self.LLM_BUSY) return { error: "llm-busy" };
+    self.LLM_BUSY = true;
+    try {
+        return await run();
+    } finally {
+        self.LLM_BUSY = false;
+    }
+}
 
 self.addEventListener("unhandledrejection", function (event) {
     AssistantLog.Write("error", "sw", "unhandledrejection: " + String(event.reason ?? ""));
@@ -49,9 +61,11 @@ async function Route(request) {
         case "flush-diffs":
             return FlushDiffs();
         case "fill":
-            return RunFill(request.params || {});
+            return WithLlm(function () { return RunFill(request.params || {}); });
         case "compose":
-            return RunCompose(request.params || {});
+            return WithLlm(function () { return RunCompose(request.params || {}); });
+        case "lesson-extract":
+            return WithLlm(function () { return RunLessonExtract(request.params || {}); });
         case "compose-list":
             return { drafts: await ComposeStore.All() };
         case "compose-accept":
@@ -210,6 +224,60 @@ async function ApplyAcceptedDrafts(tabId, domain, inventory) {
     }
 
     return drafted;
+}
+
+async function RunLessonExtract(params) {
+    if (!params.text || !String(params.text).trim()) return { error: "validation" };
+
+    const mode = params.mode === "job_detail" ? "job_detail" : "apply_form";
+
+    let inventoryKeys = [];
+    if (mode === "apply_form" && params.tabId) {
+        const state = await TabSend(params.tabId, { title: "inventory" });
+        if (state && !state.error && Array.isArray(state.inventory)) {
+            inventoryKeys = state.inventory
+                .map(function (item) { return item.fieldKey; })
+                .filter(Boolean);
+        }
+    }
+
+    const confirmedKeys = await ConfirmedKeys(mode);
+
+    AssistantLog.Write("info", "lesson", "extract (" + mode + ", " + (params.domain || "*") + ")");
+
+    const client = await LlmClient.Create();
+    const result = await LessonLoop.Run({
+        client: client,
+        text: params.text,
+        mode: mode,
+        domain: params.domain || "*",
+        inventoryKeys: inventoryKeys,
+        confirmedKeys: confirmedKeys,
+    });
+
+    if (result && result.error) {
+        AssistantLog.Write("error", "lesson", result.error);
+        return result;
+    }
+
+    AssistantLog.Write("info", "lesson",
+        "reply + " + result.candidates.length + " candidate(s), " + result.dropped.length + " dropped");
+    return result;
+}
+
+async function ConfirmedKeys(mode) {
+    try {
+        const rows = await messaging.MemoryList(mode === "job_detail" ? null : "Apply", true);
+        if (!Array.isArray(rows)) return [];
+
+        return rows
+            .filter(function (row) {
+                return mode !== "job_detail" || row.scope === "Ranking" || row.scope === "Resume";
+            })
+            .map(function (row) { return row.scope + "/" + row.fieldKey; });
+    } catch (e) {
+        return [];
+    }
 }
 
 function TabSend(tabId, message) {

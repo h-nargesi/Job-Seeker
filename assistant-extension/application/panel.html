@@ -8,14 +8,22 @@
 	<script src="../controllers/storage-handler.js"></script>
 	<script src="theme.js"></script>
 	<style>
+		html,
+		body {
+			height: 100%;
+		}
+
 		body {
 			min-width: 320px;
 			margin: 0;
 			padding: 8px;
 			font-size: 13px;
+			display: flex;
+			flex-direction: column;
 		}
 
-		.memory-row, .draft {
+		.memory-row,
+		.draft {
 			padding: 4px 0;
 			border-bottom: 1px solid var(--bs-border-color);
 		}
@@ -28,13 +36,40 @@
 			color: var(--bs-secondary-color);
 		}
 
+		#JobsView {
+			display: flex;
+			flex-direction: column;
+			flex: 1 1 auto;
+			min-height: 0;
+		}
+
+		#ChatLogArea {
+			flex: 1 1 auto;
+			min-height: 96px;
+			overflow-y: auto;
+			border: 1px solid var(--bs-border-color);
+			padding: 4px;
+		}
+
+		.chat-entry {
+			margin: 3px 0;
+			white-space: pre-wrap;
+			overflow-wrap: break-word;
+		}
+
+		.chat-card {
+			border: 1px solid var(--bs-border-color);
+			padding: 4px;
+			margin: 6px 0;
+		}
+
+		#ChatInput {
+			resize: none;
+		}
+
 		#MemoryList {
 			max-height: 260px;
 			overflow-y: auto;
-		}
-
-		#ChatLog {
-			font-size: 12px;
 		}
 
 		ul {
@@ -47,43 +82,49 @@
 <body>
 	<div class="d-flex justify-content-between align-items-center mb-1">
 		<span><b>Apply Assistant</b> <span id="Version" class="muted"></span></span>
-		<span id="Mode" class="muted"></span>
-	</div>
-	<div class="mb-2">
-	<label class="mb-1">Mode override:</label>
-	<div id="ModeOverride" class="dropdown">
-		<button type="button" class="form-select form-select-sm text-start">auto</button>
-		<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto">
-			<button type="button" class="dropdown-item" data-value="auto">auto</button>
-			<button type="button" class="dropdown-item" data-value="job_detail">job_detail</button>
-			<button type="button" class="dropdown-item" data-value="apply_form">apply_form</button>
-		</div>
-	</div>
 	</div>
 	<ul class="nav nav-tabs mb-2">
-		<li class="nav-item"><button id="ShowJobs" class="nav-link active">Jobs</button></li>
+		<li class="nav-item"><button id="ShowJobs" class="nav-link active">Assistant</button></li>
 		<li class="nav-item"><button id="ShowMemory" class="nav-link">Memory</button></li>
 	</ul>
 	<div id="JobsView" class="mb-2">
-		<label class="mb-1 d-block">Job id:
-			<input id="JobId" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
-				class="form-control form-control-sm" placeholder="job id" />
-		</label>
-		<button id="FromPage" class="btn btn-sm btn-outline-secondary">From page</button>
-		<button id="LoadJob" class="btn btn-sm btn-outline-secondary">Load</button>
-		<div id="JobInfo" class="mt-1"></div>
-		<div class="mt-1">
-			<button id="OpenJob" class="btn btn-sm btn-outline-secondary">Open</button>
-			<button id="MarkApplied" class="btn btn-sm btn-outline-secondary">Applied</button>
-			<button id="FillJob" class="btn btn-sm btn-outline-secondary">Fill current form</button>
-			<button id="ComposeJob" class="btn btn-sm btn-outline-secondary">Compose</button>
+		<div class="mb-2">
+			<label class="mb-1">Mode override:</label>
+			<div id="ModeOverride" class="dropdown">
+				<button type="button" class="form-select form-select-sm text-start">auto</button>
+				<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto">
+					<button type="button" class="dropdown-item" data-value="auto">auto</button>
+					<button type="button" class="dropdown-item" data-value="job_detail">job_detail</button>
+					<button type="button" class="dropdown-item" data-value="apply_form">apply_form</button>
+				</div>
+			</div>
+			<div id="Mode" class="muted"></div>
 		</div>
-		<div id="JobsStatus" class="muted"></div>
-	</div>
-	<div id="ComposeView" class="mb-2">
-		<b>Long-form drafts</b>
-		<span id="ComposeStatus" class="muted"></span>
-		<div id="ComposeList"></div>
+		<div class="mb-2">
+			<label class="mb-1 d-block">Job id:
+				<input id="JobId" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+					class="form-control form-control-sm" placeholder="job id" />
+			</label>
+			<button id="FromPage" class="btn btn-sm btn-outline-secondary">From page</button>
+			<button id="LoadJob" class="btn btn-sm btn-outline-secondary">Load</button>
+			<div id="JobInfo" class="mt-1"></div>
+			<div class="mt-1">
+				<button id="OpenJob" class="btn btn-sm btn-outline-secondary">Open</button>
+				<button id="MarkApplied" class="btn btn-sm btn-outline-secondary">Applied</button>
+				<button id="FillJob" class="btn btn-sm btn-outline-secondary">Fill current form</button>
+				<button id="ComposeJob" class="btn btn-sm btn-outline-secondary">Compose</button>
+			</div>
+			<div id="JobsStatus" class="muted"></div>
+		</div>
+		<div id="ChatLogArea" class="mb-2">
+			<div id="ChatEntries"></div>
+			<div id="ComposeList"></div>
+		</div>
+		<div class="d-flex gap-1 mb-2">
+			<textarea id="ChatInput" rows="2" class="form-control form-control-sm"
+				placeholder="teach a lesson ..."></textarea>
+			<button id="ChatSend" class="btn btn-sm btn-outline-secondary align-self-stretch">Send</button>
+		</div>
 	</div>
 	<div id="MemoryView" class="mb-2" style="display:none">
 		<button id="RefreshMemory" class="btn btn-sm btn-outline-secondary">Refresh</button>
@@ -98,30 +139,13 @@
 		</div>
 		<div id="MemoryCap" class="warn"></div>
 		<div id="MemoryList"></div>
-		<hr />
-		<b>Add lesson (tip, confirmed)</b>
-		<label class="mb-1 mt-1 d-block">Scope:
-			<div id="TipScope" class="dropdown">
-				<button type="button" class="form-select form-select-sm text-start"></button>
-				<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto"></div>
-			</div>
-		</label>
-		<label class="mb-1 d-block">Field:
-			<div id="TipRankingKey" class="dropdown" style="display:none">
-				<button type="button" class="form-select form-select-sm text-start"></button>
-				<div class="dropdown-menu w-100" style="max-height:240px;overflow-y:auto"></div>
-			</div>
-			<input id="TipFieldKey" type="text" class="form-control form-control-sm" placeholder="field key (name or label)" />
-		</label>
-		<label class="mb-1 d-block">Value: <input id="TipValue" type="text" class="form-control form-control-sm" /></label>
-		<label class="mb-1 d-block">Note: <input id="TipNote" type="text" class="form-control form-control-sm" /></label>
-		<button id="SaveTip" class="btn btn-sm btn-outline-secondary">Save lesson</button>
-		<div id="ChatLog" class="muted"></div>
 	</div>
 	<script src="../controllers/background-messaging.js"></script>
 	<script src="../controllers/form-inventory.js"></script>
-	<script src="compose-ui.js"></script>
+	<script src="../controllers/lesson-loop.js"></script>
 	<script src="dropdown.js"></script>
+	<script src="compose-ui.js"></script>
+	<script src="chat-ui.js"></script>
 	<script src="panel.js"></script>
 </body>
 

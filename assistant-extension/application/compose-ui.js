@@ -6,13 +6,12 @@ class ComposeUI {
 
     static Bind() {
         ComposeUI.els = {
-            status: document.getElementById("ComposeStatus"),
             list: document.getElementById("ComposeList"),
         };
     }
 
     static Status(text) {
-        if (ComposeUI.els.status) ComposeUI.els.status.textContent = text;
+        if (typeof ChatUi !== "undefined" && ChatUi.Report) ChatUi.Report(text);
     }
 
     static async Init() {
@@ -56,11 +55,7 @@ class ComposeUI {
     static Render(drafts) {
         if (!ComposeUI.els.list) return;
         ComposeUI.els.list.innerHTML = "";
-
-        if (!drafts.length) {
-            ComposeUI.els.list.textContent = "no drafts this session";
-            return;
-        }
+        if (!drafts.length) return;
 
         for (const draft of drafts) ComposeUI.els.list.appendChild(ComposeUI.Item(draft));
     }

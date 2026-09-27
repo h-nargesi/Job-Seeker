@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createEnv, link, deliver, jsonOf } from './helpers/env.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { createEnv, EXTENSION_ROOT, link, deliver, jsonOf } from './helpers/env.js';
 
 function composeEnv() {
 	const env = createEnv({});
@@ -233,4 +235,42 @@ test('compose without long-text fields answers no-long-fields', async () => {
 	const result = await deliver(sw.chrome, { title: 'compose', params: { tabId: 1, resumeText: 'Ryan' } });
 
 	assert.deepStrictEqual(jsonOf(result), { error: 'no-long-fields' });
+});
+
+test('drafts render into the chat drafts block and status lines become chat reports', async () => {
+	const env = createEnv({ dom: true, url: 'chrome-extension://panel/index.html' });
+	const html = fs.readFileSync(path.join(EXTENSION_ROOT, 'application/panel.html'), 'utf8');
+	env.sandbox.document.body.innerHTML = html.match(/<body>([\s\S]*)<\/body>/)[1].replace(/<script[\s\S]*?<\/script>/g, '');
+
+	const draft = {
+		id: 'ats.example::cover', domain: 'ats.example', fieldId: 'f2',
+		fieldKey: 'cover', fieldLabel: 'Cover letter', text: 'Dear team', accepted: false,
+	};
+	env.chrome.runtime.behavior = message => {
+		if (message.title === 'compose-list') return { drafts: [draft] };
+		return { ok: true };
+	};
+
+	env.load('controllers/storage-handler.js');
+	env.load('controllers/background-messaging.js');
+	env.load('controllers/form-inventory.js');
+	env.load('controllers/lesson-loop.js');
+	env.load('application/dropdown.js');
+	env.load('application/compose-ui.js');
+	env.load('application/chat-ui.js');
+	await env.settle();
+
+	await env.grab('ComposeUI').Init();
+	await env.grab('ChatUi').Init({ mode: () => 'apply_form', domain: () => 'ats.example' });
+	await env.settle();
+
+	const list = env.sandbox.document.getElementById('ComposeList');
+	assert.ok(env.sandbox.document.getElementById('ChatLogArea').contains(list));
+	assert.strictEqual(list.querySelector('textarea').value, 'Dear team');
+	assert.ok(list.textContent.includes('pending review'));
+
+	env.grab('ComposeUI').Status('drafts are pending');
+	await env.settle();
+
+	assert.ok(env.sandbox.document.getElementById('ChatEntries').textContent.includes('drafts are pending'));
 });
