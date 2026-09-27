@@ -4,7 +4,9 @@
 			"path": "."
 		}
 	],
-	"settings": {},
+	"settings": {
+		"dotnet.defaultSolution": "Job-Seeker.sln"
+	},
 	"launch": {
 		"version": "0.2.0",
 		"configurations": []
