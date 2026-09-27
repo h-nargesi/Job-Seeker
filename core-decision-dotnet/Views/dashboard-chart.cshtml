@@ -1,4 +1,37 @@
 <div id="dashboard-chart-body" class="mt-3">
-    <h6>Daily Overview</h6>
-    <div class="text-body-secondary small">Charts land in phase 3; refreshing stats every 15 s.</div>
+    <h6>Daily Overview <span class="text-body-secondary small">last 30 days · refreshes every 15 s</span></h6>
+    <div class="row g-2 mb-2">
+        <div class="col-sm-4">
+            <div class="card card-body py-2">
+                <div class="text-body-secondary small">Avg disposition time (D3)</div>
+                <div id="kpi-avg-disposition" class="fs-5">&mdash;</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card card-body py-2">
+                <div class="text-body-secondary small">Attention backlog (D3)</div>
+                <div id="kpi-attention-backlog" class="fs-5">&mdash;</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card card-body py-2">
+                <div class="text-body-secondary small">Attention avg age (D3)</div>
+                <div id="kpi-attention-age" class="fs-5">&mdash;</div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-2">
+        <div class="col-lg-8">
+            <div class="card card-body py-2">
+                <div class="text-body-secondary small mb-1">Daily jobs by state (D1)</div>
+                <div style="height: 260px;"><canvas id="daily-stacked-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card card-body py-2">
+                <div class="text-body-secondary small mb-1">Decision velocity per day (D2)</div>
+                <div style="height: 260px;"><canvas id="velocity-chart"></canvas></div>
+            </div>
+        </div>
+    </div>
 </div>

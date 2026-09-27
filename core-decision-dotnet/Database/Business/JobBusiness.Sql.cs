@@ -168,6 +168,37 @@ UPDATE Job SET Html = null, Content = null WHERE RegTime < @date AND State IN (
     '{nameof(JobState.NotApprovedAI)}',
     '{nameof(JobState.AIError)}')";
 
+        private readonly static string Q_STATS_DAILY_STACKED = $@"
+SELECT SUBSTR(RegTime, 1, 10) AS Day
+     , SUM(CASE WHEN State = '{nameof(JobState.Saved)}' THEN 1 ELSE 0 END) AS Saved
+     , SUM(CASE WHEN State = '{nameof(JobState.Revaluation)}' THEN 1 ELSE 0 END) AS Revaluation
+     , SUM(CASE WHEN State IN ('{nameof(JobState.NotApprovedRegex)}', '{nameof(JobState.NotApprovedAI)}') THEN 1 ELSE 0 END) AS GateRejected
+     , SUM(CASE WHEN State IN ('{nameof(JobState.AiPending)}', '{nameof(JobState.AIError)}') THEN 1 ELSE 0 END) AS InAi
+     , SUM(CASE WHEN State = '{nameof(JobState.Attention)}' THEN 1 ELSE 0 END) AS Attention
+     , SUM(CASE WHEN State = '{nameof(JobState.Applied)}' THEN 1 ELSE 0 END) AS Applied
+     , SUM(CASE WHEN State = '{nameof(JobState.Rejected)}' THEN 1 ELSE 0 END) AS Rejected
+FROM Job
+WHERE RegTime >= @from
+GROUP BY SUBSTR(RegTime, 1, 10)
+ORDER BY Day";
+
+        private readonly static string Q_STATS_VELOCITY = $@"
+SELECT SUBSTR(ModifiedOn, 1, 10) AS Day
+     , SUM(CASE WHEN State = '{nameof(JobState.Applied)}' THEN 1 ELSE 0 END) AS Applied
+     , SUM(CASE WHEN State = '{nameof(JobState.Rejected)}' THEN 1 ELSE 0 END) AS Rejected
+FROM Job
+WHERE State IN ('{nameof(JobState.Applied)}', '{nameof(JobState.Rejected)}') AND ModifiedOn >= @from
+GROUP BY SUBSTR(ModifiedOn, 1, 10)
+ORDER BY Day";
+
+        private readonly static string Q_STATS_KPIS = $@"
+SELECT AVG(CASE WHEN State IN ('{nameof(JobState.Applied)}', '{nameof(JobState.Rejected)}')
+        THEN JulianDay(ModifiedOn) - JulianDay(COALESCE(PublishedAt, RegTime)) END) AS AvgDispositionDays
+     , COALESCE(SUM(CASE WHEN State = '{nameof(JobState.Attention)}' THEN 1 ELSE 0 END), 0) AS AttentionBacklog
+     , AVG(CASE WHEN State = '{nameof(JobState.Attention)}'
+        THEN JulianDay(@now) - JulianDay(COALESCE(PublishedAt, RegTime)) END) AS AttentionAvgAgeDays
+FROM Job";
+
         private const string Q_VACUUM = "vacuum;";
     }
 }

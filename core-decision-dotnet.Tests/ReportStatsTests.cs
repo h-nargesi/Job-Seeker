@@ -5,7 +5,7 @@ namespace Photon.JobSeeker.Tests;
 public class ReportStatsTests
 {
     [Fact]
-    public void StatsDaily_serves_envelope_with_null_sections()
+    public void StatsDaily_returns_zero_filled_sections_for_last_30_days()
     {
         using var cp = new CheckpointDatabase();
         var before = DateTime.Now.AddMinutes(-1);
@@ -15,10 +15,35 @@ public class ReportStatsTests
         var ok = Assert.IsType<OkObjectResult>(result);
         var envelope = Assert.IsType<StatsDailyResponse>(ok.Value!);
         Assert.Equal(30, envelope.Days);
-        Assert.Null(envelope.DailyStacked);
-        Assert.Null(envelope.Velocity);
-        Assert.Null(envelope.Kpis);
         Assert.InRange(envelope.GeneratedAt, before, DateTime.Now.AddMinutes(1));
+
+        Assert.NotNull(envelope.DailyStacked);
+        Assert.NotNull(envelope.Velocity);
+        Assert.NotNull(envelope.Kpis);
+
+        Assert.Equal(30, envelope.DailyStacked.Count);
+        Assert.Equal(30, envelope.Velocity.Count);
+        Assert.Equal(DateTime.Now.ToString("yyyy-MM-dd"), envelope.DailyStacked[^1].Day);
+        Assert.Equal(DateTime.Now.ToString("yyyy-MM-dd"), envelope.Velocity[^1].Day);
+        Assert.All(envelope.DailyStacked, row =>
+        {
+            Assert.Equal(0, row.Saved);
+            Assert.Equal(0, row.Revaluation);
+            Assert.Equal(0, row.GateRejected);
+            Assert.Equal(0, row.InAi);
+            Assert.Equal(0, row.Attention);
+            Assert.Equal(0, row.Applied);
+            Assert.Equal(0, row.Rejected);
+        });
+        Assert.All(envelope.Velocity, row =>
+        {
+            Assert.Equal(0, row.Applied);
+            Assert.Equal(0, row.Rejected);
+        });
+
+        Assert.Equal(0, envelope.Kpis.AttentionBacklog);
+        Assert.Null(envelope.Kpis.AvgDispositionDays);
+        Assert.Null(envelope.Kpis.AttentionAvgAgeDays);
     }
 
     [Fact]

@@ -26,7 +26,11 @@ public partial class ReportController
     {
         try
         {
-            return Ok(new StatsDailyResponse(DateTime.Now, StatsDailyDays, null, null, null));
+            var daily = database.Job.StatsDailyStacked(StatsDailyDays);
+            var velocity = database.Job.StatsVelocity(StatsDailyDays);
+            var kpis = database.Job.StatsKpis();
+
+            return Ok(new StatsDailyResponse(DateTime.Now, StatsDailyDays, daily, velocity, kpis));
         }
         catch (Exception ex)
         {

@@ -23,14 +23,19 @@ button row.
 ```
 / (dashboard)                     /report/stats (new page)
 ┌───────────────────────┐        ┌─────────────────────────────────┐
-│ Job List   (existing) │        │ D3 KPI tiles · D2 velocity      │
+│ Job List   (existing) │        │ S7 funnel · S1 yield · S8 AI    │
 │ Trend List (existing) │        ├─────────────────────────────────┤
-│ ...                   │        │ S7 funnel · S1 yield · S8 AI    │
-├───────────────────────┤        ├─────────────────────────────────┤
-│ D1 daily stacked bar  │        │ S2 histograms · S3 donuts ·     │
-│ (auto-refresh 15 s)   │        │ S4 skills · S5 · S6 · S9 · S10  │
-└───────────────────────┘        └─────────────────────────────────┘
+│ ...                   │        │ S2 histograms · S3 donuts ·     │
+├───────────────────────┤        │ S4 skills · S5 · S6 · S9 · S10  │
+│ D3 KPI tiles · D2     │        └─────────────────────────────────┘
+│ velocity lines · D1   │
+│ daily stacked bar     │
+│ (auto-refresh 15 s)   │
+└───────────────────────┘
 ```
+
+All D-charts (D1–D3) live on the dashboard (§3/§4); the stats page hosts
+only S-charts.
 
 Rationale: load weight (Chart.js only on the stats page), page roles
 (real-time control vs periodic analysis), and the `index.cshtml` budget
@@ -176,15 +181,15 @@ normalized by `AiCurrency`/`AiPeriod`) — explicitly declined by the user.
   with `EXPLAIN QUERY PLAN` on `Q_STATS_*`, `Q_INDEX`, and the monitor
   queries once real data accumulates.
 
-## 6. Implementation roadmap (not started)
+## 6. Implementation roadmap
 
 Priority order: D3, D1, D2, S7, S1, S8, S4, S2, S3, S6, S5, S9, S10.
 Implementation chats continue the `docs/impl/CHAT-XX.md` numbering.
 
-1. **Data foundations:** ModifiedOn guard + local-time writes; xUnit tests
-   following `JobTimestampsTests.cs` / `CheckpointDatabase.cs`.
-2. **Stats infrastructure:** vendored Chart.js, endpoints, views, DTO models.
-3. **Dashboard:** D3, D1, D2 + 15 s refresh.
+1. **Data foundations:** done (Chat 10) — ModifiedOn guard + local-time writes.
+2. **Stats infrastructure:** done (Chat 11) — vendored Chart.js, endpoints,
+   views, DTO models.
+3. **Dashboard:** done (Chat 12) — D3, D1, D2 + 15 s refresh + stats indexes.
 4. **Stats page:** S7, S1, S8.
 5. **Skills gap:** S4.
 6. **Remaining:** S2, S3, S6, S5, S9, S10.
