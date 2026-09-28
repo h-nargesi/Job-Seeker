@@ -61,7 +61,7 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
             c => c.page_action is PageAction.go or PageAction.open or PageAction.click);
         if (index < 0) return;
 
-        var delta = (int)Math.Round(pacing * 0.25);
+        var delta = (int)Math.Round(pacing * 0.3);
         var miliseconds = pacing - delta + pacing_random.Next(2 * delta + 1);
 
         Log.Debug("Pacing wait ({0}): {1} ms before command #{2}", agency_name, miliseconds, index);
