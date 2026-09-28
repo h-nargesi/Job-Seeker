@@ -177,7 +177,7 @@ UPDATE Job SET Html = null, Content = null WHERE RegTime < @date AND State IN (
     '{nameof(JobState.AIError)}')";
 
         private readonly static string Q_STATS_DAILY_STACKED = $@"
-SELECT SUBSTR(RegTime, 1, 10) AS Day
+SELECT Day
      , SUM(CASE WHEN State = '{nameof(JobState.Saved)}' THEN 1 ELSE 0 END) AS Saved
      , SUM(CASE WHEN State = '{nameof(JobState.Revaluation)}' THEN 1 ELSE 0 END) AS Revaluation
      , SUM(CASE WHEN State IN ('{nameof(JobState.NotApprovedRegex)}', '{nameof(JobState.NotApprovedAI)}') THEN 1 ELSE 0 END) AS GateRejected
@@ -185,9 +185,15 @@ SELECT SUBSTR(RegTime, 1, 10) AS Day
      , SUM(CASE WHEN State = '{nameof(JobState.Attention)}' THEN 1 ELSE 0 END) AS Attention
      , SUM(CASE WHEN State = '{nameof(JobState.Applied)}' THEN 1 ELSE 0 END) AS Applied
      , SUM(CASE WHEN State = '{nameof(JobState.Rejected)}' THEN 1 ELSE 0 END) AS Rejected
-FROM Job
-WHERE RegTime >= @from
-GROUP BY SUBSTR(RegTime, 1, 10)
+FROM (
+    SELECT State, SUBSTR(RealTime, 1, 10) AS Day
+    FROM (
+        SELECT State, COALESCE(PublishedAt, RegTime) AS RealTime
+        FROM Job
+    ) AS Job
+    WHERE RealTime >= @from
+) AS Job
+GROUP BY Day
 ORDER BY Day";
 
         private readonly static string Q_STATS_VELOCITY = $@"
