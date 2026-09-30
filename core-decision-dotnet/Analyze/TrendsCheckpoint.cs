@@ -333,8 +333,6 @@ namespace Photon.JobSeeker
                         var url = database.Job.GetFirstJob(agency.ID);
                         if (url == null) break;
 
-                        url = agency.NormalizeJobUrl(url);
-
                         if (result.AgencyID == agency.ID && result.Type == type)
                         {
                             commands.Add(Command.Go(url));
