@@ -6,6 +6,8 @@ class Indeed : Agency
 {
     public override string Name => "Indeed";
 
+    public override int DefaultWaiting => 6000;
+
     public override string BaseUrl => CurrentMethod.Url.TrimEnd('/');
 
     public override string SearchLink => CurrentMethod.Url + "jobs?q=" + SearchTitle;
