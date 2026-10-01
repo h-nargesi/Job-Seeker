@@ -5,7 +5,26 @@
     --blue-color: rgb(0, 128, 255);
     --main-color: rgb(10, 10, 10);
     --back-color: rgb(150, 150, 150);
+    --job-state-saved: #6c757d;
+    --job-state-revaluation: #adb5bd;
+    --job-state-not-approved-regex: #ffc107;
+    --job-state-not-approved-ai: #fd7e14;
+    --job-state-ai-pending: #0d6efd;
+    --job-state-ai-error: #6f42c1;
+    --job-state-attention: #0dcaf0;
+    --job-state-applied: #198754;
+    --job-state-rejected: #dc3545;
 }
+
+.job-state-saved { color: var(--job-state-saved); }
+.job-state-revaluation { color: var(--job-state-revaluation); }
+.job-state-not-approved-regex { color: var(--job-state-not-approved-regex); }
+.job-state-not-approved-ai { color: var(--job-state-not-approved-ai); }
+.job-state-ai-pending { color: var(--job-state-ai-pending); }
+.job-state-ai-error { color: var(--job-state-ai-error); }
+.job-state-attention { color: var(--job-state-attention); }
+.job-state-applied { color: var(--job-state-applied); }
+.job-state-rejected { color: var(--job-state-rejected); }
 
 [data-bs-theme="dark"] {
     --high-ground: rgb(72, 60, 72);

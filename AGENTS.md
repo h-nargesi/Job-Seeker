@@ -209,6 +209,11 @@ Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **Reflection-discovered plugins.** `TypeHelper.GetSubTypes(typeof(Agency))`
   finds every platform class automatically. Adding a platform = adding a class;
   no registration list to edit. Same for `Page` subclasses per platform.
+- **Job-state colors live once in `wwwroot/style/color.css`**
+  (`--job-state-*` vars + `.job-state-*` classes). Job list/detail use
+  `JobStateExtensions.CssClass()`; charts read the vars via
+  `wwwroot/scripts/job-state-color.js`; row tints derive via `color-mix` —
+  never hardcode per-state hexes.
 - **Extension pages: remote CSS only, never remote JS.** MV3 CSP
   (`script-src 'self'`) blocks CDN scripts in `agent-extension` /
   `assistant-extension` pages, while remote stylesheets are allowed. Use the

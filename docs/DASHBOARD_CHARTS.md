@@ -160,6 +160,12 @@ normalized by `AiCurrency`/`AiPeriod`) — explicitly declined by the user.
   `ReportController.Jobs`). Auth: existing middleware already covers these
   paths (dashboard role) — no auth changes.
 - **Chart.js:** vendored, pinned v4 UMD under `wwwroot/scripts/lib/` — no CDN.
+- **State colors:** single source of truth is `wwwroot/style/color.css`
+  (`--job-state-*` vars + `.job-state-*` classes). Job list/detail use
+  `JobStateExtensions.CssClass()`; every chart reads the vars at build time
+  via `wwwroot/scripts/job-state-color.js` (`job_state_color('aiPending')`) —
+  never hardcode per-state hexes in views or chart scripts. Row tints in
+  `job-table.css` derive from the same vars via `color-mix`.
 - **Refresh:** dashboard charts auto-refresh every 15 s (same pattern as
   `server-operations.js` `setInterval(..., 15000)`); the stats page reloads
   manually only. Chart refresh fetches **JSON data only** — the chart JS

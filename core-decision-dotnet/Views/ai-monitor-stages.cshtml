@@ -2,17 +2,17 @@
 @model MonitorViewModel
 
 @{
-    var ChartStates = new (string Label, string Color, Func<MonitorStageRow, long> Count)[]
+    var ChartStates = new (string Label, string State, Func<MonitorStageRow, long> Count)[]
     {
-        ("Saved", "#6c757d", row => row.Saved),
-        ("Revaluation", "#fd7e14", row => row.Revaluation),
-        ("NotApprovedRegex", "#6f42c1", row => row.NotApprovedRegex),
-        ("AiPending", "#0dcaf0", row => row.AiPending),
-        ("NotApprovedAI", "#d63384", row => row.NotApprovedAI),
-        ("AIError", "#dc3545", row => row.AIError),
-        ("Attention", "#ffc107", row => row.Attention),
-        ("Rejected", "#b02a37", row => row.Rejected),
-        ("Applied", "#198754", row => row.Applied),
+        ("Saved", "saved", row => row.Saved),
+        ("Revaluation", "revaluation", row => row.Revaluation),
+        ("NotApprovedRegex", "notApprovedRegex", row => row.NotApprovedRegex),
+        ("AiPending", "aiPending", row => row.AiPending),
+        ("NotApprovedAI", "notApprovedAI", row => row.NotApprovedAI),
+        ("AIError", "aiError", row => row.AIError),
+        ("Attention", "attention", row => row.Attention),
+        ("Rejected", "rejected", row => row.Rejected),
+        ("Applied", "applied", row => row.Applied),
     };
     var StagesChart = new
     {
@@ -20,7 +20,7 @@
         states = ChartStates.Select(state => new
         {
             label = state.Label,
-            color = state.Color,
+            state = state.State,
             counts = Model.Stages.Select(state.Count).ToList()
         }).ToList()
     };

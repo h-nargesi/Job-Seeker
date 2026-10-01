@@ -55,7 +55,7 @@ function monitor_make_stages_chart(data) {
             datasets: (data.states ?? []).map(state => ({
                 label: state.label,
                 data: state.counts ?? [],
-                backgroundColor: state.color,
+                backgroundColor: job_state_color(state.state),
                 stack: 'jobs',
                 borderWidth: 0
             }))

@@ -3,18 +3,18 @@ const dashboard_chart_body = document.getElementById('dashboard-chart-body');
 const DASHBOARD_CHART_REFRESH_MS = 15000;
 
 const DAILY_SEGMENTS = [
-    { key: 'saved', label: 'Saved', color: '#6c757d' },
-    { key: 'revaluation', label: 'Revaluation', color: '#fd7e14' },
-    { key: 'gateRejected', label: 'Gate-rejected', color: '#6f42c1' },
-    { key: 'inAi', label: 'In-AI', color: '#0dcaf0' },
-    { key: 'attention', label: 'Attention', color: '#ffc107' },
-    { key: 'applied', label: 'Applied', color: '#198754' },
-    { key: 'rejected', label: 'Rejected', color: '#dc3545' }
+    { key: 'saved', state: 'saved', label: 'Saved' },
+    { key: 'revaluation', state: 'revaluation', label: 'Revaluation' },
+    { key: 'gateRejected', state: 'notApprovedRegex', label: 'Gate-rejected' },
+    { key: 'inAi', state: 'aiPending', label: 'In-AI' },
+    { key: 'attention', state: 'attention', label: 'Attention' },
+    { key: 'applied', state: 'applied', label: 'Applied' },
+    { key: 'rejected', state: 'rejected', label: 'Rejected' }
 ];
 
 const VELOCITY_SERIES = [
-    { key: 'applied', label: 'Applied', color: '#198754' },
-    { key: 'rejected', label: 'Rejected', color: '#dc3545' }
+    { key: 'applied', state: 'applied', label: 'Applied' },
+    { key: 'rejected', state: 'rejected', label: 'Rejected' }
 ];
 
 let loading_stats_daily = false;
@@ -62,7 +62,7 @@ function make_daily_chart() {
             datasets: DAILY_SEGMENTS.map(segment => ({
                 label: segment.label,
                 data: [],
-                backgroundColor: segment.color,
+                backgroundColor: job_state_color(segment.state),
                 stack: 'jobs',
                 borderWidth: 0
             }))
@@ -82,8 +82,8 @@ function make_velocity_chart() {
             datasets: VELOCITY_SERIES.map(series => ({
                 label: series.label,
                 data: [],
-                borderColor: series.color,
-                backgroundColor: series.color,
+                borderColor: job_state_color(series.state),
+                backgroundColor: job_state_color(series.state),
                 tension: 0.25,
                 pointRadius: 2,
                 borderWidth: 2

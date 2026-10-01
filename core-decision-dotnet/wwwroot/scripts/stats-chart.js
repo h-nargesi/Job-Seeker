@@ -1,15 +1,15 @@
 const stats_charts_body = document.getElementById('stats-charts-body');
 
 const FUNNEL_STAGES = [
-    { key: 'saved', label: 'Saved', color: '#6c757d' },
-    { key: 'analyzed', label: 'Analyzed', color: '#0dcaf0' },
-    { key: 'attention', label: 'Attention', color: '#ffc107' },
-    { key: 'applied', label: 'Applied', color: '#198754' }
+    { key: 'saved', state: 'saved', label: 'Saved' },
+    { key: 'analyzed', state: 'aiPending', label: 'Analyzed' },
+    { key: 'attention', state: 'attention', label: 'Attention' },
+    { key: 'applied', state: 'applied', label: 'Applied' }
 ];
 
 const HEALTH_SERIES = [
-    { key: 'aiPending', label: 'AiPending', color: '#0dcaf0' },
-    { key: 'aiError', label: 'AIError', color: '#dc3545' }
+    { key: 'aiPending', state: 'aiPending', label: 'AiPending' },
+    { key: 'aiError', state: 'aiError', label: 'AIError' }
 ];
 
 const YIELD_SERIES = [
@@ -69,7 +69,7 @@ function make_funnel_chart() {
             datasets: [{
                 label: 'Jobs',
                 data: [],
-                backgroundColor: FUNNEL_STAGES.map(stage => stage.color),
+                backgroundColor: FUNNEL_STAGES.map(stage => job_state_color(stage.state)),
                 borderWidth: 0
             }]
         },
@@ -124,7 +124,7 @@ function make_health_chart() {
             datasets: HEALTH_SERIES.map(series => ({
                 label: series.label,
                 data: [],
-                backgroundColor: series.color,
+                backgroundColor: job_state_color(series.state),
                 borderWidth: 0
             }))
         },

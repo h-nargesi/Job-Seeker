@@ -1,22 +1,25 @@
-tr.NotApprovedRegex,
+tr.NotApprovedRegex {
+    background-color: color-mix(in srgb, var(--job-state-not-approved-regex) 12%, transparent);
+}
+
 tr.NotApprovedAI {
-    background-color: rgba(255,0,0,0.1);
+    background-color: color-mix(in srgb, var(--job-state-not-approved-ai) 12%, transparent);
 }
 
 tr.Applied {
-    background-color: rgba(0,255,0,0.2);
+    background-color: color-mix(in srgb, var(--job-state-applied) 18%, transparent);
 }
 
 tr.Rejected {
-    background-color: rgba(128,0,128,0.2);
+    background-color: color-mix(in srgb, var(--job-state-rejected) 15%, transparent);
 }
 
 tr.Saved {
-    background-color: rgba(255,255,0,0.1);
+    background-color: color-mix(in srgb, var(--job-state-saved) 12%, transparent);
 }
 
 tr.AiPending {
-    background-color: rgba(0,123,255,0.1);
+    background-color: color-mix(in srgb, var(--job-state-ai-pending) 10%, transparent);
 }
 
 thead {

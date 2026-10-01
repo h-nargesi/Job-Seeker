@@ -4,15 +4,15 @@ public static class JobStateExtensions
 {
     public static string CssClass(this JobState state) => state switch
     {
-        JobState.Saved => "text-secondary",
-        JobState.Revaluation => "text-secondary",
-        JobState.NotApprovedRegex => "text-warning",
-        JobState.AiPending => "text-primary",
-        JobState.NotApprovedAI => "text-warning",
-        JobState.AIError => "text-danger",
-        JobState.Attention => "text-info",
-        JobState.Rejected => "text-danger",
-        JobState.Applied => "text-success",
-        _ => "text-secondary",
+        JobState.Saved => "job-state-saved",
+        JobState.Revaluation => "job-state-revaluation",
+        JobState.NotApprovedRegex => "job-state-not-approved-regex",
+        JobState.AiPending => "job-state-ai-pending",
+        JobState.NotApprovedAI => "job-state-not-approved-ai",
+        JobState.AIError => "job-state-ai-error",
+        JobState.Attention => "job-state-attention",
+        JobState.Rejected => "job-state-rejected",
+        JobState.Applied => "job-state-applied",
+        _ => "job-state-saved",
     };
 }
