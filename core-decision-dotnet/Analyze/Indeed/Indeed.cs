@@ -15,9 +15,9 @@ class Indeed : Agency
     public override ReadinessRule[] ReadinessRules =>
     [
         new ReadinessRule(IndeedPage.reg_job_view.ToString(),
-            ["div.jobsearch-ViewJobLayout-jobDisplay"]),
+            ["[data-testid='vj-job-title']"]),
         new ReadinessRule(IndeedPage.reg_search_url.ToString(),
-            ["div.jobsearch-ResultsList", "#resultsCol"]),
+            ["#mosaic-jobResults", "role='navigation'"]),
     ];
 
     protected override void RunningSearchingMethodChanged(int value)
