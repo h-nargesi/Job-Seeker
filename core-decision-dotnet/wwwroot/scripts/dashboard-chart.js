@@ -4,13 +4,13 @@ const DASHBOARD_CHART_REFRESH_MS = 15000;
 
 const DAILY_SEGMENTS = [
     { key: 'saved', state: 'saved', label: 'Saved' },
+    { key: 'failed', state: 'failed', label: 'Failed' },
     { key: 'revaluation', state: 'revaluation', label: 'Revaluation' },
     { key: 'gateRejected', state: 'notApprovedRegex', label: 'Gate-rejected' },
     { key: 'inAi', state: 'aiPending', label: 'In-AI' },
     { key: 'attention', state: 'attention', label: 'Attention' },
-    { key: 'applied', state: 'applied', label: 'Applied' },
     { key: 'rejected', state: 'rejected', label: 'Rejected' },
-    { key: 'failed', state: 'failed', label: 'Failed' }
+    { key: 'applied', state: 'applied', label: 'Applied' }
 ];
 
 const VELOCITY_SERIES = [

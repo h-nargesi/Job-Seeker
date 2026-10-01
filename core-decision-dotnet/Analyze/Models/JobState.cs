@@ -3,13 +3,13 @@
 public enum JobState
 {
     Saved = 1,
+    Failed,
     Revaluation,
     NotApprovedRegex,
     AiPending,
-    NotApprovedAI,
     AIError,
+    NotApprovedAI,
     Attention,
     Rejected,
     Applied,
-    Failed,
 }
