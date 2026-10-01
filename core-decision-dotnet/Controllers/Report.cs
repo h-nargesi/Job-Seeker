@@ -98,21 +98,23 @@ public partial class ReportController(Analyzer analyzer, Database database) : Co
 
     private AgencyDashboardItem[] GetAgencies(Database database)
     {
-        var report = database.Agency.JobRateReport();
-
-        return report.Select(r =>
+        return database.Agency.JobStateReport()
+            .GroupBy(r => r.AgencyID)
+            .Select(g =>
             {
-                analyzer.AgenciesByID.TryGetValue(r.AgencyID, out Agency? agency);
+                analyzer.AgenciesByID.TryGetValue(g.Key, out Agency? agency);
+                var counts = new Dictionary<JobState, long>();
+                foreach (var row in g)
+                {
+                    if (row.State != null && Enum.TryParse<JobState>(row.State, out var state))
+                        counts[state] = counts.TryGetValue(state, out var count) ? count + row.Jobs : row.Jobs;
+                }
                 return new AgencyDashboardItem(
-                    r.AgencyID,
-                    Name: r.Title,
+                    g.Key,
+                    Name: g.First().Title,
                     SearchLink: agency?.SearchLink,
-                    r.JobCount,
-                    r.Analyzed,
-                    r.Accepted,
-                    r.Applied,
-                    r.AnalyzingRate,
-                    r.AcceptingRate,
+                    JobCount: counts.Values.Sum(),
+                    StateCounts: counts,
                     Seeking: agency != null && agency.IsActiveSeeking,
                     Analyzing: agency != null && agency.IsActiveAnalyzing,
                     Running: agency == null ? null : agency.Status.HasFlag(AgencyStatus.ActiveSeeking) ? agency.CurrentMethodIndex : (int?)-1,
@@ -120,6 +122,5 @@ public partial class ReportController(Analyzer analyzer, Database database) : Co
             })
             .OrderBy(r => r.AgencyID)
             .ToArray();
-
     }
 }

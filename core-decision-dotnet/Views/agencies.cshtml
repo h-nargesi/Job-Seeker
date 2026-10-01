@@ -1,3 +1,4 @@
+@using System.Globalization
 @using Photon.JobSeeker
 @model AgencyDashboardItem[]
 @foreach (var agency in Model)
@@ -5,13 +6,43 @@
     var index = -1;
     var muted = agency.Seeking || agency.Analyzing ? "" : " text-muted";
     <div class="agency mt-3" aria-title="@agency.Name">
-    <h4 class="@muted"><a href="@agency.SearchLink">@agency.Name</a></h4>
-    <p>
-        <span title="Applied">(<small>Applied:</small> @agency.Applied)</span> -
-        <span title="Accepted">@agency.Accepted</span> <small title="Accepting Rate">(@agency.AcceptingRate %)</small> /
-        <span title="Analyzed">@agency.Analyzed</span> <small title="Analyzing Rate">(@agency.AnalyzingRate %)</small> /
-        <span title="Total Jobs">@agency.JobCount</span>
-    </p>
+    <div class="agency-head">
+        <h4 class="@muted"><a href="@agency.SearchLink">@agency.Name</a></h4>
+        <div class="agency-stats-tip" role="tooltip">
+            <div class="agency-stats-title">@agency.Name &mdash; @agency.JobCount jobs</div>
+            @foreach (var state in Enum.GetValues<JobState>())
+            {
+                var count = agency.StateCounts.TryGetValue(state, out var c) ? c : 0;
+                var pct = agency.JobCount == 0 ? 0 : Math.Round(100.0 * count / agency.JobCount, 1);
+                <div class="agency-stats-row">
+                    <span class="agency-stats-swatch" style="background-color: var(--@state.CssClass());"></span>
+                    <span class="agency-stats-label">@state</span>
+                    <span class="agency-stats-num">@count</span>
+                    <span class="agency-stats-pct">@pct.ToString("0.#", CultureInfo.InvariantCulture)%</span>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="d-flex align-items-center gap-2 mb-1" title="Total jobs: @agency.JobCount">
+        <div class="agency-job-bar flex-grow-1">
+            @if (agency.JobCount == 0)
+            {
+                <span class="agency-job-bar-empty"></span>
+            }
+            else
+            {
+                @foreach (var state in Enum.GetValues<JobState>())
+                {
+                    var count = agency.StateCounts.TryGetValue(state, out var c) ? c : 0;
+                    if (count == 0) continue;
+                    var pct = Math.Round(100.0 * count / agency.JobCount, 1).ToString("0.#", CultureInfo.InvariantCulture);
+                    <span class="agency-job-bar-seg" style="flex-grow:@count; background-color:var(--@state.CssClass());"
+                        title="@state: @count (@pct%)"></span>
+                }
+            }
+        </div>
+        <small class="text-body-secondary">@agency.JobCount</small>
+    </div>
     @if (agency.Running is int running)
     {
         <div class="d-flex flex-row align-items-center mb-1">

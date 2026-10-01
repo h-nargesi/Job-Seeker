@@ -9,9 +9,9 @@ class AgencyBusiness
 
     public AgencyBusiness(Database database) => this.database = database;
 
-    public List<AgencyRate> JobRateReport()
+    public List<AgencyJobStateCount> JobStateReport()
     {
-        return database.Query<AgencyRate>(Q_JOB_RATE_REPORT).ToList();
+        return database.Query<AgencyJobStateCount>(Q_JOB_STATE_REPORT).ToList();
     }
 
     public void SaveState(Agency agency)
@@ -110,29 +110,14 @@ class AgencyBusiness
         public string? Password { get; set; }
     }
 
-    private readonly static string Q_JOB_RATE_REPORT = @$"
-SELECT rate.*
-	, CASE JobCount WHEN 0 THEN 0 ELSE CAST(100 * CAST(Analyzed AS REAL) / JobCount AS INTEGER) END AS AnalyzingRate
-	, CASE Analyzed WHEN 0 THEN 0 ELSE CAST(100 * CAST(Accepted AS REAL) / Analyzed AS INTEGER) END AS AcceptingRate
-FROM (
-    SELECT agc.AgencyID, agc.Title
-        , IFNULL(job.JobCount, 0) AS JobCount
-        , IFNULL(job.Analyzed, 0) AS Analyzed
-        , IFNULL(job.Attention, 0) + IFNULL(job.Applied, 0) AS Accepted
-        , IFNULL(job.Applied, 0) AS Applied
-    FROM Agency agc
-    LEFT JOIN  (
-        SELECT AgencyID
-            , COUNT(*) AS JobCount
-            , SUM(CASE State WHEN '{nameof(JobState.Saved)}' THEN 0 ELSE 1 END) AS Analyzed
-            , SUM(CASE State WHEN '{nameof(JobState.Attention)}' THEN 1 ELSE 0 END) AS Attention
-            , SUM(CASE State WHEN '{nameof(JobState.Applied)}' THEN 1 ELSE 0 END) AS Applied
-        FROM Job
-        GROUP BY AgencyID
-
-    ) job ON agc.AgencyID = job.AgencyID
-
-) rate";
+    private const string Q_JOB_STATE_REPORT = @"
+SELECT agc.AgencyID, agc.Title, job.State AS State, IFNULL(job.Jobs, 0) AS Jobs
+FROM Agency agc
+LEFT JOIN (
+    SELECT AgencyID, State, COUNT(*) AS Jobs
+    FROM Job
+    GROUP BY AgencyID, State
+) job ON agc.AgencyID = job.AgencyID";
 
     private const string Q_LOAD_SETTING = @"
 SELECT Settings FROM Agency WHERE AgencyID = @agency";

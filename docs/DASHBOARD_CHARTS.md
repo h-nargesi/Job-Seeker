@@ -109,8 +109,8 @@ normalized by `AiCurrency`/`AiPeriod`) — explicitly declined by the user.
 
 ### Stats-page chart specs
 
-- **S1 — agency yield.** Reuse `AgencyBusiness.JobRateReport`
-  (`JobCount/Analyzed/Accepted/Applied`, `AnalyzingRate`, `AcceptingRate`;
+- **S1 — agency yield.** Served by `JobBusiness.StatsAgencyYield`
+  (`Q_STATS_AGENCY_YIELD`: `JobCount/Analyzed/Accepted/Applied`;
   Analyzed = rows with `State != 'Saved'`, Accepted = `Attention + Applied`).
   The stats-page `agencies` filter applies; the `countries` filter does not
   (the query has no Country dimension). Cleanup drift (rates change as old

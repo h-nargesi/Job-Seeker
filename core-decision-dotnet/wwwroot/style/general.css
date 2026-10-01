@@ -123,3 +123,74 @@ footer {
 .job-filter > * {
     margin-bottom: 5pt;
 }
+
+.agency-job-bar {
+    display: flex;
+    height: 12px;
+    gap: 1px;
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--back-color) 25%, transparent);
+}
+
+.agency-job-bar-seg {
+    flex-basis: 0;
+    min-width: 2px;
+}
+
+.agency-job-bar-empty {
+    flex: 1;
+}
+
+.agency-head {
+    position: relative;
+}
+
+.agency-stats-tip {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 10;
+    min-width: 220px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: rgba(28, 30, 34, 0.96);
+    color: #dee2e6;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+}
+
+.agency-head:hover .agency-stats-tip {
+    display: block;
+}
+
+.agency-stats-title {
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+
+.agency-stats-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.agency-stats-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex: none;
+}
+
+.agency-stats-num {
+    margin-left: auto;
+}
+
+.agency-stats-pct {
+    min-width: 44px;
+    text-align: right;
+    color: #adb5bd;
+}

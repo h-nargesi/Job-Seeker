@@ -33,7 +33,8 @@
               }
               else if (field.Kind == AppSettingField.JsonKind)
               {
-                <textarea id="setting-@field.Key" class="codes form-control" rows="4"
+                <textarea id="setting-@field.Key" class="codes form-control" rows="3"
+                  style="height: auto;"
                   placeholder="@field.Default">@(Current(field.Key).Length > 0 ? Current(field.Key) : field.Default)</textarea>
               }
               else
