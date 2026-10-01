@@ -34,6 +34,8 @@ namespace Photon.JobSeeker
 
             var queued = job.State == JobState.AiPending;
             var promoting = false;
+            var clearHtml = false;
+            var clearContent = false;
             if (!mismatch && queued)
             {
                 if (update.AiVerdict == AiVerdict.Error)
@@ -42,9 +44,14 @@ namespace Photon.JobSeeker
                 {
                     job.State = JobState.Attention;
                     promoting = true;
+                    clearHtml = true;
                 }
                 else
+                {
                     job.State = JobState.NotApprovedAI;
+                    clearHtml = true;
+                    clearContent = update.AiScore < database.AppSetting.AiPurgeFloor();
+                }
             }
 
             AiTailoring.Apply(job, update, promoting && !mismatch, inventory);
@@ -60,7 +67,7 @@ namespace Photon.JobSeeker
                 note += "\n" + update.TailoringNote;
 
             job.Log = AppendLog(job.Log, note);
-            PersistVerdict(job);
+            PersistVerdict(job, clearHtml, clearContent);
             return true;
         }
 
@@ -89,9 +96,12 @@ namespace Photon.JobSeeker
             return true;
         }
 
-        private void PersistVerdict(Job job)
+        private void PersistVerdict(Job job, bool clearHtml, bool clearContent)
         {
-            database.Execute(Q_APPLY_VERDICT, new
+            var clear = clearContent ? ", Html = null, Content = null"
+                : clearHtml ? ", Html = null" : "";
+
+            database.Execute(Q_APPLY_VERDICT.Replace("@clear@", clear), new
             {
                 aiScore = job.AiScore,
                 aiVerdict = job.AiVerdict?.ToString(),
@@ -160,7 +170,7 @@ UPDATE Job SET
     AiOptions = @aiOptions,
     ResumeText = @resumeText,
     Log = @log,
-    State = @state,
+    State = @state@clear@,
     {ModifiedOnGuard}
 WHERE JobID = @jobId";
     }

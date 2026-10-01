@@ -248,14 +248,67 @@ async function text_op(jobid, slot, op, value_id) {
     }
 }
 
+const clean_button = document.getElementById('clean-jobs');
+const CLEAN_POLL_MS = 500;
+
+let clean_running = false;
+let clean_title = null;
+
 async function clean() {
     try {
-        await fetch("/job/clean", { method: 'POST' });
-        LoadJobs();
+        const response = await fetch("/job/clean", { method: 'POST' });
+        render_clean_state(await response.json());
+        if (clean_running) setTimeout(poll_clean, CLEAN_POLL_MS);
     } catch (e) {
         console.error(e);
     }
 }
+
+async function poll_clean() {
+    if (!clean_button) return;
+    try {
+        const response = await fetch("/job/clean", { method: 'GET' });
+        const state = await response.json();
+        const was_running = clean_running;
+
+        render_clean_state(state);
+
+        if (state.running) setTimeout(poll_clean, CLEAN_POLL_MS);
+        else if (was_running && !state.error) {
+            LoadJobs();
+            LoadAgencies();
+        }
+    } catch (e) {
+        console.error(e);
+        clean_running = false;
+        restore_clean_button();
+    }
+}
+
+function render_clean_state(state) {
+    if (!clean_button) return;
+    clean_running = state.running;
+
+    if (state.running) {
+        clean_button.disabled = true;
+        clean_title ??= clean_button.title;
+        clean_button.title = state.stage;
+        clean_button.textContent = `Clean Database · ${state.percent}%` +
+            (state.stage === 'vacuuming' ? ' · vacuuming…' : '');
+    } else {
+        if (state.error) console.error(state.error);
+        restore_clean_button();
+    }
+}
+
+function restore_clean_button() {
+    if (!clean_button) return;
+    clean_button.disabled = false;
+    clean_button.textContent = 'Clean Database';
+    if (clean_title !== null) clean_button.title = clean_title;
+}
+
+poll_clean();
 
 function filterChanged(event) {
     if (event.code === "Enter")

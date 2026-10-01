@@ -365,22 +365,4 @@ AiScore = $ai, Attempts = $attempts, Tries = $tries WHERE Code = $code",
         Assert.Equal(0L, db.Scalar("SELECT COUNT(*) FROM Job WHERE Code = 'f-old'"));
         Assert.Equal(1L, db.Scalar("SELECT COUNT(*) FROM Job WHERE Code = 'f-new'"));
     }
-
-    [Fact]
-    public void Clean_not_approved_covers_regex_ai_and_error()
-    {
-        using var db = new GoldenDatabase();
-        Seed(db, "cl1", JobState.NotApprovedRegex);
-        Seed(db, "cl2", JobState.NotApprovedAI);
-        Seed(db, "cl3", JobState.AIError);
-        Seed(db, "cl4", JobState.Attention);
-        db.ExecuteRaw("UPDATE Job SET RegTime = $old", ("$old", DateTime.Now.AddDays(-10)));
-
-        db.Database.Job.Clean(1);
-
-        Assert.Equal(DBNull.Value, db.Scalar("SELECT Content FROM Job WHERE Code = 'cl1'"));
-        Assert.Equal(DBNull.Value, db.Scalar("SELECT Content FROM Job WHERE Code = 'cl2'"));
-        Assert.Equal(DBNull.Value, db.Scalar("SELECT Content FROM Job WHERE Code = 'cl3'"));
-        Assert.Equal("job text", db.Scalar("SELECT Content FROM Job WHERE Code = 'cl4'"));
-    }
 }

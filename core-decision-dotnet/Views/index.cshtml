@@ -86,7 +86,7 @@
             <a href="/report/stats" target="_blank" class="btn btn-outline-warning m-1" role="button"
                 title="Full statistics report">Charts</a>
             <button id="clean-jobs" onclick="clean()" type="button" class="btn btn-outline-danger m-1"
-                title="Purge stored content of rejected jobs older than 7 days">Clean Database</button>
+                title="Delete jobs older than 1 month (except applied); purge stored Html of attention/not-approved jobs and Html+content of below-floor ones; vacuum the database">Clean Database</button>
         </div>
         <div id="job-seeker-agency-list" class="agency-list mt-3 d-flex flex-column">
             @await Html.PartialAsync("~/views/agencies.cshtml", Model.Agencies)

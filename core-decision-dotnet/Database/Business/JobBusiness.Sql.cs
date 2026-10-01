@@ -173,17 +173,24 @@ ORDER BY Attempts = 0 DESC, Attempts DESC, JobID LIMIT 1";
         private readonly static string Q_CLEAN = @$"
 DELETE FROM Job WHERE RegTime < @date AND (State != '{nameof(JobState.Applied)}' OR Attempts >= 4)";
 
-        private readonly static string Q_CLEAN_ATTENTION = @$"
+        private readonly static string Q_CLEAN_ATTENTION = $@"
 UPDATE Job SET Html = null
-WHERE RegTime < @date AND State IN ('{nameof(JobState.Attention)}') AND JobID NOT IN (
-    SELECT JobID FROM Job WHERE State IN ('{nameof(JobState.Attention)}')
+WHERE State IN ('{nameof(JobState.Attention)}', '{nameof(JobState.NotApprovedAI)}') AND JobID NOT IN (
+    SELECT JobID FROM Job WHERE State IN ('{nameof(JobState.Attention)}', '{nameof(JobState.NotApprovedAI)}')
     ORDER BY {JobRanking.SqlRankScore} DESC LIMIT 0, 100)";
 
-        private readonly static string Q_CLEAN_NOT_APPROVED = @$"
-UPDATE Job SET Html = null, Content = null WHERE RegTime < @date AND State IN (
+        private readonly static string Q_CLEAN_NOT_APPROVED = $@"
+UPDATE Job SET Html = null WHERE State IN (
     '{nameof(JobState.NotApprovedRegex)}',
-    '{nameof(JobState.NotApprovedAI)}',
-    '{nameof(JobState.AIError)}')";
+    '{nameof(JobState.NotApprovedAI)}')";
+
+        private readonly static string Q_CLEAN_AI_BELOW_PURGE_FLOOR = $@"
+UPDATE Job SET Html = null, Content = null
+WHERE State = '{nameof(JobState.NotApprovedAI)}' AND AiScore < @aiPurgeFloor";
+
+        private readonly static string Q_CLEAN_REGEX_BELOW_FLOOR = $@"
+UPDATE Job SET Html = null, Content = null
+WHERE State = '{nameof(JobState.NotApprovedRegex)}' AND Score < @floor";
 
         private readonly static string Q_STATS_DAILY_STACKED = $@"
 SELECT Day

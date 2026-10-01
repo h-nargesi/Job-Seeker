@@ -217,12 +217,26 @@ public class JobController(Analyzer analyzer, Database database, IDatabaseFactor
     }
 
     [HttpPost]
-    public IActionResult Clean([FromQuery] bool vacuum = false)
+    public IActionResult Clean()
     {
         try
         {
-            database.Job.Clean(3, vacuum);
-            return Ok();
+            return Ok(JobBusiness.StartClean(database_factory).ToReport());
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
+    [HttpGet("/job/clean")]
+    public IActionResult CleanProgress()
+    {
+        try
+        {
+            return Ok(JobBusiness.CurrentCleanProcess?.ToReport()
+                ?? new { running = false, percent = 100, stage = "idle", error = (string?)null });
         }
         catch (Exception ex)
         {

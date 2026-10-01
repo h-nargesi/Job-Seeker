@@ -8,6 +8,7 @@ class AppSettingBusiness
 {
     public const string FloorKey = "floor";
     public const string AiPassmarkKey = "aipassmark";
+    public const string AiPurgeFloorKey = "aipurgefloor";
     public const string ScoreCapKey = "scorecap";
     public const string WRegexKey = "w_regex";
     public const string WAiKey = "w_ai";
@@ -17,6 +18,7 @@ class AppSettingBusiness
 
     public const int FloorDefault = 70;
     public const int AiPassmarkDefault = 60;
+    public const int AiPurgeFloorDefault = 35;
     public const int ScoreCapDefault = 300;
     public const double WRegexDefault = 0.35;
     public const double WAiDefault = 0.65;
@@ -29,6 +31,8 @@ class AppSettingBusiness
             FloorDefault.ToString(CultureInfo.InvariantCulture)),
         new(AiPassmarkKey, "AI passmark", AppSettingField.IntKind,
             AiPassmarkDefault.ToString(CultureInfo.InvariantCulture)),
+        new(AiPurgeFloorKey, "AI content-purge floor", AppSettingField.IntKind,
+            AiPurgeFloorDefault.ToString(CultureInfo.InvariantCulture)),
         new(ScoreCapKey, "Score cap", AppSettingField.IntKind,
             ScoreCapDefault.ToString(CultureInfo.InvariantCulture)),
         new(WRegexKey, "Regex weight", AppSettingField.DoubleKind,
@@ -49,6 +53,8 @@ class AppSettingBusiness
     public int Floor() => ReadInt(FloorKey, FloorDefault);
 
     public int AiPassmark() => ReadInt(AiPassmarkKey, AiPassmarkDefault);
+
+    public int AiPurgeFloor() => ReadInt(AiPurgeFloorKey, AiPurgeFloorDefault);
 
     public int ScoreCap() => ReadInt(ScoreCapKey, ScoreCapDefault);
 

@@ -368,9 +368,22 @@ With `?jobid=`: force re-score that one job (ignores `HumanEdited`; keeps the
 Emergency promote: `AiPending` / `NotApprovedAI` / `AIError` → `Attention`.
 
 ### `POST /job/clean`
-Run the retention queries (`JobBusiness.Clean`): delete old jobs (keeping
-`Applied`), trim HTML for old `Attention`/`NotApproved` jobs. Pass
-`?vacuum=true` to also `VACUUM` (rewrites the whole DB file — slow).
+Start the retention sweep (`JobBusiness.Clean`) in the background and return
+its state JSON immediately (same shape as `GET /job/clean`). The sweep: delete
+non-`Applied` jobs older than 1 month, trim `Html` (no age window) for the
+attention/not-approved bands (`Attention`+`NotApprovedAI` outside the top-100
+by blended score, plus `NotApprovedRegex`+`NotApprovedAI`), purge
+`Html`+`Content` of below-floor `NotApprovedAI` (`AiScore < aipurgefloor`) and
+`NotApprovedRegex` (`Score < floor`) rows using the live settings, and `VACUUM`
+(rewrites the whole DB file — slow) unconditionally. A POST while a clean is
+already running returns the live state without starting a duplicate.
+
+### `GET /job/clean`
+Poll the clean progress: `{ running, percent, stage, error }`. Stage labels:
+`deleting old jobs`, `trimming attention html`, `trimming rejected html`,
+`purging below-floor ai content`, `purging below-floor regex content`,
+`vacuuming` (percent parks at 83 there), `done`. After startup with no run yet:
+`{ running: false, percent: 100, stage: "idle", error: null }`.
 
 ## Settings — `SettingsController`
 

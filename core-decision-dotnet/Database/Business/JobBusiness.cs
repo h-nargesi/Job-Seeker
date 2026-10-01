@@ -288,17 +288,6 @@ WHERE JobID = @jobId", new
             database.Execute(Q_DELETE, new { jobId = id });
         }
 
-        public void Clean(int mounths, bool vacuum = false)
-        {
-            database.Execute(Q_CLEAN, new { date = DateTime.Now.AddMonths(-mounths) });
-            database.Execute(Q_CLEAN_ATTENTION, RankingParameters(new
-            {
-                date = DateTime.Now.AddDays(-mounths * 7),
-            }));
-            database.Execute(Q_CLEAN_NOT_APPROVED, new { date = DateTime.Now.AddDays(-7) });
-            if (vacuum) database.Execute(Q_VACUUM);
-        }
-
         private DynamicParameters RankingParameters(object? extra = null)
         {
             var parameters = extra == null
