@@ -9,14 +9,9 @@ public static class IndeedJob
         @"<h\d(?=[^>]*data-testid=""vj-job-title"")[^>]*>\s*(?:<span[^>]*>)?([^<]*?)(?:</span>)?\s*</h\d>",
         RegexOptions.IgnoreCase);
 
-    private static readonly Regex title_legacy = new(
-        @"<h1[^>]*>(?:[^<]*<span[^>]*>)?([^<]*?)(?:</span>[^<]*)?</h1>",
-        RegexOptions.IgnoreCase);
-
     public static string? ExtractTitle(string html)
     {
-        return Extract(title_heading, html)
-            ?? Extract(title_legacy, html);
+        return Extract(title_heading, html);
     }
 
     private static string? Extract(Regex regex, string html)
