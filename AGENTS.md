@@ -78,10 +78,24 @@ dotnet publish core-decision-dotnet -c Release -o publish-core
 Assembly name is `job-seeker` (set in the `.csproj`), not the folder name.
 
 **Module versioning** — every module carries `<semver>+<githash>` (csproj
-`<Version>` / manifest `version` are the semver source of truth). Run
-`scripts/version.sh` to stamp the git hash into both extension manifests'
-`version_name` and print the `dotnet publish ... /p:SourceRevisionId=<hash>`
-commands for the .NET binaries; dev `dotnet run` shows bare semver by design.
+`<Version>` / manifest `version` are the semver source of truth):
+
+| Module | Version home |
+|--------|--------------|
+| core | `core-decision-dotnet/core-decision.csproj` `<Version>` (incl. `core-decision-dotnet.Tests/` and `database/` schema changes) |
+| seeker | `agent-extension/manifest.json` `version` |
+| worker | `ai-worker/ai-worker.csproj` `<Version>` (incl. `ai-worker.Tests/`) |
+| assistant | `assistant-extension/manifest.json` `version` |
+
+After changing a module, bump **only that module's** semver in the same
+change, by change type: **patch** = fixes, refactors, logging/UI polish;
+**minor** = new backwards-compatible feature (new command, endpoint, option);
+**major** = breaking change (protocol break, removed/renamed API or setting).
+A cross-module change (e.g. the extension↔server command protocol) bumps every
+module involved, each by its own change type. Run `scripts/version.sh` to
+stamp the git hash into both extension manifests' `version_name` and print the
+`dotnet publish ... /p:SourceRevisionId=<hash>` commands for the .NET
+binaries; dev `dotnet run` shows bare semver by design.
 
 **Database first run** — the schema and seed data must be loaded once:
 ```bash
