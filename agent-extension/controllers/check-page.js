@@ -28,13 +28,12 @@ async function PageFlow() {
         return;
     }
 
-    ActionHandler.SetCloseTimer();
-
     const host = window.location.hostname;
     console.log("AGENT", 'Page', "hostname:", host);
     for (let s in scopes) {
         if (host.match(new RegExp(scopes[s].domain, 'i'))) {
             console.log("AGENT", 'Page', "matched", scopes[s].domain);
+            ActionHandler.SetCloseTimer();
             StartHeartbeat();
             await WaitForReadiness(scopes[s]);
             return;
