@@ -6,12 +6,12 @@ cd ~/llama.cpp
   --alias "Qwen3.5-35B-A3B-Q5_K_M" \
   --host 127.0.0.1 \
   --port 8081 \
-  --ctx-size 16384 \
+  --ctx-size 32768 \
   --jinja \
   --chat-template-kwargs '{"enable_thinking":false}' \
   --reasoning-budget 0 \
   --n-gpu-layers 99 \
-  --n-cpu-moe 25 \
+  --n-cpu-moe 26 \
   --flash-attn on \
   --temp 0.1 \
   --top-p 0.9 \
