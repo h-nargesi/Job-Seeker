@@ -80,7 +80,10 @@ async function SendingPageInfo(scope, challenge_kind) {
 
         if (!RetryableError(result)) break;
 
-        if (attempt < 3) await ActionHandler.OnWait({ miliseconds: attempt * 5000 });
+        if (attempt < 3) {
+            console.error("AGENT", 'Page', "OnWait", attempt * 5000);
+            await ActionHandler.OnWait({ miliseconds: attempt * 5000 });
+        }
     }
 }
 

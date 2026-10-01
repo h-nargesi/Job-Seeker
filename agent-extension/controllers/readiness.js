@@ -48,7 +48,10 @@ function MatchedReadinessSelector(rules, href) {
 
 async function WaitForReadiness(scope) {
     const cooldown = CooldownRemaining();
-    if (cooldown > 0) await ActionHandler.OnWait({ miliseconds: cooldown });
+    if (cooldown > 0) {
+        console.error("AGENT", 'Readiness', "cooldown remaining", cooldown);
+        await ActionHandler.OnWait({ miliseconds: cooldown });
+    }
 
     const rules = CompileReadinessRules(scope.rules);
     const deadline = scope.waiting || READINESS_DEFAULT_TIMEOUT_MS;

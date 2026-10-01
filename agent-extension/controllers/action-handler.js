@@ -31,11 +31,11 @@ class ActionHandler {
                 break;
             case "fill":
                 ActionHandler.OnFill(command.object, command.params);
-                ActionHandler.OnWait({ miliseconds: 300 });
+                await ActionHandler.OnWait({ miliseconds: 300 });
                 break;
             case "click":
                 ActionHandler.OnClick(command.object);
-                ActionHandler.OnWait({ miliseconds: 300 });
+                await ActionHandler.OnWait({ miliseconds: 300 });
                 break;
             case "recheck":
                 if (!ActionHandler.OnPageLoad)
