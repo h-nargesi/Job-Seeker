@@ -3,7 +3,6 @@ const job_seeker_trends = document.getElementById('job-seeker-trend-list');
 const job_seeker_agencies = document.getElementById('job-seeker-agency-list');
 const job_agency_filter = document.getElementById('job-agency-filter');
 const job_country_filter = document.getElementById('job-country-filter');
-const job_seeker_monitor = document.getElementById('ai-monitor-body');
 
 const DASHBOARD_REFRESH_MS = 15000;
 
@@ -74,19 +73,6 @@ async function LoadDashboard() {
 
 if (job_seeker_jobs || job_seeker_trends)
     setInterval(LoadDashboard, DASHBOARD_REFRESH_MS);
-
-if (job_seeker_monitor)
-    setInterval(async () => {
-        if (window.getSelection()?.toString()) return;
-
-        try {
-            const response = await fetch('/monitor/body' + location.search, { method: 'GET' });
-            job_seeker_monitor.innerHTML = await response.text();
-            window.initMonitorCharts?.();
-        } catch (e) {
-            console.error(e);
-        }
-    }, DASHBOARD_REFRESH_MS);
 
 async function apply(jobid) {
     try {

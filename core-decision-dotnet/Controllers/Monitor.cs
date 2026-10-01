@@ -23,20 +23,6 @@ public class MonitorController(Database database) : Controller
         }
     }
 
-    [HttpGet]
-    public IActionResult Body(string? group)
-    {
-        try
-        {
-            return View("~/views/ai-monitor-body.cshtml", BuildModel(group));
-        }
-        catch (Exception ex)
-        {
-            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
-            throw;
-        }
-    }
-
     private MonitorViewModel BuildModel(string? group)
     {
         var stages_group = group == JobBusiness.GroupCountry ? JobBusiness.GroupCountry : JobBusiness.GroupAgency;

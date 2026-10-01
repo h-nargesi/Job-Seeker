@@ -9,10 +9,9 @@
 ## Panel
 
 Read-only Razor page in the core dashboard: **`/monitor`** (also linked as
-"AI Monitor" on the home page). Server-rendered, auto-refreshed every 15 s
-(the body partial is swapped in via `GET /monitor/body`), English, no
-control buttons — Re-queue/Promote stay
-on job-detail. Sections:
+"AI Monitor" on the home page). Server-rendered, no auto-refresh (reload
+the page for fresh data), English, no control buttons — Re-queue/Promote
+stay on job-detail. Sections:
 
 1. **Queue health** — `AiPending` / `AIError` counts, oldest pending age.
    Growing pending with no new runs = worker not being started; growing
@@ -49,12 +48,12 @@ on job-detail. Sections:
    `droppedMemoryRows`. "—" marks pre-update rows / an old worker.
 
 Every metric block carries what/why/action notes in the page itself.
-Charts are rebuilt on every 15 s swap: the body partial embeds
-`<script type="application/json">` data blocks (readable via `textContent`
-after an `innerHTML` swap — inline scripts never execute) and
-`wwwroot/scripts/ai-monitor-chart.js` destroys + recreates the Chart.js
-instances via the `window.initMonitorCharts()` hook called by
-`server-operations.js` after each swap and once on page load.
+Charts are built once on page load: the body partial embeds
+`<script type="application/json">` data blocks and
+`wwwroot/scripts/ai-monitor-chart.js` creates the Chart.js instances via the
+`window.initMonitorCharts()` hook called by `ai-monitor.cshtml` on load; a
+MutationObserver on `data-bs-theme` destroys + recreates them on dark/light
+toggle.
 
 ## Report contract (`POST /ai/run-report`)
 
@@ -183,4 +182,4 @@ dumps, per-call records, llama-server internals.
 | Panel | `Controllers/Monitor.cs`, `Views/ai-monitor.cshtml`, `Database/Business/JobBusiness.Monitor.cs` |
 | Stages + helper SQL | `Database/Business/JobBusiness.MonitorStages.cs` |
 | Stages/helper sections (table, canvases, JSON blocks) | `Views/ai-monitor-stages.cshtml` (included by `ai-monitor-body.cshtml`) |
-| Monitor charts (destroy + rebuild each refresh) | `wwwroot/scripts/ai-monitor-chart.js` (`window.initMonitorCharts` hook; swap in `server-operations.js`) |
+| Monitor charts (built once on load; re-themed on dark-mode toggle) | `wwwroot/scripts/ai-monitor-chart.js` (`window.initMonitorCharts` hook called by `ai-monitor.cshtml`) |
