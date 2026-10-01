@@ -8,11 +8,11 @@ interface IndeedPage
 
     protected static readonly Regex reg_login_url = new(@"^https?://secure\.indeed\.com/auth", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_search_url = new(@"^https?://[^/]*indeed\.com/jobs\?", RegexOptions.IgnoreCase);
+    public static readonly Regex reg_search_url = new(@"^https?://[^/]*indeed\.com/jobs\?", RegexOptions.IgnoreCase);
 
     protected static readonly Regex reg_search_keywords_url = new(@$"(^|&|\?)q={Agency.SearchTitle}(&|$)", RegexOptions.IgnoreCase);
 
-    protected static readonly Regex reg_job_view = new(@"(?:/rc/clk\?jk=|/(?:m/)?viewjob\?jk=)(\w+)", RegexOptions.IgnoreCase);
+    public static readonly Regex reg_job_view = new(@"(?:/rc/clk\?jk=|/(?:m/)?viewjob\?jk=)(\w+)", RegexOptions.IgnoreCase);
 
     protected static readonly Regex reg_job_adding = new(@"<a[^>]+href=[""']#[""'][^>]+rel=[""']nofollow[""'][^>]+title=[""'][^""']*Add to favourites[""'][^>]*>", RegexOptions.IgnoreCase);
 

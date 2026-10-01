@@ -142,6 +142,11 @@
         </dl>
         <h3>Logs</h3>
         <p id="logs-body" style="white-space: break-spaces;">@job.Log</p>
+        @if (!string.IsNullOrEmpty(job.Tries))
+        {
+          <h3>Fetch tries</h3>
+          <p style="white-space: break-spaces;">@job.Tries</p>
+        }
         <script>document.addEventListener("DOMContentLoaded", () => display('logs-body'));</script>
       </div>
     </div>

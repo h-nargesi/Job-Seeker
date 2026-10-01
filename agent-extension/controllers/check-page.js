@@ -1,16 +1,10 @@
 console.log("AGENT", "check-page");
 
-const WAITING_JITTER = 0.25;
 const CHALLENGE_COOLDOWN_MS = 45000;
 
 let challenge_hold = false;
 let challenge_watch = null;
 let challenge_seen_at = null;
-
-function JitteredWaiting(base) {
-    const delta = Math.round(base * WAITING_JITTER);
-    return base - delta + Math.floor(Math.random() * (2 * delta + 1));
-}
 
 function CooldownRemaining() {
     if (challenge_seen_at === null) return 0;
@@ -21,28 +15,31 @@ function CooldownRemaining() {
 ActionHandler.OnPageLoad = function () {
     console.log("AGENT", 'Page', 'loaded');
     ClearChallengeHold();
-    setTimeout(async function () {
-        if (await OnDashboard()) return;
+    PageFlow();
+}
 
-        const scopes = await BackgroundMessaging.Scopes();
+async function PageFlow() {
+    if (await OnDashboard()) return;
 
-        if (!scopes || scopes.error !== undefined) {
-            console.error("AGENT", 'Page', "scopes failed", scopes);
+    const scopes = await BackgroundMessaging.Scopes();
+
+    if (!scopes || scopes.error !== undefined) {
+        console.error("AGENT", 'Page', "scopes failed", scopes);
+        return;
+    }
+
+    ActionHandler.SetCloseTimer();
+
+    const host = window.location.hostname;
+    console.log("AGENT", 'Page', "hostname:", host);
+    for (let s in scopes) {
+        if (host.match(new RegExp(scopes[s].domain, 'i'))) {
+            console.log("AGENT", 'Page', "matched", scopes[s].domain);
+            StartHeartbeat();
+            await WaitForReadiness(scopes[s]);
             return;
         }
-
-        const host = window.location.hostname;
-        console.log("AGENT", 'Page', "hostname:", host);
-        for (let s in scopes) {
-            if (host.match(new RegExp(scopes[s].domain, 'i'))) {
-                console.log("AGENT", 'Page', "matched", scopes[s].domain);
-                ActionHandler.SetCloseTimer();
-                SendingPageInfo(scopes[s], ChallengeDetector.Detect(document));
-                StartHeartbeat();
-                break;
-            }
-        }
-    }, 1000);
+    }
 }
 
 async function OnDashboard() {
@@ -57,12 +54,6 @@ async function OnDashboard() {
 }
 
 async function SendingPageInfo(scope, challenge_kind) {
-    const wait = challenge_kind
-        ? (scope.waiting ? JitteredWaiting(scope.waiting) : 0)
-        : Math.max(scope.waiting ? JitteredWaiting(scope.waiting) : 0, CooldownRemaining());
-
-    if (wait > 0) await ActionHandler.OnWait({ miliseconds: wait });
-
     console.log("AGENT", 'Page', "sending", window.location.hostname, scope);
 
     const params = {
@@ -109,7 +100,7 @@ function WatchChallenge(scope) {
 
     console.log("AGENT", 'Page', "challenge cleared - resuming");
     ClearChallengeHold();
-    SendingPageInfo(scope);
+    WaitForReadiness(scope);
 }
 
 function ClearChallengeHold() {
@@ -143,12 +134,17 @@ async function Heartbeat() {
         console.warn("AGENT", 'Page', "heartbeat failed", result);
 }
 
+if (document.readyState === 'interactive' || document.readyState === 'complete') {
+    ActionHandler.OnPageLoad();
+} else if (window.addEventListener) {
+    document.addEventListener("DOMContentLoaded", function () {
+        ActionHandler.OnPageLoad();
+    }, false);
+}
+
 if (window.addEventListener) {
-    window.addEventListener("load", ActionHandler.OnPageLoad, false);
     window.addEventListener("unload", function () {
         if (heartbeat_interval != null) clearInterval(heartbeat_interval);
         ClearChallengeHold();
     }, false);
 }
-// else if (window.attachEvent) window.attachEvent("onload", ActionHandler.OnPageLoad);
-else window.onload = ActionHandler.OnPageLoad;

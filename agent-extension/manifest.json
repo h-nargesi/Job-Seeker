@@ -1,7 +1,7 @@
 {
 	"name": "Job Seeker Agent",
-	"version": "1.1.4",
-	"version_name": "1.1.4+ce4bb5a-dirty",
+	"version": "1.2.0",
+	"version_name": "1.2.0+4eee809-dirty",
 	"description": "This extension is built for seeking jobs in different job agents.",
 	"manifest_version": 3,
 	"action": {
@@ -24,6 +24,7 @@
 				"controllers/background-messaging.js",
 				"controllers/action-handler.js",
 				"controllers/challenge-detector.js",
+				"controllers/readiness.js",
 				"controllers/check-page.js"
 			]
 		}

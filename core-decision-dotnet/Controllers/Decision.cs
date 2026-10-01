@@ -123,6 +123,11 @@ public class DecisionController(Analyzer analyzer, Database database, TrendsChec
                 a.Name,
                 a.Domain,
                 waiting = a.DefaultWaiting,
+                rules = a.ReadinessRules.Select(r => new
+                {
+                    url = r.UrlPattern,
+                    selectors = r.Selectors,
+                }),
             });
 
             return Ok(agencies);

@@ -230,6 +230,19 @@ WHERE JobID = @jobId", new
             database.Execute(Q_CHANGE_STATE, new { state = state.ToString(), now = DateTime.Now, jobId = id });
         }
 
+        public void RecordBrokenPage(long id, string reason)
+        {
+            var job = database.QueryFirstOrDefault<MetaRow>(Q_FETCH_META, new { job = id });
+            if (job == null) return;
+
+            database.Execute(Q_APPEND_LOG, new
+            {
+                log = AppendLog(job.Log, $"Broken job page ({reason}) — {DateTime.Now:yyyy-MM-dd HH:mm}"),
+                now = DateTime.Now,
+                jobId = id,
+            });
+        }
+
         public bool ChangeStateManually(long id, JobState state)
         {
             var job = database.QueryFirstOrDefault<MetaRow>(Q_FETCH_META, new { job = id });

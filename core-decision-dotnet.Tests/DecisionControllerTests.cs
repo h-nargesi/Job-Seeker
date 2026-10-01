@@ -287,6 +287,19 @@ public class DecisionControllerTests
     }
 
     [Fact]
+    public void Scopes_serializes_readiness_rules_with_url_and_selectors()
+    {
+        using var db = new CheckpointDatabase();
+
+        var body = OkBody(Controller(db).Scopes());
+
+        var rule = Assert.Single(Assert.Single(body.EnumerateArray()).GetProperty("rules").EnumerateArray());
+        Assert.Equal("jobs\\?q=", rule.GetProperty("url").GetString());
+        Assert.Equal("div.results", rule.GetProperty("selectors").EnumerateArray().First().GetString());
+        Assert.Equal("#main", rule.GetProperty("selectors").EnumerateArray().Last().GetString());
+    }
+
+    [Fact]
     public void Scopes_serves_the_hardcoded_waiting_despite_the_settings_override()
     {
         using var db = new CheckpointDatabase(waiting: 9000);

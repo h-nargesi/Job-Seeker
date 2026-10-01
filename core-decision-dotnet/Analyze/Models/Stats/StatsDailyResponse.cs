@@ -15,7 +15,8 @@ public sealed record DailyStackedItem(
     long InAi,
     long Attention,
     long Applied,
-    long Rejected);
+    long Rejected,
+    long Failed);
 
 public sealed record VelocityItem(string Day, long Applied, long Rejected);
 

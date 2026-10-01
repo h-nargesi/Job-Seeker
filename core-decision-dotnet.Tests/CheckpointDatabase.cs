@@ -18,6 +18,11 @@ internal sealed class CheckpointAgency : Agency
 
     public override int DefaultPacing => 2500;
 
+    public override ReadinessRule[] ReadinessRules =>
+    [
+        new ReadinessRule(@"jobs\?q=", ["div.results", "#main"]),
+    ];
+
     public override string SearchLink => "https://cp.example.com/jobs";
 
     protected override void RunningSearchingMethodChanged(int value) { }

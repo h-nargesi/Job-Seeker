@@ -11,6 +11,8 @@ internal sealed class BrokenAgency : Agency
 
     public string JobHtml { get; set; } = string.Empty;
 
+    public string? PayloadMarker { get; set; }
+
     public override string Name => "BrokenAgency";
 
     public override Regex? JobAcceptabilityChecker => null;
@@ -45,6 +47,8 @@ internal sealed class BrokenJobPage(Agency parent) : JobPage(parent)
         apply = null;
         title = Agency.JobTitle;
     }
+
+    protected override string? RequiredPayloadMarker => Agency.PayloadMarker;
 
     public override string GetHtmlContent(string html) => Agency.JobHtml;
 }
@@ -199,32 +203,106 @@ public class BrokenJobPageTests
 {
     private const string JobUrl = "https://broken.example.com/jobs/j1";
 
+    private const string GoodHtml = "<html><body>backend alpha beta backend alpha beta backend alpha beta"
+        + " backend alpha beta backend alpha beta backend alpha beta backend alpha beta"
+        + " backend alpha beta backend alpha beta backend alpha beta backend alpha beta</body></html>";
+
     [Fact]
-    public void Missing_title_throws_BadJobRequest_and_preserves_row()
+    public void Missing_title_closes_records_reason_and_preserves_row()
     {
         using var fixture = new BrokenPageFixture();
         fixture.Agency.JobTitle = null;
-        fixture.Agency.JobHtml = "<html><body>backend alpha beta</body></html>";
+        fixture.Agency.JobHtml = GoodHtml;
 
-        var exception = Assert.Throws<BadJobRequest>(
-            () => fixture.JobPage.IssueCommand(JobUrl, "<html>garbage</html>"));
+        var commands = fixture.JobPage.IssueCommand(JobUrl, "<html>garbage</html>");
 
-        Assert.Contains("title missing", exception.Message);
+        Assert.NotNull(commands);
+        Assert.Equal("close", Assert.Single(commands).Action);
         AssertBrokenRowUntouched(fixture);
+        Assert.Contains("Broken job page (title)",
+            fixture.Database.ExecuteScalar<string>("SELECT Log FROM Job"));
     }
 
     [Fact]
-    public void Empty_text_content_throws_BadJobRequest_and_preserves_row()
+    public void Short_text_content_closes_records_reason_and_preserves_row()
     {
         using var fixture = new BrokenPageFixture();
         fixture.Agency.JobTitle = "Backend Developer";
-        fixture.Agency.JobHtml = "<html><body></body></html>";
+        fixture.Agency.JobHtml = "<html><body>backend alpha beta</body></html>";
 
-        var exception = Assert.Throws<BadJobRequest>(
-            () => fixture.JobPage.IssueCommand(JobUrl, "<html>garbage</html>"));
+        var commands = fixture.JobPage.IssueCommand(JobUrl, "<html>garbage</html>");
 
-        Assert.Contains("content missing", exception.Message);
+        Assert.NotNull(commands);
+        Assert.Equal("close", Assert.Single(commands).Action);
         AssertBrokenRowUntouched(fixture);
+        Assert.Contains("Broken job page (content-short)",
+            fixture.Database.ExecuteScalar<string>("SELECT Log FROM Job"));
+    }
+
+    [Fact]
+    public void Missing_payload_marker_closes_records_reason_and_preserves_row()
+    {
+        using var fixture = new BrokenPageFixture();
+        fixture.Agency.JobTitle = "Backend Developer";
+        fixture.Agency.JobHtml = GoodHtml;
+        fixture.Agency.PayloadMarker = "jobsearch-ViewJobLayout-jobDisplay";
+
+        var commands = fixture.JobPage.IssueCommand(JobUrl, "<html>garbage</html>");
+
+        Assert.NotNull(commands);
+        Assert.Equal("close", Assert.Single(commands).Action);
+        AssertBrokenRowUntouched(fixture);
+        Assert.Contains("Broken job page (payload)",
+            fixture.Database.ExecuteScalar<string>("SELECT Log FROM Job"));
+
+        fixture.Agency.PayloadMarker = null;
+        var recovered = fixture.JobPage.IssueCommand(JobUrl, "<html>garbage</html>");
+        Assert.Empty(recovered);
+        Assert.Equal("AiPending", fixture.Database.ExecuteScalar<string>("SELECT State FROM Job"));
+    }
+
+    [Fact]
+    public void Present_payload_marker_passes_validation()
+    {
+        using var fixture = new BrokenPageFixture();
+        fixture.Agency.JobTitle = "Backend Developer";
+        fixture.Agency.JobHtml = GoodHtml;
+        fixture.Agency.PayloadMarker = "jobsearch-ViewJobLayout-jobDisplay";
+
+        var commands = fixture.JobPage.IssueCommand(JobUrl,
+            "<html><div class='jobsearch-ViewJobLayout-jobDisplay'>x</div></html>");
+
+        Assert.NotNull(commands);
+        Assert.Equal("AiPending", fixture.Database.ExecuteScalar<string>("SELECT State FROM Job"));
+    }
+
+    [Fact]
+    public void Broken_page_at_four_attempts_moves_the_job_to_failed()
+    {
+        using var fixture = new BrokenPageFixture();
+        fixture.Database.Execute("UPDATE Job SET Attempts = 4 WHERE JobID = 1");
+        fixture.Agency.JobTitle = null;
+        fixture.Agency.JobHtml = GoodHtml;
+
+        var commands = fixture.JobPage.IssueCommand(JobUrl, "<html>garbage</html>");
+
+        Assert.Equal("close", Assert.Single(commands).Action);
+        Assert.Equal("Failed", fixture.Database.ExecuteScalar<string>("SELECT State FROM Job"));
+        Assert.Equal(4L, fixture.Database.ExecuteScalar<long>("SELECT Attempts FROM Job"));
+    }
+
+    [Fact]
+    public void Broken_new_job_is_not_inserted()
+    {
+        using var fixture = new BrokenPageFixture();
+        fixture.Database.Execute("DELETE FROM Job");
+        fixture.Agency.JobTitle = null;
+        fixture.Agency.JobHtml = GoodHtml;
+
+        var commands = fixture.JobPage.IssueCommand(JobUrl, "<html>garbage</html>");
+
+        Assert.Equal("close", Assert.Single(commands).Action);
+        Assert.Equal(0L, fixture.Database.ExecuteScalar<long>("SELECT COUNT(*) FROM Job"));
     }
 
     [Fact]
@@ -232,17 +310,18 @@ public class BrokenJobPageTests
     {
         using var fixture = new BrokenPageFixture();
         fixture.Agency.JobTitle = "Backend Developer";
-        fixture.Agency.JobHtml = "<html><body>backend alpha beta</body></html>";
+        fixture.Agency.JobHtml = GoodHtml;
 
         var commands = fixture.JobPage.IssueCommand(JobUrl, "<html>valid</html>");
 
         Assert.NotNull(commands);
         Assert.Equal("AiPending", fixture.Database.ExecuteScalar<string>("SELECT State FROM Job"));
         Assert.Equal("Backend Developer", fixture.Database.ExecuteScalar<string>("SELECT Title FROM Job"));
-        Assert.Equal("<html><body>backend alpha beta</body></html>",
+        Assert.Equal(GoodHtml,
             fixture.Database.ExecuteScalar<string>("SELECT Html FROM Job"));
-        Assert.Equal(" backend alpha beta",
+        Assert.Contains("backend alpha beta",
             fixture.Database.ExecuteScalar<string>("SELECT Content FROM Job"));
+        Assert.True(fixture.Database.ExecuteScalar<long>("SELECT LENGTH(Content) FROM Job") >= 200);
     }
 
     [Fact]

@@ -56,8 +56,20 @@ one HTTP round-trip.
 
 Two entry points trigger analysis:
 
-1. **Page load** (`check-page.js` → `SendingPageInfo`): the normal reactive path.
-   Fires whenever the browser navigates to a matched domain.
+1. **Page load** (`check-page.js` → `readiness.js` → `SendingPageInfo`): the
+   normal reactive path. The flow clock starts at content-script init — if
+   `document.readyState` is already `interactive`/`complete` it runs
+   immediately, otherwise on `DOMContentLoaded` (no `load` listener, no fixed
+   post-load delay). After the hostname matches an agency scope: the close
+   timer (90 s leak guard) is armed regardless of scope match, then the page
+   waits for **readiness markers** — per-page-role `{url, selectors}` rules
+   served by `GET /decision/scopes` and defined beside the scraping selectors
+   in each platform folder. The extension polls every ~400 ms (challenge
+   check first, then markers) and sends ~250 ms after a marker matches.
+   Deadline = the scope's `waiting` (readiness timeout, default 8000 ms, no
+   jitter); at the deadline it sends anyway. A URL matching no rule takes the
+   legacy path: wait the full `waiting`, then send. The challenge path
+   short-circuits polling and sends with `challenge: true`.
 2. **Orders polling** (service worker `background.js` → `CheckNewOrders`): the
    extension's service worker polls `GET /decision/orders` on a 30 s
    `chrome.alarms` timer, gated by the popup's "Trend Ordering" toggle, to ask
@@ -97,10 +109,11 @@ a human instead of letting the flow spin:
    touching the trend (challenge-flagged rows are swept only after 30 min
    without a heartbeat instead of the usual 5).
 5. A 5 s watcher re-checks the DOM. When the box disappears (solved without
-   navigation) the page is re-sent normally and the next checkpoint update
+   navigation) the readiness flow re-runs (gated by a 45 s post-challenge
+   cooldown) and the next checkpoint update
    clears the `Challenge` bit; a post-solve navigation re-enters the normal
-   loop through `load` (this is also the recovery path for 403s: fix the
-   cause, then load any page on the agency domain).
+   loop through the content-script init flow (this is also the recovery path
+   for 403s: fix the cause, then load any page on the agency domain).
 6. The dashboard trend list (polled every 15 s) overlays the state as
    `Challenge` with an orange row.
 
@@ -222,7 +235,8 @@ All logs are prefixed `console.log("AGENT", ...)`.
 | File | Role |
 |------|------|
 | `manifest.json` | MV3 manifest; content scripts on `*://*/*`, service worker `background.js` |
-| `controllers/check-page.js` | Runs on every page load. Matches hostname → agency, posts HTML to `/decision/take`. Inert on the dashboard (server-origin / `#job-seeker-trend-list` check). |
+| `controllers/check-page.js` | Runs on every page (flow starts at script init / DOMContentLoaded). Matches hostname → agency, arms the close timer, waits for readiness, posts HTML to `/decision/take`. Inert on the dashboard (server-origin / `#job-seeker-trend-list` check). |
+| `controllers/readiness.js` | Marker polling: challenge check → scope `rules` selectors → deadline (scope `waiting`, default 8 s) → send anyway; legacy full wait when no rule url matches. |
 | `controllers/background.js` | Service worker. Routes messages, stamps the `trend` id onto each request, maps responses back to tabs, and drives idle trends: polls `/decision/orders` on a 30 s alarm and executes `open` commands (gated by the popup's ordering toggle). |
 | `controllers/core-messaging.js` | Thin HTTP client for the server endpoints (`take`, `scopes`, `orders`, `heartbeat`); sends `X-Client: search`. |
 | `controllers/action-handler.js` | Executes `Command[]`. Maps `go/open/fill/click/recheck/close/wait/reload` to DOM/window calls. |

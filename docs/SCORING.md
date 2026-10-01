@@ -83,6 +83,10 @@ Saved(1) → Revaluation → NotApproved ─┐
 - `NotApproved` — scored, failed the gate.
 - `Attention` — scored, passed (≥100). The "review me" pool.
 - `Applied` / `Rejected` — terminal user decisions.
+- `Failed` — the job page kept failing core validation (missing title / missing
+  payload marker / < 200 chars of text) once `Attempts >= 4`; the reason is
+  appended to `Log`. The dashboard shows a `Failed` category (cap 3, after
+  `Done`). `Q_CLEAN` ages these rows out via the `Attempts >= 4` branch.
 - Manual override — `POST /job/state` sets any state except `Revaluation`
   (logs `Manual state change X→Y`); it never purges content, unlike
   `POST /job/reject`.
@@ -119,7 +123,8 @@ but it stays in `AgenciesByID` for reporting. `1` = actively searching new jobs;
 `JobBusiness.Q_INDEX` is the ranked feed for `/report/jobs`. It is a CTE that:
 
 1. Buckets each job by `State` into a `Category` weight
-   (`Attention=1, NotApproved=2, Applied/Rejected=4, else=12`).
+   (`Attention=1, AiPending=2, AIError=3, NotApproved=4, Applied/Rejected=5
+   (Done), Failed=6, else=12`).
 2. Computes `EffectiveScore = Score × W(age)` where `W` is a piecewise-linear
    **trapezoid** time-weight. Source of truth: `Analyze/JobRanking.cs`.
 
@@ -142,7 +147,8 @@ but it stays in `AgenciesByID` for reporting. `1` = actively searching new jobs;
    `%) Relocation**%` / `%) Remote**%` (tri-state: `Log` NULL/empty → not scored).
 4. Partitions by `(AgencyID, State)`, keeps the top N per bucket via an
    explicit CASE cap (`Attention→12, NotApproved→6, Applied/Rejected→3,
-   else→1`; the Category 4 bucket orders by `ModifiedOn DESC` first), and
+   Failed→3, else→1`; the Done and Failed buckets partition by `State` only
+   and order by `ModifiedOn DESC` first), and
    assigns a final global `Ordering`.
 
 > The SQL `CASE` inside `Q_INDEX` is a **mirror** of `JobRanking.Weight`,

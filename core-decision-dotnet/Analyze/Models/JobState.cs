@@ -11,4 +11,5 @@ public enum JobState
     Attention,
     Rejected,
     Applied,
+    Failed,
 }

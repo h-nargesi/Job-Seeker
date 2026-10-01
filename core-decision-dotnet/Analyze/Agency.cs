@@ -29,7 +29,9 @@ public abstract class Agency
 
     public string Link { get; private set; } = string.Empty;
 
-    public virtual int DefaultWaiting => 1_000;
+    public virtual int DefaultWaiting => 8_000;
+
+    public virtual ReadinessRule[] ReadinessRules => [];
 
     public virtual int DefaultPacing => 10_000;
 

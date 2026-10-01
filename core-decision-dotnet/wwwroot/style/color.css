@@ -14,6 +14,7 @@
     --job-state-attention: #0dcaf0;
     --job-state-applied: #198754;
     --job-state-rejected: #dc3545;
+    --job-state-failed: #6610f2;
 }
 
 .job-state-saved { color: var(--job-state-saved); }
@@ -25,6 +26,7 @@
 .job-state-attention { color: var(--job-state-attention); }
 .job-state-applied { color: var(--job-state-applied); }
 .job-state-rejected { color: var(--job-state-rejected); }
+.job-state-failed { color: var(--job-state-failed); }
 
 [data-bs-theme="dark"] {
     --high-ground: rgb(72, 60, 72);

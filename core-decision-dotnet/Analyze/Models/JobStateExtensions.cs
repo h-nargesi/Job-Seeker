@@ -13,6 +13,7 @@ public static class JobStateExtensions
         JobState.Attention => "job-state-attention",
         JobState.Rejected => "job-state-rejected",
         JobState.Applied => "job-state-applied",
+        JobState.Failed => "job-state-failed",
         _ => "job-state-saved",
     };
 }

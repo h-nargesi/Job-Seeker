@@ -16,6 +16,8 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
         using var database = Parent.DatabaseFactory.Open();
         var job = LoadJob(url, content, database);
 
+        if (job == null) return [Command.Close()];
+
         if (job.State == JobState.NotApprovedRegex) return [];
 
         using var evaluator = new JobEligibilityHelper(database);
@@ -45,9 +47,11 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
 
     public abstract string GetHtmlContent(string html);
 
+    protected virtual string? RequiredPayloadMarker => null;
+
     protected virtual void ChceckJob(Job job) { }
 
-    private Job LoadJob(string url, string html, Database database)
+    private Job? LoadJob(string url, string html, Database database)
     {
         var code = GetJobCode(url);
         if (string.IsNullOrEmpty(code)) throw new Exception($"Invalid job url ({Parent.Name}).");
@@ -121,10 +125,24 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
 
         var broken_parts = new List<string>();
         if (string.IsNullOrWhiteSpace(title)) broken_parts.Add("title");
-        if (string.IsNullOrWhiteSpace(incoming_text)) broken_parts.Add("content");
+        if (RequiredPayloadMarker != null && !html.Contains(RequiredPayloadMarker)) broken_parts.Add("payload");
+        if ((incoming_text?.Trim().Length ?? 0) < 200) broken_parts.Add("content-short");
+
         if (broken_parts.Count > 0)
-            throw new BadJobRequest(
-                $"Broken job page ({Parent.Name}, {code}): {string.Join("/", broken_parts)} missing");
+        {
+            var reason = string.Join("/", broken_parts);
+            Log.Warning("Broken job page ({0}, {1}): {2}", Parent.Name, code, reason);
+
+            if (job.JobID != 0)
+            {
+                database.Job.RecordBrokenPage(job.JobID, reason);
+
+                if (job.Attempts >= 4)
+                    database.Job.ChangeState(job.JobID, JobState.Failed);
+            }
+
+            return null;
+        }
 
         var content_changed = JobContent.HasChanged(job.Content, incoming_text);
         job.Html = html_content;

@@ -9,7 +9,8 @@ const DAILY_SEGMENTS = [
     { key: 'inAi', state: 'aiPending', label: 'In-AI' },
     { key: 'attention', state: 'attention', label: 'Attention' },
     { key: 'applied', state: 'applied', label: 'Applied' },
-    { key: 'rejected', state: 'rejected', label: 'Rejected' }
+    { key: 'rejected', state: 'rejected', label: 'Rejected' },
+    { key: 'failed', state: 'failed', label: 'Failed' }
 ];
 
 const VELOCITY_SERIES = [

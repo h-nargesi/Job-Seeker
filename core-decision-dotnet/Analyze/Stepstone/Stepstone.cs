@@ -6,8 +6,6 @@ class Stepstone : Agency
 {
     public override string Name => "Stepstone";
 
-    public override int DefaultWaiting => 5000;
-
     public override string SearchLink => $"{BaseUrl}/work/full-time/{SearchTitle}?ct=222&fdl=en";
 
     public override Regex? JobAcceptabilityChecker => null;

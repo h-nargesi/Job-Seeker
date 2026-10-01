@@ -28,6 +28,10 @@ WHERE JobID = @jobId";
 UPDATE Job SET State = @state, ModifiedOn = @now
 WHERE JobID = @jobId";
 
+        private readonly static string Q_APPEND_LOG = @"
+UPDATE Job SET Log = @log, ModifiedOn = @now
+WHERE JobID = @jobId";
+
         private readonly static string Q_MANUAL_STATE = @"
 UPDATE Job SET State = @state, Log = @log, ModifiedOn = @now
 WHERE JobID = @jobId";
@@ -60,7 +64,7 @@ WITH date_diff AS (
              , Job.State, Job.Score, Job.AiScore, job.Country, Job.Url, Job.Link
              , Job.AiRelocation, Job.AiWorkModel, Job.PublishedAt
              , Agency.Title AS AgencyName
-             , CASE State
+              , CASE State
                WHEN '{nameof(JobState.Attention)}' THEN 'Attention'
                WHEN '{nameof(JobState.AiPending)}' THEN 'AiPending'
                WHEN '{nameof(JobState.AIError)}' THEN 'AIError'
@@ -68,6 +72,7 @@ WITH date_diff AS (
                WHEN '{nameof(JobState.NotApprovedRegex)}' THEN 'NotApproved'
                WHEN '{nameof(JobState.Applied)}' THEN 'Done'
                WHEN '{nameof(JobState.Rejected)}' THEN 'Done'
+               WHEN '{nameof(JobState.Failed)}' THEN 'Failed'
                ELSE 'Other'
                END AS Category
              , SUBSTR(Job.RegTime, 1, 10) AS RegDate
@@ -94,6 +99,7 @@ WITH date_diff AS (
 SELECT *
      , CASE Category
        WHEN 'Done' THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
+       WHEN 'Failed' THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
        WHEN 'Other' THEN ROW_NUMBER() OVER(PARTITION BY Category ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
        ELSE ROW_NUMBER() OVER(PARTITION BY Category ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
        END AS Ordering
@@ -102,6 +108,7 @@ FROM (
         , CASE Category
           WHEN 'Other' THEN ROW_NUMBER() OVER(PARTITION BY AgencyID, State ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
           WHEN 'Done' THEN ROW_NUMBER() OVER(PARTITION BY State ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
+          WHEN 'Failed' THEN ROW_NUMBER() OVER(PARTITION BY State ORDER BY ModifiedOn DESC, EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
           ELSE ROW_NUMBER() OVER(PARTITION BY State ORDER BY EffectiveScore DESC, COALESCE(PublishedAt, RegTime) DESC)
           END AS Ranking
     FROM ranking
@@ -112,6 +119,7 @@ WHERE Ranking <= CASE Category
     WHEN 'AIError' THEN 3
     WHEN 'NotApproved' THEN 6
     WHEN 'Done' THEN 3
+    WHEN 'Failed' THEN 3
     ELSE 1 END
 ORDER BY CASE Category
     WHEN 'Attention' THEN 1
@@ -119,6 +127,7 @@ ORDER BY CASE Category
     WHEN 'AIError' THEN 3
     WHEN 'NotApproved' THEN 4
     WHEN 'Done' THEN 5
+    WHEN 'Failed' THEN 6
     ELSE 12 END,
     Ordering";
 
@@ -185,6 +194,7 @@ SELECT Day
      , SUM(CASE WHEN State = '{nameof(JobState.Attention)}' THEN 1 ELSE 0 END) AS Attention
      , SUM(CASE WHEN State = '{nameof(JobState.Applied)}' THEN 1 ELSE 0 END) AS Applied
      , SUM(CASE WHEN State = '{nameof(JobState.Rejected)}' THEN 1 ELSE 0 END) AS Rejected
+     , SUM(CASE WHEN State = '{nameof(JobState.Failed)}' THEN 1 ELSE 0 END) AS Failed
 FROM (
     SELECT State, SUBSTR(RealTime, 1, 10) AS Day
     FROM (

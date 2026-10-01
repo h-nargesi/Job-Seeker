@@ -34,6 +34,8 @@
 
         public string? Tries { get; set; }
 
+        public int Attempts { get; set; }
+
         public int? AiScore { get; set; }
 
         public AiVerdict? AiVerdict { get; set; }

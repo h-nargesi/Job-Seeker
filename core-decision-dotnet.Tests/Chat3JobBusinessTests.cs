@@ -335,6 +335,38 @@ AiScore = $ai, Attempts = $attempts, Tries = $tries WHERE Code = $code",
     }
 
     [Fact]
+    public void Q_INDEX_failed_bucket_caps_at_three_and_sorts_after_done()
+    {
+        using var db = new GoldenDatabase();
+        Seed(db, "f-applied", JobState.Applied, score: 10);
+        for (var i = 0; i < 5; i++)
+            Seed(db, $"f-failed-{i}", JobState.Failed, score: 100 + i);
+
+        var list = db.Database.Job.Fetch([], []);
+
+        var failed = list.Where(x => x.Job.State == JobState.Failed).ToList();
+        Assert.Equal(3, failed.Count);
+
+        var states = list.Select(x => x.Job.State).ToList();
+        Assert.True(states.IndexOf(JobState.Failed) > states.IndexOf(JobState.Applied));
+    }
+
+    [Fact]
+    public void Clean_ages_out_failed_jobs_via_the_attempts_branch()
+    {
+        using var db = new GoldenDatabase();
+        Seed(db, "f-old", JobState.Failed, attempts: 4);
+        Seed(db, "f-new", JobState.Failed, attempts: 4);
+        db.ExecuteRaw("UPDATE Job SET RegTime = $old WHERE Code = 'f-old'",
+            ("$old", DateTime.Now.AddMonths(-2)));
+
+        db.Database.Job.Clean(1);
+
+        Assert.Equal(0L, db.Scalar("SELECT COUNT(*) FROM Job WHERE Code = 'f-old'"));
+        Assert.Equal(1L, db.Scalar("SELECT COUNT(*) FROM Job WHERE Code = 'f-new'"));
+    }
+
+    [Fact]
     public void Clean_not_approved_covers_regex_ai_and_error()
     {
         using var db = new GoldenDatabase();

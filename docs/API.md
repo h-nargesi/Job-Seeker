@@ -73,7 +73,10 @@ capped at 5 MB (`[RequestSizeLimit]`).
   `close_timeout_ms` — the tab auto-close timeout the extension should arm
   for this tab: `90000` (90 s) by default, `600000` (10 min) while the trend
   state is `Auth` (human 2FA/login wait).
-- Returns `400` on a `BadJobRequest` (unknown agency, empty url/content).
+- Returns `400` on a `BadJobRequest` (unknown agency, empty url/content). A
+  job page that fails core validation (missing title/payload/short content) is
+  **not** a 400: the core answers `200` with `[close]`, records the reason in
+  the job's `Log`, and moves the job to `Failed` once `Attempts >= 4`.
 
 ### `POST /decision/heartbeat`
 Keeps a tab's trend row alive during human pauses (2FA/CAPTCHA). The
@@ -98,13 +101,21 @@ Returns the active agencies the extension should react to. Cached on the client
 (the extension re-fetches when its cache is older than ~60 s; there is no
 server-side invalidation).
 
-- **Response**: array of `{ "name", "domain", "waiting" }`.
+- **Response**: array of `{ "name", "domain", "waiting", "rules" }`.
   - `domain` — regex; the extension matches `window.location.hostname` against it.
-  - `waiting` — pre-send delay (ms) the extension honors before sending the
-    page (lets the site's dynamic data load before the HTML snapshot). Always
-    the platform's hardcoded `DefaultWaiting`; the `/settings` waiting value no
-    longer affects it — that value is now anti-bot pacing (see
-    `POST /settings/agencywaiting` below).
+  - `waiting` — **readiness timeout** (ms), default `8000`. After the page is
+    interactive the extension polls the `rules` markers every ~400 ms and sends
+    as soon as one matches; at the deadline it sends anyway (the core decides
+    what to do). No jitter — jittering lives only in the server-side pacing
+    wait. Always the platform's hardcoded `DefaultWaiting`; the `/settings`
+    waiting value no longer affects it — that value is now anti-bot pacing
+    (see `POST /settings/agencywaiting` below).
+  - `rules` — per-page-role readiness markers:
+    `[{ "url": <regex over location.href>, "selectors": [<css selector>, ...] }]`.
+    Any selector of the first url-matching rule present in the DOM = page
+    ready. Empty array (or no rule whose `url` matches) → legacy behavior:
+    wait the full `waiting`, then send. Rules live in the platform folders
+    next to the scraping selectors (e.g. `Indeed.ReadinessRules`).
 
 > Correction: earlier docs described `POST /decision/scopes?reset=true` — that
 > endpoint never existed server-side. The "reset" was the dashboard's content
@@ -398,6 +409,7 @@ Per-agency anti-bot pacing (ms), jittered ±25% server-side and applied as a
 each `POST /decision/take` response for that agency. Empty/null falls back to
 the default (10 000 ms), `0` disables it; valid range `0..600000`. Stored in
 the agency's `Settings` JSON key `waiting`; changes apply without a restart.
+Unrelated to the scopes `waiting` (readiness timeout) despite the shared name.
 
 ## Dashboard — `ReportController`
 

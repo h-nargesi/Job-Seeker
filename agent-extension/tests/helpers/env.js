@@ -148,16 +148,17 @@ function installFakeLocation(sandbox, url) {
 	return location;
 }
 
-export function createEnv(options = {}) {
-	const {
-		dom = false,
-		url = 'https://www.example.com/',
-		chrome: chromeOption,
-		clock: clockOption,
-		importScripts = false,
-		html = null,
-		autoLoadGate = true,
-	} = options;
+	export function createEnv(options = {}) {
+		const {
+			dom = false,
+			url = 'https://www.example.com/',
+			chrome: chromeOption,
+			clock: clockOption,
+			importScripts = false,
+			html = null,
+			autoLoadGate = true,
+			autoFlow = false,
+		} = options;
 
 	const clock = clockOption ?? createClock();
 	const chrome = chromeOption ?? createChrome();
@@ -197,6 +198,13 @@ export function createEnv(options = {}) {
 		installFakeLocation(sandbox, url);
 		if (autoLoadGate) {
 			sandbox.addEventListener('load', event => event.stopImmediatePropagation());
+		}
+		if (!autoFlow) {
+			Object.defineProperty(sandbox.document, 'readyState', {
+				value: 'loading',
+				configurable: true,
+			});
+			sandbox.addEventListener('DOMContentLoaded', event => event.stopImmediatePropagation());
 		}
 		if (html !== null) {
 			const DOMParserCtor = sandbox.DOMParser;

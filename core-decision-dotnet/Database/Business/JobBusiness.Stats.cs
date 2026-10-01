@@ -20,7 +20,8 @@ namespace Photon.JobSeeker
                     row?.InAi ?? 0,
                     row?.Attention ?? 0,
                     row?.Applied ?? 0,
-                    row?.Rejected ?? 0);
+                    row?.Rejected ?? 0,
+                    row?.Failed ?? 0);
             }).ToList();
         }
 
@@ -211,6 +212,8 @@ namespace Photon.JobSeeker
             public long Applied { get; set; }
 
             public long Rejected { get; set; }
+
+            public long Failed { get; set; }
         }
 
         private sealed class VelocityRow

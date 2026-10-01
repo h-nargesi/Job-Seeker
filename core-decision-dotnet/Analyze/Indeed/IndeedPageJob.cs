@@ -46,6 +46,8 @@ class IndeedPageJob(Indeed parent) : JobPage(parent), IndeedPage
         }
     }
 
+    protected override string? RequiredPayloadMarker => "jobsearch-ViewJobLayout-jobDisplay";
+
     public override string GetHtmlContent(string html)
     {
         var doc = new HtmlDocument();

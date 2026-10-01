@@ -20,6 +20,7 @@ public class Chat1AiModelTests
                 nameof(JobState.Attention),
                 nameof(JobState.Rejected),
                 nameof(JobState.Applied),
+                nameof(JobState.Failed),
             },
             Enum.GetNames<JobState>());
     }
