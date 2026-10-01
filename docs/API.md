@@ -364,6 +364,11 @@ With `?jobid=`: force re-score that one job (ignores `HumanEdited`; keeps the
 ### `POST /job/requeue?jobid=`
 `AIError` / `NotApprovedAI` → `AiPending` when `Content` is present; otherwise 400.
 
+### `POST /job/requeueerrors`
+Bulk dashboard action: every `AIError` job with `Content` present → `AiPending`
+(same guard as the per-job requeue; contentless `AIError` rows stay put).
+Returns the re-queued count as a JSON number.
+
 ### `POST /job/promote?jobid=`
 Emergency promote: `AiPending` / `NotApprovedAI` / `AIError` → `Attention`.
 

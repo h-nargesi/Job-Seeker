@@ -79,6 +79,8 @@
                 title="Unblock and restart all trends">Reset Trends</button>
             <button onclick="revaluate()" type="button" class="btn btn-outline-warning m-1"
                 title="Re-run regex evaluation over stored jobs">Revaluate</button>
+            <button onclick="requeue_errors()" type="button" class="btn btn-outline-warning m-1"
+                title="Move every AIError job (that still has stored content) back to AiPending for the next worker run">Requeue AIError</button>
             <a href="/settings" target="_blank" class="btn btn-outline-warning m-1" role="button"
                 title="Job options, weights and app settings">Settings</a>
             <a href="/monitor" target="_blank" class="btn btn-outline-warning m-1" role="button"

@@ -77,6 +77,12 @@ namespace Photon.JobSeeker
             return database.Changes() == 1;
         }
 
+        public long RequeueAllErrors()
+        {
+            database.Execute(Q_REQUEUE_ALL_ERRORS, new { now = DateTime.Now });
+            return database.Changes();
+        }
+
         public bool PromoteJob(long jobId)
         {
             var job = Fetch(jobId);
@@ -147,6 +153,10 @@ UPDATE Job SET State = '{nameof(JobState.AiPending)}', ModifiedOn = @now
 WHERE JobID = @jobId AND Content IS NOT NULL AND State IN (
     '{nameof(JobState.AIError)}',
     '{nameof(JobState.NotApprovedAI)}')";
+
+        private readonly static string Q_REQUEUE_ALL_ERRORS = $@"
+UPDATE Job SET State = '{nameof(JobState.AiPending)}', ModifiedOn = @now
+WHERE State = '{nameof(JobState.AIError)}' AND Content IS NOT NULL";
 
         private readonly static string Q_PROMOTE = @"
 UPDATE Job SET State = @state, Log = @log, ModifiedOn = @now

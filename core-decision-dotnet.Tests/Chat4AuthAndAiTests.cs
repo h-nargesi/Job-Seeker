@@ -164,6 +164,27 @@ public class Chat4AuthAndAiTests
     }
 
     [Fact]
+    public void Requeue_errors_bulk_moves_only_ai_error_with_content()
+    {
+        using var db = new GoldenDatabase();
+        var err1 = Seed(db, "b1", JobState.AIError);
+        var err2 = Seed(db, "b2", JobState.AIError);
+        var empty = Seed(db, "b3", JobState.AIError, content: null);
+        var not_approved = Seed(db, "b4", JobState.NotApprovedAI);
+        var controller = new JobController(null!, db.Database, null!);
+
+        var result = Assert.IsType<OkObjectResult>(controller.RequeueErrors());
+        Assert.Equal(2L, result.Value);
+
+        Assert.Equal(JobState.AiPending, db.Database.Job.Fetch(err1)!.State);
+        Assert.Equal(JobState.AiPending, db.Database.Job.Fetch(err2)!.State);
+        Assert.Equal(JobState.AIError, db.Database.Job.Fetch(empty)!.State);
+        Assert.Equal(JobState.NotApprovedAI, db.Database.Job.Fetch(not_approved)!.State);
+
+        Assert.Equal(0L, Assert.IsType<OkObjectResult>(controller.RequeueErrors()).Value);
+    }
+
+    [Fact]
     public void Force_revaluate_http_guards_content_and_terminal_states()
     {
         using var db = new GoldenDatabase();

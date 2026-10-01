@@ -203,6 +203,20 @@ public class JobController(Analyzer analyzer, Database database, IDatabaseFactor
     }
 
     [HttpPost]
+    public IActionResult RequeueErrors()
+    {
+        try
+        {
+            return Ok(database.Job.RequeueAllErrors());
+        }
+        catch (Exception ex)
+        {
+            Log.Error(string.Join("\r\n", ex.Message, ex.StackTrace));
+            throw;
+        }
+    }
+
+    [HttpPost]
     public IActionResult Promote([FromQuery] long jobid)
     {
         try

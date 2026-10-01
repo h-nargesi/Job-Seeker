@@ -131,6 +131,18 @@ async function requeue(jobid) {
     }
 }
 
+async function requeue_errors() {
+    try {
+        const response = await fetch("/job/requeueerrors", { method: 'POST' });
+        const count = await response.json();
+        if (count === 0) console.info('Requeue AIError: no eligible jobs');
+        LoadJobs();
+        LoadAgencies();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
 async function promote(jobid) {
     try {
         await fetch("/job/promote?jobid=" + jobid, { method: 'POST' });
