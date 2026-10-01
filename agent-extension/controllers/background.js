@@ -10,8 +10,6 @@ let orders_pending = false;
 
 chrome.runtime.onMessage.addListener(
     async function (request, sender) {
-        // console.log("AGENT", "Background", request, sender.tab.windowId, sender.tab.id);
-
         if (!sender.tab) {
             console.error("AGENT", "Background", "no tab in sender", request);
             return;

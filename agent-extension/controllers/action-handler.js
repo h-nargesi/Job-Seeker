@@ -39,7 +39,7 @@ class ActionHandler {
                 break;
             case "recheck":
                 if (!ActionHandler.OnPageLoad)
-                    console.warn("The OnPageLoad event is not set!");
+                    console.warn("AGENT", "The OnPageLoad event is not set!");
                 ActionHandler.OnPageLoad();
                 break;
             case "close":
@@ -53,7 +53,7 @@ class ActionHandler {
                 await ActionHandler.OnWait(command.params);
                 break;
             default:
-                console.error("Unkown action", command.action);
+                console.error("AGENT", "Unkown action", command.action);
                 break;
         }
     }
@@ -64,7 +64,7 @@ class ActionHandler {
 
     static OnFill(object, params) {
         let elements = document.querySelectorAll(object);
-        if (!elements) console.warn("Not found", object);
+        if (!elements) console.warn("AGENT", "Not found", object);
         elements.forEach(element => {
             if ('value' in element) element.value = params.value;
             else element.innerText = params.value;
@@ -73,7 +73,7 @@ class ActionHandler {
 
     static OnClick(object) {
         let elements = document.querySelectorAll(object);
-        if (!elements) console.warn("Not found", object);
+        if (!elements) console.warn("AGENT", "Not found", object);
         elements.forEach(element => {
             if (element) element.click()
         });
