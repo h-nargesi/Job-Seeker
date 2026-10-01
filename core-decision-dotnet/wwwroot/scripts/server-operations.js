@@ -77,9 +77,12 @@ if (job_seeker_jobs || job_seeker_trends)
 async function apply(jobid) {
     try {
         await fetch("/job/apply?jobid=" + jobid, { method: 'POST' });
-        document.getElementById('Job_' + jobid).className = 'applied';
-        LoadJobs();
-        LoadAgencies();
+        const row = document.getElementById('Job_' + jobid);
+        if (row) {
+            row.className = 'applied';
+            LoadJobs();
+            LoadAgencies();
+        } else location.reload();
     } catch (e) {
         console.error(e);
     }
@@ -88,9 +91,12 @@ async function apply(jobid) {
 async function reject(jobid) {
     try {
         await fetch("/job/reject?jobid=" + jobid, { method: 'POST' });
-        document.getElementById('Job_' + jobid).className = 'rejected';
-        LoadJobs();
-        LoadAgencies();
+        const row = document.getElementById('Job_' + jobid);
+        if (row) {
+            row.className = 'rejected';
+            LoadJobs();
+            LoadAgencies();
+        } else location.reload();
     } catch (e) {
         console.error(e);
     }
