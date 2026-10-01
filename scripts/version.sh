@@ -10,14 +10,15 @@ if ! git -C "$ROOT" diff --quiet; then
 fi
 
 for manifest in agent-extension assistant-extension; do
-  node -e '
+  stamped="$(node -e '
     const fs = require("fs");
     const file = process.argv[1];
     const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
     manifest.version_name = manifest.version + "+" + process.argv[2];
     fs.writeFileSync(file, JSON.stringify(manifest, null, "\t") + "\n");
-  ' "$ROOT/$manifest/manifest.json" "$HASH"
-  echo "$manifest/manifest.json -> version_name <semver>+$HASH"
+    process.stdout.write(manifest.version_name);
+  ' "$ROOT/$manifest/manifest.json" "$HASH")"
+  echo "$manifest/manifest.json -> version_name $stamped"
 done
 
 echo
