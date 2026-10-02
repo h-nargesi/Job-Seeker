@@ -8,9 +8,11 @@ interface IamExpatPage
 
     protected static readonly Regex reg_login_url = new(@"^https?://[^/]*iamexpat\.[\w]{2,3}/login", RegexOptions.IgnoreCase);
 
-    internal static Regex reg_search_url = new(@"^https?://[^/]*iamexpat\.[\w]{2,3}/career/jobs-netherlands", RegexOptions.IgnoreCase);
+    protected static readonly Regex reg_search_url = new(@"^https?://[^/]*iamexpat\.[\w]{2,3}/career/jobs-[\w-]+", RegexOptions.IgnoreCase);
 
     internal const string search_category_path = "/it-technology-positions";
+
+    protected const string reg_search_location_pattern = @"^https?://[^/]*iamexpat\.";
 
     protected static readonly Regex reg_search_category_url = new(@"/it-technology-positions([/?#]|$)", RegexOptions.IgnoreCase);
 

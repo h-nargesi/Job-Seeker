@@ -14,7 +14,7 @@ internal sealed class TestAgency : Agency
 
     public override string SearchLink => "https://test/jobs";
 
-    protected override void RunningSearchingMethodChanged(int value) { }
+    public override AgencyRegion ParseRegion(string url) => AgencyRegion.Empty;
 
     protected override IEnumerable<Type> GetSubPages()
     {
@@ -34,7 +34,7 @@ internal sealed class TestSearchPage(Agency parent) : SearchPage(parent)
         return false;
     }
 
-    protected override IEnumerable<(string url, string code)> GetJobUrls(string content) => [];
+    protected override IEnumerable<(string url, string code)> GetJobUrls(string pageUrl, string content) => [];
 
     protected override Command[] CheckNextButton(string url, string content) => [];
 }

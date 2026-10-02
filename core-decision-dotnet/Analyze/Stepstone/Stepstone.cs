@@ -6,13 +6,11 @@ class Stepstone : Agency
 {
     public override string Name => "Stepstone";
 
-    public override string SearchLink => $"{BaseUrl}/work/full-time/{SearchTitle}?ct=222&fdl=en";
+    public override string SearchLink => $"{Link}/work/full-time/{SearchTitle}?ct=222&fdl=en";
+
+    public override AgencyRegion ParseRegion(string url) => CurrentMethod;
 
     public override Regex? JobAcceptabilityChecker => null;
-
-    protected override void RunningSearchingMethodChanged(int value)
-    {
-    }
 
     protected override IEnumerable<Type> GetSubPages()
     {

@@ -6,29 +6,26 @@ class LinkedIn : Agency
 {
     public override string Name => "LinkedIn";
 
-    internal string RunningUrl => CurrentMethod.Url;
-
-    public override string SearchLink => $"{BaseUrl}/jobs/search/";
-
-    public override string NormalizeJobUrl(string url)
-    {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return url;
-
-        return uri.Host == "www.linkedin.com" ? url : $"https://www.linkedin.com{uri.PathAndQuery}";
-    }
+    public override string SearchLink => $"{Link}/jobs/search/";
 
     public override Regex? JobAcceptabilityChecker => LinkedInPage.reg_job_no_longer_accepting;
 
-    protected override void RunningSearchingMethodChanged(int value)
+    public override AgencyRegion ParseRegion(string url)
     {
-        var match = Regex.Match(RunningUrl, @"(?:^|&)(location|geoId)=([^&]+)", RegexOptions.IgnoreCase);
-        if (!match.Success) return;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return AgencyRegion.Empty;
 
-        var parameter = match.Groups[1].Value.ToLowerInvariant();
-        var location = Regex.Escape(Uri.EscapeDataString(Uri.UnescapeDataString(match.Groups[2].Value)));
+        foreach (var method in AllSearchingMethod)
+        {
+            var pattern = LinkedInPage.GetSearchLocationUrlPattern(method.Url);
+            if (pattern == null) continue;
 
-        LinkedInPage.reg_search_location_url = new Regex(
-            @$"(^|[?&]){parameter}={location}(&|$)", RegexOptions.IgnoreCase);
+            var value = Regex.Match(uri.Query,
+                @$"(^|[?&]){pattern.Value.parameter}={pattern.Value.location}(&|$)", RegexOptions.IgnoreCase);
+            if (value.Success) return method;
+        }
+
+        return AgencyRegion.Empty;
     }
 
     protected override IEnumerable<Type> GetSubPages()

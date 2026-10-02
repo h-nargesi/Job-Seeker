@@ -14,7 +14,7 @@ internal sealed class LoginGuardAgency : Agency
 
     public override string SearchLink => "https://guard.example.com/jobs";
 
-    protected override void RunningSearchingMethodChanged(int value) { }
+    public override AgencyRegion ParseRegion(string url) => AgencyRegion.Empty;
 
     protected override IEnumerable<Type> GetSubPages()
     {

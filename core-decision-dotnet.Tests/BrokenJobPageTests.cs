@@ -23,7 +23,7 @@ internal sealed class BrokenAgency : Agency
 
     public override string SearchLink => "https://broken.example.com/jobs";
 
-    protected override void RunningSearchingMethodChanged(int value) { }
+    public override AgencyRegion ParseRegion(string url) => AgencyRegion.Empty;
 
     protected override IEnumerable<Type> GetSubPages()
     {

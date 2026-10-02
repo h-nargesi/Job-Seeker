@@ -13,7 +13,7 @@ class BaytPageSearch(Bayt parent) : SearchPage(parent), BaytPage
     protected override bool CheckInvalidSearchTitle(string url, string content, out Command[]? commands)
     {
         if (!BaytPage.reg_search_keywords_url.IsMatch(url) ||
-            !BaytPage.reg_search_location_url.IsMatch(url))
+            !Regex.IsMatch(url, GetSearchLocationUrlPattern(), RegexOptions.IgnoreCase))
         {
             commands = [Command.Go(Parent.SearchLink)];
             return true;
@@ -25,16 +25,17 @@ class BaytPageSearch(Bayt parent) : SearchPage(parent), BaytPage
         }
     }
 
-    protected override IEnumerable<(string url, string code)> GetJobUrls(string content)
+    protected override IEnumerable<(string url, string code)> GetJobUrls(string url, string content)
     {
         var result = new List<(string url, string code)>();
         var job_matches = BaytPage.reg_job_url.Matches(content).Cast<Match>();
+        var baseUrl = PageUtils.GetBaseUrl(url);
 
         foreach (var job_match in job_matches)
         {
-            var code = job_match.Groups[2].Value;
-            var url = string.Join("", Parent.BaseUrl, job_match.Groups[1].Value);
-            result.Add((url, code));
+            var jobCode = job_match.Groups[2].Value;
+            var jobUrl = string.Join("", baseUrl, job_match.Groups[1].Value);
+            result.Add((jobUrl, jobCode));
         }
 
         return result;
@@ -55,5 +56,10 @@ class BaytPageSearch(Bayt parent) : SearchPage(parent), BaytPage
         }
 
         return [];
+    }
+
+    private string GetSearchLocationUrlPattern()
+    {
+        return BaytPage.reg_search_location_pattern.Replace("{location}", Parent.CurrentMethod.Url);
     }
 }

@@ -6,16 +6,20 @@ class Bayt : Agency
 {
     public override string Name => "Bayt";
 
-    public override string SearchLink => $"{BaseUrl}/en/{CurrentMethod.Url}/jobs/{SearchTitle}-jobs/";
+    public override string SearchLink => $"{Link}/en/{CurrentMethod.Url}/jobs/{SearchTitle}-jobs/";
+
+    public override AgencyRegion ParseRegion(string url)
+    {
+        foreach (var method in AllSearchingMethod)
+        {
+            if (Regex.IsMatch(url, $@"/en/{method.Url}/jobs", RegexOptions.IgnoreCase))
+                return method;
+        }
+
+        return AgencyRegion.Empty;
+    }
 
     public override Regex? JobAcceptabilityChecker => null;
-
-    protected override void RunningSearchingMethodChanged(int value)
-    {
-        var location = Uri.EscapeDataString(CurrentMethod.Url);
-
-        BaytPage.reg_search_location_url = new Regex(@$"/en/{location}/jobs", RegexOptions.IgnoreCase);
-    }
 
     protected override IEnumerable<Type> GetSubPages()
     {

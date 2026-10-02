@@ -24,10 +24,11 @@ class StepstonePageSearch(Stepstone parent) : SearchPage(parent), StepstonePage
         return true;
     }
 
-    protected override IEnumerable<(string url, string code)> GetJobUrls(string content)
+    protected override IEnumerable<(string url, string code)> GetJobUrls(string url, string content)
     {
+        var baseUrl = PageUtils.GetBaseUrl(url);
         foreach (Match job_match in StepstonePage.reg_job_url.Matches(content).Cast<Match>())
-            yield return (string.Join("", Parent.BaseUrl, job_match.Value), job_match.Groups[1].Value);
+            yield return (string.Join("", baseUrl, job_match.Value), job_match.Groups[1].Value);
     }
 
     protected override Command[] CheckNextButton(string url, string content)

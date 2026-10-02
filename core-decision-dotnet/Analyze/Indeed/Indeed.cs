@@ -6,8 +6,6 @@ class Indeed : Agency
 {
     public override string Name => "Indeed";
 
-    public override string BaseUrl => CurrentMethod.Url.TrimEnd('/');
-
     public override string SearchLink => CurrentMethod.Url + "jobs?q=" + SearchTitle;
 
     public override Regex? JobAcceptabilityChecker => IndeedPage.reg_job_acceptability_checker;
@@ -20,8 +18,19 @@ class Indeed : Agency
             ["#mosaic-jobResults", "role='navigation'"]),
     ];
 
-    protected override void RunningSearchingMethodChanged(int value)
+    public override AgencyRegion ParseRegion(string url)
     {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return AgencyRegion.Empty;
+
+        foreach (var method in AllSearchingMethod)
+        {
+            if (Uri.TryCreate(method.Url, UriKind.Absolute, out var method_uri) &&
+                string.Equals(method_uri.Host, uri.Host, StringComparison.OrdinalIgnoreCase))
+                return method;
+        }
+
+        return AgencyRegion.Empty;
     }
 
     protected override IEnumerable<Type> GetSubPages()

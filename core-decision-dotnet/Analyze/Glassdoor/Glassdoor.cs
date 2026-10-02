@@ -14,13 +14,13 @@ class Glassdoor : Agency
             var keyword_index = CurrentMethod.Url.Length + 1;
             var ko = $"KO.{keyword_index},{keyword_index + SearchTitle.Length}";
 
-            return $"{BaseUrl}/{CurrentMethod.Url}-{SearchTitle}-jobs-SRCH_{il}_{CurrentMethod.Params}_{ko}.htm";
+            return $"{Link}/{CurrentMethod.Url}-{SearchTitle}-jobs-SRCH_{il}_{CurrentMethod.Params}_{ko}.htm";
         }
     }
 
-    public override Regex? JobAcceptabilityChecker => null;
+    public override AgencyRegion ParseRegion(string url) => AgencyRegion.Empty;
 
-    protected override void RunningSearchingMethodChanged(int value) { }
+    public override Regex? JobAcceptabilityChecker => null;
 
     protected override IEnumerable<Type> GetSubPages()
     {

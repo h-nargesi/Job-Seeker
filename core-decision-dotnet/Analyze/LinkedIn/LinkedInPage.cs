@@ -8,8 +8,6 @@ interface LinkedInPage
 
     protected static readonly Regex reg_search_url = new(@"^https?://[^/]*linkedin\.com/jobs/search", RegexOptions.IgnoreCase);
 
-    internal static Regex reg_search_location_url = new(@"(^|[?&])location=Netherlands(&|$)", RegexOptions.IgnoreCase);
-
     protected static readonly Regex reg_search_keywords_url = new(@"(^|[?&])keywords=developer(&|$)", RegexOptions.IgnoreCase);
 
     protected static readonly Regex reg_search_options_url = new(@"(^|[?&])f_E=3%2C4(&|$)", RegexOptions.IgnoreCase);
@@ -35,4 +33,15 @@ interface LinkedInPage
     protected static readonly Regex reg_job_adding = new(@"<span\s+aria-hidden=[""']true[""']>Save</span>", RegexOptions.IgnoreCase);
 
     public static readonly Regex reg_job_no_longer_accepting = new(@"\bNo longer accepting applications\b", RegexOptions.IgnoreCase);
+
+    public static (string parameter, string location)? GetSearchLocationUrlPattern(string settingUrl)
+    {
+        var match = Regex.Match(settingUrl, @"(?:^|&)(location|geoId)=([^&]+)", RegexOptions.IgnoreCase);
+        if (!match.Success) return null;
+
+        var parameter = match.Groups[1].Value.ToLowerInvariant();
+        var location = Regex.Escape(Uri.EscapeDataString(Uri.UnescapeDataString(match.Groups[2].Value)));
+
+        return (parameter, location);
+    }
 }

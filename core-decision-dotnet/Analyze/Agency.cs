@@ -53,22 +53,18 @@ public abstract class Agency
     public int CurrentMethodIndex
     {
         get => settings.Running;
-        set
-        {
-            settings.SetRunningIndex(value);
-            RunningSearchingMethodChanged(settings.Running);
-        }
+        set => settings.SetRunningIndex(value);
     }
 
     public int SearchingMethodCount => settings.Length;
 
-    public SearchingMethod CurrentMethod => settings.Current;
+    public AgencyRegion CurrentMethod => settings.Current;
 
-    public SearchingMethod[]? EnabledSearchingMethod => settings.EnabledMethods;
+    public AgencyRegion[]? EnabledSearchingMethod => settings.EnabledMethods;
 
-    public virtual string BaseUrl => Link;
+    public AgencyRegion[] AllSearchingMethod => settings.Methods ?? [];
 
-    public virtual string NormalizeJobUrl(string url) => url;
+    public abstract AgencyRegion ParseRegion(string url);
 
     public abstract string SearchLink { get; }
 
@@ -207,11 +203,8 @@ public abstract class Agency
         {
             this.settings = settings;
             this.settings.Check();
-            RunningSearchingMethodChanged(this.settings.Running);
         }
     }
-
-    protected abstract void RunningSearchingMethodChanged(int value);
 
     protected abstract IEnumerable<Type> GetSubPages();
 
@@ -236,13 +229,13 @@ public abstract class Agency
 
     public class AgencySetting
     {
-        private SearchingMethod[]? all_methods = null;
+        private AgencyRegion[]? all_methods = null;
 
         [JsonProperty("running")]
         public int Running { get; set; } = -1;
 
         [JsonProperty("methods")]
-        public SearchingMethod[]? Methods
+        public AgencyRegion[]? Methods
         {
             get => all_methods;
             set
@@ -254,7 +247,7 @@ public abstract class Agency
         }
 
         [JsonIgnore]
-        public SearchingMethod[]? EnabledMethods { get; private set; }
+        public AgencyRegion[]? EnabledMethods { get; private set; }
 
         [JsonIgnore]
         public int Length => EnabledMethods?.Length ?? 0;
@@ -263,9 +256,9 @@ public abstract class Agency
         public int? Waiting { get; set; }
 
         [JsonIgnore]
-        public SearchingMethod Current
+        public AgencyRegion Current
         {
-            get => EnabledMethods?[Running] ?? SearchingMethod.Empty;
+            get => EnabledMethods?[Running] ?? AgencyRegion.Empty;
         }
 
         public void Check()
@@ -288,24 +281,5 @@ public abstract class Agency
 
             Running = index;
         }
-    }
-
-    public struct SearchingMethod
-    {
-        public string Title { get; set; }
-
-        public string Url { get; set; }
-
-        public object? Params { get; set; }
-
-        public bool? Enabled { get; set; }
-
-        public static SearchingMethod Empty { get; } = new()
-        {
-            Title = string.Empty,
-            Url = string.Empty,
-            Params = null,
-            Enabled = false,
-        };
     }
 }

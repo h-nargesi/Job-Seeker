@@ -15,17 +15,18 @@ abstract class SearchPage(Agency parent) : PageBase(parent)
         if (CheckInvalidSearchTitle(url, content, out var commands)) return commands;
 
         var codes = new HashSet<string>();
+        var region = Parent.ParseRegion(url);
         using var database = Parent.DatabaseFactory.Open();
 
         database.BeginTransaction();
         try
         {
-            foreach (var (link, code) in GetJobUrls(content))
+            foreach (var (jobUrl, jobCode) in GetJobUrls(url, content))
             {
-                if (string.IsNullOrEmpty(code) || codes.Contains(code)) continue;
-                codes.Add(code);
+                if (string.IsNullOrEmpty(jobCode) || codes.Contains(jobCode)) continue;
+                codes.Add(jobCode);
 
-                database.Job.InsertFromSearch(Parent.ID, Parent.CurrentMethod.Title, link, code);
+                database.Job.InsertFromSearch(Parent.ID, region.Title, jobUrl, jobCode);
             }
 
             database.Commit();
@@ -44,7 +45,7 @@ abstract class SearchPage(Agency parent) : PageBase(parent)
 
     protected abstract bool CheckInvalidSearchTitle(string url, string content, out Command[]? commands);
 
-    protected abstract IEnumerable<(string url, string code)> GetJobUrls(string content);
+    protected abstract IEnumerable<(string url, string code)> GetJobUrls(string pageUrl, string content);
 
     protected abstract Command[] CheckNextButton(string url, string content);
 }

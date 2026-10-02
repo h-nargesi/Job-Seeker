@@ -5,27 +5,40 @@ namespace Photon.JobSeeker.IamExpat;
 class IamExpat : Agency
 {
     private string base_link = string.Empty;
-    
+
     public override string Name => "IamExpat";
 
-    public override string BaseUrl => base_link + CurrentMethod.Url[0..2];
+    public override string SearchLink
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(base_link))
+            {
+                var index = Link.LastIndexOf('.');
+                base_link = index < 0 ? Link : Link[..(index + 1)];
+            }
 
-    public override string SearchLink => base_link + CurrentMethod.Url;
+            return base_link + CurrentMethod.Url;
+        }
+    }
 
     public override Regex? JobAcceptabilityChecker => null;
 
-    protected override void RunningSearchingMethodChanged(int value)
+    public override AgencyRegion ParseRegion(string url)
     {
-        var location = CurrentMethod.Url.Replace(@"\", @"\\").Replace(@".", @"\.");
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return AgencyRegion.Empty;
 
-        IamExpatPage.reg_search_url = new Regex(
-            @$"://[^/]*iamexpat\.{location}", RegexOptions.IgnoreCase);
-
-        if (string.IsNullOrEmpty(base_link))
+        foreach (var method in AllSearchingMethod)
         {
-            var index = Link.LastIndexOf('.');
-            base_link = index < 0 ? Link : Link[..(index + 1)];
+            if (method.Url.Length < 3) continue;
+
+            var tld = Regex.Escape(method.Url[0..2]);
+            if (Regex.IsMatch(uri.Host, @$"iamexpat\.{tld}$", RegexOptions.IgnoreCase))
+                return method;
         }
+
+        return AgencyRegion.Empty;
     }
 
     protected override IEnumerable<Type> GetSubPages()

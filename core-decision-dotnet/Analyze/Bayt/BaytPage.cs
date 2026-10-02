@@ -12,7 +12,7 @@ interface BaytPage
 
     protected static readonly Regex reg_search_keywords_url = new(@$"/{Agency.SearchTitle}-jobs/", RegexOptions.IgnoreCase);
 
-    internal static Regex reg_search_location_url = new(@"en/oman/jobs", RegexOptions.IgnoreCase);
+    protected const string reg_search_location_pattern = @"en/{location}/jobs";
 
     protected static readonly Regex reg_search_url_page = new(@"\?page=(\d+)", RegexOptions.IgnoreCase);
 

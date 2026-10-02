@@ -97,14 +97,15 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
                     AgencyID = Parent.ID,
                     Code = code,
                     State = JobState.Saved,
-                    Url = Parent.NormalizeJobUrl(url),
+                    Url = url,
                 };
 
                 new_job = true;
             }
         }
 
-        job.Country = Parent.CurrentMethod.Title;
+        var region = Parent.ParseRegion(url);
+        if (!string.IsNullOrEmpty(region.Title)) job.Country = region.Title;
 
         var link_found = false;
 
