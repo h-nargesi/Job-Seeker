@@ -136,7 +136,7 @@ public abstract class JobPage(Agency parent) : PageBase(parent)
 
             if (job.JobID != 0)
             {
-                database.Job.RecordBrokenPage(job.JobID, reason);
+                database.Job.RecordBrokenPage(job.JobID, reason, html_content);
 
                 if (job.Attempts >= 4)
                     database.Job.ChangeState(job.JobID, JobState.Failed);

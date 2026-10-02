@@ -29,7 +29,7 @@ UPDATE Job SET State = @state, ModifiedOn = @now
 WHERE JobID = @jobId";
 
         private readonly static string Q_APPEND_LOG = @"
-UPDATE Job SET Log = @log, ModifiedOn = @now
+UPDATE Job SET Log = @log, Html = COALESCE(Html, @html), ModifiedOn = @now
 WHERE JobID = @jobId";
 
         private readonly static string Q_MANUAL_STATE = @"

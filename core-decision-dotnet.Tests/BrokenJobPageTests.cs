@@ -292,6 +292,23 @@ public class BrokenJobPageTests
     }
 
     [Fact]
+    public void Broken_page_stores_html_when_row_has_none()
+    {
+        using var fixture = new BrokenPageFixture();
+        fixture.Database.Execute("UPDATE Job SET Html = NULL WHERE JobID = 1");
+        fixture.Agency.JobTitle = null;
+        fixture.Agency.JobHtml = GoodHtml;
+
+        var commands = fixture.JobPage.IssueCommand(JobUrl, "<html>garbage</html>");
+
+        Assert.Equal("close", Assert.Single(commands).Action);
+        Assert.Equal("Saved", fixture.Database.ExecuteScalar<string>("SELECT State FROM Job"));
+        Assert.Equal(GoodHtml, fixture.Database.ExecuteScalar<string>("SELECT Html FROM Job"));
+        Assert.Contains("Broken job page (title)",
+            fixture.Database.ExecuteScalar<string>("SELECT Log FROM Job"));
+    }
+
+    [Fact]
     public void Broken_new_job_is_not_inserted()
     {
         using var fixture = new BrokenPageFixture();
